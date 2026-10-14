@@ -1,0 +1,289 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-voice-recorder",
+      "componentClassName": "PopVoiceRecorder",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "mode",
+          "type": "string",
+          "attribute": "mode",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'expanded'",
+          "complexType": {
+            "original": "VoiceRecorderMode",
+            "resolved": "\"collapsed\" | \"expanded\"",
+            "references": {
+              "VoiceRecorderMode": {
+                "location": "local",
+                "path": "ui-kit/organisms/voice-recorder/voice-recorder.tsx",
+                "id": "ui-kit/organisms/voice-recorder/voice-recorder.tsx::VoiceRecorderMode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Visual mode: 'expanded' = active recording bar, 'collapsed' = ring playback"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "audioBlob",
+          "type": "any",
+          "attribute": "audio-blob",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "Blob",
+            "resolved": "any",
+            "references": {
+              "Blob": {
+                "location": "global",
+                "id": "global::Blob"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pre-recorded blob to start in collapsed mode"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "isRecording"
+        },
+        {
+          "name": "isPaused"
+        },
+        {
+          "name": "isPlaying"
+        },
+        {
+          "name": "playbackProgress"
+        },
+        {
+          "name": "waveformData"
+        }
+      ],
+      "methods": [
+        {
+          "name": "begin",
+          "docs": {
+            "text": "Call this to begin recording — only invoke from an explicit user gesture.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => any",
+            "parameters": [],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "recordingComplete",
+          "method": "recordingComplete",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when recording is saved — detail is the AudioBlob"
+          },
+          "complexType": {
+            "original": "Blob",
+            "resolved": "Blob",
+            "references": {
+              "Blob": {
+                "location": "global",
+                "id": "global::Blob"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "recordingCancel",
+          "method": "recordingCancel",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user cancels"
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "mode",
+          "methodName": "onModeChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-VOICE-RECORDER",
+          "styleStr": null,
+          "styleIdentifier": "PopVoiceRecorderStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/voice-recorder/voice-recorder.css",
+              "relativePath": "voice-recorder.css",
+              "originalComponentPath": "voice-recorder.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "onClick",
+        "title",
+        "type",
+        "aria-hidden",
+        "key",
+        "style",
+        "viewBox",
+        "width",
+        "height",
+        "id",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "offset",
+        "stop-color",
+        "cx",
+        "cy",
+        "r",
+        "stroke",
+        "stroke-dasharray",
+        "stroke-dashoffset",
+        "transform"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "svg",
+        "defs",
+        "lineargradient",
+        "stop",
+        "circle"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "External @Method() begin() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async begin()."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

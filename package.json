@@ -10,6 +10,8 @@
   },
   "scripts": {
     "build:native": "cargo build --release -p stencilrs_napi && node scripts/copy-native.js",
-    "test": "cargo test && node --test"
+    "test": "cargo test && node --test",
+    "parity:snapshot": "npm --prefix parity run snapshot",
+    "parity": "npm --prefix parity run compare"
   }
 }

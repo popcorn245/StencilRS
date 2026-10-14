@@ -1,0 +1,746 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-assistant",
+      "componentClassName": "PopAssistant",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "verb",
+          "type": "string",
+          "attribute": "verb",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'ask'",
+          "complexType": {
+            "original": "Verb",
+            "resolved": "\"ask\" | \"build\" | \"link\"",
+            "references": {
+              "Verb": {
+                "location": "global",
+                "id": "global::Verb"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Active verb (Ask default). Controlled by the host or the internal tabs."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "attribute": "model",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'gemma'",
+          "complexType": {
+            "original": "Model",
+            "resolved": "\"claude\" | \"gemma\"",
+            "references": {
+              "Model": {
+                "location": "global",
+                "id": "global::Model"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The single model control's value: Gemma (default) ↔ Claude (toggle)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "messages",
+          "type": "string",
+          "attribute": "messages",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pre-loaded Ask conversation (JSON AiMessage[]) restored from the thread."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "noteGrounded",
+          "type": "boolean",
+          "attribute": "note-grounded",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "True when the Assistant is grounded in an open note (shows the context row)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "noteTitle",
+          "type": "string",
+          "attribute": "note-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Label of the grounding note (for the context row)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "layout",
+          "type": "string",
+          "attribute": "layout",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'dock'",
+          "complexType": {
+            "original": "'dock' | 'full'",
+            "resolved": "\"dock\" | \"full\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Compact mode = the desktop dock; full = a page/sheet surface."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "buildProposal",
+          "type": "string",
+          "attribute": "build-proposal",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A pending Build proposal (JSON AssistantBlock[]) — renders the block diff."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "buildAction",
+          "type": "string",
+          "attribute": "build-action",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'structure'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The Build sub-action label shown on the proposal (\"Structure\"/\"Rewrite\"…)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "linkProposal",
+          "type": "string",
+          "attribute": "link-proposal",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A pending Link proposal (JSON AssistantLink[]) — renders the link chips."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "proposing",
+          "type": "boolean",
+          "attribute": "proposing",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show the busy state while the host fetches a Build/Link proposal."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "errorMessage",
+          "type": "string",
+          "attribute": "error-message",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "An honest error to surface (e.g. endpoint unreachable)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "acceptedBlocks"
+        },
+        {
+          "name": "acceptedLinks"
+        }
+      ],
+      "methods": [
+        {
+          "name": "beginAssistant",
+          "docs": {
+            "text": "Host: begin an Ask assistant turn (typing bubble).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => any",
+            "parameters": [],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "appendAssistantToken",
+          "docs": {
+            "text": "Host: append a token to the streaming answer.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(token: string) => any",
+            "parameters": [
+              {
+                "name": "token",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "endAssistant",
+          "docs": {
+            "text": "Host: finalize the answer with optional citations.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(content?: string, citations?: AssistantCitation[]) => any",
+            "parameters": [
+              {
+                "name": "content",
+                "type": "string | undefined",
+                "docs": ""
+              },
+              {
+                "name": "citations",
+                "type": "{} | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "AssistantCitation": {
+                "location": "local",
+                "path": "ui-kit/organisms/assistant/assistant.tsx",
+                "id": "ui-kit/organisms/assistant/assistant.tsx::AssistantCitation"
+              }
+            },
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "setAskInput",
+          "docs": {
+            "text": "Host: seed the Ask input (e.g. from Cmd-K / a selection).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(text: string) => any",
+            "parameters": [
+              {
+                "name": "text",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popAssistantVerbChange",
+          "method": "popAssistantVerbChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "Verb",
+            "resolved": "\"ask\" | \"build\" | \"link\"",
+            "references": {
+              "Verb": {
+                "location": "global",
+                "id": "global::Verb"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantModelChange",
+          "method": "popAssistantModelChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "Model",
+            "resolved": "\"claude\" | \"gemma\"",
+            "references": {
+              "Model": {
+                "location": "global",
+                "id": "global::Model"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantSend",
+          "method": "popAssistantSend",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Ask: a question was submitted (host drives the streamed answer)."
+          },
+          "complexType": {
+            "original": "{ text: string; model: Model }",
+            "resolved": "{ text: string; model: Model; }",
+            "references": {
+              "Model": {
+                "location": "global",
+                "id": "global::Model"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantBuild",
+          "method": "popAssistantBuild",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Build: run a sub-action against the current text/selection."
+          },
+          "complexType": {
+            "original": "{ action: string; model: Model }",
+            "resolved": "{ action: string; model: Model; }",
+            "references": {
+              "Model": {
+                "location": "global",
+                "id": "global::Model"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantSuggestLinks",
+          "method": "popAssistantSuggestLinks",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Link: on-demand \"Suggest links\" was invoked."
+          },
+          "complexType": {
+            "original": "{ model: Model }",
+            "resolved": "{ model: Model; }",
+            "references": {
+              "Model": {
+                "location": "global",
+                "id": "global::Model"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantCitationClick",
+          "method": "popAssistantCitationClick",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A citation chip was clicked → host navigates to the ref."
+          },
+          "complexType": {
+            "original": "{ refId: string; index: number }",
+            "resolved": "{ refId: string; index: number; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantApproveBuild",
+          "method": "popAssistantApproveBuild",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Approve a Build proposal → host writes the accepted blocks."
+          },
+          "complexType": {
+            "original": "{ blocks: AssistantBlock[] }",
+            "resolved": "{ blocks: {}; }",
+            "references": {
+              "AssistantBlock": {
+                "location": "local",
+                "path": "ui-kit/organisms/assistant/assistant.tsx",
+                "id": "ui-kit/organisms/assistant/assistant.tsx::AssistantBlock"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantRejectBuild",
+          "method": "popAssistantRejectBuild",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Reject a Build proposal → discard (nothing written)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantApproveLinks",
+          "method": "popAssistantApproveLinks",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Approve a Link proposal → host appends the accepted links."
+          },
+          "complexType": {
+            "original": "{ noteIds: string[] }",
+            "resolved": "{ noteIds: {}; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popAssistantRejectLinks",
+          "method": "popAssistantRejectLinks",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Reject a Link proposal → discard."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "buildProposal",
+          "methodName": "resetBuildSelection"
+        },
+        {
+          "propName": "linkProposal",
+          "methodName": "resetLinkSelection"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-ASSISTANT",
+          "styleStr": null,
+          "styleIdentifier": "PopAssistantStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/assistant/assistant.css",
+              "relativePath": "assistant.css",
+              "originalComponentPath": "assistant.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "role",
+        "aria-label",
+        "type",
+        "aria-selected",
+        "onClick",
+        "name",
+        "aria-checked",
+        "ref",
+        "external-driver",
+        "ai-name",
+        "layout",
+        "placeholder",
+        "messages",
+        "selected-model",
+        "onPopMessageSent",
+        "onPopCitationClick",
+        "disabled",
+        "variant",
+        "show-label",
+        "label",
+        "iconName",
+        "heading",
+        "message",
+        "size",
+        "checked",
+        "onChange",
+        "innerHTML",
+        "aria-hidden",
+        "key",
+        "hidden"
+      ],
+      "htmlTagNames": [
+        "header",
+        "div",
+        "button",
+        "pop-brand-icon",
+        "span",
+        "pop-ai-chat",
+        "pop-loading-state",
+        "pop-empty-state",
+        "ul",
+        "li",
+        "label",
+        "input",
+        "p",
+        "table",
+        "tbody",
+        "tr",
+        "td",
+        "pre",
+        "code"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "External @Method() beginAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async beginAssistant()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() appendAssistantToken() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async appendAssistantToken()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() endAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async endAssistant()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() setAskInput() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async setAskInput()."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

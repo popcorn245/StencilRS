@@ -75,22 +75,23 @@ fn prop_attribute_and_reflect() {
     let props = &result.components[0].properties;
 
     assert_eq!(props[0].attribute.as_deref(), Some("val"));
-    assert_eq!(props[0].reflect, Some(false));
+    assert!(!props[0].reflect);
     assert_eq!(props[0].default_value.as_deref(), Some("\"initial value\""));
     assert_eq!(props[0].complex_type_original, "string");
 
     assert_eq!(props[1].attribute.as_deref(), Some("first-name"));
-    assert_eq!(props[1].reflect, Some(true));
+    assert!(props[1].reflect);
     assert!(props[1].mutable);
     assert!(props[1].required);
 
     assert_eq!(props[2].attribute.as_deref(), Some("my-attr"));
-    assert_eq!(props[3].attribute, None);
+    // Stencil v5 quirk: `attribute: null` is read as an AST node, not null, so it is ignored.
+    assert_eq!(props[3].attribute.as_deref(), Some("no-attr"));
 
-    // `unknown` props get neither an attribute nor reflect
+    // `unknown` props get no attribute and never reflect
     assert_eq!(props[4].prop_type, PropType::Unknown);
     assert_eq!(props[4].attribute, None);
-    assert_eq!(props[4].reflect, None);
+    assert!(!props[4].reflect);
 
     assert_eq!(props[5].attribute.as_deref(), Some("val-2"));
     assert!(props[5].optional);
@@ -122,7 +123,7 @@ fn component_options_and_members() {
             @State() count = 0;
             @Event() thingChanged: EventEmitter<string>;
             @Event({ eventName: 'my-event', bubbles: false }) other: EventEmitter;
-            @Method() async open() {}
+            @Method() async open(): Promise<void> {}
             @Watch('count') onCount() {}
             @Listen('scroll', { target: 'window' }) onScroll() {}
             @Listen('click') onClick() {}

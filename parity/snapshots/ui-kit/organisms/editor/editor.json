@@ -1,0 +1,699 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-editor",
+      "componentClassName": "Editor",
+      "elementRef": "el",
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "string",
+          "attribute": "value",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The current Editor.js document data representation (stringified JSON)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "currentUser",
+          "type": "string",
+          "attribute": "current-user",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "users",
+          "type": "string",
+          "attribute": "users",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tags",
+          "type": "string",
+          "attribute": "tags",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "recentNotes",
+          "type": "string",
+          "attribute": "recent-notes",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activities",
+          "type": "string",
+          "attribute": "activities",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "questId",
+          "type": "string",
+          "attribute": "quest-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Quest ID for creating tasks linked to this quest (used by TaskBlock)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "aiModel",
+          "type": "string",
+          "attribute": "ai-model",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default AI model for AiBlock (optional, defaults to Gemma 4)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disable",
+          "type": "string",
+          "attribute": "disable",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Comma-separated feature flags to disable. Recognised values:\n - `ai`   — skip the Ollama probe, omit AiBlock + AiInlineTool tools.\n - `task` — omit TaskBlock + the `[ ]` paragraph→task auto-conversion.\n\nUse from tasks-app where the editor is a plain note pane (no AI, no\ncross-collection task creation): `<pop-editor disable=\"ai,task\" ... />`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "wikilinks",
+          "type": "boolean",
+          "attribute": "wikilinks",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Opt-in: enable the `[[wiki-link]]` inline tool (notes-app Phase 3). When on,\ntyping `[[` opens a note-title autocomplete and inserts an inline link chip\ncarrying the target noteId. The autocomplete + lazy-create resolve through\nhost-provided globals (`window.__notesLinkSearch` / `__notesLinkCreate` /\n`__notesLinkNavigate`) so ui-kit stays decoupled from notes-app's data layer.\nOff by default — the main app's editor is unaffected."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "assistantSlash",
+          "type": "boolean",
+          "attribute": "assistant-slash",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Opt-in: add an \"Ask the Assistant\" entry to the slash / block \"+\" menu\n(notes-app WS3). Selecting it does NOT insert a block — it dispatches a\n`notes-app:open-assistant` window event (verb `build`) that the host app's\nunified Assistant (WS2) listens for, then removes its own placeholder block.\nThis reuses the SAME invocation path as the selection toolbar (no second\nassistant). Off by default so other pop-editor hosts are unaffected."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "resolveQuery",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "(options: any) => Promise<any>",
+            "resolved": "((options: any) => Promise<any>) | undefined",
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "A promise-returning function allowing Astro to resolve deep queries \n(e.g., from Firestore) when requested by a Functional block."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "selectedBlockIds"
+        },
+        {
+          "name": "isMenuOpen"
+        },
+        {
+          "name": "menuX"
+        },
+        {
+          "name": "menuY"
+        },
+        {
+          "name": "actionState"
+        },
+        {
+          "name": "saveStatus"
+        }
+      ],
+      "methods": [
+        {
+          "name": "getEditorBlocks",
+          "docs": {
+            "text": "Retrieves the raw JSON structure of all blocks currently inside the editor.\nUseful for querying functional blocks or parsing data externally before submission.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<OutputData | null>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "OutputData": {
+                "location": "global",
+                "id": "global::OutputData"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "dangerouslyUpdateEditor",
+          "docs": {
+            "text": "Instantly replaces the entire document's content with new data.\nThis is destructive to strict cursor positions, use with caution.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(newData: OutputData) => Promise<void>",
+            "parameters": [
+              {
+                "name": "newData",
+                "type": "OutputData",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "OutputData": {
+                "location": "global",
+                "id": "global::OutputData"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getActiveBlockId",
+          "docs": {
+            "text": "Gets the block ID of the currently focused/active block if any.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<string | null>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<string | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "focusLastBlock",
+          "docs": {
+            "text": "Focuses the editor caret at the end of the very last block.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getSelectedBlocks",
+          "docs": {
+            "text": "Retrieves the block IDs of all currently selected blocks.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<string[]>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<{}>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "editorChange",
+          "method": "editorChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted roughly every time Editor's internal content changes.\nEvent `detail` will contain the EditorJS DocumentData `OutputData`."
+          },
+          "complexType": {
+            "original": "OutputData",
+            "resolved": "OutputData",
+            "references": {
+              "OutputData": {
+                "location": "global",
+                "id": "global::OutputData"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "queryData",
+          "method": "queryData",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Called when a Functional block executes `blocks.query()`.\nCan be listened to via `onQueryData={}` natively or `document.addEventListener('queryData')`."
+          },
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-EDITOR",
+          "styleStr": null,
+          "styleIdentifier": "PopEditorStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/editor/editor.css",
+              "relativePath": "editor.css",
+              "originalComponentPath": "editor.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "xmlns",
+        "d",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "cx",
+        "cy",
+        "r",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "points",
+        "class",
+        "style",
+        "onMouseDown",
+        "onMouseLeave",
+        "onClick",
+        "src",
+        "key",
+        "id"
+      ],
+      "htmlTagNames": [
+        "style",
+        "svg",
+        "path",
+        "circle",
+        "line",
+        "polyline",
+        "div",
+        "span",
+        "img",
+        "slot"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "name",
+            "text": "pop-editor"
+          },
+          {
+            "name": "description",
+            "text": "A rich text editor built using Editor.js, natively supporting Code (via Monaco), Headers, Images, embeds, lists, and drag-and-drop mechanics.\n\nSupports two-way binding with JSON stringified data and automatic debounced sync events."
+          }
+        ],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "@editorjs/editorjs"
+    },
+    {
+      "path": "@editorjs/header"
+    },
+    {
+      "path": "@editorjs/list"
+    },
+    {
+      "path": "@editorjs/image"
+    },
+    {
+      "path": "@editorjs/embed"
+    },
+    {
+      "path": "editorjs-paragraph-with-alignment"
+    },
+    {
+      "path": "@editorjs/table"
+    },
+    {
+      "path": "editorjs-undo"
+    },
+    {
+      "path": "editorjs-style"
+    },
+    {
+      "path": "editorjs-change-case"
+    },
+    {
+      "path": "editorjs-drag-drop"
+    },
+    {
+      "path": "./MonacoCode"
+    },
+    {
+      "path": "./Checklist"
+    },
+    {
+      "path": "./AssistantLauncher"
+    },
+    {
+      "path": "./TagTune"
+    },
+    {
+      "path": "./TaskBlock"
+    },
+    {
+      "path": "./HashtagInlineTool"
+    },
+    {
+      "path": "./MentionTune"
+    },
+    {
+      "path": "./TimelineTune"
+    },
+    {
+      "path": "./MentionInlineTool"
+    },
+    {
+      "path": "./LinkInlineTool"
+    },
+    {
+      "path": "./CopyLinkTune"
+    },
+    {
+      "path": "./PollBlock"
+    },
+    {
+      "path": "./ActivityTune"
+    },
+    {
+      "path": "editorjs-multiblock-selection-plugin"
+    },
+    {
+      "path": "./AiBlock"
+    },
+    {
+      "path": "./AiInlineTool"
+    },
+    {
+      "path": "./ButtonBlock"
+    },
+    {
+      "path": "./DividerBlock"
+    },
+    {
+      "path": "./ColumnsBlock"
+    },
+    {
+      "path": "./RawMjml"
+    },
+    {
+      "path": "./VisibilityConditionTune"
+    }
+  ]
+}

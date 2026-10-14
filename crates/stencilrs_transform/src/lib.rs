@@ -4,7 +4,9 @@
 //! (the `standalone` output) comes next; see `docs/transformers.md` §5 for the port order.
 
 mod analyze;
+mod default_value;
 mod eval;
+mod locals;
 pub mod meta;
 mod prop_type;
 

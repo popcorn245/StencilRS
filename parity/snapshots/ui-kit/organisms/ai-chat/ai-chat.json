@@ -1,0 +1,907 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-ai-chat",
+      "componentClassName": "PopAiChat",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "endpoint",
+          "type": "string",
+          "attribute": "endpoint",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "POST endpoint that streams SSE: data: {token?, done?, error?, assistantMsgId?}"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "externalDriver",
+          "type": "boolean",
+          "attribute": "external-driver",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "When true, the host drives the answer instead of the built-in SSE fetch:\non send the component emits `popMessageSent` and the host streams tokens via\n`beginAssistant()` / `appendAssistantToken()` / `endAssistant()`. Used by the\nnotes-app right-dock so chat is backed by the in-browser RAG `askBrain`\n(retrieval + required citations) rather than a raw endpoint."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "context",
+          "type": "string",
+          "attribute": "context",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Extra context injected into request payload"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "messages",
+          "type": "string",
+          "attribute": "messages",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON string of AiMessage[] — pre-loaded history"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sessionId",
+          "type": "string",
+          "attribute": "session-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Session ID passed through in each request"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "aiName",
+          "type": "string",
+          "attribute": "ai-name",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Assistant'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "aiAvatarUrl",
+          "type": "string",
+          "attribute": "ai-avatar-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "aiAccentColor",
+          "type": "string",
+          "attribute": "ai-accent-color",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "userAvatarUrl",
+          "type": "string",
+          "attribute": "user-avatar-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "userInitials",
+          "type": "string",
+          "attribute": "user-initials",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "layout",
+          "type": "string",
+          "attribute": "layout",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'bubble'",
+          "complexType": {
+            "original": "'bubble' | 'prose'",
+            "resolved": "\"bubble\" | \"prose\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "streamingMode",
+          "type": "string",
+          "attribute": "streaming-mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'inline'",
+          "complexType": {
+            "original": "'inline' | 'dots'",
+            "resolved": "\"dots\" | \"inline\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Message...'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showMicButton",
+          "type": "boolean",
+          "attribute": "show-mic-button",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "attribute": "disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "models",
+          "type": "string",
+          "attribute": "models",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedModel",
+          "type": "string",
+          "attribute": "selected-model",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedMode",
+          "type": "string",
+          "attribute": "selected-mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'chat'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tools",
+          "type": "string",
+          "attribute": "tools",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activeTools",
+          "type": "string",
+          "attribute": "active-tools",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "localMessages"
+        },
+        {
+          "name": "isStreaming"
+        },
+        {
+          "name": "streamingContent"
+        },
+        {
+          "name": "streamingCitations"
+        },
+        {
+          "name": "currentModel"
+        },
+        {
+          "name": "currentMode"
+        },
+        {
+          "name": "currentActiveTools"
+        }
+      ],
+      "methods": [
+        {
+          "name": "beginAssistant",
+          "docs": {
+            "text": "Host: start an assistant turn (shows the streaming bubble).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => any",
+            "parameters": [],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "appendAssistantToken",
+          "docs": {
+            "text": "Host: append a token to the in-flight assistant message.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(token: string) => any",
+            "parameters": [
+              {
+                "name": "token",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "endAssistant",
+          "docs": {
+            "text": "Host: finalize the assistant turn with optional grounding citations.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(content?: string, citations?: AiCitation[]) => any",
+            "parameters": [
+              {
+                "name": "content",
+                "type": "string | undefined",
+                "docs": ""
+              },
+              {
+                "name": "citations",
+                "type": "{} | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "AiCitation": {
+                "location": "local",
+                "path": "ui-kit/organisms/ai-chat/ai-chat.tsx",
+                "id": "ui-kit/organisms/ai-chat/ai-chat.tsx::AiCitation"
+              },
+              "AiMessage": {
+                "location": "local",
+                "path": "ui-kit/organisms/ai-chat/ai-chat.tsx",
+                "id": "ui-kit/organisms/ai-chat/ai-chat.tsx::AiMessage"
+              }
+            },
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "getMessages",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<AiMessage[]>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "AiMessage": {
+                "location": "local",
+                "path": "ui-kit/organisms/ai-chat/ai-chat.tsx",
+                "id": "ui-kit/organisms/ai-chat/ai-chat.tsx::AiMessage"
+              }
+            },
+            "return": "Promise<{}>"
+          },
+          "internal": false
+        },
+        {
+          "name": "sendMessage",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(text: string) => any",
+            "parameters": [
+              {
+                "name": "text",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "setInputValue",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(text: string) => any",
+            "parameters": [
+              {
+                "name": "text",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popMessageSent",
+          "method": "popMessageSent",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ text: string; sessionId: string; model: string; mode: string; tools: string[] }",
+            "resolved": "{ text: string; sessionId: string; model: string; mode: string; tools: {}; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popResponseComplete",
+          "method": "popResponseComplete",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ content: string; sessionId: string }",
+            "resolved": "{ content: string; sessionId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popError",
+          "method": "popError",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCitationClick",
+          "method": "popCitationClick",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when a source/citation chip is clicked — host navigates to the ref."
+          },
+          "complexType": {
+            "original": "{ refId: string; index: number }",
+            "resolved": "{ refId: string; index: number; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popModelChanged",
+          "method": "popModelChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popModeChanged",
+          "method": "popModeChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popToolToggled",
+          "method": "popToolToggled",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string; enabled: boolean }",
+            "resolved": "{ id: string; enabled: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "messages",
+          "methodName": "parseMessages"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-AI-CHAT",
+          "styleStr": null,
+          "styleIdentifier": "PopAiChatStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/ai-chat/ai-chat.css",
+              "relativePath": "ai-chat.css",
+              "originalComponentPath": "ai-chat.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": true,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "aria-label",
+        "type",
+        "key",
+        "title",
+        "onClick",
+        "style",
+        "role",
+        "content",
+        "message-id",
+        "layout",
+        "avatar-url",
+        "avatar-initials",
+        "user-name",
+        "timestamp",
+        "show-copy-button",
+        "streaming",
+        "streaming-mode",
+        "ref",
+        "placeholder",
+        "disabled",
+        "models",
+        "selected-model",
+        "selected-mode",
+        "tools",
+        "active-tools",
+        "show-mic-button",
+        "onSend",
+        "onPopModelChanged",
+        "onPopModeChanged",
+        "onPopToolToggled",
+        "name",
+        "slot"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "span",
+        "pop-message-bubble",
+        "pop-message-box",
+        "slot"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "toolbar-end"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "External @Method() beginAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async beginAssistant()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() appendAssistantToken() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async appendAssistantToken()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() endAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async endAssistant()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() sendMessage() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async sendMessage()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() setInputValue() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async setInputValue()."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

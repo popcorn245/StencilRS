@@ -50,9 +50,8 @@ pub struct PropMeta {
     pub optional: bool,
     pub getter: bool,
     pub setter: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reflect: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reflect: bool,
+    /// `null` when the prop has no attribute (its type is `unknown`).
     pub attribute: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_value: Option<String>,
