@@ -9,3 +9,14 @@ const native = createRequire(import.meta.url)('./stencilrs.node');
  * @returns {{ components: object[], diagnostics: object[] }}
  */
 export const analyze = (source, fileName) => native.analyze(source, fileName);
+
+/**
+ * Generate the customelement module (what Stencil's transpileSync emits for @stencil/unplugin).
+ * @param {string} source module source (TS/TSX)
+ * @param {{ file: string, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string }} options
+ * @returns {{ code: string, components: object[], diagnostics: object[] }}
+ */
+export const transpile = (source, options) => native.transpile(source, options);
+
+/** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
+export const normalize = (code) => native.normalize(code);

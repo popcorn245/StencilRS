@@ -5,7 +5,8 @@
   "description": "Golden output from real Stencil v5, compared against stencilrs",
   "scripts": {
     "snapshot": "node snapshot.mjs",
-    "compare": "node compare.mjs"
+    "compare": "node compare.mjs",
+    "bench": "node bench.mjs"
   },
   "dependencies": {
     "@stencil/core": "5.0.0-beta.25"

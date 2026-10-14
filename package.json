@@ -12,6 +12,7 @@
     "build:native": "cargo build --release -p stencilrs_napi && node scripts/copy-native.js",
     "test": "cargo test && node --test",
     "parity:snapshot": "npm --prefix parity run snapshot",
-    "parity": "npm --prefix parity run compare"
+    "parity": "npm --prefix parity run compare",
+    "bench": "npm --prefix parity run bench"
   }
 }

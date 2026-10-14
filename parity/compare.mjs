@@ -4,12 +4,13 @@
 //
 // Metadata: Stencil's `data` is projected to the fields stencilrs produces today (FIELDS
 // below grows as the port does) and compared exactly. Diagnostics: compared as sorted
-// lists of `level: message`. Code: not compared until stencilrs emits code.
+// lists of `level: message`. Code: both outputs are reprinted by one printer (oxc codegen,
+// comments dropped) and compared exactly, for fixtures Stencil compiles without errors.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { analyze } from '../index.js';
-import { listFixtures, snapshotsDir } from './lib.mjs';
+import { normalize, transpile } from '../index.js';
+import { listFixtures, snapshotsDir, stencilrsOptions } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose');
@@ -62,11 +63,39 @@ const diff = (a, b, path = '') => {
   return [`${path || '(root)'}: ${JSON.stringify(a)} → ${JSON.stringify(b)}`];
 };
 
+const safeNormalize = (code) => {
+  try {
+    return normalize(code);
+  } catch (e) {
+    return `<<unparsable: ${e.message}>>\n${code}`;
+  }
+};
+
+/** The first differing lines of two normalized outputs, with a little context. */
+const codeDiff = (expected, actual) => {
+  if (expected === actual) return [];
+  const a = expected.split('\n');
+  const b = actual.split('\n');
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  const out = [`code: first difference at line ${i + 1}`];
+  for (let k = Math.max(0, i - 1); k < Math.min(Math.max(a.length, b.length), i + 4); k++) {
+    if (a[k] !== b[k]) {
+      if (a[k] !== undefined) out.push(`  - ${a[k]}`);
+      if (b[k] !== undefined) out.push(`  + ${b[k]}`);
+    } else {
+      out.push(`    ${a[k]}`);
+    }
+  }
+  return out;
+};
+
 const results = [];
 for (const { id, file } of listFixtures(suite)) {
-  const snap = JSON.parse(readFileSync(join(snapshotsDir, id.replace(/\.tsx?$/, '.json')), 'utf8'));
+  const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
+  const snap = JSON.parse(readFileSync(`${base}.json`, 'utf8'));
   const code = readFileSync(file, 'utf8');
-  const ours = analyze(code, id);
+  const ours = transpile(code, stencilrsOptions(code, id));
 
   const meta = diff(snap.data.map(fromStencil), ours.components.map(fromStencilrs), 'components');
   const diags = diff(
@@ -74,21 +103,26 @@ for (const { id, file } of listFixtures(suite)) {
     diagList(ours.diagnostics, (d) => d.message),
     'diagnostics',
   );
-  results.push({ id, meta, diags });
+  const compiles = !snap.diagnostics.some((d) => d.level === 'error');
+  const codeLines = compiles ? codeDiff(safeNormalize(readFileSync(`${base}.js`, 'utf8')), safeNormalize(ours.code)) : [];
+  results.push({ id, meta, diags, code: codeLines, compiles });
 }
 
-const failing = results.filter((r) => r.meta.length || r.diags.length);
+const failing = results.filter((r) => r.meta.length || r.diags.length || r.code.length);
 for (const r of failing) {
-  const lines = [...r.meta, ...r.diags];
+  const lines = [...r.meta, ...r.diags, ...r.code];
   console.log(`✗ ${r.id}`);
-  for (const line of verbose ? lines : lines.slice(0, 6)) console.log(`    ${line.replaceAll('\n', '⏎')}`);
-  if (!verbose && lines.length > 6) console.log(`    … ${lines.length - 6} more (--verbose)`);
+  for (const line of verbose ? lines : lines.slice(0, 8)) console.log(`    ${line.replaceAll('\n', '⏎')}`);
+  if (!verbose && lines.length > 8) console.log(`    … ${lines.length - 8} more (--verbose)`);
 }
 
+const n = results.length;
 const metaOk = results.filter((r) => !r.meta.length).length;
 const diagOk = results.filter((r) => !r.diags.length).length;
+const compiling = results.filter((r) => r.compiles);
+const codeOk = compiling.filter((r) => !r.code.length).length;
 console.log(
-  `\n${results.length - failing.length}/${results.length} fixtures identical` +
-    ` · metadata ${metaOk}/${results.length} · diagnostics ${diagOk}/${results.length} · code: not compared yet (no codegen)`,
+  `\n${n - failing.length}/${n} fixtures identical · metadata ${metaOk}/${n} · diagnostics ${diagOk}/${n}` +
+    ` · code ${codeOk}/${compiling.length} (fixtures that compile)`,
 );
 process.exitCode = failing.length ? 1 : 0;

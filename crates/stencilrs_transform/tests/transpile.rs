@@ -1,0 +1,80 @@
+//! Code generation for the customelement output. Exact parity against Stencil v5 is checked by
+//! `parity/` (all fixtures); these cover the shape of the output.
+
+use stencilrs_transform::{DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile};
+
+fn run(src: &str, jsx: Jsx) -> String {
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx };
+    let out = transpile(src, &opts);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    normalize(&out.code).expect("valid JS")
+}
+
+#[test]
+fn component_becomes_a_custom_element() {
+    let code = run(
+        r#"
+        import { Component, Prop, State, Event, EventEmitter, Element, Watch, h } from '@stencil/core';
+        @Component({ tag: 'cmp-a', styleUrl: 'cmp-a.css', encapsulation: { type: 'shadow' } })
+        export class CmpA {
+            @Element() el: HTMLElement;
+            @Prop({ reflect: true }) firstName: string = 'x';
+            @State() open = false;
+            @Event() changed: EventEmitter<string>;
+            @Watch('firstName') onName() {}
+            render() { return <div class="a">{this.firstName}</div>; }
+        }
+        "#,
+        Jsx::Classic,
+    );
+    for expected in [
+        r#"import { createEvent as __stencil_createEvent, transformTag as __stencil_transformTag, defineCustomElement as __stencil_defineCustomElement, HTMLElement } from "@stencil/core/runtime/client/standalone";"#,
+        r#"import { h } from "@stencil/core/runtime/client/standalone";"#,
+        r#"import CmpAStyle0 from "./cmp/cmp-a.css?tag=cmp-a&encapsulation=shadow";"#,
+        "const CmpA = class extends HTMLElement {",
+        "this.__attachShadow();",
+        r#"this.changed = __stencil_createEvent(this, "changed", 7);"#,
+        "get el() {",
+        r#"firstName = "x";"#,
+        r#"h("div", {"#,
+        r#"key: "0","#,
+        "static get watchers() {",
+        "static get style() {",
+        "__stencil_defineCustomElement(CmpA, [",
+    ] {
+        assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
+    }
+    assert!(!code.contains("@Prop"), "decorators left in:\n{code}");
+    assert!(!code.contains(": string"), "types left in:\n{code}");
+}
+
+#[test]
+fn automatic_runtime_and_keys() {
+    let code = run(
+        r#"
+        import { Component, Host } from '@stencil/core';
+        @Component({ tag: 'cmp-a' })
+        export class CmpA {
+            items: string[] = [];
+            render() { return <Host><ul>{this.items.map((i) => <li>{i}</li>)}</ul></Host>; }
+        }
+        "#,
+        Jsx::Automatic { import_source: "@stencil/core".into() },
+    );
+    assert!(code.contains(r#"import { jsx as _jsx } from "@stencil/core/jsx-runtime";"#), "{code}");
+    // Elements inside a call (the map callback) get no key.
+    assert!(code.contains(r#"_jsx("li", { children: i })"#), "{code}");
+    assert!(code.contains(r#"}, "1")"#) && code.contains(r#"}, "0")"#), "{code}");
+}
+
+#[test]
+fn plain_component_has_no_runtime_proxy() {
+    let code = run(
+        "import { Component } from '@stencil/core';\n@Component({ tag: 'cmp-a' })\nexport class CmpA { render() { return 'hello'; } }",
+        Jsx::Classic,
+    );
+    assert!(code.contains(r#"customElements.define(__stencil_transformTag("cmp-a"), CmpA);"#), "{code}");
+    assert!(code.contains("this.textContent = this.render();"), "{code}");
+    assert!(code.contains(r#"static get is() {"#), "{code}");
+    assert!(!code.contains("__registerHost"), "{code}");
+}

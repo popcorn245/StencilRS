@@ -39,5 +39,11 @@ export const transpileOptions = (code, id) => ({
   styleImportData: 'queryparams',
 });
 
+/** The same settings for stencilrs' `transpile()`. */
+export const stencilrsOptions = (code, id) => ({
+  file: id,
+  jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
+});
+
 /** Drop compiler-internal keys (`_astNode` and friends) so snapshots are plain data. */
 export const plain = (value) => JSON.parse(JSON.stringify(value, (k, v) => (k.startsWith('_') ? undefined : v)));

@@ -37,7 +37,24 @@ reports it for every file.
 and nothing sets it, so the build conditional it feeds (`app-core/app-data.ts:33`) is always
 off. Not yet relevant to stencilrs (no build conditionals), recorded for later.
 
-## 5. Watch-mode change detection (not reproduced, not yet confirmed)
+## 5. Members whose name starts with `_` vanish from the runtime metadata
+
+`convertValueToLiteral` (`transform-utils.ts:156`) drops object keys that start with `_`, which
+is how compiler-internal fields such as `complexType._astNode` stay out of the output. The
+runtime metadata passed to `__stencil_defineCustomElement` is printed with the same helper, so
+`@State() _filters` (or a `_`-prefixed prop, method, or watched prop) disappears from it and is
+not reactive in the customelement / standalone output. Two old bucket ui-kit components hit
+this (`filter-bar`, `note-list`). The member is still in the compiler metadata (`data`).
+
+## 6. Plain components call `__stencil_transformTag` without importing it
+
+A component with no members, styles, lifecycle methods, listeners or JSX is "plain"
+(`setComponentBuildConditionals`). `define-custom-element.ts` then emits
+`customElements.define(__stencil_transformTag("tag"), Cls)` but returns before
+`addCoreRuntimeApi(..., transformTag)`, so the module references an undeclared
+`__stencil_transformTag` and throws when loaded. Fixture: `parity/fixtures/features/plain.tsx`.
+
+## 7. Watch-mode change detection (not reproduced, not yet confirmed)
 
 `computeVersion` in `transpile/incremental-compiler.ts:46-51` versions a file as
 `length-firstChar-lastChar`. An edit that keeps all three (`10` → `20`) probably isn't

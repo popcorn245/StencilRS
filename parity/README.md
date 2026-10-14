@@ -33,6 +33,17 @@ metadata, diagnostics, imports).
 - **Metadata**: Stencil's `ComponentCompilerMeta` projected to the fields stencilrs produces
   (`fromStencil` in `compare.mjs`; the list grows with the port).
 - **Diagnostics**: level and full message text, order-independent.
-- **Code**: not yet; stencilrs has no codegen.
+- **Code**: for fixtures Stencil compiles without errors, both outputs are reprinted through
+  oxc's printer with comments dropped (`normalize()`), then compared exactly. Formatting
+  (TypeScript's indentation, quotes, blank lines) is not compared; every token is.
+
+## Benchmark
+
+```sh
+node bench.mjs [rounds]     # Stencil v5 transpileSync vs stencilrs transpile, same files
+```
+
+Cold (first pass) and warm (median, best) times for each, single-threaded, one process.
+Stencil is timed with source maps (as `@stencil/unplugin` runs it) and without.
 
 Known Stencil quirks stencilrs copies on purpose: [`../docs/quirks.md`](../docs/quirks.md).

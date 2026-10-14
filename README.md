@@ -42,11 +42,19 @@ output against v5.
 ## Status
 
 - Step 1 done: [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
-- Step 3 started: `crates/stencilrs_transform` reads `@Component`, `@Prop`, `@State`, `@Event`,
-  `@Method`, `@Element`, `@Watch` and `@Listen` into Stencil-shaped metadata, with the
-  syntactic prop-type classifier. `crates/stencilrs_napi` exposes it to Node as `analyze()`.
-  Not yet: code generation, computed names, const evaluation for decorator arguments, serializers,
-  `@AttachInternals`, inheritance, JSDoc.
+- Step 2 done: [`parity/`](parity/README.md), 164 fixtures (27 features + the old bucket ui-kit)
+  with golden output from real Stencil v5.
+- Step 3, first seam done: `transpile()` produces what Stencil's `transpileSync` emits for
+  `@stencil/unplugin` (`componentExport: 'customelement'`): metadata, diagnostics and code.
+  **164/164 fixtures identical** to Stencil v5 (code compared after reprinting both through
+  oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer.
+- Benchmark (`npm run bench`), same 164 files, one process: Stencil v5 ~2.3 s warm, stencilrs
+  ~55 ms, about **40× faster** (70× cold). Stencil also writes source maps; stencilrs doesn't yet.
+- Not yet: source maps, computed member names, const evaluation for decorator arguments,
+  serializers, `@AttachInternals`, inheritance and mixins, scoped inline `styles` (needs
+  `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR outputs.
+
+Stencil behaviours copied on purpose (upstream bug candidates): [`docs/quirks.md`](docs/quirks.md).
 
 ## Develop
 

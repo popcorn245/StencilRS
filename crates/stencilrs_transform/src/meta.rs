@@ -37,6 +37,9 @@ pub struct ComponentMeta {
     pub listeners: Vec<ListenerMeta>,
     pub watchers: Vec<WatcherMeta>,
     pub element_ref: Option<String>,
+    /// The evaluated `@Component({...})` options, for code generation.
+    #[serde(skip)]
+    pub options: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize)]

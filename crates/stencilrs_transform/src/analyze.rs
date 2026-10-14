@@ -117,7 +117,7 @@ pub fn analyze_program(program: &Program, source: &str) -> Analysis {
 }
 
 /// Port of `ImportAliasMap`: Stencil matches any import whose specifier contains `@stencil/core`.
-fn import_aliases(program: &Program) -> HashMap<&'static str, String> {
+pub(crate) fn import_aliases(program: &Program) -> HashMap<&'static str, String> {
     let mut aliases = HashMap::new();
     for stmt in &program.body {
         let Statement::ImportDeclaration(import) = stmt else { continue };
@@ -229,8 +229,10 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         listeners: Vec::new(),
         watchers: Vec::new(),
         element_ref: None,
+        options: Value::Null,
     };
-    if let Some((tag, encapsulation, style_urls)) = &component {
+    if let Some((tag, encapsulation, style_urls, options)) = &component {
+        cmp.options = options.clone();
         cmp.tag_name = tag.clone();
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
@@ -353,7 +355,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
 }
 
 /// `@Component` options, or `None` when Stencil would reject the component.
-fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exports: &[(String, Span)]) -> Option<(String, Encapsulation, Vec<String>)> {
+fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exports: &[(String, Span)]) -> Option<(String, Encapsulation, Vec<String>, Value)> {
     let opts = ctx.arg(call, 0)?;
 
     // `checkForDeprecatedApi`. Stencil reports this once per process
@@ -391,7 +393,7 @@ fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exp
         style_urls.extend(urls.iter().filter_map(Value::as_str).map(str::to_owned));
     }
 
-    Some((tag.trim().to_owned(), encapsulation, style_urls))
+    Some((tag.trim().to_owned(), encapsulation, style_urls, opts))
 }
 
 /// Port of `validateComponentTag` (`src/utils/validation.ts:88-132`).
