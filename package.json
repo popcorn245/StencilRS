@@ -1,0 +1,15 @@
+{
+  "name": "@popcorn245/stencilrs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build:native": "cargo build --release -p stencilrs_napi && node scripts/copy-native.js",
+    "test": "cargo test && node --test"
+  }
+}
