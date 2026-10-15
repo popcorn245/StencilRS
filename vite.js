@@ -13,6 +13,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { foldBuildFlags } from '@stencil/core/compiler';
 import { stencilVite } from '@stencil/unplugin';
 
 import { buildId, transpile } from './index.js';
@@ -70,6 +71,8 @@ export function stencilrs(options = {}) {
   let tsconfigJsx = null;
   const fileToTag = new Map();
   const counts = { stencilrs: 0, stencil: 0 };
+  // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
+  const handled = new Set();
 
   /** @type {import('vite').Plugin} */
   const plugin = {
@@ -88,11 +91,17 @@ export function stencilrs(options = {}) {
       tsconfigJsx = readTsconfigJsx(root);
     },
 
-    transform(code, id) {
+    transform(code, id, transformOpts) {
       const file = id.split('?')[0].replaceAll('\\', '/');
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
       if (!DECORATORS_RE.test(code)) return null;
+
+      // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
+      // `Build.isServer` so server-only code is tree-shaken.
+      if (!isDev && !transformOpts?.ssr && code.includes('Build')) {
+        code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
+      }
 
       const result = transpile(code, { file, ...jsxFor(code, tsconfigJsx) });
 
@@ -111,6 +120,7 @@ export function stencilrs(options = {}) {
       // Base classes and mixins without @Component: Stencil's compiler handles those.
       if (!result.components.length) return null;
       counts.stencilrs++;
+      handled.add(file);
 
       const { tagName, componentClassName } = result.components[0];
       fileToTag.set(file, tagName);
@@ -145,7 +155,21 @@ export function stencilrs(options = {}) {
     },
   };
 
-  return [plugin, stencilVite(stencilOptions)];
+  const stencil = [stencilVite(stencilOptions)].flat();
+  for (const p of stencil) skipHandled(p, handled);
+  return [plugin, ...stencil];
+}
+
+/** Make @stencil/unplugin's `transform` leave files stencilrs already compiled alone. */
+function skipHandled(p, handled) {
+  const hook = p.transform;
+  if (!hook) return;
+  const fn = typeof hook === 'function' ? hook : hook.handler;
+  const wrapped = function (code, id, ...rest) {
+    if (handled.has(id.split('?')[0].replaceAll('\\', '/'))) return null;
+    return fn.call(this, code, id, ...rest);
+  };
+  p.transform = typeof hook === 'function' ? wrapped : { ...hook, handler: wrapped };
 }
 
 export default stencilrs;

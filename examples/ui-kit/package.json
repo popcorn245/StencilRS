@@ -1,0 +1,48 @@
+{
+  "name": "stencilrs-ui-kit-harness",
+  "private": true,
+  "type": "module",
+  "description": "The old bucket ui-kit's spec suite, run on real components compiled by stencilrs and by Stencil v5",
+  "scripts": {
+    "import": "node import.mjs",
+    "test": "vitest run",
+    "test:stencil": "cross-env COMPILER=stencil vitest run",
+    "compare": "node compare.mjs"
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:../..",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "cross-env": "10.1.0",
+    "happy-dom": "21.0.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  },
+  "dependencies": {
+    "@editorjs/code": "^2.9.4",
+    "@editorjs/editorjs": "^2.31.7",
+    "@editorjs/embed": "^2.7.7",
+    "@editorjs/header": "^2.8.9",
+    "@editorjs/image": "^2.10.3",
+    "@editorjs/list": "^1.9.0",
+    "@editorjs/table": "^2.4.6",
+    "@picocss/pico": "^2.1.1",
+    "canvas-confetti": "^1.9.4",
+    "d3-force": "^3.0.0",
+    "dompurify": "^3.4.17",
+    "editorjs-change-case": "^0.0.3",
+    "editorjs-drag-drop": "^1.1.16",
+    "editorjs-multiblock-selection-plugin": "^0.1.2",
+    "editorjs-paragraph-with-alignment": "^3.0.0",
+    "editorjs-parser": "^1.8.0",
+    "editorjs-style": "^3.0.3",
+    "editorjs-undo": "^2.0.28",
+    "highlight.js": "^10.7.3",
+    "lottie-web": "^5.13.0",
+    "marked": "^13.0.3",
+    "motion": "^11.18.2",
+    "qr-scanner": "^1.4.2",
+    "reveal.js": "^6.0.2"
+  }
+}
