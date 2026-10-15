@@ -77,6 +77,20 @@ Declaring `@Element()` on the component itself works. Fixture:
 mixins. Likewise an aliased parent (`import { Base as B }` with `extends B`) is looked up as
 `B` in the parent's module, where it doesn't exist, and Stencil warns.
 
+## 10. With `resolveImport`, serializers are dropped (not reproduced)
+
+`mergeExtendedClassMetaWithResolveImport` (`resolve-import-merge.ts`) returns
+`serializers: []` and `deserializers: []`, constants, and `parseStaticComponentMeta` uses them
+for every component whenever a `resolveImport` callback is passed, which `@stencil/unplugin`
+always does. So under unplugin `@PropSerialize` / `@AttrDeserialize` methods are compiled but
+never wired: no `static get serializers()`, nothing in the runtime meta (checked with
+`transpileSync` on `parity/fixtures/features/serializers.tsx`, with and without
+`resolveImport`). A full `stencil build` keeps them (`compiler-ctx-merge.ts` merges them).
+
+stencilrs keeps them, as the full build does, own and inherited. This is the one place it
+departs from `transpileSync`-with-`resolveImport`, on purpose: the features suite compiles
+without the callback, where Stencil keeps them too.
+
 ## Single-file type inference
 
 Not bugs, but worth knowing when reading parity results: in single-file mode every imported

@@ -42,6 +42,11 @@ const fromStencil = (c) => ({
   listeners: c.listeners.map((l) => ({ name: l.name, method: l.method, target: nul(l.target), capture: l.capture, passive: l.passive })),
   watchers: c.watchers.map((w) => ({ propName: w.propName, methodName: w.methodName })),
   elementRef: nul(c.elementRef),
+  attachInternalsMemberName: nul(c.attachInternalsMemberName),
+  attachInternalsCustomStates: (c.attachInternalsCustomStates ?? []).map((s) => ({ name: s.name, initialValue: s.initialValue, docs: s.docs })),
+  formAssociated: !!c.formAssociated,
+  serializers: (c.serializers ?? []).map((w) => ({ propName: w.propName, methodName: w.methodName })),
+  deserializers: (c.deserializers ?? []).map((w) => ({ propName: w.propName, methodName: w.methodName })),
 });
 
 const fromStencilrs = (c) => ({
@@ -49,6 +54,7 @@ const fromStencilrs = (c) => ({
   properties: c.properties.map((p) => ({ ...p, attribute: nul(p.attribute), defaultValue: nul(p.defaultValue) })),
   listeners: c.listeners.map((l) => ({ ...l, target: nul(l.target) })),
   elementRef: nul(c.elementRef),
+  attachInternalsMemberName: nul(c.attachInternalsMemberName),
 });
 
 const diagList = (list, text) => list.map((d) => `${d.level}: ${String(text(d)).trim()}`).sort();

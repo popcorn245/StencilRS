@@ -53,6 +53,9 @@ export class PopCounter {
 | `@Prop` | `reflect`, `mutable`, `attribute`; getters / setters; `!` (required) and `?` (optional); type classification and attribute names exactly as Stencil computes them |
 | `@State`, `@Element`, `@Method`, `@Event` (`eventName`, `bubbles`, `cancelable`, `composed`) | |
 | `@Watch`, `@Listen` (`target`, `capture`, `passive`) | Several per method |
+| `@AttachInternals` (`formAssociated`, `states`) | Form-associated components and custom states; see below |
+| `@PropSerialize`, `@AttrDeserialize` | Custom prop ↔ attribute translation; see below |
+| `extends`, `Mixin(...)` | Inheritance and mixins; see below |
 | Lifecycle | `connectedCallback`, `componentWillLoad`, `componentDidLoad`, `componentWillRender`, `componentDidRender`, `componentShouldUpdate`, `componentWillUpdate`, `componentDidUpdate`, `disconnectedCallback` |
 | JSX | Classic (`import { h }`, `h()` calls) or the automatic runtime (`@stencil/core/jsx-runtime`); `<Host>`, fragments, automatic `key` insertion like Stencil |
 | Styles | `.css`, `.scss` (and anything `@stencil/unplugin` preprocesses), shadow or scoped |
@@ -113,11 +116,60 @@ The Vite plugin compiles the files your ancestors live in as **base classes**, a
 `@stencil/unplugin` does: a class that extends nothing gets `extends HTMLElement`, so the
 chain ends in a real element.
 
+## Forms and serializers
+
+`@AttachInternals()` gives the component its
+[`ElementInternals`](https://developer.mozilla.org/docs/Web/API/ElementInternals) and makes it
+**form-associated**: it joins its `<form>`, and `internals.setFormValue(...)` is what the form
+submits. `formAssociated: false` keeps the internals (for ARIA, custom states) without the form.
+`states` declares [custom states](https://developer.mozilla.org/docs/Web/API/CustomStateSet)
+for `:state(...)` selectors; `true` ones start on.
+
+`@PropSerialize(prop)` turns a prop's value into its attribute text; `@AttrDeserialize(prop)`
+turns attribute text into the prop's value. With them a prop of any type can have an attribute:
+a serializer makes the prop reflect (unless `reflect: false`), a deserializer gives it an
+attribute.
+
+```tsx
+@Component({ tag: 'pop-date-field', encapsulation: { type: 'shadow' } })
+export class PopDateField {
+  @AttachInternals() internals: ElementInternals;
+
+  @Prop() name = '';
+  @Prop({ mutable: true }) value?: Date;
+
+  @PropSerialize('value')
+  valueToAttr(value?: Date) {
+    return value ? value.toISOString().slice(0, 10) : null; // value="2026-10-15"
+  }
+
+  @AttrDeserialize('value')
+  valueFromAttr(value: string | null) {
+    return value ? new Date(`${value}T00:00:00Z`) : undefined;
+  }
+
+  @Watch('value')
+  syncForm() {
+    this.internals.setFormValue(this.valueToAttr(this.value));
+  }
+
+  componentWillLoad() {
+    this.syncForm();
+  }
+  // render() { ... }
+}
+```
+
+The starter's `pop-date-field` is this component, with tests: the serializers in happy-dom, the
+form association in Chrome (happy-dom has no `ElementInternals`).
+
+Through `@stencil/unplugin`, Stencil drops every serializer (see the Quirks page); stencilrs keeps
+them, as a full `stencil build` does.
+
 ## Falls back to Stencil's compiler (for now)
 
 These compile through Stencil's own compiler, per file, automatically:
 
-- `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`;
 - per-mode `styleUrls` (`{ ios: …, md: … }`);
 - inline `styles` on **scoped** components (they need Stencil's `scopeCss`);
 - component `globalStyle` / `globalStyleUrl`.

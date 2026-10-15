@@ -21,7 +21,7 @@ npm install
 | `npm run dev` | Dev server with the demo page (`index.html`). Edit a component and it hot-reloads in place, keeping its state. |
 | `npm run new pop-card` | Scaffold `src/components/pop-card/` (component, CSS, test, Storybook story) and register it. |
 | `npm test` | Tests in happy-dom (fast, no browser). |
-| `npm run test:browser` | The same tests in headless Chrome (the Chrome installed on this machine). |
+| `npm run test:browser` | The same tests in headless Chrome (the Chrome installed on this machine), plus the `*.browser.test.ts` ones. |
 | `npm run build` | Production build of the demo page into `dist/`. |
 | `npm run build:lib` | `dist/lib/components.js`: one ES module that registers every component, to use elsewhere. |
 
@@ -41,14 +41,19 @@ src/
 
 - `mount(html)` renders and waits for `componentOnReady()`. After changing a prop or state,
   `await flush()` lets Stencil's batched re-render run.
-- happy-dom has no `ElementInternals`, so `@AttachInternals` components need
-  `npm run test:browser`.
+- happy-dom has no `ElementInternals`. Put tests that need it (forms, custom states) in
+  `<tag>.browser.test.ts`: `npm test` skips those and `npm run test:browser` runs them.
+  `pop-date-field` has both kinds.
 
 ## What compiles with stencilrs
 
-Everything above, including inheritance (`pop-press-button` extends `src/shared/pressable.ts`)
-and mixins (`pop-tone-chip` extends `Mixin(withTone)` from `src/shared/with-tone.ts`). A file
-that uses something stencilrs hasn't ported yet (`@AttachInternals`, `@PropSerialize` /
-`@AttrDeserialize`, per-mode styles, inline `styles` on scoped components) is compiled by
-Stencil's own compiler instead, automatically.
+Everything above, including:
+
+- inheritance: `pop-press-button` extends `src/shared/pressable.ts`;
+- mixins: `pop-tone-chip` extends `Mixin(withTone)` from `src/shared/with-tone.ts`;
+- forms and serializers: `pop-date-field` is form-associated (`@AttachInternals`) and turns
+  its `Date` value into an attribute and back (`@PropSerialize`, `@AttrDeserialize`).
+
+A file that uses something stencilrs hasn't ported yet (per-mode styles, inline `styles` on
+scoped components) is compiled by Stencil's own compiler instead, automatically.
 `stencilrs({ verbose: true })` (set in `vite.config.ts`) logs how many files each compiler handled.

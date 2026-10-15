@@ -11,9 +11,10 @@
 use std::collections::HashMap;
 
 use oxc::ast::ast::{
-    ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
+    Argument, ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
     ExportDefaultDeclarationKind, Expression, Function, ImportDeclarationSpecifier,
-    ImportOrExportKind, MethodDefinition, MethodDefinitionKind, Program, PropertyDefinition,
+    ImportOrExportKind, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectPropertyKind,
+    Program, PropertyDefinition,
     PropertyKey, ReturnStatement, Statement, TSAccessibility, TSType, TSTypeName,
 };
 use oxc::ast_visit::Visit;
@@ -267,6 +268,11 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         listeners: own.listeners,
         watchers: own.watchers,
         element_ref: own.element_ref,
+        attach_internals_member_name: own.attach_internals_member_name,
+        attach_internals_custom_states: own.attach_internals_custom_states,
+        form_associated: own.form_associated,
+        serializers: own.serializers,
+        deserializers: own.deserializers,
         options: Value::Null,
         does_extend: false,
         base_class_files: Vec::new(),
@@ -293,6 +299,10 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
             cmp.events = inherit::prepend(parent.events, std::mem::take(&mut cmp.events), |e| e.name.clone());
             cmp.listeners = inherit::prepend(parent.listeners, std::mem::take(&mut cmp.listeners), |l| l.name.clone());
             cmp.watchers = inherit::prepend(parent.watchers, std::mem::take(&mut cmp.watchers), |w| w.method_name.clone());
+            // Serializers merge as in a full build (`compiler-ctx-merge.ts`). With a `resolveImport`
+            // callback Stencil drops them all, the component's own too: docs/quirks.md 10.
+            cmp.serializers = inherit::prepend(parent.serializers, std::mem::take(&mut cmp.serializers), |w| w.method_name.clone());
+            cmp.deserializers = inherit::prepend(parent.deserializers, std::mem::take(&mut cmp.deserializers), |w| w.method_name.clone());
         }
         cmp.base_class_files = found.files;
     }
@@ -310,6 +320,11 @@ pub(crate) struct Members {
     pub listeners: Vec<ListenerMeta>,
     pub watchers: Vec<WatcherMeta>,
     pub element_ref: Option<String>,
+    pub attach_internals_member_name: Option<String>,
+    pub attach_internals_custom_states: Vec<CustomState>,
+    pub form_associated: bool,
+    pub serializers: Vec<WatcherMeta>,
+    pub deserializers: Vec<WatcherMeta>,
 }
 
 /// The members of a class in another module (or this one): an ancestor. Its diagnostics are
@@ -329,6 +344,11 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         listeners: Vec::new(),
         watchers: Vec::new(),
         element_ref: None,
+        attach_internals_member_name: None,
+        attach_internals_custom_states: Vec::new(),
+        form_associated: false,
+        serializers: Vec::new(),
+        deserializers: Vec::new(),
     };
 
     let [prop_n, state_n, event_n, method_n, element_n, watch_n, listen_n] =
@@ -355,6 +375,24 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         })
         .collect();
 
+    // `serializeDecoratorsToStatic`, before the props: a serializer makes its prop reflect, a
+    // deserializer gives it an attribute. Only translators of a `@Prop` count.
+    let prop_names: Vec<String> = class
+        .body
+        .body
+        .iter()
+        .filter_map(|el| match el {
+            ClassElement::PropertyDefinition(p) if !decorator_calls(&p.decorators, &prop_n).is_empty() => property_key_name(&p.key),
+            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Get && !decorator_calls(&m.decorators, &prop_n).is_empty() => {
+                property_key_name(&m.key)
+            }
+            _ => None,
+        })
+        .collect();
+    cmp.serializers = translators(ctx, class, "PropSerialize", &prop_names);
+    cmp.deserializers = translators(ctx, class, "AttrDeserialize", &prop_names);
+    let has = |list: &[WatcherMeta], name: &str| list.iter().any(|t| t.prop_name == name);
+
     for el in &class.body.body {
         match el {
             ClassElement::PropertyDefinition(p) => {
@@ -368,7 +406,8 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         None => classify_initializer(p.value.as_ref(), locals, ctx.source),
                     };
                     let default_value = p.value.as_ref().map(|v| initializer_text(v, locals, ctx.source));
-                    let prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span());
+                    let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
+                    let prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span(), translated);
                     cmp.properties.push(prop);
                 }
 
@@ -404,7 +443,8 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         let opts = ctx.arg(call, 0);
                         let (prop_type, original, default_value) = getter_prop(ctx, m, &fields, locals);
                         let has_setter = setters.contains(&name);
-                        let prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span());
+                        let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
+                        let prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span(), translated);
                         cmp.properties.push(prop);
                     }
                 }
@@ -444,26 +484,114 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         }
     }
 
+    // `attachInternalsDecoratorsToStatic`: one decorated field at most.
+    let ai_n = ctx.name("AttachInternals");
+    let internals: Vec<(&PropertyDefinition, &CallExpression)> = class
+        .body
+        .body
+        .iter()
+        .filter_map(|el| match el {
+            ClassElement::PropertyDefinition(p) => decorator_calls(&p.decorators, &ai_n).first().map(|c| (&**p, *c)),
+            _ => None,
+        })
+        .collect();
+    match internals.as_slice() {
+        [] => {}
+        [(p, call)] => {
+            cmp.attach_internals_member_name = property_key_name(&p.key);
+            let options = match call.arguments.first() {
+                Some(Argument::ObjectExpression(o)) => Some(&**o),
+                _ => None,
+            };
+            cmp.attach_internals_custom_states = options.map(|o| custom_states(o, ctx.source)).unwrap_or_default();
+            cmp.form_associated = !options.is_some_and(|o| {
+                object_entry(o, "formAssociated").is_some_and(|v| matches!(v, Expression::BooleanLiteral(b) if !b.value))
+            });
+        }
+        _ => ctx.push(Level::Error, "Stencil does not support adding more than one AttachInternals() decorator to a component", Span::default()),
+    }
+
     cmp
+}
+
+/// `@PropSerialize(prop)` / `@AttrDeserialize(prop)` methods whose prop is one of `props`, in
+/// class order (`parseSerializeDecorator`).
+fn translators(ctx: &mut Ctx, class: &Class, decorator: &'static str, props: &[String]) -> Vec<WatcherMeta> {
+    let local = ctx.name(decorator);
+    let mut out = Vec::new();
+    for el in &class.body.body {
+        let ClassElement::MethodDefinition(m) = el else { continue };
+        if m.kind != MethodDefinitionKind::Method {
+            continue;
+        }
+        let Some(method_name) = property_key_name(&m.key) else { continue };
+        for call in decorator_calls(&m.decorators, &local) {
+            if let Some(Value::String(prop_name)) = ctx.arg(call, 0) {
+                if props.contains(&prop_name) {
+                    out.push(WatcherMeta { prop_name, method_name: method_name.clone() });
+                }
+            }
+        }
+    }
+    out
+}
+
+/// A `key: value` entry of an object literal, by identifier key (`ts.isPropertyAssignment` with
+/// an identifier name: no shorthand, no string or computed key).
+fn object_entry<'o, 'a>(o: &'o ObjectExpression<'a>, key: &str) -> Option<&'o Expression<'a>> {
+    o.properties.iter().find_map(|p| match p {
+        ObjectPropertyKind::ObjectProperty(p) if !p.shorthand && !p.computed && matches!(&p.key, PropertyKey::StaticIdentifier(id) if id.name == key) => {
+            Some(&p.value)
+        }
+        _ => None,
+    })
+}
+
+/// `@AttachInternals({ states: { name: true, ... } })` (`parseCustomStatesFromDecorator`):
+/// identifier or string keys; `true` starts the state on, anything else off; each state's
+/// JSDoc becomes its docs.
+fn custom_states(options: &ObjectExpression, source: &str) -> Vec<CustomState> {
+    let Some(Expression::ObjectExpression(states)) = object_entry(options, "states") else { return Vec::new() };
+    states
+        .properties
+        .iter()
+        .filter_map(|p| {
+            let ObjectPropertyKind::ObjectProperty(p) = p else { return None };
+            if p.shorthand || p.computed {
+                return None;
+            }
+            let name = match &p.key {
+                PropertyKey::StaticIdentifier(id) => id.name.to_string(),
+                PropertyKey::StringLiteral(s) => s.value.to_string(),
+                _ => return None,
+            };
+            Some(CustomState {
+                name,
+                initial_value: matches!(&p.value, Expression::BooleanLiteral(b) if b.value),
+                docs: jsdoc_before(source, p.span.start),
+            })
+        })
+        .collect()
+}
+
+/// The text of a `/** ... */` comment right before `at`, as TypeScript's
+/// `getDocumentationComment` gives it: leading `*`s gone, tags (`@...`) dropped.
+fn jsdoc_before(source: &str, at: u32) -> String {
+    let before = source[..at as usize].trim_end();
+    let Some(body) = before.strip_suffix("*/") else { return String::new() };
+    let Some(open) = body.rfind("/*") else { return String::new() };
+    let Some(text) = body[open..].strip_prefix("/**") else { return String::new() };
+    let lines: Vec<&str> = text
+        .lines()
+        .map(|l| l.trim().trim_start_matches('*').trim())
+        .take_while(|l| !l.starts_with('@'))
+        .collect();
+    lines.join("\n").trim().to_owned()
 }
 
 /// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
 fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
-    let unported = ["AttachInternals", "PropSerialize", "AttrDeserialize"].map(|d| (d, ctx.name(d)));
-    for el in &class.body.body {
-        let decorators = match el {
-            ClassElement::PropertyDefinition(p) => &p.decorators,
-            ClassElement::MethodDefinition(m) => &m.decorators,
-            ClassElement::AccessorProperty(a) => &a.decorators,
-            _ => continue,
-        };
-        for (original, local) in &unported {
-            for call in decorator_calls(decorators, local) {
-                ctx.push(Level::Error, format!("stencilrs: @{original}() is not ported yet."), call.span);
-            }
-        }
-    }
     let Some(o) = options else { return };
     let checks: [(bool, &str); 4] = [
         (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
@@ -575,6 +703,7 @@ fn build_prop(
     default_value: Option<String>,
     complex_type_original: String,
     name_span: Span,
+    (serialized, deserialized): (bool, bool),
 ) -> PropMeta {
     if name.starts_with("on") && name[2..].starts_with(|c: char| c == '-' || c.is_ascii_uppercase()) {
         ctx.push(Level::Warn, format!("The @Prop() name \"{name}\" looks like an event. Please use the \"@Event()\" decorator to expose events instead, not properties or methods."), name_span);
@@ -583,10 +712,11 @@ fn build_prop(
         ctx.push(Level::Error, "@Prop option \"reflectToAttr\" should be renamed to \"reflect\".", name_span);
     }
 
-    // `parsePropDecorator` sets reflect / attribute only for non-`unknown` types (no
-    // serializers yet); `parseStaticProps` then defaults reflect to false.
-    let reflect = prop_type != PropType::Unknown && opt_bool(opts, "reflect").unwrap_or(false);
-    let attribute = (prop_type != PropType::Unknown || reflect).then(|| match opts.as_ref().and_then(|o| o.get("attribute")) {
+    // `parsePropDecorator`: a prop can reflect when its type is known or it has a serializer
+    // (which reflects it unless `reflect` says otherwise); it gets an attribute when its type is
+    // known, it reflects, or it has a deserializer. `parseStaticProps` defaults reflect to false.
+    let reflect = (prop_type != PropType::Unknown || serialized) && opt_bool(opts, "reflect").unwrap_or(serialized);
+    let attribute = (prop_type != PropType::Unknown || reflect || deserialized).then(|| match opts.as_ref().and_then(|o| o.get("attribute")) {
         // `attribute: null` never reaches here as null (see eval.rs), so this is the only branch.
         Some(Value::String(a)) if !a.trim().is_empty() => a.trim().to_lowercase(),
         _ => to_dash_case(&name),

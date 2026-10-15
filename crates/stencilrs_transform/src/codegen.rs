@@ -31,7 +31,7 @@ use serde_json::Value;
 use crate::analyze::import_aliases;
 use crate::edits::Edits;
 use crate::eval::property_key_name;
-use crate::meta::{ComponentMeta, Encapsulation, PropType};
+use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
 
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 
@@ -248,6 +248,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
                 let flags = (if ev.bubbles { 4 } else { 0 }) | (if ev.composed { 2 } else { 0 }) | (if ev.cancelable { 1 } else { 0 });
                 stmts.push(format!("this.{} = __stencil_createEvent(this, {}, {flags});", ev.method, json(&ev.name)));
             }
+            // `createNativeAttachInternalsBinding`
+            if let Some(member) = &cmp.attach_internals_member_name {
+                stmts.push(format!("this.{member} = this.attachInternals();"));
+                for state in cmp.attach_internals_custom_states.iter().filter(|s| s.initial_value) {
+                    stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
+                }
+            }
             // `super(false)` when an ancestor was found (`cmp.doesExtend`), not merely when the class has an `extends`.
             let super_call = if cmp.does_extend { "super(false);" } else { "super();" };
             match ctor {
@@ -274,6 +281,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         // Members appended at the end of the class, in Stencil's order.
         let mut tail: Vec<String> = Vec::new();
         tail.extend(surviving_static_getters(cmp));
+        // Left behind by `attachInternalsDecoratorsToStatic`, after the component's own getters.
+        if !cmp.attach_internals_custom_states.is_empty() {
+            tail.push(format!("static get attachInternalsCustomStates() {{ return {}; }}", js_value(&custom_states_value(cmp))));
+        }
+        if cmp.form_associated {
+            tail.push("static get formAssociated() { return true; }".into());
+        }
         if plain && info.has_render_fn {
             match connected {
                 Some(m) => {
@@ -288,7 +302,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             tail.push(format!("get {el}() {{ return this; }}"));
         }
         if !cmp.watchers.is_empty() {
-            tail.push(format!("static get watchers() {{ return {}; }}", js_value(&watchers_value(cmp))));
+            tail.push(format!("static get watchers() {{ return {}; }}", js_value(&handlers_value(&cmp.watchers))));
+        }
+        if !cmp.serializers.is_empty() {
+            tail.push(format!("static get serializers() {{ return {}; }}", js_value(&handlers_value(&cmp.serializers))));
+        }
+        if !cmp.deserializers.is_empty() {
+            tail.push(format!("static get deserializers() {{ return {}; }}", js_value(&handlers_value(&cmp.deserializers))));
         }
         if plain {
             tail.push(format!("static get is() {{ return {}; }}", json(&cmp.tag_name)));
@@ -644,9 +664,10 @@ fn surviving_static_getters(cmp: &ComponentMeta) -> Vec<String> {
     out
 }
 
-fn watchers_value(cmp: &ComponentMeta) -> Value {
+/// Watchers, serializers or deserializers as `{ prop: [{ method: 0 }] }`.
+fn handlers_value(handlers: &[WatcherMeta]) -> Value {
     let mut obj = serde_json::Map::new();
-    for w in &cmp.watchers {
+    for w in handlers {
         let list = obj.entry(w.prop_name.clone()).or_insert_with(|| Value::Array(Vec::new()));
         if let Value::Array(items) = list {
             let mut handler = serde_json::Map::new();
@@ -655,6 +676,16 @@ fn watchers_value(cmp: &ComponentMeta) -> Value {
         }
     }
     Value::Object(obj)
+}
+
+/// `attachInternalsCustomStates`: `[{ name, initialValue, docs }]`.
+fn custom_states_value(cmp: &ComponentMeta) -> Value {
+    Value::Array(
+        cmp.attach_internals_custom_states
+            .iter()
+            .map(|s| serde_json::json!({ "name": s.name, "initialValue": s.initial_value, "docs": s.docs }))
+            .collect(),
+    )
 }
 
 /// A component style mode: its import identifier and external URLs, or an inline string.
@@ -818,6 +849,9 @@ fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
     if styles.iter().any(|s| s.mode != DEFAULT_STYLE_MODE) {
         flags |= 1 << 5;
     }
+    if cmp.form_associated {
+        flags |= 1 << 6;
+    }
     if info.has_modern_property_decls {
         flags |= 1 << 9;
     }
@@ -901,7 +935,9 @@ fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
         Some(json(&cmp.tag_name)),
         (!dedup.is_empty()).then(|| format!("{{ {} }}", dedup.iter().filter(|(k, _)| !k.starts_with('_')).map(|(k, v)| format!("{}: {v}", json(k))).collect::<Vec<_>>().join(", "))),
         (!listeners.is_empty()).then(|| format!("[{}]", listeners.join(", "))),
-        (!cmp.watchers.is_empty()).then(|| js_value(&watchers_value(cmp))),
+        (!cmp.watchers.is_empty()).then(|| js_value(&handlers_value(&cmp.watchers))),
+        (!cmp.serializers.is_empty()).then(|| js_value(&handlers_value(&cmp.serializers))),
+        (!cmp.deserializers.is_empty()).then(|| js_value(&handlers_value(&cmp.deserializers))),
     ];
     // `trimFalsy`; `flags` 0 is falsy too, but the tag name always follows it.
     while matches!(items.last(), Some(None)) {

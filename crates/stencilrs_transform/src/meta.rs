@@ -37,6 +37,16 @@ pub struct ComponentMeta {
     pub listeners: Vec<ListenerMeta>,
     pub watchers: Vec<WatcherMeta>,
     pub element_ref: Option<String>,
+    /// The `@AttachInternals()` member.
+    pub attach_internals_member_name: Option<String>,
+    /// `@AttachInternals({ states })`, in order.
+    pub attach_internals_custom_states: Vec<CustomState>,
+    /// `@AttachInternals()` without `formAssociated: false`.
+    pub form_associated: bool,
+    /// `@PropSerialize(prop)` methods (prop → attribute).
+    pub serializers: Vec<WatcherMeta>,
+    /// `@AttrDeserialize(prop)` methods (attribute → prop).
+    pub deserializers: Vec<WatcherMeta>,
     /// The evaluated `@Component({...})` options, for code generation.
     #[serde(skip)]
     pub options: serde_json::Value,
@@ -96,6 +106,15 @@ pub struct ListenerMeta {
     pub target: Option<String>,
     pub capture: bool,
     pub passive: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomState {
+    pub name: String,
+    pub initial_value: bool,
+    /// The state's JSDoc text.
+    pub docs: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -6,7 +6,6 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## Not ported yet (these fall back to Stencil's compiler)
 
-- **`@AttachInternals`**, **`@PropSerialize`**, **`@AttrDeserialize`**.
 - **Inline `styles` on scoped components**: needs a port of Stencil's `scopeCss`.
 - **Per-mode styles** (`styleUrls: { ios, md }`) and component global styles.
 - **Computed member names** and decorator arguments that are constants (`@Watch(CONST)`); these are
@@ -22,8 +21,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## Next
 
-1. `@AttachInternals` and the serializers (`@PropSerialize`, `@AttrDeserialize`): small, and
-   form-associated components need the first.
+1. Inline `styles` on scoped components: a port of Stencil's `scopeCss`.
 2. The lazy and SSR transforms (they share most of the customelement code).
 3. A full `stencil build` replacement for the benchmark: stencilrs feeding Stencil's Rolldown
    pipeline in place of its TypeScript transform passes.

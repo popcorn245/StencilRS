@@ -79,11 +79,11 @@ image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts
 ## Status
 
 - Step 1 done: [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
-- Step 2 done: [`parity/`](parity/README.md), 180 fixtures (29 features, 15 inheritance and
+- Step 2 done: [`parity/`](parity/README.md), 185 fixtures (34 features, 15 inheritance and
   mixins, and the 136 ui-kit components) with golden output from real Stencil v5.
 - Step 3, first seam done: `transpile()` produces what Stencil's `transpileSync` emits for
   `@stencil/unplugin` (`componentExport: 'customelement'`): metadata, diagnostics and code.
-  **180/180 fixtures identical** to Stencil v5 (code compared after reprinting both through
+  **185/185 fixtures identical** to Stencil v5 (code compared after reprinting both through
   oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer. With
   `resolveImports` it also matches a full `stencil build`'s metadata: 136/136 on the ui-kit.
 - The ui-kit spec suite: 874/874 green with either compiler.
@@ -96,9 +96,11 @@ image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts
 - Inheritance and mixins: `extends Base` and `extends Mixin(a, b)`, in the same file or through
   relative imports (one barrel hop), with Stencil's member merging and warnings. The Vite plugin
   serves the files ancestors live in as base-class modules, as @stencil/unplugin does.
-- Not yet: computed member names, const evaluation for decorator arguments,
-  serializers, `@AttachInternals`, scoped inline `styles` (needs `scopeCss`), style modes,
-  JSDoc and full `complexType`, the lazy and SSR outputs.
+- Forms and serializers: `@AttachInternals` (form-associated components, custom states) and
+  `@PropSerialize` / `@AttrDeserialize`.
+- Not yet: computed member names, const evaluation for decorator arguments, scoped inline
+  `styles` (needs `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR
+  outputs.
 
 Stencil behaviours copied on purpose (upstream bug candidates): [`docs/quirks.md`](docs/quirks.md).
 
