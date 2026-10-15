@@ -216,6 +216,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     // Port of `componentDecoratorToStatic`: a component that fails validation produces no
     // metadata, but its members are still converted (and still report diagnostics).
     let component = component_options(ctx, cmp_call, &class_name, exports);
+    report_unported(ctx, class, component.as_ref().map(|c| &c.3));
 
     let mut cmp = ComponentMeta {
         tag_name: String::new(),
@@ -352,6 +353,43 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     }
 
     component.map(|_| cmp)
+}
+
+/// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
+/// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
+fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
+    if let Some(h) = &class.heritage {
+        ctx.push(Level::Error, "stencilrs: components that extend a class or mixin are not ported yet.", h.expression.span());
+    }
+    let unported = ["AttachInternals", "PropSerialize", "AttrDeserialize"].map(|d| (d, ctx.name(d)));
+    for el in &class.body.body {
+        let decorators = match el {
+            ClassElement::PropertyDefinition(p) => &p.decorators,
+            ClassElement::MethodDefinition(m) => &m.decorators,
+            ClassElement::AccessorProperty(a) => &a.decorators,
+            _ => continue,
+        };
+        for (original, local) in &unported {
+            for call in decorator_calls(decorators, local) {
+                ctx.push(Level::Error, format!("stencilrs: @{original}() is not ported yet."), call.span);
+            }
+        }
+    }
+    let Some(o) = options else { return };
+    let checks: [(bool, &str); 4] = [
+        (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
+        (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
+        (
+            o.get("styles").is_some() && o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped"),
+            "inline `styles` on scoped components (needs Stencil's scopeCss)",
+        ),
+        (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
+    ];
+    for (hit, what) in checks {
+        if hit {
+            ctx.push(Level::Error, format!("stencilrs: {what} are not ported yet."), class.span);
+        }
+    }
 }
 
 /// `@Component` options, or `None` when Stencil would reject the component.

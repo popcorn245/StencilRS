@@ -22,6 +22,24 @@ Authors write the same components as Stencil v5 (`@Component`, `@Prop`, `@State`
 `@Method`, `@Watch`, `@Element`, `@Listen`, `@AttachInternals`); stencilrs aims for byte-identical
 output against v5.
 
+## Use it
+
+```ts
+// vite.config.ts (Vite 8)
+import stencilrs from '@popcorn245/stencilrs/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({ plugins: [stencilrs()] });
+```
+
+Peer dependencies: `@stencil/core` and `@stencil/unplugin` (both `5.0.0-beta.25`) and Vite 8.
+The plugin compiles component files with stencilrs and leaves everything else to
+`@stencil/unplugin` (CSS modules and preprocessors, the runtime, build flags). Files using a
+feature stencilrs hasn't ported fall back to Stencil's compiler automatically.
+
+**[`examples/starter`](examples/starter/README.md)** is a ready project: dev server with hot
+reload, a component generator, tests in happy-dom and in headless Chrome, app and library builds.
+
 ## Plan
 
 1. **Study** – catalogue every v5 transformer: input shape, emitted code, and whether it needs

@@ -1,0 +1,27 @@
+{
+  "name": "stencilrs-starter",
+  "private": true,
+  "type": "module",
+  "description": "Stencil v5 components compiled by stencilrs: dev server, build and tests",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "new": "node scripts/new-component.mjs"
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:../..",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "@vitest/browser-playwright": "5.0.4",
+    "happy-dom": "21.0.1",
+    "playwright": "1.64.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

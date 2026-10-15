@@ -1,0 +1,7 @@
+:host {
+  display: inline-block;
+}
+
+:host(.active) button {
+  outline: 2px solid #e53e3e;
+}

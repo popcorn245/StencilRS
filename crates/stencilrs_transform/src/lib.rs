@@ -36,7 +36,7 @@ pub struct TranspileResult {
 }
 
 fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (ParserReturn<'a>, Vec<Diagnostic>) {
-    let source_type = SourceType::from_path(file_name).unwrap_or_else(|_| SourceType::tsx());
+    let source_type = SourceType::from_path(file_name).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(allocator, source, source_type).parse();
     let diagnostics = parsed
         .diagnostics

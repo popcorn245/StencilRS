@@ -589,9 +589,15 @@ fn style_getter(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
 
 /// `normalizePath(join(dirname(file), url))` then `serializeImportPath` with query params.
 fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> String {
-    let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
-    let joined = normalize_path(&if dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") });
-    let mut p = joined;
+    let file = file.replace('\\', "/");
+    let absolute = file.starts_with('/') || file.as_bytes().get(1) == Some(&b':');
+    let mut p = if absolute {
+        // `serializeImportPath`: an absolute style path is made relative to the importer.
+        relative_url(url)
+    } else {
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        normalize_path(&if dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") })
+    };
     if !p.starts_with('.') {
         p = format!("./{p}");
     }
@@ -605,6 +611,22 @@ fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> 
         Encapsulation::None => {}
     }
     format!("{p}?{}", params.join("&"))
+}
+
+/// `url` resolved against a directory and made relative to it again: `./a/../b.css` → `b.css`.
+fn relative_url(url: &str) -> String {
+    let url = url.replace('\\', "/");
+    let mut parts: Vec<&str> = Vec::new();
+    for part in url.split('/') {
+        match part {
+            "" | "." => {}
+            ".." if parts.last().is_some_and(|p| *p != "..") => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
 }
 
 fn normalize_path(path: &str) -> String {
@@ -838,7 +860,7 @@ fn fmt_num(v: f64) -> String {
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
 fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<String, String> {
     let allocator = Allocator::default();
-    let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx());
+    let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
     if parsed.diagnostics.has_errors() {
         let msgs: Vec<String> = parsed.diagnostics.errors().map(|e| e.message.to_string()).collect();

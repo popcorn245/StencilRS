@@ -1,6 +1,15 @@
+import { statSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
-const native = createRequire(import.meta.url)('./stencilrs.node');
+const nativePath = fileURLToPath(new URL('./stencilrs.node', import.meta.url));
+const native = createRequire(import.meta.url)(nativePath);
+
+/** Changes whenever the native binary does: for build caches keyed on plugin output. */
+export const buildId = (() => {
+  const s = statSync(nativePath);
+  return `${s.size}-${Math.round(s.mtimeMs)}`;
+})();
 
 /**
  * Read the Stencil components in one module.

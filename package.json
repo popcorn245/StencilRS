@@ -10,9 +10,29 @@
   },
   "scripts": {
     "build:native": "cargo build --release -p stencilrs_napi && node scripts/copy-native.js",
-    "test": "cargo test && node --test",
+    "test": "cargo test && node --test \"test/**/*.test.js\"",
     "parity:snapshot": "npm --prefix parity run snapshot",
     "parity": "npm --prefix parity run compare",
-    "bench": "npm --prefix parity run bench"
+    "bench": "npm --prefix parity run bench",
+    "test:starter": "npm --prefix examples/starter test"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./vite": "./vite.js"
+  },
+  "files": [
+    "index.js",
+    "vite.js",
+    "stencilrs.node"
+  ],
+  "peerDependencies": {
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "vite": ">=8"
+  },
+  "devDependencies": {
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "vite": "8.3.4"
   }
 }
