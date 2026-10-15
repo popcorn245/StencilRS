@@ -1,5 +1,5 @@
 // Scaffold a component: npm run new pop-thing
-// Writes src/components/<tag>/<tag>.tsx, .css and .test.ts, exports it from src/index.ts
+// Writes src/components/<tag>/<tag>.tsx, .css, .test.ts and .stories.ts, exports it from src/index.ts
 // (which main.ts imports), and drops an example tag into index.html.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -90,8 +90,29 @@ describe('${tag}', () => {
 `,
 );
 
+writeFileSync(
+  join(dir, `${tag}.stories.ts`),
+  `import type { Meta, StoryObj } from '@storybook/web-components-vite';
+import { html } from 'lit';
+
+type Args = { label: string };
+
+const meta: Meta<Args> = {
+  title: '${tag}',
+  component: '${tag}',
+  args: { label: '${tag}' },
+  argTypes: { label: { control: 'text' } },
+  render: ({ label }) => html\`<${tag} label=\${label}></${tag}>\`,
+};
+
+export default meta;
+
+export const Default: StoryObj<Args> = {};
+`,
+);
+
 appendFileSync('src/index.ts', `export { ${className} } from './components/${tag}/${tag}';\n`);
 const html = readFileSync('index.html', 'utf8');
 writeFileSync('index.html', html.replace('    <script type="module"', `    <h2>${tag}</h2>\n    <${tag}></${tag}>\n\n    <script type="module"`));
 
-console.log(`created ${dir}/ (${tag}.tsx, ${tag}.css, ${tag}.test.ts) and registered <${tag}>`);
+console.log(`created ${dir}/ (${tag}.tsx, .css, .test.ts, .stories.ts) and registered <${tag}>`);

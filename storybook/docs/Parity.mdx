@@ -1,0 +1,62 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Parity and verification" />
+
+# Parity and verification
+
+"Same output as Stencil" is checked four ways, all runnable from the repo.
+
+## 1. Per-file parity with `transpileSync`: `parity/`
+
+Real Stencil v5 compiles every fixture with `transpileSync`, exactly as `@stencil/unplugin` calls it,
+and the output is committed as golden snapshots. stencilrs (single-file mode) runs on the same
+files.
+
+```sh
+cd parity
+npm install
+npm run snapshot   # regenerate snapshots/ from Stencil v5
+npm run compare    # stencilrs vs the snapshots (--verbose for every diff)
+```
+
+| Compared | How | Result |
+|---|---|---|
+| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 165 / 165 |
+| Diagnostics | level + full message text, order-independent | 165 / 165 |
+| Code | both reprinted by oxc's printer (comments dropped), exact | 159 / 159 that compile |
+
+The corpus is 29 feature fixtures (one Stencil feature each, including error cases) and the 136
+ui-kit components.
+
+## 2. Against a full `stencil build`: `check-build.mjs`
+
+The full build type-checks the whole program, so its metadata is the ground truth. Its
+`collection` output carries every component's metadata as static getters; `check-build.mjs`
+compares them with stencilrs in build-accurate mode, field by field.
+
+```sh
+cd examples/ui-kit
+npm run build            # stencil build: 0 errors, 0 warnings
+node check-build.mjs     # 136 / 136 identical
+```
+
+## 3. Behaviour: the spec suite on both compilers
+
+The ui-kit's 874 specs mount the real compiled elements. Run with each compiler and diff test by
+test:
+
+```sh
+npm run test:stencil && npm test && npm run compare
+# Stencil v5:  874/874 · stencilrs: 874/874 · no test differs
+```
+
+## 4. Coverage: which files stencilrs compiles itself
+
+```sh
+node coverage.mjs        # stencilrs compiles 136 component files; 0 fall back to Stencil
+```
+
+## Unit tests
+
+`npm test` at the repo root runs the Rust tests (analysis rules, codegen shape) and the Node binding
+test.

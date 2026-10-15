@@ -1,0 +1,70 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="How it was built" />
+
+# How it was built
+
+stencilrs was built in one long session (2026-10-14) as an experiment: could the slow part of the
+Stencil compiler be rewritten in Rust and still produce *exactly* what Stencil produces? The rule
+throughout was **measure against the real thing**: every step was checked against Stencil v5's
+own output, not against expectations.
+
+## 1. Study Stencil v5, don't decompile it
+
+Stencil is open source (MIT), so there was nothing to decompile. The `v5` branch
+(5.0.0-beta.25) was cloned read-only and mapped: the compile pipeline end to end, and every one of
+its ~30 TypeScript transformers, with each type-checker call it makes. That map (under **Reference**)
+showed which parts are purely syntactic (most of them, and all of code generation) and which ask
+the type checker (prop types, docs, type text).
+
+Stencil v5 had already moved to Rolldown and Lightning CSS; the remaining TypeScript transform
+layer was the target.
+
+## 2. Golden output first
+
+Before writing compiler code, a parity harness (`parity/`) compiled a corpus with **real Stencil v5**
+and committed its output as snapshots: 27 single-feature fixtures plus the bucket ui-kit's 136
+components. Every later change was measured against those snapshots: metadata field by field,
+diagnostics by exact message, code after reprinting both sides through one printer.
+
+## 3. Port the analysis
+
+Decorators → metadata in Rust on oxc, including a syntactic port of Stencil's prop-type rules. The
+first comparison against the snapshots found real gaps immediately (how Stencil reads `null` in
+decorator options, how it types initializers it can't resolve, how it resolves defaults), and each
+became a fix plus a fixture. It also surfaced **Stencil bugs** (see
+[Stencil quirks](?path=/docs/docs-stencil-quirks--docs)), which stencilrs reproduces on purpose so the
+output stays identical.
+
+## 4. Generate code
+
+Code generation reached 141 / 144 matching files on its first run; the rest came from import order,
+key order, `_`-prefixed members (another Stencil quirk) and a JSX spread detail. The first benchmark:
+**~40× faster** per file.
+
+## 5. Make it usable
+
+A Vite plugin that slots in front of `@stencil/unplugin`, falls back to Stencil per file for anything
+not ported, and supports HMR; a starter project with a generator, tests and builds. Real use found
+real bugs: a file importing only decorators came out as CommonJS; Vitest's cache didn't notice a
+rebuilt binary; unplugin re-compiled stencilrs' output because doc comments mentioned decorators.
+
+## 6. A real component set
+
+The bucket ui-kit was migrated to Stencil v5 for real (`examples/ui-kit`) and brought to a clean
+`stencil build`: 0 errors, 0 warnings. Comparing stencilrs with that **full, type-checked build**
+showed 21 components where single-file compilation (stencilrs and Stencil's own Vite plugin alike)
+types props differently, because it can't see imports. stencilrs gained **build-accurate mode**,
+which follows relative imports and knows lib types, and now matches the full build for all 136.
+
+## 7. A real test suite
+
+The ui-kit's 874 specs had been written against a mock renderer. Run against real components they
+first showed the two compilers agreeing on every result (no stencilrs regressions), then were fixed
+up (harness, real-DOM assumptions, v5 behaviour, stale specs) until **874 / 874 pass with both
+compilers**.
+
+## Tools
+
+Rust 1.99, oxc 0.154, napi-rs 3, Node 22, Vite 8.3 (Rolldown), Vitest 5, Stencil 5.0.0-beta.25 with
+TypeScript 6.0.3, Storybook 10.6. Built with Claude Code.

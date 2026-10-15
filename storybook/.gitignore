@@ -1,0 +1,5 @@
+/node_modules/
+/dist/
+/generated/
+/storybook-static/
+debug-storybook.log

@@ -1,0 +1,103 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Testing" />
+
+# Testing
+
+stencilrs components are real custom elements, so test them as such: render them into a DOM,
+wait for Stencil to finish, interact, assert. Vitest with the Vite plugin compiles them on the fly.
+
+## Setup
+
+```ts
+// vitest.config.ts
+import stencilrs from '@popcorn245/stencilrs/vite';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [stencilrs()],
+  test: { environment: 'happy-dom' }, // or 'jsdom'
+});
+```
+
+### In a real browser
+
+```ts
+// vitest.browser.config.ts: headless Chrome, using the Chrome already installed (no download)
+import { playwright } from '@vitest/browser-playwright';
+
+export default defineConfig({
+  plugins: [stencilrs()],
+  test: {
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright({ launchOptions: { channel: 'chrome' } }),
+      instances: [{ browser: 'chromium' }],
+    },
+  },
+});
+```
+
+Use the browser for anything the simulated DOMs lack: `ElementInternals` (`@AttachInternals`),
+real layout, camera and media APIs, `<select>` edge cases.
+
+## Mount, wait, assert
+
+```ts
+import { expect, it } from 'vitest';
+import './pop-counter'; // importing registers the element
+
+async function mount<T extends HTMLElement>(html: string) {
+  document.body.innerHTML = html;
+  const el = document.body.firstElementChild as T & { componentOnReady(): Promise<T> };
+  await el.componentOnReady();
+  return el;
+}
+const flush = () => new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r)));
+
+it('counts', async () => {
+  const el = await mount('<pop-counter step="5"></pop-counter>');
+  el.shadowRoot!.querySelector('button')!.click();
+  await flush(); // Stencil batches re-renders to the next frame
+  expect(el.shadowRoot!.querySelector('output')!.textContent).toBe('5');
+});
+```
+
+`examples/starter/src/test-utils.ts` has these helpers; `examples/ui-kit/harness/spec-page.ts` is a
+drop-in `newSpecPage({ html })` that returns `{ root, rootInstance, waitForChanges }` on real
+elements, plus `setProps()` and `textOf()`.
+
+## Things that differ from mock renderers
+
+Lessons from bringing the ui-kit's 874 specs (written against a hand-rolled mock renderer) to green
+on real components:
+
+- **The element is the instance.** `rootInstance` is the element; private methods and state are on it.
+- **Child components get props as properties**, not attributes: `(child as any).name`, not
+  `child.getAttribute('name')`. Only `reflect: true` props show up as attributes.
+- **Shadow components render into `shadowRoot`**; query through it.
+- **Scoped components emulate `<slot>`**: there's no `<slot>` element in the DOM, and v5 patches the
+  host's `textContent` to return only slotted content. Assert where slotted content landed, and read
+  rendered text with `Node.prototype` `textContent` (`textOf()`).
+- **Register children.** A parent's children render for real only if their modules are imported:
+  import every component once (an `import.meta.glob` in a setup file).
+- **Mocks before components.** Load components after `vi.mock(...)` of their dependencies, e.g. in
+  a `beforeAll`, not eagerly in a setup file.
+- **Fake timers freeze rendering.** Stencil renders on `requestAnimationFrame`; jsdom's runs on the
+  faked `setTimeout`. Keep animation frames on the real clock (see `examples/ui-kit/vitest.setup.ts`)
+  and leave `requestAnimationFrame` out of `fakeTimers.toFake`.
+- **Stencil v5 booleans:** `prop="false"` is `true`; set the property to turn it off.
+- **Attribute names:** `toDashCase` puts a dash before digits: `draw2Url` → `draw-2-url`.
+- **Vitest 4+:** a mock used with `new` must be a `function`, not an arrow function.
+
+## Comparing compilers
+
+`examples/ui-kit` runs its suite against both compilers and diffs the results test by test:
+
+```sh
+cd examples/ui-kit
+npm run test:stencil   # Stencil v5's compiler → results/stencil.json
+npm test               # stencilrs           → results/stencilrs.json
+npm run compare        # tests that differ
+```

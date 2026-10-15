@@ -1,0 +1,36 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Roadmap" />
+
+# Roadmap
+
+## Not ported yet (these fall back to Stencil's compiler)
+
+- **Inheritance and mixins**: components that `extend` a class, `Mixin(...)`.
+- **`@AttachInternals`**, **`@PropSerialize`**, **`@AttrDeserialize`**.
+- **Inline `styles` on scoped components**: needs a port of Stencil's `scopeCss`.
+- **Per-mode styles** (`styleUrls: { ios, md }`) and component global styles.
+- **Computed member names** and decorator arguments that are constants (`@Watch(CONST)`); these are
+  reported as errors today rather than falling back.
+
+## Missing output
+
+- **Source maps.** DevTools shows the compiled module.
+- **The lazy-loading and SSR outputs** (Stencil's `loader-bundle` and `ssr` targets). stencilrs
+  produces the customelement / `standalone` shape, which is what Vite, Vitest and Storybook use.
+- **`newSpecPage` mode** (`@stencil/unplugin`'s `spec-page`).
+- **Docs metadata**: JSDoc text and full `complexType` (resolved types and references) for
+  `docs-json` and `components.d.ts`.
+
+## Next
+
+1. Source maps (oxc can emit them; the text-edit pass needs mapping back to the original).
+2. Inheritance and mixins (Stencil's checker-free `resolveImport` strategy is the template).
+3. The lazy and SSR transforms (they share most of the customelement code).
+4. A full `stencil build` replacement for the benchmark: stencilrs feeding Stencil's Rolldown
+   pipeline in place of its TypeScript transform passes.
+
+## Upstream
+
+`docs/quirks.md` lists behaviours in Stencil v5 that look like bugs (and that stencilrs reproduces on
+purpose). They're candidates for issues on the Stencil repo.

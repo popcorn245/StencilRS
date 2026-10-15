@@ -1,0 +1,43 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Introduction" />
+
+# stencilrs
+
+**Stencil v5 components, compiled by Rust.**
+
+stencilrs is a re-implementation of the part of the [Stencil](https://stenciljs.com) compiler that
+turns a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is
+written in Rust on top of [oxc](https://oxc.rs), runs inside Vite 8 (Rolldown), and produces the
+**same output as Stencil v5**, roughly **40× faster per file** and **~5× faster end to end**.
+
+You write components exactly as you would for Stencil v5. stencilrs compiles them; Stencil's own
+runtime (`@stencil/core`) runs them in the browser.
+
+## What's in this Storybook
+
+| Section | What |
+|---|---|
+| **Docs** | Everything on these pages: how to use stencilrs, how it works, how it was built and verified, the benchmarks. |
+| **UI Kit** | The old bucket component library: 136 components migrated to Stencil v5, with its 117 story files, every component compiled by stencilrs. |
+| **Starter** | The components from `examples/starter`, the template project for building new components. |
+
+Every component you see in this Storybook was compiled by stencilrs as the page loaded, through the
+Vite plugin. The controls tables come from stencilrs' own component metadata.
+
+## Where it stands
+
+| Check | Result |
+|---|---|
+| Same output as Stencil v5's per-file compiler (`transpileSync`), 165 fixtures | **165 / 165** metadata, diagnostics and code |
+| Same metadata as a full `stencil build`, 136 ui-kit components | **136 / 136** |
+| ui-kit spec suite (874 tests), Stencil v5 vs stencilrs | **874 / 874** both, no test differs |
+| Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
+| Production `vite build`, all 136 ui-kit components | **0.82 s** vs 3.9 s (4.7×) |
+
+## Start here
+
+- [Getting started](?path=/docs/docs-getting-started--docs): build it, add the Vite plugin, run the starter.
+- [Writing components](?path=/docs/docs-writing-components--docs): what's supported.
+- [How it works](?path=/docs/docs-how-it-works--docs) and [How it was built](?path=/docs/docs-how-it-was-built--docs).
+- [Benchmarks](?path=/docs/docs-benchmarks--docs).

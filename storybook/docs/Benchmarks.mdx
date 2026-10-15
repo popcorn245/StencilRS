@@ -1,0 +1,81 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+import data from './data/benchmarks.json';
+
+<Meta title="Benchmarks" />
+
+export const Bars = ({ rows, value, unit, label }) => {
+  const max = Math.max(...rows.map((r) => r[value]));
+  return (
+    <div style={{ margin: '12px 0 24px' }}>
+      {rows.map((r) => {
+        const rs = r.compiler.startsWith('stencilrs');
+        return (
+          <div key={r.compiler} style={{ margin: '8px 0' }}>
+            <div style={{ fontSize: 13, marginBottom: 3 }}>{r.compiler}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ height: 18, width: `${Math.max(0.6, (r[value] / max) * 100)}%`, background: rs ? '#e53e3e' : '#4299e1', borderRadius: 3 }} />
+              <span style={{ fontVariantNumeric: 'tabular-nums', fontSize: 13, whiteSpace: 'nowrap' }}>
+                {r[value].toLocaleString()} {unit}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 12, color: '#888' }}>{label}</div>
+    </div>
+  );
+};
+
+export const Table = ({ head, rows }) => (
+  <table>
+    <thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+    <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody>
+  </table>
+);
+export const ms = (v) => `${v.toLocaleString()} ms`;
+
+# Benchmarks
+
+Measured {data.date} on {data.machine}. Stencil {data.versions.stencil} (TypeScript {data.versions.typescript}),
+Vite {data.versions.vite}, oxc {data.versions.oxc}, Rust {data.versions.rust}.
+
+## Compile: per file
+
+{data.transpile.what}: {data.transpile.files} files ({data.transpile.kib} KiB), the parity corpus.
+Same inputs, same output contract, so this is the compiler alone.
+
+<Bars rows={data.transpile.rows} value="medianMs" unit="ms" label="Warm median for all files. Shorter is faster." />
+
+<Table head={['Compiler', 'Cold', 'Warm median', 'Per file']} rows={data.transpile.rows.map((r) => [r.compiler, ms(r.coldMs), ms(r.medianMs), `${r.perFileUs.toLocaleString()} µs`])} />
+
+**stencilrs: {data.transpile.speedup} faster.** Stencil also writes source maps here; stencilrs
+doesn't yet, which is why Stencil is shown both ways.
+
+## Build: the whole ui-kit through Vite
+
+{data.viteBuild.what}. Everything else in the build is identical: Rolldown bundling, CSS through
+`@stencil/unplugin`, minification. Only the component compiler changes.
+
+<Bars rows={data.viteBuild.rows} value="warmMedianMs" unit="ms" label="Warm median of a production build. Shorter is faster." />
+
+<Table head={['Compiler', 'First build', 'Warm median']} rows={data.viteBuild.rows.map((r) => [r.compiler, ms(r.firstMs), ms(r.warmMedianMs)])} />
+
+**stencilrs: {data.viteBuild.speedup} faster**, end to end. For scale, a full `stencil build` of the
+same project (type-check plus four output targets) takes {(data.stencilBuild.ms / 1000).toFixed(1)} s.
+
+## What the numbers mean
+
+- **Dev server and tests** compile files one at a time on demand: that's the per-file number. In the
+  ui-kit's Vitest suite, Stencil's compiler took over 10 s to compile all 136 components for a single
+  spec file's first test; stencilrs does it in a fraction of a second.
+- **Production builds** spend time on more than compiling (bundling, CSS, minifying), so the speedup
+  is smaller, but still ~5×.
+- stencilrs is single-threaded here; Vite calls it per file, so it parallelises with Vite's own work.
+
+## Reproduce
+
+```sh
+cd parity && node bench.mjs 10                     # per file
+cd examples/ui-kit && node bench-build.mjs 3       # whole ui-kit through Vite
+cd examples/ui-kit && npm run build                # full stencil build, for scale
+```

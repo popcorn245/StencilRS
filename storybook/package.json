@@ -1,0 +1,24 @@
+{
+  "name": "stencilrs-storybook",
+  "private": true,
+  "type": "module",
+  "description": "Storybook for stencilrs: docs, the v5 ui-kit and the starter components, all compiled by stencilrs",
+  "scripts": {
+    "manifest": "node scripts/custom-elements.mjs",
+    "storybook": "npm run manifest && storybook dev -p 6007 --no-open",
+    "build": "npm run manifest && storybook build -o dist"
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:..",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "@storybook/addon-docs": "10.6.2",
+    "@storybook/web-components": "10.6.2",
+    "@storybook/web-components-vite": "10.6.2",
+    "ionicons": "8.1.0",
+    "lit": "3.3.3",
+    "remark-gfm": "4.0.1",
+    "storybook": "10.6.2",
+    "vite": "8.3.4"
+  }
+}

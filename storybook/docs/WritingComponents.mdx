@@ -1,0 +1,97 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Writing components" />
+
+# Writing components
+
+Components are ordinary **Stencil v5** components. If it compiles with Stencil v5, it should compile
+with stencilrs to the same output; where stencilrs hasn't ported a feature yet, the Vite plugin hands
+that file to Stencil's compiler instead (see [Vite plugin](?path=/docs/docs-vite-plugin--docs)).
+
+```tsx
+import { Component, Event, EventEmitter, Host, Method, Prop, State, Watch } from '@stencil/core';
+
+@Component({
+  tag: 'pop-counter',
+  styleUrl: 'pop-counter.css',
+  encapsulation: { type: 'shadow' },
+})
+export class PopCounter {
+  /** Text shown before the count. */
+  @Prop() label: string = 'Count';
+  @Prop() step: number = 1;
+  @State() count = 0;
+  @Event() countChanged: EventEmitter<number>;
+
+  @Method()
+  async reset(): Promise<void> {
+    this.count = 0;
+  }
+
+  @Watch('count')
+  onCount(next: number) {
+    this.countChanged.emit(next);
+  }
+
+  render() {
+    return (
+      <Host>
+        <span>{this.label}</span>
+        <output>{this.count}</output>
+        <button onClick={() => (this.count += this.step)}>+{this.step}</button>
+      </Host>
+    );
+  }
+}
+```
+
+## Supported
+
+| Feature | Notes |
+|---|---|
+| `@Component` | `tag`, `styleUrl`, `styleUrls` (array), `styles` (string), `encapsulation: { type: 'shadow' \| 'scoped' \| 'none', mode, delegatesFocus, slotAssignment, clonable, serializable, patches }`, `assetsDirs` |
+| `@Prop` | `reflect`, `mutable`, `attribute`; getters / setters; `!` (required) and `?` (optional); type classification and attribute names exactly as Stencil computes them |
+| `@State`, `@Element`, `@Method`, `@Event` (`eventName`, `bubbles`, `cancelable`, `composed`) | |
+| `@Watch`, `@Listen` (`target`, `capture`, `passive`) | Several per method |
+| Lifecycle | `connectedCallback`, `componentWillLoad`, `componentDidLoad`, `componentWillRender`, `componentDidRender`, `componentShouldUpdate`, `componentWillUpdate`, `componentDidUpdate`, `disconnectedCallback` |
+| JSX | Classic (`import { h }`, `h()` calls) or the automatic runtime (`@stencil/core/jsx-runtime`); `<Host>`, fragments, automatic `key` insertion like Stencil |
+| Styles | `.css`, `.scss` (and anything `@stencil/unplugin` preprocesses), shadow or scoped |
+| TypeScript | Everything oxc strips; enums are emitted the way TypeScript emits them |
+| Imports | Aliased decorator imports (`import { Prop as P }`), other modules, packages |
+
+## Falls back to Stencil's compiler (for now)
+
+These compile through Stencil's own compiler, per file, automatically:
+
+- components that `extend` a class or use mixins;
+- `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`;
+- per-mode `styleUrls` (`{ ios: …, md: … }`);
+- inline `styles` on **scoped** components (they need Stencil's `scopeCss`);
+- component `globalStyle` / `globalStyleUrl`.
+
+## How props become attributes
+
+stencilrs follows Stencil exactly, so these are worth knowing when you write components:
+
+- **Prop types decide attributes.** `string`, `number`, `boolean` and `any` props get an attribute;
+  object, array and other types (`unknown` to Stencil) don't, so set them as properties
+  (`el.items = [...]`).
+- **Attribute names are `toDashCase(name)`**, which puts a dash before every capital *and every
+  digit*: `firstName` → `first-name`, `draw2Url` → `draw-2-url`.
+- **Booleans follow HTML in v5**: `show-header="false"` is `true` (the attribute is present). Turn a
+  boolean prop off by setting the property or omitting the attribute.
+- **Imported types count.** `@Prop() size: Size` where `Size = 'sm' | 'lg'` is imported is a
+  string prop. Stencil's single-file compiler can't see imports and makes it `any`; stencilrs
+  follows the import, like a full `stencil build` (the plugin's default, `resolveImports`).
+
+## Where to put components
+
+Anywhere Vite can see them; one component per module is the Stencil convention (the module's only
+export should be the component class, or Stencil v5 reports an error). Import the module to
+register the element. A library entry that re-exports every component is a good pattern:
+
+```ts
+// src/index.ts
+export { PopCounter } from './components/pop-counter/pop-counter';
+export { PopGreeting } from './components/pop-greeting/pop-greeting';
+```

@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-14",
+  "machine": "Intel Core i9-10850K (10 cores / 20 threads), 64 GB, Windows 11, Node 22.20.0",
+  "versions": {
+    "stencil": "5.0.0-beta.25",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "oxc": "0.154",
+    "rust": "1.99"
+  },
+  "transpile": {
+    "what": "Compile each file to its customelement module, one process, single-threaded (parity/bench.mjs, 10 rounds)",
+    "files": 165,
+    "kib": 1097,
+    "rows": [
+      { "compiler": "Stencil v5 transpileSync (source maps, as @stencil/unplugin runs it)", "coldMs": 4617, "medianMs": 2778, "perFileUs": 16834 },
+      { "compiler": "Stencil v5 transpileSync (no source maps)", "coldMs": 2667, "medianMs": 2564, "perFileUs": 15539 },
+      { "compiler": "stencilrs transpile", "coldMs": 69, "medianMs": 68, "perFileUs": 409 }
+    ],
+    "speedup": "41× (vs. with maps), 38× (vs. without)"
+  },
+  "viteBuild": {
+    "what": "Production vite build of all 136 ui-kit components as one library (examples/ui-kit/bench-build.mjs, 3 rounds)",
+    "components": 136,
+    "rows": [
+      { "compiler": "Stencil v5 (@stencil/unplugin)", "firstMs": 5433, "warmMedianMs": 3880 },
+      { "compiler": "stencilrs (@popcorn245/stencilrs/vite)", "firstMs": 1011, "warmMedianMs": 819 }
+    ],
+    "speedup": "4.7× warm, 5.4× first build"
+  },
+  "stencilBuild": {
+    "what": "Full `stencil build` of the ui-kit (type-check, loader-bundle, standalone, www, docs-json)",
+    "ms": 11680
+  }
+}

@@ -1,0 +1,93 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="API" />
+
+# API
+
+## JavaScript (`@popcorn245/stencilrs`)
+
+```ts
+import { analyze, buildId, normalize, transpile } from '@popcorn245/stencilrs';
+```
+
+### `transpile(source, options)`
+
+Compile one component module to its **customelement** module: what Stencil's `transpileSync` emits
+with `componentExport: 'customelement'`, the shape `@stencil/unplugin` and Stencil's `standalone`
+output use.
+
+```ts
+const { code, components, diagnostics } = transpile(source, {
+  file: '/abs/path/my-counter.tsx', // picks the parser (.ts / .tsx), resolves style and relative imports
+  jsx: 'automatic',                  // 'classic' (h) or 'automatic' (default)
+  jsxImportSource: '@stencil/core',  // automatic runtime source (default)
+  coreImportPath: '@stencil/core/runtime/client/standalone', // runtime import (default)
+  resolveImports: true,              // build-accurate metadata (default false here; true in the Vite plugin)
+});
+```
+
+### `analyze(source, fileName, { resolveImports })`
+
+Metadata and diagnostics only, no code.
+
+### `normalize(code)`
+
+Reprints JavaScript through oxc's printer with comments dropped. The parity harness compares
+Stencil's and stencilrs' output after both go through it.
+
+### `buildId`
+
+A string that changes whenever the native binary does (size + mtime), for build caches keyed on
+compiler output.
+
+### Result shapes
+
+```ts
+interface ComponentMeta {
+  tagName: string;
+  componentClassName: string;
+  encapsulation: 'none' | 'scoped' | 'shadow';
+  styleUrls: string[];
+  properties: {
+    name: string;
+    type: 'string' | 'number' | 'boolean' | 'any' | 'unknown'; // Stencil's runtime type
+    mutable: boolean; required: boolean; optional: boolean;
+    getter: boolean; setter: boolean; reflect: boolean;
+    attribute: string | null;        // null: no attribute (object-typed props)
+    defaultValue?: string;           // source text, resolved through consts like Stencil
+    complexTypeOriginal: string;     // the type as written / printed
+  }[];
+  states: { name: string }[];
+  events: { name: string; method: string; bubbles: boolean; cancelable: boolean; composed: boolean }[];
+  methods: { name: string }[];
+  listeners: { name: string; method: string; target?: string; capture: boolean; passive: boolean }[];
+  watchers: { propName: string; methodName: string }[];
+  elementRef: string | null;
+}
+
+interface Diagnostic {
+  level: 'error' | 'warn';
+  message: string; // Stencil's own message text; "stencilrs: …" = a feature not ported yet
+  start: number;   // byte offsets into the source
+  end: number;
+}
+```
+
+## Rust (`stencilrs_transform`)
+
+```rust
+use stencilrs_transform::{analyze_with, normalize, transpile, Jsx, TranspileOptions, DEFAULT_CORE_IMPORT_PATH};
+
+let out = transpile(source, &TranspileOptions {
+    file: "src/my-counter.tsx".into(),
+    core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
+    jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
+    resolve_imports: true,
+});
+// out.code, out.components, out.diagnostics (serde-serialisable)
+
+let meta = analyze_with(source, "src/my-counter.tsx", true);
+```
+
+`analyze(source, file)` is `analyze_with(source, file, false)`. The Node binding
+(`crates/stencilrs_napi`) is a thin wrapper over these.

@@ -1,0 +1,94 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="How it works" />
+
+export const Step = ({ title, children, accent }) => (
+  <div style={{ flex: 1, minWidth: 170, border: `2px solid ${accent ?? '#4299e1'}`, borderRadius: 8, padding: '10px 12px' }}>
+    <div style={{ fontWeight: 700, marginBottom: 4 }}>{title}</div>
+    <div style={{ fontSize: 13, lineHeight: 1.45 }}>{children}</div>
+  </div>
+);
+export const Arrow = () => <div style={{ alignSelf: 'center', fontSize: 22, color: '#888' }}>→</div>;
+
+# How it works
+
+## Where stencilrs sits
+
+Stencil v5 compiles components with the TypeScript compiler API: a set of TypeScript
+*transformers* rewrites decorators into static metadata and the class into a custom element, then
+TypeScript prints JavaScript. That transform layer (about 13,700 lines) is the slow part, and it's
+what stencilrs replaces. Everything else stays Stencil's: the runtime that runs the elements, the
+bundler plugin (`@stencil/unplugin`) that handles CSS and build flags, and the output shape.
+
+<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '20px 0' }}>
+  <Step title="Your component" accent="#888">`.tsx` with Stencil decorators</Step>
+  <Arrow />
+  <Step title="stencilrs (Rust)" accent="#e53e3e">parse → analyse → generate, on oxc</Step>
+  <Arrow />
+  <Step title="Vite 8 / Rolldown">bundling; CSS, runtime and build flags via <code>@stencil/unplugin</code></Step>
+  <Arrow />
+  <Step title="@stencil/core runtime" accent="#888">the custom element in the browser</Step>
+</div>
+
+## Inside the compiler
+
+### 1. Parse
+
+[oxc](https://oxc.rs) parses the TypeScript/TSX source (as an ES module) into an AST.
+
+### 2. Analyse
+
+A port of Stencil's `decorators-to-static` and `static-to-meta` transformers reads the decorators
+straight into component metadata (`ComponentMeta`), and reproduces Stencil's validation and
+diagnostics word for word (tag rules, the single-export rule, v4 options, `@Method` return types, …).
+
+The hard part is **prop types**: Stencil asks the TypeScript type checker whether each prop is a
+string, number, boolean or something else, and that decides attribute handling at runtime.
+stencilrs answers the same question without a type checker:
+
+- written annotations are classified syntactically, with unions, literal types, enums, `keyof`,
+  `typeof` and type aliases followed;
+- unannotated props are typed from their initializer the way TypeScript widens it;
+- defaults are resolved through `const` chains and object members, as Stencil does.
+
+### Two modes
+
+| | single-file (`resolveImports: false`) | build-accurate (`resolveImports: true`) |
+|---|---|---|
+| Matches | Stencil's `transpileSync` / `@stencil/unplugin` | a full `stencil build` |
+| Imports | unresolved → `any` | relative imports followed (types, enums, consts, function return types, re-exports), each module summarised once and cached |
+| Lib types (`Date`, `Record<…>`) | unresolved → `any` | object types |
+| Verified by | `parity/` (165 / 165) | `examples/ui-kit/check-build.mjs` (136 / 136) |
+
+The two differ for real components: in the ui-kit, single-file compilation types 21 components'
+props differently from the full build (an imported `CardPayload` becomes `any` and gets an
+attribute). The Vite plugin defaults to build-accurate.
+
+### 3. Generate
+
+The customelement module is produced in two passes:
+
+1. **Stencil's rewrites as text edits on the original TypeScript**: the `@stencil/core` import is
+   rewritten, the class becomes `const X = class extends HTMLElement`, a constructor is added
+   (`__registerHost`, `__attachShadow`, `createEvent` for each `@Event`), `@Element` becomes a getter,
+   static getters are added (`watchers`, `style`, and the ones Stencil leaves behind), JSX elements in
+   `render()` get Stencil's automatic `key`s, enums are lowered the way TypeScript does, style imports
+   are added, and `__stencil_defineCustomElement(X, [flags, tag, members, …])` is appended with the
+   compact runtime metadata from a port of `formatComponentRuntimeMeta`.
+2. **oxc's transformer** strips the TypeScript and compiles the JSX (classic `h()` or the automatic
+   runtime), with two adjustments so the output matches TypeScript's (the JSX runtime import first;
+   a lone `{...spread}` copied into an object).
+
+The runtime helper import is prepended last, so nothing it brings in is elided.
+
+## The Vite plugin
+
+`@popcorn245/stencilrs/vite` runs before `@stencil/unplugin`, compiles component files, and marks
+them so unplugin leaves them alone. Files using a feature stencilrs hasn't ported come back with a
+`stencilrs:` diagnostic, and the plugin lets unplugin compile those with Stencil's own compiler. In
+dev it adds HMR (`stencil:hmr`) the same way unplugin does.
+
+## Design notes
+
+The full map of Stencil v5's compiler pipeline and every transformer, with the type-checker calls
+each makes, is under **Reference** in this sidebar.

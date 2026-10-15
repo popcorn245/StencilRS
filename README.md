@@ -44,6 +44,14 @@ metadata for all 136, and the spec suite gives identical results with either com
 **[`examples/starter`](examples/starter/README.md)** is a ready project: dev server with hot
 reload, a component generator, tests in happy-dom and in headless Chrome, app and library builds.
 
+**[`storybook/`](storybook/README.md)** shows both component sets, compiled by stencilrs, beside
+the full documentation: getting started, writing components, the Vite plugin, the API, testing,
+migrating to v5, how the compiler works and was built, parity, benchmarks, quirks and roadmap.
+
+```sh
+cd storybook && npm install && npm run storybook   # http://localhost:6007
+```
+
 ## Plan
 
 1. **Study** – catalogue every v5 transformer: input shape, emitted code, and whether it needs
@@ -64,14 +72,17 @@ reload, a component generator, tests in happy-dom and in headless Chrome, app an
 ## Status
 
 - Step 1 done: [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
-- Step 2 done: [`parity/`](parity/README.md), 164 fixtures (27 features + the old bucket ui-kit)
-  with golden output from real Stencil v5.
+- Step 2 done: [`parity/`](parity/README.md), 165 fixtures (29 features + the 136 ui-kit
+  components) with golden output from real Stencil v5.
 - Step 3, first seam done: `transpile()` produces what Stencil's `transpileSync` emits for
   `@stencil/unplugin` (`componentExport: 'customelement'`): metadata, diagnostics and code.
-  **164/164 fixtures identical** to Stencil v5 (code compared after reprinting both through
-  oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer.
-- Benchmark (`npm run bench`), same 164 files, one process: Stencil v5 ~2.3 s warm, stencilrs
-  ~55 ms, about **40× faster** (70× cold). Stencil also writes source maps; stencilrs doesn't yet.
+  **165/165 fixtures identical** to Stencil v5 (code compared after reprinting both through
+  oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer. With
+  `resolveImports` it also matches a full `stencil build`'s metadata: 136/136 on the ui-kit.
+- The ui-kit spec suite: 874/874 green with either compiler.
+- Benchmark (`npm run bench`), same 165 files, one process: about **41× faster** per file than
+  Stencil v5 warm; a production Vite build of the whole ui-kit is about **4.7× faster**. Stencil
+  also writes source maps; stencilrs doesn't yet. Numbers: the Benchmarks page in Storybook.
 - Not yet: source maps, computed member names, const evaluation for decorator arguments,
   serializers, `@AttachInternals`, inheritance and mixins, scoped inline `styles` (needs
   `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR outputs.

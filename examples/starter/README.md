@@ -19,7 +19,7 @@ npm install
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with the demo page (`index.html`). Edit a component and it hot-reloads in place, keeping its state. |
-| `npm run new pop-card` | Scaffold `src/components/pop-card/` (component, CSS, test) and register it. |
+| `npm run new pop-card` | Scaffold `src/components/pop-card/` (component, CSS, test, Storybook story) and register it. |
 | `npm test` | Tests in happy-dom (fast, no browser). |
 | `npm run test:browser` | The same tests in headless Chrome (the Chrome installed on this machine). |
 | `npm run build` | Production build of the demo page into `dist/`. |

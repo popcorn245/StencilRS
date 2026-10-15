@@ -1,0 +1,66 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Migrating to Stencil v5" />
+
+# Migrating to Stencil v5
+
+stencilrs targets Stencil v5's component API. This is what it took to move the bucket ui-kit
+(136 components) from Stencil 4 to a clean v5 `stencil build`, and what to expect in your own
+components.
+
+## Components
+
+1. **Encapsulation** moved into one option:
+
+   ```diff
+   - @Component({ tag: 'pop-card', shadow: true })
+   + @Component({ tag: 'pop-card', encapsulation: { type: 'shadow' } })
+
+   - @Component({ tag: 'pop-list', scoped: true })
+   + @Component({ tag: 'pop-list', encapsulation: { type: 'scoped' } })
+   ```
+
+   `shadow: false` / `scoped: false` just go. `formAssociated: true` becomes `@AttachInternals()`.
+   `npx stencil migrate` does this for you.
+
+2. **Type your `async @Method()`s.** A full `stencil build` accepts `@Method() async open() {}`, but
+   Stencil's single-file compiler (`@stencil/unplugin`, Vite) rejects it, because without the
+   TypeScript lib it can't tell the return type is a Promise. Write `async open(): Promise<void>`.
+
+3. **Boolean attributes follow HTML.** `show-header="false"` now means `true`. Set the property, or
+   restore the old behaviour with `@AttrDeserialize`.
+
+4. **`@Watch` waits for the first render**, and `componentShouldUpdate` gets one batched call.
+
+## `stencil.config.ts`
+
+| v4 | v5 |
+|---|---|
+| `type: 'dist'` | `type: 'loader-bundle'` |
+| `type: 'dist-custom-elements'` | `type: 'standalone'` |
+| `type: 'dist-hydrate-script'` | `type: 'ssr'` |
+| `extras: { … }` | `compat: { … }` (`enableImportInjection` is now the default) |
+| `testing: { … }` | gone: use Vitest (`@stencil/vitest`) or Playwright |
+| `externalRuntime: false`, `serviceWorker: null` | now the defaults: delete |
+
+`npx stencil migrate --dry-run` lists what's left. The `stencil build` CLI is now its own package:
+`npm install --save-dev @stencil/cli`.
+
+## TypeScript 6
+
+Stencil v5 ships with TypeScript 6, which changed two defaults that bite older projects:
+
+- **`strict` is on by default.** Code written without strict mode (uninitialised `@Prop()` fields,
+  implicit `any`s) needs `"strict": false` in `tsconfig.json`, or the fixes.
+- **`baseUrl` is deprecated.** `paths` work without it (relative to the tsconfig).
+
+## Packaging
+
+v5 checks `package.json` when generating a distribution: set `module`
+(`./dist/loader-bundle/index.js`), `types` (`./dist/types/index.d.ts`), `collection`
+(`dist/collection/collection-manifest.json`) and a `files` array.
+
+## The result
+
+The ui-kit (`examples/ui-kit`) builds with **0 errors and 0 warnings**, and its spec suite passes
+**874 / 874** with Stencil v5's compiler and with stencilrs. See its README for the full list.
