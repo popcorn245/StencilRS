@@ -1,0 +1,104 @@
+:host { display: block; }
+
+.toast-container {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  pointer-events: none;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+}
+
+.toast-container--bottom-right {
+  left: auto;
+  right: 1.25rem;
+  transform: none;
+  align-items: flex-end;
+}
+
+@media (min-width: 768px) {
+  .toast-container {
+    bottom: 1.25rem;
+    left: auto;
+    right: 1.25rem;
+    transform: none;
+    align-items: flex-end;
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--color-grey-800, #1f2937);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  pointer-events: all;
+  animation: toast-in 200ms ease both;
+}
+
+.toast--error {
+  background: var(--color-red-600, #dc2626);
+}
+
+.toast--success {
+  background: var(--color-green-600, #16a34a);
+}
+
+.toast__action {
+  /* Works for both <a> (navigate) and <button> (in-page, e.g. Undo). */
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  /* Keep a comfortable tap target without inflating the pill's height. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.25rem;
+  margin: -0.5rem 0;
+}
+
+.toast__action:hover { text-decoration-thickness: 2px; }
+
+.toast__action:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

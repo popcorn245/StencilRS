@@ -1,0 +1,32 @@
+/* pop-brand-icon is SCOPED (no shadow root), so `:host` does NOT apply — the
+   real centering + sizing is set inline in render() AND mirrored here on the
+   scoped `.pop-brand-icon` class.
+
+   Size is driven by font-size, in precedence order:
+   - the `size` prop → font-size inline on the host (highest), OR
+   - the `--size` custom property, OR
+   - a sane VISIBLE DEFAULT (1.25rem) — NOT `inherit` (which would collapse the
+     glyph to 0 on icon-only buttons that zero out font-size to hide their text). */
+:host,
+.pop-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  font-size: var(--size, 1.25rem);
+}
+
+.pop-brand-icon__wrap {
+  display: inline-flex;
+  line-height: 0;
+}
+
+/* The glyph tracks 1em square so it stays centered with zero baseline offset.
+   It paints in `currentColor`, so it themes with the surrounding text colour. */
+.pop-brand-icon__svg {
+  display: block;
+  width: 1em;
+  height: 1em;
+  color: inherit;
+  flex: 0 0 auto;
+}

@@ -1,0 +1,150 @@
+/* pop-field — one labeled form field (chrome + composite widgets). */
+
+pop-field {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+.field--disabled {
+  opacity: 0.65;
+}
+
+/* ── label / hint / error chrome ───────────────────────────────────────────── */
+.field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.field__label-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft, var(--pico-color, inherit));
+}
+.field__hint {
+  font-size: 0.72rem;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+}
+.field__error {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--pico-del-color, #d93848);
+}
+.field__note {
+  font-size: 0.72rem;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+}
+.field--invalid .field__input,
+.field--invalid pop-fillable-field input,
+.field--invalid pop-fillable-field select {
+  border-color: var(--pico-del-color, #d93848);
+}
+
+/* ── native inputs (number / date) ─────────────────────────────────────────── */
+.field__input {
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-sm, 12px);
+  background: var(--surface-raised, var(--pico-form-element-background-color, #fff));
+  color: var(--ink, var(--pico-form-element-color, inherit));
+  font: inherit;
+  font-size: 0.9rem;
+}
+.field__input:focus-visible {
+  outline: 2px solid var(--pico-primary, #3b82f6);
+  outline-offset: 1px;
+}
+
+/* ── boolean switch row ────────────────────────────────────────────────────── */
+.field__switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* ── depth composite ───────────────────────────────────────────────────────── */
+.field__depth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.field__depth-head {
+  display: flex;
+  justify-content: flex-end;
+}
+.field__depth-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.field__depth-count input {
+  width: 4.25rem;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-xs, 8px);
+  background: var(--surface-raised, var(--pico-form-element-background-color, #fff));
+  color: var(--ink, inherit);
+  font: inherit;
+  font-size: 0.82rem;
+}
+.field__depth-unit {
+  font-size: 0.72rem;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+}
+.field__depth-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--pico-primary, #3b82f6);
+}
+.field__depth-ticks {
+  display: flex;
+  justify-content: space-between;
+}
+.field__depth-tick {
+  padding: 0.1rem 0.3rem;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  cursor: pointer;
+  border-radius: var(--radius-xs, 8px);
+}
+.field__depth-tick--on {
+  color: var(--pico-primary, #3b82f6);
+}
+
+/* ── persist composite ─────────────────────────────────────────────────────── */
+.field__check-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.field__check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink, inherit);
+  cursor: pointer;
+}
+.field__check-row input[type='checkbox'] {
+  margin: 0;
+}
+
+/* ── slot fallback ─────────────────────────────────────────────────────────── */
+.field__slot {
+  display: block;
+}

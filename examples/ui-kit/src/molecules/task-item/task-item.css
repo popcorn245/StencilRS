@@ -1,0 +1,317 @@
+/* pop-task-item — a rich, high-contrast task row.
+ *
+ * Layout (mockup: mockup/tasks-redesign):
+ *   [check] [priority-dot] [body: title / meta-row] [drag-handle]
+ *
+ * The host custom element defaults to `display: inline`, which collapses the
+ * flex child to height:0 (invisible rows). Force a block host. The anchor
+ * wrapper (supplied by pop-task-list) also redefines `--pico-color` to its link
+ * colour, so row text uses our theme ink token (`--ink`) directly. */
+:host {
+  display: block;
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: var(--radius-sm, 14px);
+  border: 1px solid transparent;
+  transition: background var(--trans-fast, 0.16s ease), border-color var(--trans-fast, 0.16s ease),
+    transform var(--trans-fast, 0.16s ease), box-shadow var(--trans-fast, 0.16s ease);
+  position: relative;
+  font-family: var(--font-sans, inherit);
+  color: var(--ink, var(--pico-h1-color));
+}
+
+/* Hover lift — the whole row is the tap target (the wrapping <a>). */
+.task-list__item-wrap:hover .task-item {
+  background: var(--surface-card, #fff);
+}
+
+.task-item--done {
+  opacity: 0.7;
+}
+
+/* ──────────────── Checkbox ──────────────── */
+.task-item__check {
+  appearance: none;
+  flex: 0 0 auto;
+  /* min-* overrides the global `button { min-height/-width: 44px }` WCAG
+     touch-target rule; the tap target is the whole row anchor. */
+  width: 1.375rem;
+  height: 1.375rem;
+  min-width: 1.375rem;
+  min-height: 1.375rem;
+  margin: 0.06rem 0 0;
+  padding: 0;
+  border: 2px solid var(--ink-muted, #8492a8);
+  border-radius: 0.44rem;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--trans-fast, 0.16s ease), border-color var(--trans-fast, 0.16s ease),
+    transform var(--trans-fast, 0.16s ease), box-shadow var(--trans-fast, 0.16s ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.task-item__check:hover:not(:disabled) {
+  border-color: var(--brand-blue, #4299e1);
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 10%, transparent);
+}
+
+.task-item__check:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.task-item__check:focus-visible {
+  outline: 2px solid var(--brand-blue, #4299e1);
+  outline-offset: 2px;
+}
+
+.task-item__check--on {
+  background: var(--grad-brand, linear-gradient(135deg, #4299e1, #e53e3e));
+  border-color: transparent;
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--brand-red, #e53e3e) 26%, transparent);
+  animation: task-check-pop 0.34s var(--ease-spring, ease-out);
+}
+@keyframes task-check-pop {
+  0% { transform: scale(0.7); }
+  55% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.task-item__check svg {
+  width: 0.82rem;
+  height: 0.82rem;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.task-item__check--on svg {
+  opacity: 1;
+}
+
+/* ──────────────── Priority dot ──────────────── */
+.task-item__pri {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--ink-muted, #8492a8);
+}
+.task-item__pri--urgent {
+  background: var(--brand-red, #e53e3e);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-red, #e53e3e) 22%, transparent);
+}
+.task-item__pri--high { background: var(--sun-amber, #ffb86c); }
+.task-item__pri--med { background: var(--brand-blue, #4299e1); }
+.task-item__pri--low { background: var(--ink-muted, #8492a8); }
+
+/* ──────────────── Body (title + meta) ──────────────── */
+.task-item__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.44rem;
+}
+
+.task-item__title {
+  outline: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink, var(--pico-h1-color));
+  background: transparent;
+  padding: 0;
+  word-break: break-word;
+}
+.task-item__title--done {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-muted, var(--pico-muted-color));
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+/* Read mode: don't let a sloppy tap enter a text-selection drag. The
+   long-press handler flips to edit mode explicitly. */
+.task-item__title:not(.task-item__title--editing) {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+.task-item__title--editing {
+  outline: 2px solid var(--brand-blue, #4299e1);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+  cursor: text;
+}
+.task-item__title[contenteditable="true"]:empty::before {
+  content: "New task…";
+  color: var(--ink-muted, var(--pico-muted-color));
+  pointer-events: none;
+}
+
+/* ──────────────── Meta row ──────────────── */
+.task-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.task-item__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--line, #dde6f2);
+  color: var(--ink-soft, #475067);
+  background: transparent;
+  white-space: nowrap;
+  line-height: 1.4;
+  max-width: 100%;
+  min-width: 0;
+}
+.task-item__chip svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  flex: none;
+}
+.task-item__chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Due chip — neutral by default, red overdue, amber today. */
+.task-item__chip--due {
+  color: var(--ink-soft, #475067);
+  background: var(--surface-sunken, #e8eef8);
+  border-color: transparent;
+}
+.task-item__chip--overdue {
+  color: var(--brand-red, #e53e3e);
+  background: color-mix(in oklab, var(--brand-red, #e53e3e) 12%, transparent);
+  border-color: transparent;
+}
+.task-item__chip--today {
+  color: #a9741b;
+  background: color-mix(in oklab, var(--sun-amber, #ffb86c) 26%, transparent);
+  border-color: transparent;
+}
+[data-theme="dark"] .task-item__chip--today { color: var(--sun-gold, #ffd36c); }
+
+/* Reminder/timer chip — violet, distinct from a due date. */
+.task-item__chip--reminder {
+  color: var(--brand-violet, #8b5cf6);
+  background: color-mix(in oklab, var(--brand-violet, #8b5cf6) 12%, transparent);
+  border-color: transparent;
+}
+
+/* Quest badge — violet. Shrinks + ellipsizes first so a long name never
+   overlaps a neighbouring chip. */
+.task-item__chip--quest {
+  color: var(--brand-violet, #8b5cf6);
+  background: color-mix(in oklab, var(--brand-violet, #8b5cf6) 13%, transparent);
+  border-color: transparent;
+  flex-shrink: 1;
+}
+.task-item__chip--quest .task-item__chip-label { max-width: 18ch; }
+
+/* Thread chip — teal. */
+.task-item__chip--thread {
+  color: #0e8074;
+  background: color-mix(in oklab, var(--sun-teal, #4ecdc4) 20%, transparent);
+  border-color: transparent;
+}
+[data-theme="dark"] .task-item__chip--thread { color: var(--sun-teal, #4ecdc4); }
+
+/* Tag chip — quiet, hash-prefixed. */
+.task-item__chip--tag {
+  color: var(--ink-soft, #475067);
+  background: transparent;
+  border-color: var(--line, #dde6f2);
+}
+.task-item__chip--tag::before { content: "#"; color: var(--ink-muted, #8492a8); }
+
+/* ──────────────── Assignee ──────────────── */
+.task-item__assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  background: var(--surface-sunken, #e8eef8);
+  border-radius: var(--radius-pill, 999px);
+  padding: 0.1rem 0.5rem 0.1rem 0.14rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-soft, #475067);
+  max-width: 12rem;
+  min-width: 0;
+}
+.task-item__assignee-av {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.25);
+}
+.task-item__assignee-av--initials {
+  background: var(--grad-brand, var(--brand-blue, #4299e1));
+  color: #fff;
+}
+.task-item__assignee-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ──────────────── Drag handle ──────────────── */
+.task-item__drag-handle {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  appearance: none;
+  background: transparent;
+  border: none;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft, #475067);
+  cursor: grab;
+  touch-action: none;
+  border-radius: 8px;
+  opacity: 0.55;
+  transition: opacity var(--trans-fast, 0.16s ease), color var(--trans-fast, 0.16s ease),
+    background var(--trans-fast, 0.16s ease);
+}
+.task-item__drag-handle:active { cursor: grabbing; }
+.task-item__drag-handle:hover {
+  color: var(--ink, inherit);
+  opacity: 1;
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 12%, transparent);
+}
+.task-list__item-wrap:hover .task-item__drag-handle,
+.task-item__drag-handle:focus-visible {
+  opacity: 0.9;
+}
+@media (hover: none) {
+  .task-item__drag-handle { opacity: 0.75; }
+}

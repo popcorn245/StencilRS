@@ -86,13 +86,13 @@ export class PopTabbedChat {
   }
 
   @Method()
-  async sendMessage(text: string) {
+  async sendMessage(text: string): Promise<any> {
     const aiChat = this.el.querySelector('pop-ai-chat') as any;
     await aiChat?.sendMessage(text);
   }
 
   @Method()
-  async setInputValue(text: string) {
+  async setInputValue(text: string): Promise<any> {
     const aiChat = this.el.querySelector('pop-ai-chat') as any;
     await aiChat?.setInputValue(text);
   }

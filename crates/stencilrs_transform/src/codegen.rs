@@ -46,6 +46,9 @@ pub enum Jsx {
 #[derive(Debug, Clone)]
 pub struct CodegenOptions2 {
     pub file: String,
+    /// Build-accurate metadata: follow relative imports and know lib types, as a full
+    /// `stencil build` does. Off: exactly what single-file `transpileSync` produces.
+    pub resolve_imports: bool,
     pub core_import_path: String,
     pub jsx: Jsx,
 }

@@ -1,0 +1,332 @@
+:host {
+  display: block;
+  position: relative;
+  width: 64px;
+  height: 64px;
+  z-index: 1001;
+}
+
+.ring-menu-container {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none; /* Prevent scroll while dragging */
+}
+
+/* Backdrop for closing without clicking items */
+.ring-menu-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: -1;
+  background: transparent;
+}
+
+/* Background gradient ring that expands to help options pop */
+.ring-menu-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250px;
+  height: 250px;
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ring-glow-color, var(--pico-primary)) 40%, transparent) 0%, transparent 70%);
+  z-index: 1;
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.ring-menu-container.is-open .ring-menu-glow {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+/* Core Center Button */
+.ring-btn-core {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--ring-btn-background, linear-gradient(135deg, var(--pico-primary) 0%, var(--pico-primary-hover) 100%));
+  background-size: var(--ring-btn-background-size, auto);
+  animation: var(--ring-btn-animation, none);
+  color: #fff !important;
+  border: 4px solid var(--pico-background-color);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--pico-primary) 39%, transparent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* Open state: go transparent so the ring items pop */
+.ring-menu-container.is-open .ring-btn-core:not(.is-dragging-out) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  animation: none;
+}
+
+.ring-btn-core.is-dragging-out {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--drag-ring-color, #ffffff) !important;
+  border: 2px solid var(--drag-ring-color, #ffffff);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--drag-ring-color, #ffffff) 20%, transparent);
+}
+.ring-btn-core.is-dragging-out .ring-btn-icon {
+  color: var(--drag-ring-color, #ffffff);
+}
+
+.ring-btn-core:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pico-primary) 20%, transparent);
+}
+
+.ring-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.ring-btn-icon.rotate-icon {
+  transform: rotate(135deg); /* Turns the '+' into an 'x' */
+}
+
+/* The expanding animation circle when holding */
+.ring-btn-core::after {
+  content: '';
+  position: absolute;
+  top: -6px; left: -6px; right: -6px; bottom: -6px;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: var(--pico-primary-focus);
+  border-right-color: var(--pico-primary-focus);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.ring-btn-core.is-holding::after {
+  opacity: 0.8;
+  animation: app-spin-hold 0.4s linear forwards;
+}
+
+@keyframes app-spin-hold {
+  0% { transform: rotate(-45deg); border-bottom-color: transparent; border-left-color: transparent; }
+  50% { border-bottom-color: var(--pico-primary-focus); border-left-color: transparent; }
+  100% { transform: rotate(315deg); border-bottom-color: var(--pico-primary-focus); border-left-color: var(--pico-primary-focus); }
+}
+
+/* The thumb drag tracker */
+.drag-thumb-ring {
+  position: absolute;
+  top: -12px; left: -12px; bottom: -12px; right: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.5);
+  opacity: 0;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+}
+
+.drag-thumb-ring.is-visible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Menu Items */
+.ring-menu-items-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  z-index: 5; /* Below the core button but above backdrop */
+}
+
+.ring-item {
+  position: absolute;
+  top: -24px; /* Half of height to center */
+  left: -24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.3s ease;
+  transform-origin: center;
+  opacity: 0;
+}
+
+.ring-menu-container.is-open .ring-item {
+  opacity: 1;
+}
+
+.ring-item-label {
+  position: absolute;
+  top: -25px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pico-color, #fff);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.2s, transform 0.2s;
+  background: rgba(0,0,0,0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.ring-menu-container.is-dragging .ring-item-label {
+  /* hide labels while dragging for cleaner UI */
+  opacity: 0 !important;
+}
+
+.ring-menu-container.is-open:not(.is-dragging) .ring-item-label,
+.ring-item.is-active .ring-item-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Mic drag hint ────────────────────────────────────────────────────────── */
+
+/* Mic icon — appears below the ring when open, smaller than ring items, no bg */
+.mic-drag-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9;
+  padding: 0;
+  opacity: 0.65;
+  color: #fff;
+  transition: opacity 150ms ease, transform 150ms ease;
+  animation: mic-hint-in 250ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.mic-drag-hint.is-active {
+  opacity: 1;
+  transform: translateX(-50%) scale(1.2);
+  color: #c084fc;
+}
+
+@keyframes mic-hint-in {
+  from { opacity: 0; transform: translateX(-50%) scale(0.5) translateY(-4px); }
+  to   { opacity: 0.65; transform: translateX(-50%) scale(1) translateY(0); }
+}
+
+/* ── Countdown: centered in the ring ─────────────────────────────────────── */
+
+.ring-countdown-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 11; /* above ring-btn-core */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  animation: ring-countdown-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes ring-countdown-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* cancel text link — no chrome */
+.ring-countdown-center .ring-rec-cancel {
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ring-countdown-num {
+  font-size: 3rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  animation: ring-count-pulse 1s ease-in-out infinite;
+}
+
+@keyframes ring-count-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ── Recorder area: above the ring options ───────────────────────────────── */
+
+.ring-recorder-area {
+  position: absolute;
+  top: -150px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 6;
+  pointer-events: auto;
+  animation: ring-waveform-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes ring-waveform-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Fade ring items when mic is active */
+.ring-menu-container.is-recording .ring-item {
+  opacity: 0.12;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+/* Minimal cancel — just an × with no chrome */
+.ring-rec-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  letter-spacing: 0.04em;
+  transition: color 150ms ease;
+}
+.ring-rec-cancel:hover {
+  color: rgba(255, 255, 255, 0.85);
+}

@@ -1,0 +1,165 @@
+/* pop-budget-bill-list — themed via ui-kit tokens (--ink, --ink-muted, --line,
+   --surface-raised, --brand-blue) with fallbacks so it renders in plain HTML /
+   Storybook (light + dark via [data-theme]) AND matches the hub panel. */
+.bill-list {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--ink, #0f172a);
+  /* Size columns off the panel's own width so the container query below can
+     shed columns on a narrow sheet instead of overflowing left/right. */
+  container-type: inline-size;
+  max-width: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tab-btn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 6px;
+  background: var(--surface-raised, #f6f8fc);
+  color: var(--ink-muted, #64748b);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.tab-btn:hover {
+  background: var(--surface-2, #eef2f9);
+  color: var(--ink, #0f172a);
+}
+
+.tab-btn.active {
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 14%, transparent);
+  color: var(--brand-blue, #3b82f6);
+  border-color: var(--brand-blue, #3b82f6);
+}
+
+.add-btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: var(--brand-blue, #3b82f6);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.add-btn:hover {
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 88%, #000);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Fixed layout so columns honor the widths below and the name cell can
+     ellipsize instead of the whole table growing past the panel. */
+  table-layout: fixed;
+}
+
+/* Cells never expand the table — long content is clipped/ellipsized. */
+thead th,
+td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Column widths (name = remaining space). */
+.amount { width: 5rem; }
+.due { width: 3.75rem; }
+.freq { width: 5.5rem; }
+thead th:nth-child(5), /* Status */
+td:nth-child(5) { width: 5rem; }
+thead th:nth-child(6), /* actions */
+td:nth-child(6) { width: 3.5rem; }
+
+thead th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  color: var(--ink-muted, #64748b);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  transition: background 0.1s;
+}
+
+tbody tr:hover {
+  background: var(--surface-raised, #f6f8fc);
+}
+
+td {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.due, .freq {
+  color: var(--ink-muted, #64748b);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  color: #0f1117;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.action-btn {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-muted, #64748b);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.action-btn:hover {
+  background: var(--surface-raised, #f6f8fc);
+  color: var(--ink, #0f172a);
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--ink-muted, #64748b);
+  font-size: 0.9rem;
+}
+
+/* On a narrow sheet, keep Name + Amount + Due; shed Frequency / Status / actions.
+   NOTE: Stencil `scoped` does NOT scope selectors inside @container, so these
+   are prefixed with `.bill-list` to out-specify the scoped base rules (a bare
+   `td.freq` would lose to the scoped `.freq` rule and never hide). */
+@container (max-width: 480px) {
+  .bill-list thead th:nth-child(4),
+  .bill-list thead th:nth-child(5),
+  .bill-list thead th:nth-child(6),
+  .bill-list td.freq,
+  .bill-list td:nth-child(5),
+  .bill-list td:nth-child(6) {
+    display: none;
+  }
+}

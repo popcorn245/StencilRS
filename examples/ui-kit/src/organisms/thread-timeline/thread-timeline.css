@@ -1,0 +1,172 @@
+/* pop-thread-timeline — Pico tokens only, no hardcoded colors. */
+.ttl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+  color: var(--pico-color);
+  font-size: 0.9rem;
+}
+
+.ttl__spinner {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--pico-muted-color);
+}
+
+.ttl__older {
+  align-self: center;
+  width: auto;
+  padding: 0.15rem 0.6rem;
+  margin: 0;
+  font-size: 0.75rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-muted-color);
+  cursor: pointer;
+}
+
+.ttl__empty {
+  margin: 1.5rem 0;
+  text-align: center;
+  color: var(--pico-muted-color);
+  font-style: italic;
+}
+
+.ttl__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 92%;
+  min-width: 0;
+}
+
+.ttl__item--own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.ttl__item--other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+/* Cards get the full column — the wrapper draws its own chrome. */
+.ttl__item--card {
+  max-width: 100%;
+  align-self: stretch;
+  align-items: stretch;
+}
+
+/* Done = struck through and muted, but still readable in context. */
+.ttl__item--done .ttl__bubble {
+  text-decoration: line-through;
+  color: var(--pico-muted-color);
+}
+
+.ttl__item--done .ttl__card {
+  opacity: 0.65;
+}
+
+/* Dismissed = collapsed to a single muted line. */
+.ttl__item--dismissed {
+  align-self: center;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--pico-muted-color);
+}
+
+/* Brief highlight after scrollToItem() lands on a row. */
+.ttl__item--flash .ttl__bubble,
+.ttl__item--flash .ttl__card {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+
+.ttl__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: var(--pico-muted-color);
+}
+
+.ttl__author {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ttl__from {
+  font-style: italic;
+}
+
+.ttl__replyref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  text-align: left;
+  border-left: 2px solid var(--pico-primary);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-muted-color);
+  cursor: pointer;
+}
+
+.ttl__replyref-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ttl__bubble {
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  background: var(--pico-card-background-color);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ttl__item--own .ttl__bubble {
+  background: var(--pico-card-sectioning-background-color);
+  border-color: var(--pico-primary-border, var(--pico-border-color));
+}
+
+.ttl__controls {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.ttl__btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  background: transparent;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.ttl__btn:hover:not(:disabled) {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.ttl__btn ion-icon {
+  font-size: 1rem;
+}

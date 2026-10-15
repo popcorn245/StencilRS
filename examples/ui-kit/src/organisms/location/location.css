@@ -1,0 +1,205 @@
+/* pop-location — collapsed button + anchored popover. Pico-token themed. */
+.pl {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Collapsed: the single button (pin + label + caret). */
+.pl__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-sectioning-background-color, rgba(127, 127, 127, 0.06));
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease;
+}
+.pl__btn:hover {
+  border-color: var(--pico-primary, #3b82f6);
+}
+.pl__btn-pin {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  color: var(--pico-primary, #3b82f6);
+}
+.pl__btn-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl__btn-caret {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  color: var(--pico-muted-color, #94a3b8);
+}
+
+/* ── Inline trigger: plain text (label + subtle ▾), styled to drop into another
+   element's location-label slot (muted, small). NOT a filled button. ──────── */
+.pl--inline {
+  display: inline-block;
+  width: auto;
+}
+.pl__inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.pl__inline-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl__inline-caret {
+  flex: 0 0 auto;
+  font-size: 0.8em;
+  opacity: 0.75;
+}
+.pl__inline:hover {
+  color: var(--pico-primary, #3b82f6);
+}
+
+/* Popover anchored under the trigger (within the relative .pl). */
+.pl__pop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  padding: 0.55rem;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-background-color, #fff);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+/* Inline trigger sits on the RIGHT of a card → right-align the popover and give
+   it an explicit width clamped to the viewport so it never overflows the edge. */
+.pl__pop--right {
+  left: auto;
+  right: 0;
+  width: min(18rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+}
+
+/* Input with a find-my-location icon button on the RIGHT edge. */
+.pl__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pl__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.55rem 2.6rem 0.55rem 0.65rem; /* right pad clears the locate button */
+  font: inherit;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-form-element-border-color, var(--pico-border-color, rgba(127, 127, 127, 0.3)));
+  background: var(--pico-form-element-background-color, transparent);
+  color: var(--pico-form-element-color, inherit);
+}
+.pl__input:focus {
+  outline: none;
+  border-color: var(--pico-primary, #3b82f6);
+}
+.pl__locate {
+  position: absolute;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  background: transparent;
+  color: var(--pico-primary, #3b82f6);
+  cursor: pointer;
+}
+.pl__locate:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pico-primary, #3b82f6) 12%, transparent);
+}
+.pl__locate ion-icon {
+  font-size: 1.2rem;
+}
+
+.pl__error {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--pico-del-color, #e53e3e);
+}
+.pl__hint {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--pico-muted-color, #8b97a6);
+}
+
+/* Suggestions dropdown. */
+.pl__list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  max-height: 13rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.pl__item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.5rem 0.55rem;
+  border: none;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.pl__item:hover {
+  background: var(--pico-card-sectioning-background-color, rgba(127, 127, 127, 0.1));
+}
+/* Keyboard-highlighted option (Arrow nav) reads stronger than plain hover. */
+.pl__item--hl {
+  background: color-mix(in oklab, var(--pico-primary, #3b82f6) 16%, transparent);
+}
+.pl__item ion-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  color: var(--pico-muted-color, #94a3b8);
+}
+.pl__item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl__spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--pico-primary, #3b82f6) 30%, transparent);
+  border-top-color: var(--pico-primary, #3b82f6);
+  animation: pl-spin 0.7s linear infinite;
+}
+@keyframes pl-spin {
+  to { transform: rotate(360deg); }
+}

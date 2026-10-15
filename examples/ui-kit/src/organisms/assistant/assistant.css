@@ -1,0 +1,259 @@
+/* ── pop-assistant ─────────────────────────────────────────────────────────
+   The unified Ask/Build/Link Assistant surface. Tokens throughout (no hard px
+   where a token exists); 44px targets; :focus-visible rings inherited globally. */
+
+:host { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.asst-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-card, #fff);
+  color: var(--ink, #1a1a2e);
+}
+
+/* ── header: verb tabs + the ONE model control ── */
+.asst-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2, 0.5rem);
+  padding: var(--size-2, 0.5rem) var(--size-3, 0.75rem);
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+  flex-wrap: wrap;
+}
+
+.asst-verbs { display: flex; gap: var(--size-1, 0.25rem); }
+
+.asst-verb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-1, 0.25rem);
+  min-height: 36px;
+  padding: 0 var(--size-2, 0.5rem);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--ink-soft, #4a4a68);
+  font: inherit;
+  font-size: var(--scale-00, 0.875rem);
+  cursor: pointer;
+  transition: background var(--trans-fast, 120ms), color var(--trans-fast, 120ms);
+}
+.asst-verb pop-brand-icon { font-size: 1.05em; }
+.asst-verb:hover { background: var(--surface-sunken, rgba(0, 0, 0, 0.04)); color: var(--ink, #1a1a2e); }
+.asst-verb.is-active {
+  background: color-mix(in srgb, var(--brand-violet, #7b61ff) 14%, transparent);
+  color: var(--brand-violet, #7b61ff);
+  font-weight: 600;
+}
+
+.asst-model {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-sunken, rgba(0, 0, 0, 0.05));
+}
+.asst-model-opt {
+  min-height: 32px;
+  padding: 0 var(--size-2, 0.5rem);
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--ink-muted, #6a6a80);
+  font: inherit;
+  font-size: var(--scale-000, 0.8rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--trans-fast, 120ms), color var(--trans-fast, 120ms);
+}
+.asst-model-opt.is-active {
+  background: var(--surface-card, #fff);
+  color: var(--ink, #1a1a2e);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.12));
+}
+
+/* ── grounding context row ── */
+.asst-context {
+  display: flex;
+  align-items: center;
+  gap: var(--size-1, 0.25rem);
+  padding: var(--size-1, 0.25rem) var(--size-3, 0.75rem);
+  font-size: var(--scale-000, 0.8rem);
+  color: var(--brand-violet, #7b61ff);
+  background: color-mix(in srgb, var(--brand-violet, #7b61ff) 8%, transparent);
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.06));
+}
+
+/* ── honest error state ── */
+.asst-error {
+  display: flex;
+  align-items: center;
+  gap: var(--size-1, 0.25rem);
+  margin: var(--size-2, 0.5rem) var(--size-3, 0.75rem) 0;
+  padding: var(--size-2, 0.5rem);
+  font-size: var(--scale-000, 0.8rem);
+  color: var(--brand-red, #d64545);
+  background: color-mix(in srgb, var(--brand-red, #d64545) 8%, transparent);
+  border-radius: var(--radius-sm, 8px);
+}
+
+/* ── body / panes ── */
+.asst-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+.asst-pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.asst-pane[hidden] { display: none; }
+
+.asst-chat { flex: 1; min-height: 0; }
+/* NOTE: the message-box's own model-selector pill is suppressed by a GLOBAL rule
+   in the host app (notes-app global/app.css) — a scoped rule here can't pierce
+   the nested scoped pop-ai-chat subtree. The Assistant header owns the ONE model
+   control (assistant.mdx §D16). */
+
+/* ── Build + Link shared scroll ── */
+.asst-build,
+.asst-link {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--size-3, 0.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3, 0.75rem);
+}
+
+.asst-actions { display: flex; flex-wrap: wrap; gap: var(--size-1, 0.25rem); }
+.asst-action,
+.asst-suggest {
+  min-height: 44px;
+  padding: 0 var(--size-3, 0.75rem);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-1, 0.25rem);
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface-card, #fff);
+  color: var(--ink, #1a1a2e);
+  font: inherit;
+  font-size: var(--scale-00, 0.875rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--trans-fast, 120ms), border-color var(--trans-fast, 120ms);
+}
+.asst-action:hover,
+.asst-suggest:hover { background: var(--surface-sunken, rgba(0, 0, 0, 0.04)); border-color: var(--brand-violet, #7b61ff); }
+.asst-action:disabled,
+.asst-suggest:disabled { opacity: 0.5; cursor: not-allowed; }
+.asst-suggest { align-self: flex-start; }
+
+/* ── proposal card (Build diff / Link chips) ── */
+.asst-proposal {
+  border: 1px solid var(--line-strong, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-card, 12px);
+  background: var(--surface-canvas, #fafafe);
+  overflow: hidden;
+}
+.asst-proposal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--size-2, 0.5rem);
+  padding: var(--size-2, 0.5rem) var(--size-3, 0.75rem);
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+  flex-wrap: wrap;
+}
+.asst-proposal-title { font-weight: 700; font-size: var(--scale-00, 0.875rem); }
+.asst-proposal-note { font-size: var(--scale-000, 0.78rem); color: var(--ink-muted, #6a6a80); }
+
+.asst-diff,
+.asst-linklist { list-style: none; margin: 0; padding: 0; }
+
+.asst-diff-block,
+.asst-linkrow {
+  display: flex;
+  gap: var(--size-2, 0.5rem);
+  padding: var(--size-2, 0.5rem) var(--size-3, 0.75rem);
+  border-bottom: 1px solid var(--line, rgba(0, 0, 0, 0.06));
+}
+.asst-diff-block:last-child,
+.asst-linkrow:last-child { border-bottom: none; }
+.asst-diff-block.is-off,
+.asst-linkrow.is-off { opacity: 0.45; }
+
+.asst-diff-toggle { display: flex; align-items: flex-start; padding-top: 2px; }
+.asst-diff-toggle input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--brand-violet, #7b61ff); }
+
+.asst-diff-body { flex: 1; min-width: 0; }
+.asst-diff-kind {
+  display: inline-block;
+  font-size: var(--scale-0000, 0.7rem);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, #6a6a80);
+  margin-bottom: 2px;
+}
+
+/* block previews */
+.asst-bp { margin: 0; font-size: var(--scale-00, 0.875rem); line-height: 1.4; overflow-wrap: anywhere; }
+.asst-bp-h1 { font-size: var(--scale-2, 1.4rem); font-weight: 700; }
+.asst-bp-h2 { font-size: var(--scale-1, 1.15rem); font-weight: 700; }
+.asst-bp-h3 { font-size: var(--scale-0, 1rem); font-weight: 700; }
+.asst-bp-list { padding-left: var(--size-4, 1rem); }
+.asst-bp-list.is-check { list-style: none; padding-left: 0; }
+.asst-bp-list.is-check li { display: flex; align-items: baseline; gap: var(--size-1, 0.25rem); }
+.asst-check {
+  width: 14px; height: 14px; flex: 0 0 auto;
+  border: 1.5px solid var(--ink-muted, #6a6a80); border-radius: 3px;
+}
+.asst-check.is-on { background: var(--brand-violet, #7b61ff); border-color: var(--brand-violet, #7b61ff); }
+.asst-bp-table { border-collapse: collapse; width: 100%; }
+.asst-bp-table td { border: 1px solid var(--line, rgba(0, 0, 0, 0.12)); padding: 2px 6px; }
+.asst-bp-code {
+  background: var(--surface-sunken, rgba(0, 0, 0, 0.06));
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--size-2, 0.5rem);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--scale-000, 0.8rem);
+  overflow-x: auto;
+}
+.asst-bp-cols { display: flex; gap: var(--size-2, 0.5rem); }
+.asst-bp-col { flex: 1; padding: var(--size-1, 0.25rem); background: var(--surface-sunken, rgba(0, 0, 0, 0.03)); border-radius: var(--radius-xs, 4px); }
+.asst-bp-muted { color: var(--ink-muted, #6a6a80); font-style: italic; }
+
+.asst-linkrow-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.asst-linkrow-title { font-weight: 600; font-size: var(--scale-00, 0.875rem); }
+.asst-linkrow-reason { font-size: var(--scale-000, 0.78rem); color: var(--ink-muted, #6a6a80); }
+
+/* approve / reject */
+.asst-approve-row {
+  display: flex;
+  gap: var(--size-2, 0.5rem);
+  padding: var(--size-2, 0.5rem) var(--size-3, 0.75rem);
+  border-top: 1px solid var(--line, rgba(0, 0, 0, 0.08));
+}
+.asst-approve,
+.asst-reject {
+  min-height: 44px;
+  padding: 0 var(--size-3, 0.75rem);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-1, 0.25rem);
+  border-radius: var(--radius-sm, 8px);
+  font: inherit;
+  font-size: var(--scale-00, 0.875rem);
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: filter var(--trans-fast, 120ms), background var(--trans-fast, 120ms);
+}
+.asst-approve { background: var(--brand-violet, #7b61ff); color: #fff; }
+.asst-approve:hover:not(:disabled) { filter: brightness(1.06); }
+.asst-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+.asst-reject { background: transparent; border-color: var(--line-strong, rgba(0, 0, 0, 0.14)); color: var(--ink, #1a1a2e); }
+.asst-reject:hover { background: var(--surface-sunken, rgba(0, 0, 0, 0.04)); }
+
+/* dock layout is the compact default; full spreads out for a page/sheet */
+.asst-root--full .asst-build,
+.asst-root--full .asst-link { max-width: 48rem; margin: 0 auto; width: 100%; }

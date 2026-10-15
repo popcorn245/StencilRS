@@ -1,0 +1,234 @@
+/* ============================================================================
+ * editor-chrome.css — SHARED ui-kit GLOBAL theming for Editor.js body-portaled
+ * chrome (popovers / toolbars / tune menus).
+ *
+ * This is imported by `styles/index.css` (the ui-kit `globalStyle`), so EVERY
+ * `pop-editor` consumer — notes-app, tasks-app, the Astro app (packages/app)
+ * and popcorn-plus — inherits it automatically. Lives at the ui-kit global
+ * level so the fix is defined ONCE rather than duplicated per app.
+ *
+ * WHY THIS FILE EXISTS / ROOT CAUSE
+ * Editor.js portals its popovers, toolbars and tune menus to `document.body`
+ * (outside any app-scoped container). Its own stylesheet hard-codes a set of
+ * `--color-*` custom properties on `.ce-popover` (`--color-background: white`,
+ * `--color-text-primary: black`, …). Every internal popover element — the
+ * container, items, search field, separators, nested popovers — reads those
+ * vars, so in dark mode the whole block-insert / conversion / tunes menu
+ * rendered as a WHITE panel with near-invisible text. The previous overrides
+ * only re-skinned a couple of top-level selectors, so nested elements stayed
+ * light.
+ *
+ * FIX: this is a *global* stylesheet (imported by `styles/index.css`, the
+ * ui-kit `globalStyle`), so it lands in `document.head` and reaches the
+ * body-portaled nodes. We re-map Editor.js's OWN `--color-*` variables onto
+ * the theme-fabulous tokens, keyed on `html[data-theme="…"]` (those attrs live
+ * on <html>, which is an ancestor of body → they match). Re-mapping the
+ * variables re-themes the entire popover subtree in one place instead of
+ * chasing every nested selector. The theme-fabulous tokens themselves are
+ * defined at `:root` / `:root[data-theme]` (imported by index.css before this
+ * file), so `var(--surface-card)` etc. also resolve correctly on body
+ * descendants in every consumer.
+ * ========================================================================= */
+
+/* ── Re-map Editor.js popover variables to theme tokens (both themes) ──────── */
+.ce-popover,
+.ce-popover__container,
+.ce-conversion-toolbar,
+.ce-inline-toolbar {
+  --color-background: var(--surface-card);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--ink-soft, var(--ink-muted));
+  --color-border: var(--line);
+  --color-shadow: rgba(0, 0, 0, 0.18);
+  --color-border-icon: var(--line);
+  --color-border-icon-disabled: var(--line);
+  --color-text-icon-active: var(--brand-blue);
+  --color-background-icon-active: color-mix(in oklab, var(--brand-blue) 16%, transparent);
+  --color-background-item-focus: color-mix(in oklab, var(--brand-blue) 14%, transparent);
+  --color-shadow-item-focus: color-mix(in oklab, var(--brand-blue) 18%, transparent);
+  --color-background-item-hover: color-mix(in oklab, var(--brand-blue) 12%, transparent);
+}
+
+/* ── Container surface, border, shadow + scrollbar ────────────────────────────
+ * NOTE: paint only the floating `__container` (the visible panel) and the
+ * conversion toolbar — NOT the bare `.ce-popover`, which Editor.js keeps as a
+ * tiny (~14px) anchor in the gutter; painting it shows as a stray dark dot. */
+.ce-popover__container,
+.ce-conversion-toolbar {
+  background: var(--surface-card) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.32) !important;
+  scrollbar-color: color-mix(in oklab, var(--brand-blue) 35%, var(--line)) transparent;
+}
+.ce-popover {
+  color: var(--ink) !important;
+}
+
+.ce-popover__container::-webkit-scrollbar,
+.ce-popover__items::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+}
+.ce-popover__items::-webkit-scrollbar-thumb,
+.ce-popover__container::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--brand-blue) 35%, var(--line));
+  border-radius: 8px;
+}
+
+/* ── Item text + icons legible in both themes ─────────────────────────────── */
+.ce-popover-item__title,
+.ce-popover__item-label,
+.ce-popover-item__icon,
+.ce-popover-item,
+.ce-popover__items,
+.ce-conversion-tool__text,
+.ce-conversion-toolbar__label {
+  color: var(--ink) !important;
+}
+
+.ce-popover-item__icon,
+.ce-popover-item__icon svg,
+.ce-conversion-tool__icon {
+  color: var(--ink-soft, var(--ink-muted)) !important;
+  background: color-mix(in oklab, var(--ink) 5%, transparent) !important;
+}
+html[data-theme="dark"] .ce-popover-item__icon,
+html[data-theme="dark"] .ce-conversion-tool__icon {
+  background: color-mix(in oklab, #ffffff 6%, transparent) !important;
+}
+
+.ce-popover-item__secondary-title {
+  color: var(--ink-muted) !important;
+}
+
+/* ── Hover / focus / confirm states ───────────────────────────────────────── */
+.ce-popover-item:hover,
+.ce-popover-item--focused,
+.ce-conversion-tool:hover,
+.ce-conversion-tool--focused {
+  background: color-mix(in oklab, var(--brand-blue) 14%, transparent) !important;
+}
+.ce-popover-item--active,
+.ce-conversion-tool--active {
+  background: color-mix(in oklab, var(--brand-blue) 20%, transparent) !important;
+  color: var(--brand-blue) !important;
+}
+.ce-popover-item--confirmation:hover {
+  background: var(--brand-red, #c0392b) !important;
+  color: #fff !important;
+}
+
+/* ── Search field inside the popover ──────────────────────────────────────── */
+.ce-popover__search,
+.cdx-search-field {
+  background: var(--surface-sunken, var(--surface-raised)) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+}
+.cdx-search-field__input,
+.ce-popover__search input {
+  color: var(--ink) !important;
+  background: transparent !important;
+}
+.cdx-search-field__input::placeholder,
+.ce-popover__search input::placeholder {
+  color: var(--ink-muted) !important;
+}
+.cdx-search-field__icon svg,
+.ce-popover__search svg {
+  color: var(--ink-muted) !important;
+}
+
+/* ── Nested popover / separator ───────────────────────────────────────────── */
+.ce-popover--nested .ce-popover__container {
+  background: var(--surface-card) !important;
+}
+.ce-popover-item-separator__line {
+  background: var(--line) !important;
+}
+.ce-popover__nothing-found-message {
+  color: var(--ink-muted) !important;
+}
+
+/* ── Inline toolbar (keep consistent in both themes) ──────────────────────────
+ * Only paint the surface when the toolbar is actually shown (Editor.js toggles
+ * inline `visibility`); otherwise the collapsed toolbar paints as a stray dot. */
+.ce-inline-toolbar[style*="visibility: visible"] {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.3) !important;
+  color: var(--ink) !important;
+}
+.ce-inline-tool,
+.ce-inline-toolbar__dropdown {
+  color: var(--ink) !important;
+}
+.ce-inline-toolbar__dropdown {
+  border-right: 1px solid var(--line) !important;
+}
+
+/* ── Conversion toolbar surface ───────────────────────────────────────────── */
+.ce-conversion-toolbar {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+}
+.ce-conversion-toolbar__label {
+  color: var(--ink-muted) !important;
+}
+
+/* ── Block settings / tunes popover (uses the same .ce-popover machinery) ─── */
+.ce-settings,
+.ce-settings__button {
+  color: var(--ink) !important;
+}
+
+/* ── Custom tool popovers (LinkInlineTool [[…]] autocomplete, mention/hashtag)
+ *    These render inside the editor container but inherit hard-coded light
+ *    surfaces from their tool CSS — pin them to theme tokens too. ─────────── */
+.pop-link-suggest,
+.pop-mention-suggest,
+.pop-hashtag-suggest,
+.cdx-autocomplete,
+[data-pop-inline-popover] {
+  background: var(--surface-card) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.32) !important;
+}
+.pop-link-suggest__item:hover,
+.pop-mention-suggest__item:hover,
+.pop-hashtag-suggest__item:hover,
+.cdx-autocomplete__item:hover {
+  background: color-mix(in oklab, var(--brand-blue) 14%, transparent) !important;
+}
+
+/* ── Block actionbar (multi-block selection plugin) — already body-level ──── */
+.pop-block-actionbar,
+.pop-submenu-content {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.32) !important;
+}
+.pop-actionbar-header { background: var(--surface-sunken, var(--surface-raised)) !important; }
+.pop-actionbar-header span,
+.pop-actionbar-chevron,
+.pop-actionbar-close { color: var(--ink-muted) !important; }
+.pop-actionbar-item,
+.pop-actionbar-icon { color: var(--ink) !important; }
+.pop-actionbar-item:hover,
+.pop-actionbar-close:hover {
+  background: color-mix(in oklab, var(--brand-blue) 12%, transparent) !important;
+  color: var(--ink) !important;
+}
+
+/* ── Portaled surfaces sit ABOVE the (decorative) version badge ───────────── */
+.ce-popover,
+.ce-popover__container,
+.ce-conversion-toolbar,
+.ce-inline-toolbar,
+.pop-block-actionbar {
+  z-index: 1100 !important;
+}

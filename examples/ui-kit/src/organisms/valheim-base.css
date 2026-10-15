@@ -1,0 +1,190 @@
+/*
+ * Shared valheim-* primitives (block card, rows, rune avatar, pills, buttons,
+ * legend) — included via `styleUrls` by every valheim-* component so each
+ * scoped component carries its own copy. ALL color/shape comes from the
+ * semantic --vlh-* token layer (styles/valheim-skins.css); the fallbacks keep
+ * the components legible even with no skin class applied.
+ */
+
+.vlh-block {
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  border-radius: var(--vlh-radius-sm, 8px);
+  background: var(--vlh-surface, #fff);
+  color: var(--vlh-text, #1b2333);
+  font-family: var(--vlh-font, inherit);
+  padding: 0.6rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.vlh-block-h {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.vlh-block-h .vlh-ic {
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  color: var(--vlh-accent, #6366f1);
+}
+.vlh-block-h .vlh-ic--danger {
+  color: var(--vlh-danger, #ef4444);
+}
+.vlh-block-h h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--vlh-text, #1b2333);
+  font-family: var(--vlh-font-display, inherit);
+  letter-spacing: var(--vlh-title-spacing, -0.02em);
+}
+.vlh-block-h .vlh-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vlh-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vlh-accent, #6366f1);
+  white-space: nowrap;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--vlh-radius-pill, 999px);
+  background: color-mix(in srgb, var(--vlh-accent, #6366f1) 14%, transparent);
+}
+
+.vlh-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.vlh-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  background: var(--vlh-surface, #fff);
+}
+.vlh-rune {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  font-weight: var(--vlh-rune-weight, 600);
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  color: var(--vlh-text-soft, #475067);
+}
+
+/* Status pill (Fallen / This week / Upcoming / Sealed / Finale). */
+.vlh-st {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--vlh-radius-pill, 999px);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--vlh-st-c, var(--vlh-text-dim, #8492a8)) 14%, transparent);
+  color: var(--vlh-st-c, var(--vlh-text-dim, #8492a8));
+}
+.vlh-st--done { --vlh-st-c: var(--vlh-success, #48bb78); }
+.vlh-st--now { --vlh-st-c: var(--vlh-danger, #ef4444); }
+.vlh-st--soon { --vlh-st-c: var(--vlh-text-dim, #8492a8); }
+.vlh-st--sealed { --vlh-st-c: var(--vlh-mystic, #8b5cf6); }
+
+.vlh-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--vlh-radius-sm, 8px);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  border: 1px solid var(--vlh-border-strong, #c2cbd9);
+  background: var(--vlh-surface, #fff);
+  color: var(--vlh-text, #1b2333);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.vlh-btn:hover {
+  background: var(--vlh-surface-2, #eef1f6);
+}
+.vlh-btn--primary {
+  background: var(--vlh-accent, #6366f1);
+  border-color: var(--vlh-accent, #6366f1);
+  color: var(--vlh-accent-contrast, #fff);
+}
+.vlh-btn--primary:hover {
+  filter: brightness(1.05);
+  background: var(--vlh-accent, #6366f1);
+}
+.vlh-btn--sm {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+}
+.vlh-iconbtn {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vlh-text, #1b2333);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  transition: background 0.15s ease;
+}
+.vlh-iconbtn:hover {
+  background: var(--vlh-surface-2, #eef1f6);
+}
+.vlh-iconbtn--danger:hover {
+  color: var(--vlh-danger, #ef4444);
+}
+
+.vlh-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-style: italic;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px dashed var(--vlh-border-strong, #c2cbd9);
+}
+.vlh-legend pop-icon {
+  flex: 0 0 auto;
+}
+.vlh-legend--pub pop-icon { color: var(--vlh-mystic, #8b5cf6); }
+.vlh-legend--adm pop-icon { color: var(--vlh-accent, #6366f1); }
+
+.vlh-group-head {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  text-transform: uppercase;
+  margin: 0.15rem 0 -0.1rem;
+}
+
+/* Coin glyph after prices/balances. */
+.vlh-cn {
+  font-size: 0.5rem;
+  vertical-align: middle;
+  margin-left: 1px;
+  color: var(--vlh-coin, #f59e0b);
+}

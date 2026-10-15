@@ -1,0 +1,28 @@
+:host { display: block; }
+
+.nb {
+  display: flex; gap: 0;
+}
+.nb--horizontal { flex-direction: row; align-items: center; }
+.nb--vertical { flex-direction: column; }
+
+.nb--bottom {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  background: var(--pico-card-background-color);
+  border-top: 1px solid var(--pico-muted-border-color);
+  justify-content: space-around;
+  padding: 0.25rem 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nb--top {
+  background: var(--pico-card-background-color);
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  padding: 0 1rem;
+}
+
+.nb--side {
+  flex-direction: column; padding: 0.5rem;
+  height: 100%;
+}

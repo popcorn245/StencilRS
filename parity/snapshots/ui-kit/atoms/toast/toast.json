@@ -74,7 +74,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(message: string, type?: \"default\" | \"error\" | \"success\", action?: ToastAction, options?: ToastOptions) => any",
+            "signature": "(message: string, type?: \"default\" | \"error\" | \"success\", action?: ToastAction, options?: ToastOptions) => Promise<any>",
             "parameters": [
               {
                 "name": "message",
@@ -98,6 +98,10 @@
               }
             ],
             "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
               "ToastAction": {
                 "location": "local",
                 "path": "ui-kit/atoms/toast/toast.tsx",
@@ -109,7 +113,7 @@
                 "id": "ui-kit/atoms/toast/toast.tsx::ToastOptions"
               }
             },
-            "return": "any"
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -120,10 +124,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         }
@@ -234,16 +243,7 @@
       "styleDocs": []
     }
   ],
-  "diagnostics": [
-    {
-      "level": "error",
-      "messageText": "External @Method() show() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async show()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() hide() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async hide()."
-    }
-  ],
+  "diagnostics": [],
   "imports": [
     {
       "path": "@stencil/core/runtime/client/standalone"

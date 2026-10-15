@@ -378,7 +378,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(indexH: number, indexV?: number) => any",
+            "signature": "(indexH: number, indexV?: number) => Promise<any>",
             "parameters": [
               {
                 "name": "indexH",
@@ -391,8 +391,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -403,10 +408,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -417,10 +427,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         }
@@ -582,20 +597,7 @@
       "styleDocs": []
     }
   ],
-  "diagnostics": [
-    {
-      "level": "error",
-      "messageText": "External @Method() goToSlide() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async goToSlide()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() next() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async next()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() prev() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async prev()."
-    }
-  ],
+  "diagnostics": [],
   "imports": [
     {
       "path": "@stencil/core/runtime/client/standalone"

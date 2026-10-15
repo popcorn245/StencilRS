@@ -1,0 +1,113 @@
+.aib-wrap {
+  border: 1px solid var(--pico-muted-border-color, #d0d0d0);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--pico-card-background-color, #fafafa);
+  font-family: inherit;
+}
+
+.aib-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.aib-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pico-primary, #7c3aed);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aib-model-select {
+  border: 1.5px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  background: var(--pico-form-element-background-color, transparent);
+  color: inherit;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  margin: 0;
+}
+
+.aib-prompt-area {
+  margin-bottom: 8px;
+}
+
+.aib-prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid var(--pico-muted-border-color, #d0d0d0);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--pico-background-color, #fff);
+  color: var(--pico-color, #333);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.aib-generate-btn {
+  background: var(--pico-primary, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.aib-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.aib-status {
+  font-size: 12px;
+  color: var(--pico-primary, #7c3aed);
+  margin-bottom: 4px;
+}
+
+.aib-content {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--pico-color, #333);
+}
+
+.aib-error {
+  font-size: 13px;
+  color: #ef4444;
+  margin-top: 8px;
+}
+
+.aib-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.aib-action-btn {
+  background: transparent;
+  border: 1px solid var(--pico-muted-border-color, #ccc);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--pico-color, #555);
+  font-family: inherit;
+}
+
+.aib-action-btn--primary {
+  background: var(--pico-primary, #7c3aed);
+  color: #fff;
+  border-color: var(--pico-primary, #7c3aed);
+}

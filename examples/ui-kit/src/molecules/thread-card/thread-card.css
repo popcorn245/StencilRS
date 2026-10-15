@@ -1,0 +1,117 @@
+/* pop-thread-card — shared card chrome. Pico tokens only, no hardcoded colors. */
+.tcw {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--pico-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  color: var(--pico-color);
+  font-size: 0.9rem;
+}
+
+/* Frozen = historical snapshot: muted chrome, mutating actions already dropped. */
+.tcw--frozen {
+  color: var(--pico-muted-color);
+  background: var(--pico-card-sectioning-background-color);
+  border-style: dashed;
+}
+
+.tcw--broken,
+.tcw__fallback {
+  margin: 0;
+  color: var(--pico-muted-color);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.tcw__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tcw__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.tcw__title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tcw__subtitle {
+  font-size: 0.78rem;
+  color: var(--pico-muted-color);
+}
+
+.tcw__type {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-muted-color);
+}
+
+.tcw__frozen {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-muted-color);
+}
+
+.tcw__body {
+  min-width: 0;
+}
+
+.tcw__people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.tcw__chip {
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  font-size: 0.72rem;
+  color: var(--pico-muted-color);
+}
+
+.tcw__actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tcw__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-color);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.tcw__btn:hover:not(:disabled) {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.tcw__btn ion-icon {
+  font-size: 1.05rem;
+}

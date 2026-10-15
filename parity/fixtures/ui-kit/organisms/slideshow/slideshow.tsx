@@ -39,17 +39,17 @@ export class PopSlideshow {
 
   // ─── Methods ───
   @Method()
-  async goToSlide(indexH: number, indexV: number = 0) {
+  async goToSlide(indexH: number, indexV: number = 0): Promise<any> {
     this.deck?.slide(indexH, indexV);
   }
 
   @Method()
-  async next() {
+  async next(): Promise<any> {
     this.deck?.next();
   }
 
   @Method()
-  async prev() {
+  async prev(): Promise<any> {
     this.deck?.prev();
   }
 

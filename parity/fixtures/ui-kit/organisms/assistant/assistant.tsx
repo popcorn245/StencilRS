@@ -132,19 +132,19 @@ export class PopAssistant {
 
   // ── imperative streaming (proxied to the inner pop-ai-chat) ────────────────
   /** Host: begin an Ask assistant turn (typing bubble). */
-  @Method() async beginAssistant() {
+  @Method() async beginAssistant(): Promise<any> {
     await this.chatEl?.beginAssistant();
   }
   /** Host: append a token to the streaming answer. */
-  @Method() async appendAssistantToken(token: string) {
+  @Method() async appendAssistantToken(token: string): Promise<any> {
     await this.chatEl?.appendAssistantToken(token);
   }
   /** Host: finalize the answer with optional citations. */
-  @Method() async endAssistant(content?: string, citations?: AssistantCitation[]) {
+  @Method() async endAssistant(content?: string, citations?: AssistantCitation[]): Promise<any> {
     await this.chatEl?.endAssistant(content, citations);
   }
   /** Host: seed the Ask input (e.g. from Cmd-K / a selection). */
-  @Method() async setAskInput(text: string) {
+  @Method() async setAskInput(text: string): Promise<any> {
     this.verb = 'ask';
     await this.chatEl?.setInputValue(text);
   }

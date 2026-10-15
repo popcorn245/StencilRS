@@ -1,0 +1,473 @@
+/* pop-reminders-panel — themed via ui-kit tokens with fallbacks so it renders
+   in plain HTML / Storybook. Mobile-first (390px sheet); light + dark.
+
+   Shared DRAIN mechanic: a red→amber→blue gradient with a cover sliding in from
+   the RIGHT to eat spent time — the remaining fill recedes right→left and the
+   last sliver left standing is red (urgent). Reused by the hub tile + chip. */
+:host {
+  display: block;
+  --rp-drain-grad: linear-gradient(90deg, #ef4444 0%, #f59e0b 32%, #3b82f6 100%);
+}
+
+.rp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--ink, #1b2333);
+  /* Size children off the PANEL's own width (sheet vs dialog vs dock). */
+  container-type: inline-size;
+}
+
+/* ── shared DRAIN bar ──────────────────────────────────────────────────────── */
+.rp-drain {
+  position: relative;
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--rp-drain-grad);
+}
+.rp-drain::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: calc(100% - var(--pct, 100%));
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.12));
+  border-left: 2px solid color-mix(in srgb, var(--ink, #1b2333) 22%, transparent);
+  transition: width 1s linear;
+}
+
+/* ── header (standalone mode) ──────────────────────────────────────────────── */
+.rp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rp-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.rp-headbtns {
+  display: flex;
+  gap: 6px;
+}
+.rp-iconbtn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-raised, #f6f8fc);
+  color: var(--ink-soft, #3a465c);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.05rem;
+}
+.rp-iconbtn:hover {
+  border-color: var(--brand-blue, #3b82f6);
+}
+.rp-iconbtn--on {
+  background: var(--brand-blue, #3b82f6);
+  border-color: var(--brand-blue, #3b82f6);
+  color: #fff;
+}
+
+/* ── countdown hero ────────────────────────────────────────────────────────── */
+.rp-count {
+  padding: 15px 16px 13px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-raised, #f6f8fc);
+}
+.rp-count-top {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 12px;
+}
+.rp-count-glyph {
+  font-size: 1.6rem;
+  flex: none;
+}
+.rp-count-body {
+  min-width: 0;
+  flex: 1;
+}
+.rp-count-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted, #64748b);
+}
+.rp-count-name {
+  font-size: 0.96rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-count-time {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+.rp-count-time--warn {
+  color: var(--del, #dc2626);
+}
+.rp-count-top .rp-iconbtn {
+  flex: none;
+}
+
+/* ── ringing banner ────────────────────────────────────────────────────────── */
+.rp-ringing {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: var(--radius-md, 12px);
+  background: color-mix(in srgb, var(--red, #ef4444) 12%, var(--surface-card, #fff));
+  border: 1px solid color-mix(in srgb, var(--red, #ef4444) 45%, transparent);
+  animation: rp-pulse 1.3s ease-in-out infinite;
+}
+.rp-ringing-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-ringing-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+@keyframes rp-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red, #ef4444) 40%, transparent); }
+  50% { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* ── alarm settings drawer ─────────────────────────────────────────────────── */
+.rp-settings {
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-raised, #f6f8fc);
+  padding: 12px 14px;
+  display: grid;
+  gap: 12px;
+}
+.rp-set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rp-set-row--test {
+  justify-content: flex-end;
+}
+.rp-set-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft, #3a465c);
+}
+.rp-sounds {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rp-sound {
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-card, #fff);
+  color: var(--ink-soft, #3a465c);
+  border-radius: var(--radius-pill, 999px);
+  padding: 5px 11px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rp-sound--on {
+  background: var(--brand-blue, #3b82f6);
+  border-color: var(--brand-blue, #3b82f6);
+  color: #fff;
+}
+.rp-set-row input[type='range'] {
+  accent-color: var(--brand-blue, #3b82f6);
+  width: 130px;
+  max-width: 55%;
+}
+
+/* ── controls: search + segmented filter ───────────────────────────────────── */
+.rp-controls {
+  display: grid;
+  gap: 10px;
+}
+.rp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-raised, #f6f8fc);
+  border-radius: var(--radius-pill, 999px);
+  padding: 8px 14px;
+  color: var(--ink-muted, #64748b);
+}
+.rp-search input {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--ink, #1b2333);
+  font-size: 0.88rem;
+  outline: none;
+  min-width: 0;
+}
+.rp-seg {
+  display: flex;
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.1));
+  border-radius: var(--radius-pill, 999px);
+  padding: 3px;
+  gap: 2px;
+}
+.rp-seg-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  color: var(--ink-muted, #64748b);
+  border-radius: var(--radius-pill, 999px);
+  padding: 7px 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.rp-seg-btn--on {
+  background: var(--surface-card, #fff);
+  color: var(--ink, #1b2333);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.rp-n {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.14));
+  color: var(--ink-muted, #64748b);
+}
+.rp-seg-btn--on .rp-n {
+  background: var(--brand-blue, #3b82f6);
+  color: #fff;
+}
+.rp-n--alert {
+  background: var(--del, #dc2626);
+  color: #fff;
+}
+
+/* ── quick create ──────────────────────────────────────────────────────────── */
+.rp-create {
+  padding: 12px;
+  border: 1px dashed var(--brand-blue-soft, #93c5fd);
+  border-radius: var(--radius-md, 12px);
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 5%, var(--surface-card, #fff));
+  display: grid;
+  gap: 8px;
+}
+.rp-create-row2 {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.rp-field {
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-card, #fff);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+  color: var(--ink, #1b2333);
+  min-width: 0;
+  margin: 0;
+}
+
+/* ── buttons ───────────────────────────────────────────────────────────────── */
+.rp-btn {
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  background: var(--surface-card, #fff);
+  color: var(--ink, #1b2333);
+}
+.rp-btn--primary {
+  background: var(--brand-blue, #3b82f6);
+  border-color: var(--brand-blue, #3b82f6);
+  color: #fff;
+}
+
+/* ── list rows ─────────────────────────────────────────────────────────────── */
+.rp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  border-radius: 13px;
+  background: var(--surface-card, #fff);
+}
+.rp-row--overdue {
+  border-color: color-mix(in srgb, var(--del, #dc2626) 45%, var(--line, rgba(120, 130, 150, 0.24)));
+  background: color-mix(in srgb, var(--del, #dc2626) 6%, var(--surface-card, #fff));
+}
+.rp-row--ring {
+  border-color: var(--red, #ef4444);
+  background: color-mix(in srgb, var(--red, #ef4444) 10%, var(--surface-card, #fff));
+  animation: rp-pulse 1.4s infinite;
+}
+.rp-row--edit {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.rp-edit-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.rp-row-glyph {
+  font-size: 1.1rem;
+  flex: none;
+}
+.rp-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.rp-row-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-badge {
+  font-size: 0.68rem;
+}
+.rp-row-when {
+  font-size: 0.76rem;
+  color: var(--ink-muted, #64748b);
+  margin-top: 1px;
+}
+.rp-rel {
+  color: var(--brand-blue, #3b82f6);
+  font-weight: 700;
+}
+.rp-rel--over {
+  color: var(--del, #dc2626);
+}
+.rp-row-actions {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  align-items: center;
+}
+.rp-row--edit .rp-row-actions {
+  justify-content: flex-end;
+}
+.rp-a {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--ink-muted, #64748b);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.rp-a:hover {
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.12));
+  color: var(--ink, #1b2333);
+}
+.rp-a--danger:hover {
+  color: var(--del, #dc2626);
+}
+
+/* ── snooze menu ───────────────────────────────────────────────────────────── */
+.rp-snoozewrap {
+  position: relative;
+}
+.rp-snoozemenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 7.5rem;
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface-card, #fff);
+  box-shadow: var(--shadow-md, 0 8px 30px rgba(20, 30, 55, 0.12));
+  overflow: hidden;
+}
+.rp-snoozemenu button {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--ink, #1b2333);
+  text-align: left;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rp-snoozemenu button:hover {
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.12));
+}
+
+/* ── states + disclaimer ───────────────────────────────────────────────────── */
+.rp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 12px;
+  color: var(--ink-muted, #64748b);
+  text-align: center;
+  font-size: 0.9rem;
+}
+.rp-state ion-icon {
+  font-size: 1.8rem;
+}
+.rp-state--err {
+  color: var(--del, #dc2626);
+}
+.rp-disclaimer {
+  font-size: 0.72rem;
+  color: var(--ink-muted, #64748b);
+  background: var(--surface-sunken, rgba(120, 130, 150, 0.1));
+  border: 1px solid var(--line, rgba(120, 130, 150, 0.24));
+  border-radius: var(--radius-md, 12px);
+  padding: 9px 12px;
+}

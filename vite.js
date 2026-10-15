@@ -62,10 +62,13 @@ const hmrSnippet = (tagName, className) => {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, resolveImports?: boolean }} [options]
+ *   resolveImports (default true): component metadata as a full `stencil build` computes it,
+ *   following relative imports for prop types and defaults. false: exactly what Stencil's
+ *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, ...stencilOptions } = options;
+  const { fallback = true, verbose = false, resolveImports = true, ...stencilOptions } = options;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let tsconfigJsx = null;
@@ -103,7 +106,7 @@ export function stencilrs(options = {}) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const result = transpile(code, { file, ...jsxFor(code, tsconfigJsx) });
+      const result = transpile(code, { file, resolveImports, ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {

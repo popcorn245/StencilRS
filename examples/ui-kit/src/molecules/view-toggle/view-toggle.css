@@ -1,0 +1,86 @@
+/* ── Root: segmented outline pill ── */
+.pvt-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  background: transparent !important;
+  border: 1.5px solid var(--pico-muted-border-color, rgba(0,0,0,0.15)) !important;
+  border-radius: var(--radius-full, 999px) !important;
+  overflow: hidden;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+/* ── Individual toggle button — !important to override Pico ── */
+.pvt-root button.pvt-btn,
+button.pvt-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: #888 !important;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  outline-offset: 2px;
+  line-height: 1;
+  min-width: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Divider between buttons */
+.pvt-root button.pvt-btn + button.pvt-btn {
+  border-left: 1px solid var(--pico-muted-border-color, rgba(0,0,0,0.1)) !important;
+}
+
+.pvt-root button.pvt-btn:hover,
+button.pvt-btn:hover {
+  background: rgba(0,0,0,0.04) !important;
+  color: #333 !important;
+}
+
+.pvt-root button.pvt-btn.pvt-btn--active,
+button.pvt-btn--active {
+  background: var(--pico-primary, #2563eb) !important;
+  color: white !important;
+}
+
+.pvt-root button.pvt-btn.pvt-btn--active:hover,
+button.pvt-btn--active:hover {
+  background: var(--pico-primary-hover, #1d4ed8) !important;
+  color: white !important;
+}
+
+/* Remove divider when adjacent to active */
+.pvt-root button.pvt-btn--active + button.pvt-btn,
+.pvt-root button.pvt-btn + button.pvt-btn--active {
+  border-left-color: transparent !important;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .pvt-root button.pvt-btn,
+  button.pvt-btn {
+    color: #888 !important;
+  }
+  .pvt-root button.pvt-btn:hover,
+  button.pvt-btn:hover {
+    background: rgba(255,255,255,0.08) !important;
+    color: white !important;
+  }
+}
+[data-theme="dark"] .pvt-root button.pvt-btn,
+[data-theme="dark"] button.pvt-btn {
+  color: #888 !important;
+}
+[data-theme="dark"] .pvt-root button.pvt-btn:hover,
+[data-theme="dark"] button.pvt-btn:hover {
+  background: rgba(255,255,255,0.08) !important;
+  color: white !important;
+}

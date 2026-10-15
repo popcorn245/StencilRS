@@ -1,0 +1,625 @@
+:host {
+  display: block;
+  font-family: var(--pico-font-family, var(--font-sans));
+  position: relative;
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────── */
+
+.search-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--size-2, 8px);
+  padding: 8px var(--size-3, 12px);
+  background: var(--pico-form-element-background-color, white);
+  border: 1px solid var(--pico-form-element-border-color, #e2e8f0);
+  border-radius: var(--radius-full, 9999px);
+  min-width: 200px;
+  box-sizing: border-box;
+  transition:
+    border-color 150ms var(--ease-out-cubic, cubic-bezier(0.215, 0.61, 0.355, 1)),
+    box-shadow 150ms var(--ease-out-cubic, cubic-bezier(0.215, 0.61, 0.355, 1));
+}
+
+.search-bar:focus-within {
+  border-color: var(--pico-primary, #4299e1);
+  box-shadow: 0 0 0 3px rgba(var(--color-rgb-blue-500, 66, 153, 225), 0.15);
+}
+
+.search-icon {
+  color: var(--pico-muted-color, #94a3b8);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
+
+input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--pico-form-element-color, #0f172a);
+  font-size: var(--scale-00, 0.875rem);
+  font-family: inherit;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  box-shadow: none !important;
+  margin: 0;
+}
+
+input::placeholder {
+  color: var(--pico-form-element-placeholder-color, #94a3b8);
+}
+
+/* ── Suffix icons ────────────────────────────────────────────────────────── */
+
+.suffix-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--size-1, 4px);
+  flex-shrink: 0;
+}
+
+/* ── Icon buttons ────────────────────────────────────────────────────────── */
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--pico-muted-color, #94a3b8);
+  padding: var(--size-1, 4px);
+  border-radius: var(--radius-sm, 6px);
+  transition: color 130ms ease, background 130ms ease;
+  flex-shrink: 0;
+  line-height: 0;
+  min-height: unset;
+  min-width: unset;
+}
+
+.icon-btn:hover {
+  color: var(--pico-color, #0f172a);
+  background: var(--color-grey-100, #f2f4f5);
+}
+
+.clear-btn {
+  color: var(--color-grey-400, #a5aab4);
+}
+
+.mic-btn.is-dictating {
+  color: var(--color-red-500, #e53e3e) !important;
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.sparkles-btn {
+  color: var(--color-purple-500, #9f7aea);
+}
+
+.sparkles-btn:hover {
+  color: var(--color-purple-700, #6b46c1);
+  background: rgba(var(--color-rgb-purple-300, 214, 188, 250), 0.15);
+}
+
+/* ── ⌘K hint badge ───────────────────────────────────────────────────────── */
+
+.kbd-hint {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  background: var(--color-grey-100, #f2f4f5);
+  border: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: var(--radius-xs, 3px);
+  padding: 1px 5px;
+  color: var(--pico-muted-color, #94a3b8);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .kbd-hint {
+    display: none;
+  }
+}
+
+/* ── Search popover (position: fixed, coords set by JS) ──────────────────── */
+
+.search-popover {
+  position: fixed;
+  z-index: 160;
+  background: var(--pico-card-background-color, white);
+  border: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-xl, 0 24px 48px -12px rgba(0, 0, 0, 0.25));
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, 60vh);
+  overflow: hidden;
+  animation: popover-in 150ms var(--ease-out-cubic, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.search-popover-scroll {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.search-popover-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.search-popover-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-popover-scroll::-webkit-scrollbar-thumb {
+  background: var(--pico-muted-border-color, #e2e8f0);
+  border-radius: var(--radius-full, 9999px);
+}
+
+/* ── Loading ─────────────────────────────────────────────────────────────── */
+
+.loading-row {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2, 8px);
+  padding: var(--size-3, 12px) var(--size-4, 16px);
+  font-size: var(--scale-000, 0.75rem);
+  color: var(--pico-muted-color, #94a3b8);
+}
+
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--pico-muted-border-color, #e2e8f0);
+  border-top-color: var(--pico-primary, #4299e1);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dot {
+  animation: blink 1.2s infinite both;
+}
+
+.dot-1 {
+  animation-delay: 0s;
+}
+
+.dot-2 {
+  animation-delay: 0.2s;
+}
+
+.dot-3 {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.empty-state {
+  padding: var(--size-3, 12px) var(--size-4, 16px);
+  font-size: var(--scale-000, 0.75rem);
+  color: var(--pico-muted-color, #94a3b8);
+  text-align: center;
+}
+
+.empty-hint {
+  opacity: 0.75;
+}
+
+kbd {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  background: var(--color-grey-100, #f2f4f5);
+  border: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: var(--radius-xs, 3px);
+  padding: 1px 4px;
+  color: var(--pico-muted-color, #94a3b8);
+}
+
+/* ── Result groups ───────────────────────────────────────────────────────── */
+
+.result-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-header {
+  padding: var(--size-1, 4px) var(--size-4, 16px);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--pico-muted-color, #94a3b8);
+  background: var(--pico-card-sectioning-background-color, #f8fafc);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.result-item {
+  padding: var(--size-2, 8px) var(--size-4, 16px);
+  cursor: pointer;
+  transition: background 100ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.result-item:hover,
+.result-item.is-focused {
+  background: rgba(var(--color-rgb-blue-500, 66, 153, 225), 0.06);
+}
+
+.result-item.is-focused .result-title {
+  color: var(--pico-primary, #4299e1);
+}
+
+.result-title {
+  font-size: var(--scale-000, 0.75rem);
+  color: var(--pico-form-element-color, #0f172a);
+  font-weight: var(--weight-medium, 500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 100ms ease;
+}
+
+.result-subtitle {
+  font-size: 11px;
+  color: var(--pico-muted-color, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Toolbar-end slot ────────────────────────────────────────────────────── */
+
+.slot-toolbar-end {
+  padding: var(--size-2, 8px);
+  border-top: 1px solid var(--pico-muted-border-color, #e2e8f0);
+}
+
+.slot-toolbar-end:empty {
+  display: none;
+}
+
+/* ── Chat side panel (position: fixed, right edge) ───────────────────────── */
+
+.chat-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: var(--pop-chat-panel-width, 480px);
+  z-index: 140;
+  background: var(--pico-card-background-color, white);
+  border-left: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: panel-slide-in 300ms var(--ease-out-cubic, cubic-bezier(0.215, 0.61, 0.355, 1)) both;
+}
+
+@keyframes panel-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .chat-panel {
+    width: 100vw;
+    border-left: none;
+  }
+}
+
+/* ── Chat panel header ───────────────────────────────────────────────────── */
+
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-3, 12px) var(--size-4, 16px);
+  border-bottom: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  flex-shrink: 0;
+  gap: var(--size-2, 8px);
+}
+
+.chat-panel-query {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2, 8px);
+  font-size: var(--scale-000, 0.75rem);
+  color: var(--pico-muted-color, #64748b);
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-panel-query span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sources ─────────────────────────────────────────────────────────────── */
+
+.sources-section {
+  border-bottom: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  padding: var(--size-2, 8px) var(--size-4, 16px);
+  flex-shrink: 0;
+}
+
+.sources-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-1, 4px) var(--size-2, 8px);
+}
+
+.source-item {
+  background: var(--color-grey-100, #f2f4f5);
+  border: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: var(--radius-full, 9999px);
+  padding: 2px var(--size-3, 12px);
+  font-size: 11px;
+  color: var(--pico-muted-color, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  transition: background 120ms, color 120ms, border-color 120ms;
+  min-height: unset;
+  min-width: unset;
+}
+
+.source-item:hover {
+  background: var(--color-grey-200, #e8eaed);
+  color: var(--pico-color, #0f172a);
+  border-color: var(--color-grey-300, #d4d7dd);
+}
+
+/* ── Continue prompt ─────────────────────────────────────────────────────── */
+
+.continue-prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2, 8px);
+  padding: var(--size-2, 8px) var(--size-4, 16px);
+  background: rgba(var(--color-rgb-purple-300, 214, 188, 250), 0.1);
+  border-bottom: 1px solid rgba(var(--color-rgb-purple-300, 214, 188, 250), 0.2);
+  font-size: var(--scale-000, 0.75rem);
+  color: var(--pico-muted-color, #64748b);
+  flex-shrink: 0;
+}
+
+.continue-prompt>span {
+  flex: 1;
+}
+
+.continue-actions {
+  display: flex;
+  gap: var(--size-1, 4px);
+}
+
+.continue-btn,
+.new-chat-btn {
+  padding: 3px var(--size-3, 12px);
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  background: transparent;
+  color: var(--pico-muted-color, #64748b);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  min-height: unset;
+  min-width: unset;
+}
+
+.continue-btn:hover,
+.new-chat-btn:hover {
+  background: var(--color-grey-100, #f2f4f5);
+  color: var(--pico-color, #0f172a);
+}
+
+.continue-btn {
+  border-color: var(--color-purple-300, #d6bcfa);
+  color: var(--color-purple-700, #6b46c1);
+}
+
+/* ── AI chat fills panel ─────────────────────────────────────────────────── */
+
+.chat-panel-ai {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────────── */
+
+@media (prefers-color-scheme: dark) {
+  .icon-btn:hover {
+    background: var(--color-grey-800, #2c343f);
+    color: var(--pico-color, #f1f5f9);
+  }
+
+  .kbd-hint {
+    background: var(--color-grey-800, #2c343f);
+    border-color: var(--pico-muted-border-color, #2a2f3e);
+  }
+
+  .group-header {
+    background: var(--pico-card-sectioning-background-color, #1e2433);
+  }
+
+  .source-item {
+    background: var(--color-grey-800, #2c343f);
+    border-color: var(--pico-muted-border-color, #2a2f3e);
+  }
+
+  .source-item:hover {
+    background: var(--color-grey-700, #3f4754);
+  }
+
+  .continue-btn:hover,
+  .new-chat-btn:hover {
+    background: var(--color-grey-800, #2c343f);
+  }
+
+  kbd {
+    background: var(--color-grey-800, #2c343f);
+    border-color: var(--pico-muted-border-color, #2a2f3e);
+  }
+}
+
+/* ── Filter chips ────────────────────────────────────────────────────────── */
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding-top: 0.5rem;
+}
+
+.filter-chip-wrap {
+  position: relative;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1.5px solid var(--pico-muted-border-color);
+  background: transparent;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: var(--pico-primary);
+}
+
+.filter-chip--active {
+  border-color: var(--pico-primary);
+  background: color-mix(in srgb, var(--pico-primary) 12%, transparent);
+  color: var(--pico-primary);
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--pico-primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 160px;
+  background: var(--pico-card-background-color);
+  border: 1.5px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+  padding: 0.375rem;
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.1s;
+  min-height: 36px;
+}
+
+.filter-option:hover {
+  background: color-mix(in srgb, var(--pico-primary) 8%, transparent);
+}
+
+.filter-option input[type="checkbox"] {
+  margin: 0;
+}

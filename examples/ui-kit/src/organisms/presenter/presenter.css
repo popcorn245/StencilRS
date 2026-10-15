@@ -1,0 +1,83 @@
+/* pop-presenter — tier chrome. Sheet + dialog chrome comes from the underlying
+   pop-bottom-sheet / pop-form-dialog; only the dock container and small shared
+   bits are styled here. */
+
+pop-presenter {
+  display: block;
+}
+
+/* ── actions area (all tiers) ──────────────────────────────────────────────── */
+.presenter__actions--dialog {
+  margin-top: 0.9rem;
+}
+.presenter__actions--sheet {
+  width: 100%;
+}
+.presenter__actions--dock {
+  margin-top: 0.75rem;
+}
+
+/* ── dock: a plain panel container the host places in its layout ───────────── */
+.presenter-dock {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border-radius: var(--radius-card, 22px);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.2));
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  color: var(--ink, var(--pico-color, inherit));
+  padding: 0.9rem;
+}
+.presenter-dock__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.presenter-dock__header-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.presenter__sheet-header {
+  margin-bottom: 0.5rem;
+}
+.presenter-dock__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.presenter-dock__close,
+.presenter__redock {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--ink-soft, var(--pico-color, inherit));
+  cursor: pointer;
+  line-height: 0;
+}
+.presenter-dock__close:hover,
+.presenter__redock:hover {
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+.presenter-dock__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.presenter__dialog-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink, inherit);
+}

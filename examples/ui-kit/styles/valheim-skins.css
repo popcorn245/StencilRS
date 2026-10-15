@@ -1,0 +1,68 @@
+/*
+ * valheim-* skin token layers (docs bucket-bot/valheim-game-master).
+ *
+ * The valheim-* components (organisms/valheim/) are THEME-AGNOSTIC: structure
+ * + behavior live in the component, and ALL color/shape is driven by the
+ * semantic `--vlh-*` custom-property layer below. Each SURFACE picks a skin by
+ * putting a `vlh-skin--hub` / `vlh-skin--norse` class (or `data-vlh-skin`
+ * attr) on any ancestor:
+ *
+ *   .vlh-skin--hub    → Popcorn 245 / theme-fabulous tokens (light+dark follow
+ *                       the theme automatically) — the ADMIN-facing hub panel.
+ *   .vlh-skin--norse  → the in-universe palette for the PUBLIC event page
+ *                       (valheim.popcorn245.com — a follow-on slice; the values
+ *                       are the APPROVED site-mockup palette so the second skin
+ *                       is a class swap, not a redesign).
+ */
+
+.vlh-skin--hub,
+[data-vlh-skin='hub'] {
+  --vlh-bg: var(--surface-canvas);
+  --vlh-surface: var(--surface-card);
+  --vlh-surface-2: var(--surface-sunken);
+  --vlh-surface-raised: var(--surface-raised);
+  --vlh-border: var(--line);
+  --vlh-border-strong: var(--line-strong);
+  --vlh-text: var(--ink);
+  --vlh-text-soft: var(--ink-soft);
+  --vlh-text-dim: var(--ink-muted);
+  --vlh-accent: #6366f1;
+  --vlh-accent-contrast: #ffffff;
+  --vlh-danger: var(--brand-red);
+  --vlh-success: #48bb78;
+  --vlh-coin: #f59e0b;
+  --vlh-mystic: var(--brand-violet);
+  --vlh-radius: var(--radius-card);
+  --vlh-radius-sm: var(--radius-xs);
+  --vlh-radius-pill: var(--radius-pill);
+  --vlh-font: inherit;
+  --vlh-font-display: inherit;
+  --vlh-rune-weight: 600;
+  --vlh-title-spacing: -0.02em;
+}
+
+.vlh-skin--norse,
+[data-vlh-skin='norse'] {
+  --vlh-bg: #0b0e13;
+  --vlh-surface: #151b25;
+  --vlh-surface-2: #0f141c;
+  --vlh-surface-raised: #1a212d;
+  --vlh-border: #26303e;
+  --vlh-border-strong: #39465a;
+  --vlh-text: #ece4d1;
+  --vlh-text-soft: #b7ae97;
+  --vlh-text-dim: #847b67;
+  --vlh-accent: #d8b45c;
+  --vlh-accent-contrast: #1a1206;
+  --vlh-danger: #c0392b;
+  --vlh-success: #5bbd7a;
+  --vlh-coin: #d8b45c;
+  --vlh-mystic: #9a86c8;
+  --vlh-radius: 16px;
+  --vlh-radius-sm: 10px;
+  --vlh-radius-pill: 999px;
+  --vlh-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --vlh-font-display: 'Cinzel', 'Trajan Pro', Georgia, 'Times New Roman', serif;
+  --vlh-rune-weight: 700;
+  --vlh-title-spacing: 0.02em;
+}

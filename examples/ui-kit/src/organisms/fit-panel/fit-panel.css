@@ -1,0 +1,277 @@
+/* pop-fit-panel — themed via ui-kit tokens (--ink, --line, --surface-card,
+   --brand-blue) with fallbacks so it renders in plain HTML / Storybook. */
+:host {
+  display: block;
+}
+.fitp {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--ink, #0f172a);
+  /* Size children off the PANEL's own width (sheet vs dialog vs dock), not the
+     viewport — so the card grid goes 3-up only when the panel is actually wide
+     enough, and the narrow mobile sheet stays a legible 2-up. */
+  container-type: inline-size;
+}
+
+/* ── header (standalone mode) ────────────────────────────────────────────── */
+.fitp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fitp-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.fitp-headright {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fitp-datepill {
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-raised, #f6f8fc);
+  color: inherit;
+  border-radius: var(--radius-pill, 999px);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fitp-datepill:hover {
+  border-color: var(--brand-blue, #3b82f6);
+}
+.fitp-refresh {
+  border: none;
+  background: none;
+  color: var(--ink-muted, #64748b);
+  cursor: pointer;
+  font-size: 1rem;
+}
+.fitp-datehidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── action zone (log form) ──────────────────────────────────────────────── */
+.fitp-actionzone {
+  margin-bottom: -6px;
+}
+.fitp-cardform {
+  border: 1px solid var(--brand-blue, #3b82f6);
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 10%, var(--surface-card, #fff));
+  border-radius: var(--radius-lg, 16px);
+  padding: 14px;
+}
+.fitp-cardform-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.fitp-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--ink-muted, #64748b);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.fitp-cardform-hint {
+  font-size: 0.75rem;
+  color: var(--ink-muted, #64748b);
+  margin-bottom: 8px;
+}
+.fitp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fitp-fields--row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fitp-cardform-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.fitp-btn {
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-card, #fff);
+  color: inherit;
+}
+.fitp-btn--primary {
+  background: var(--brand-blue, #3b82f6);
+  border-color: var(--brand-blue, #3b82f6);
+  color: #fff;
+}
+.fitp-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.fitp-log-reply {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pico-ins-color, #16a34a);
+}
+
+/* ── metric cards grid ───────────────────────────────────────────────────── */
+.fitp-cards {
+  display: grid;
+  /* minmax(0, 1fr) — not bare 1fr — so equal tracks can shrink below their
+     content's min-content width instead of overflowing the panel. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+/* Container query (not viewport) — 3-up only when the panel itself is wide
+   (dock / desktop dialog); the mobile sheet stays 2-up with full card titles. */
+@container (min-width: 440px) {
+  .fitp-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── sections + charts ───────────────────────────────────────────────────── */
+.fitp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fitp-section-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.fitp-section-hint {
+  font-size: 0.72rem;
+  color: var(--ink-muted, #64748b);
+  font-weight: 600;
+}
+.fitp-chart-card {
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 12px 12px 6px;
+  background: var(--surface-card, #fff);
+}
+.fitp-chart-empty,
+.fitp-empty {
+  border: 1px dashed var(--line, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  padding: 18px;
+  text-align: center;
+  color: var(--ink-muted, #64748b);
+  font-size: 0.85rem;
+}
+
+/* ── readings-by-day list ────────────────────────────────────────────────── */
+.fitp-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fitp-dayrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  background: var(--surface-card, #fff);
+  font-size: 0.85rem;
+}
+.fitp-dayrow-glyph {
+  flex: none;
+}
+.fitp-dayrow-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.fitp-dayrow-meta {
+  flex: none;
+  color: var(--ink-muted, #64748b);
+  font-size: 0.75rem;
+}
+.fitp-dayrow-actions {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.fitp-rowbtn {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--ink-muted, #64748b);
+  border-radius: 8px;
+  padding: 2px 7px;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  cursor: pointer;
+}
+.fitp-rowbtn:hover {
+  background: var(--surface-raised, #f6f8fc);
+  color: var(--ink, #0f172a);
+}
+.fitp-rowbtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.fitp-rowbtn--danger {
+  color: var(--pico-del-color, #dc2626);
+  font-weight: 700;
+}
+/* Inline edit form fills the row (stacked pop-fields + Save/Cancel). */
+.fitp-dayrow--edit {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.fitp-dayrow-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fitp-dayrow--edit .fitp-dayrow-actions {
+  justify-content: flex-end;
+}
+
+/* ── disclaimer + states ─────────────────────────────────────────────────── */
+.fitp-disclaimer {
+  font-size: 0.72rem;
+  color: var(--ink-muted, #64748b);
+  background: var(--surface-raised, #f6f8fc);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  padding: 10px 12px;
+}
+.fitp-state {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--ink-muted, #64748b);
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.fitp-state--err {
+  color: var(--pico-del-color, #dc2626);
+}

@@ -1,0 +1,97 @@
+/* pop-sync-status — themed via Pico tokens (no phantom variables). */
+.ss {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--pico-muted-color, #8b97a6);
+}
+.ss__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss__clock {
+  font-size: 0.95rem;
+  flex: 0 0 auto;
+}
+.ss__refresh {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-sectioning-background-color, transparent);
+  color: var(--pico-color, inherit);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ss__refresh:hover:not(:disabled) {
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+.ss__refresh:disabled {
+  cursor: default;
+}
+.ss__refresh ion-icon {
+  font-size: 1.05rem;
+}
+.ss__refresh--spin ion-icon {
+  animation: ss-spin 0.8s linear infinite;
+}
+@keyframes ss-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Bare/inline variant: chrome-less text + icon (for a panel header top-right). */
+.ss-bare {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--pico-muted-color, #8b97a6);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ss-bare:hover:not(:disabled) {
+  color: var(--pico-primary, #3b82f6);
+}
+.ss-bare:disabled {
+  cursor: default;
+}
+.ss-bare__icon {
+  font-size: 0.95rem;
+}
+.ss-bare--spin .ss-bare__icon {
+  animation: ss-spin 0.8s linear infinite;
+}
+
+/* Label-only variant: the same staleness read-out as `bare`, minus the button.
+   Not focusable and not hoverable-as-interactive — the refresh action lives
+   elsewhere (e.g. a panel's `…` overflow menu). */
+.ss-label-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--pico-muted-color, #8b97a6);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: default;
+}
+.ss-label-only--spin .ss-bare__icon {
+  animation: ss-spin 0.8s linear infinite;
+}

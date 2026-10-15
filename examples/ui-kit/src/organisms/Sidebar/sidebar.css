@@ -1,0 +1,125 @@
+/* Sidebar Component */
+:host {
+  display: block;
+  position: relative;
+  height: 100%;
+}
+
+.sidebar-checkbox {
+  display: none;
+}
+
+.sidebar-trigger {
+  display: none; /* Hidden on desktop by default */
+  cursor: pointer;
+  padding: 8px;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+.sidebar-content {
+  height: 100%;
+  background: var(--pico-card-background-color, #2f3136);
+  z-index: 50;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--scrim);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+  z-index: 40;
+}
+
+/* 
+ * Mobile / Collapsed Logic 
+ * (Using max-width media query as requested default, but could be controlled by container)
+ */
+@media (max-width: 768px) {
+  .sidebar-trigger {
+    display: block;
+  }
+
+  .sidebar-content {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 80vw;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.5);
+  }
+  
+  /* Left Sidebar (Default) */
+  :host(.sidebar-left) .sidebar-content {
+      left: 0;
+      transform: translateX(-100%);
+  }
+
+  /* Right Sidebar */
+  :host(.sidebar-right) .sidebar-content {
+      right: 0;
+      left: auto;
+      transform: translateX(100%);
+  }
+
+  /* Open State */
+  /* Using checkbox state OR host class if reflected */
+  .sidebar-checkbox:checked ~ .sidebar-content,
+  :host(.sidebar-open) .sidebar-content {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-checkbox:checked ~ .sidebar-overlay,
+  :host(.sidebar-open) .sidebar-overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Desktop: If we want sidebar to be visible relative */
+@media (min-width: 769px) {
+    :host {
+        display: flex;
+    }
+    
+    /* If left */
+    :host(.sidebar-left) {
+        flex-direction: row;
+    }
+    
+    /* If right */
+    :host(.sidebar-right) {
+        flex-direction: row-reverse;
+    }
+    
+    .sidebar-content {
+        width: 250px; /* Default desktop width */
+        position: relative;
+        transform: none;
+        box-shadow: none;
+        border-right: 1px solid var(--pico-border-color, #ccc);
+    }
+    
+    :host(.sidebar-right) .sidebar-content {
+        border-right: none;
+        border-left: 1px solid var(--pico-border-color, #ccc);
+    }
+}

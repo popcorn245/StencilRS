@@ -57,9 +57,15 @@ fn resolve_literal_text(node: &Expression, locals: &Locals, source: &str, depth:
         Expression::Identifier(id) => match locals.const_init(id.name.as_str()) {
             Some(init) => resolve_literal_text(init, locals, source, depth + 1),
             None if id.name == "undefined" => Some("undefined".into()),
-            None => None,
+            None => locals.imported_value(id.name.as_str()).and_then(|v| v.default_text),
         },
         Expression::StaticMemberExpression(m) => {
+            if let Expression::Identifier(id) = &m.object {
+                if locals.const_init(id.name.as_str()).is_none() {
+                    let v = locals.imported_value(id.name.as_str())?;
+                    return v.members.get(m.property.name.as_str())?.default_text.clone();
+                }
+            }
             let obj = resolve_object_literal(&m.object, locals, depth + 1)?;
             let prop = find_member(obj, m.property.name.as_str())?;
             resolve_literal_text(prop, locals, source, depth + 1)

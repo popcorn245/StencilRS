@@ -1,0 +1,93 @@
+:host {
+    display: block;
+    width: 100%;
+    color: var(--text-1, #fff);
+}
+.planner-card {
+    background: var(--surface-1, #111);
+    border: 1px solid var(--border-color, #222);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+.planner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+.planner-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--brand, #ff00ff);
+}
+.edit-btn, .save-btn {
+    background: var(--brand, #ff00ff);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+.edit-btn:hover, .save-btn:hover {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-2, #aaa);
+}
+.form-group input[type="text"],
+.form-group input[type="datetime-local"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color, #333);
+    background: var(--surface-2, #1a1a1a);
+    color: var(--text-1, #fff);
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+.form-group input[type="text"]:focus,
+.form-group input[type="datetime-local"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--brand, #ff00ff);
+}
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+.empty-state {
+    color: var(--text-3, #777);
+    font-style: italic;
+}
+.plan-details h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+}
+.detail-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    align-items: flex-start;
+}
+.icon {
+    font-size: 1.2rem;
+}
+.detail-row p {
+    margin: 0;
+}

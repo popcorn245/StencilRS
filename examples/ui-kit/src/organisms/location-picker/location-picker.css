@@ -1,0 +1,174 @@
+:host {
+  display: block;
+  width: 100%;
+  position: relative;
+  font-family: inherit;
+}
+
+.plp {
+  position: relative;
+  width: 100%;
+}
+
+/* Positioning context for the absolutely-positioned popover so it anchors to
+   the field input — NOT the whole component (which also contains the Room
+   picker below). The popover overlays the Room section instead of pushing the
+   layout down past it. */
+.plp__field-wrap {
+  position: relative;
+}
+
+.plp__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 11px;
+  border: 1.5px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-sm, 12px);
+  background: var(--surface-card, var(--pico-form-element-background-color, #fff));
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink, inherit);
+  transition: border-color var(--trans-fast, 0.15s ease), box-shadow var(--trans-fast, 0.15s ease);
+}
+.plp__field:hover,
+.plp__field:focus {
+  border-color: var(--brand-blue, var(--pico-primary, #1976d2));
+}
+.plp__field:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-blue, #4299e1) 16%, transparent);
+}
+
+.plp__field-icon {
+  flex: 0 0 auto;
+  font-size: 1.05em;
+}
+.plp__field-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plp__field-label--placeholder {
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+}
+.plp__field-clear {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill, 999px);
+  color: var(--ink-soft, inherit);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--trans-fast, 0.12s ease), color var(--trans-fast, 0.12s ease);
+}
+.plp__field-clear:hover {
+  background: color-mix(in oklab, var(--brand-red, #e53e3e) 16%, transparent);
+  color: var(--brand-red, inherit);
+}
+
+.plp__popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--surface-card, var(--pico-background-color, #fff));
+  border: 1px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-sm, 12px);
+  box-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.12));
+  padding: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.plp__search {
+  width: 100%;
+  padding: 7px 11px;
+  border: 1.5px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-xs, 10px);
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink, inherit);
+  background: var(--surface-raised, transparent);
+}
+.plp__search:focus {
+  outline: none;
+  border-color: var(--brand-blue, #4299e1);
+}
+
+.plp__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.plp__opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs, 10px);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink, inherit);
+}
+.plp__opt:hover {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 10%, transparent);
+}
+.plp__opt--picked {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 16%, transparent);
+  font-weight: 600;
+}
+.plp__opt--home {
+  border-bottom: 1px solid color-mix(in oklab, var(--line, #ddd) 70%, transparent);
+  border-radius: var(--radius-xs, 10px) var(--radius-xs, 10px) 0 0;
+  margin-bottom: 4px;
+}
+
+.plp__opt-icon {
+  flex: 0 0 auto;
+}
+.plp__opt-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plp__opt-check {
+  flex: 0 0 auto;
+  font-weight: bold;
+  color: var(--brand-blue, #4299e1);
+}
+
+.plp__hint {
+  padding: 8px 10px;
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+  font-style: italic;
+  font-size: 14px;
+}
+
+.plp__spaces {
+  margin-top: 8px;
+}
+.plp__spaces-label {
+  display: block;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

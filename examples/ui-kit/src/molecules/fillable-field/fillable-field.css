@@ -1,0 +1,100 @@
+:host {
+  display: block;
+}
+
+.ff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ff__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+
+.ff__hint {
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* The control row — a single bordered field that holds the control on the left
+   and the auto-fill toggle on the right, like a browser password field. */
+.ff__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line, var(--pico-form-element-border-color));
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-card, var(--pico-form-element-background-color));
+  transition: border-color var(--trans-fast, 0.15s ease), box-shadow var(--trans-fast, 0.15s ease);
+}
+
+.ff__row:focus-within {
+  border-color: var(--brand-violet, #8b5cf6);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-violet, #8b5cf6) 18%, transparent);
+}
+
+/* Built-in input + any slotted control sit flush inside the row (borderless). */
+.ff__input,
+.ff__control ::slotted(input),
+.ff__control ::slotted(select),
+.ff__row input,
+.ff__row select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  padding: 9px 11px;
+  outline: none;
+}
+
+.ff__control {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px;
+}
+
+/* A multi-control slot (e.g. mode + value) lays its children out in a row. */
+.ff__control ::slotted(*) {
+  min-width: 0;
+}
+
+.ff__toggle {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-muted, var(--pico-muted-color));
+  cursor: pointer;
+  transition: color var(--trans-fast, 0.15s ease), background var(--trans-fast, 0.15s ease);
+}
+
+.ff__toggle:hover {
+  background: color-mix(in oklab, var(--ink, currentColor) 8%, transparent);
+}
+
+.ff__toggle--on {
+  color: var(--brand-violet, #8b5cf6);
+  background: color-mix(in oklab, var(--brand-violet, #8b5cf6) 14%, transparent);
+}
+
+.ff__toggle:focus-visible {
+  outline: 2px solid var(--brand-violet, #8b5cf6);
+  outline-offset: 2px;
+}

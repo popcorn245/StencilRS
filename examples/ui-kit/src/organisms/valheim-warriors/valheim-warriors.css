@@ -1,0 +1,106 @@
+/* valheim-warriors — roster + health strip + admin ops. Tokens only. */
+
+.vw-health {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem 0.8rem;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+}
+.vw-health b {
+  color: var(--vlh-text-soft, #475067);
+  font-weight: 600;
+}
+.vw-health .vw-ok {
+  color: var(--vlh-success, #48bb78);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.vw-health .vw-down {
+  color: var(--vlh-danger, #ef4444);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.vw-sep {
+  width: 1px;
+  height: 0.8rem;
+  background: var(--vlh-border-strong, #c2cbd9);
+}
+
+.vw-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vw-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--vlh-text, #1b2333);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.vw-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vlh-success, #48bb78);
+  flex: 0 0 auto;
+}
+.vw-class {
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  margin-top: 0.05rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vw-lvl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vlh-text-soft, #475067);
+  white-space: nowrap;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--vlh-radius-pill, 999px);
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  font-variant-numeric: tabular-nums;
+}
+.vw-count--down {
+  color: var(--vlh-danger, #ef4444);
+  background: color-mix(in srgb, var(--vlh-danger, #ef4444) 14%, transparent);
+}
+.vw-empty {
+  font-size: 0.78rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-style: italic;
+  padding: 0.2rem 0.1rem;
+}
+
+.vw-ops {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.15rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--vlh-border-strong, #c2cbd9);
+}
+.vw-ops-lbl {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--vlh-text-dim, #8492a8);
+  margin-right: 0.15rem;
+}
+.vw-ops-hint {
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+}

@@ -8,9 +8,10 @@ fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
 }
 
 /// Analyse one component module: `{ components: ComponentMeta[], diagnostics: Diagnostic[] }`.
+/// `resolve_imports`: build-accurate metadata (relative imports followed, lib types known).
 #[napi]
-pub fn analyze(source: String, file_name: String) -> napi::Result<serde_json::Value> {
-    to_js(stencilrs_transform::analyze(&source, &file_name))
+pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>) -> napi::Result<serde_json::Value> {
+    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false)))
 }
 
 #[napi(object)]
@@ -22,6 +23,9 @@ pub struct JsTranspileOptions {
     pub jsx: Option<String>,
     /// Defaults to `@stencil/core`.
     pub jsx_import_source: Option<String>,
+    /// Build-accurate metadata, as a full `stencil build` computes it: follow relative imports and
+    /// know lib types. Default false: exactly what single-file `transpileSync` produces.
+    pub resolve_imports: Option<bool>,
 }
 
 /// Generate the `customelement` module: `{ code, components, diagnostics }`.
@@ -35,6 +39,7 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
         file: options.file,
         core_import_path: options.core_import_path.unwrap_or_else(|| DEFAULT_CORE_IMPORT_PATH.into()),
         jsx,
+        resolve_imports: options.resolve_imports.unwrap_or(false),
     };
     to_js(stencilrs_transform::transpile(&source, &opts))
 }

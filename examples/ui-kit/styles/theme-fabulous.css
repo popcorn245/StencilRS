@@ -1,0 +1,300 @@
+/* =====================================================================
+ * theme-fabulous.css — "Fabulous × popcorn245" design language
+ *
+ * Imported AFTER pico.css + pollen.css so it re-skins the --pico-* surface
+ * and adds a brand/gradient/motion token system. Two themes:
+ *   - light  (warm cream)   — default; also forced by [data-theme="light"]
+ *   - dark   (deep plum)    — [data-theme="dark"] or OS pref when not forced
+ *
+ * Brand pops: red #e53e3e + blue #4299e1 + the blue→red brand gradient,
+ * layered over a warm sunrise gradient (coral → amber → teal).
+ * ===================================================================== */
+
+/* Animatable gradient angle (modern @property; degrades gracefully). */
+@property --grad-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 135deg;
+}
+
+:root {
+  /* ---- Brand constants (theme-independent) ---- */
+  --brand-red: #e53e3e;
+  --brand-red-soft: #ff6b6b;
+  --brand-blue: #4299e1;
+  --brand-blue-soft: #63b3ed;
+  --brand-violet: #8b5cf6;        /* quests + tertiary accents */
+
+  /* The interactive ACCENT. Previously a PHANTOM token — dozens of hub/ui-kit
+   * rules said `var(--accent, <some fallback>)` but nothing ever defined it,
+   * so every call site silently rendered its own fallback (#6366f1 indigo,
+   * #4a7dff, …). One canonical definition: the Pico/Pollen primary
+   * (--pico-primary → --color-blue-500 = the brand blue), which is what
+   * interactive controls actually render with. Resolves per-theme at use time. */
+  --accent: var(--pico-primary, var(--brand-blue, #4299e1));
+
+  /* Warm sunrise stops — the Fabulous DNA */
+  --sun-coral: #ff6b6b;
+  --sun-amber: #ffb86c;
+  --sun-gold: #ffd36c;
+  --sun-teal: #4ecdc4;
+
+  /* Signature gradients */
+  --grad-brand: linear-gradient(var(--grad-angle, 135deg), var(--brand-blue), var(--brand-red));
+  --grad-sunrise: linear-gradient(var(--grad-angle, 135deg), var(--sun-coral) 0%, var(--sun-amber) 45%, var(--sun-teal) 100%);
+  --grad-warm-glow: radial-gradient(120% 120% at 50% 0%, color-mix(in oklab, var(--sun-amber) 40%, transparent) 0%, transparent 60%);
+
+  /* ---- Shape ---- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-card: 22px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  /* ---- Motion ---- */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Springy overshoot via linear() — CSS-native bounce, no JS */
+  --ease-spring: linear(
+    0, 0.006, 0.025, 0.101, 0.539, 0.721, 0.849, 0.937, 0.99, 1.014,
+    1.023, 1.018, 1.008, 1.001, 0.998, 1
+  );
+  --dur-fast: 150ms;
+  --dur: 260ms;
+  --dur-slow: 440ms;
+  --trans-fast: var(--dur-fast) var(--ease-soft);
+  --trans: var(--dur) var(--ease-soft);
+  --trans-slow: var(--dur-slow) var(--ease-emphatic);
+
+  /* ---- Type ---- */
+  --font-display: "Outfit", var(--font-sans, system-ui, sans-serif);
+  --font-brand: "Tasty Popcorn", var(--font-display);
+}
+
+/* =====================================================================
+ * LIGHT (warm cream) — default + explicit [data-theme="light"]
+ * ===================================================================== */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-canvas: #eef3fb;       /* clean, slightly blue-tinted page */
+  --surface-canvas-2: #e5edf8;     /* deeper blue-tint for washes */
+  --surface-card: #ffffff;         /* crisp white card */
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8eef8;
+  --ink: #1b2333;                  /* cool slate near-black */
+  --ink-soft: #475067;
+  --ink-muted: #8492a8;
+  --line: #dde6f2;                 /* cool hairline */
+  --line-strong: #c9d5e6;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  /* The overlay wash behind any modal surface (dialog backdrop, bottom-sheet
+     backdrop). One token so every tier of pop-presenter dims the page by the
+     same amount instead of each stylesheet picking its own alpha. */
+  --scrim: rgba(0, 0, 0, 0.5);
+  --shadow-color: 30 41 66;        /* rgb of slate, for soft cool shadows */
+  --halo: color-mix(in oklab, var(--brand-blue) 30%, white);
+
+  /* Re-skin Pico to the warm surface */
+  --pico-background-color: var(--surface-canvas);
+  --pico-color: var(--ink);
+  --pico-h1-color: var(--ink);
+  --pico-h2-color: var(--ink);
+  --pico-h3-color: var(--ink);
+  --pico-muted-color: var(--ink-muted);
+  --pico-muted-border-color: var(--line);
+  --pico-card-background-color: var(--surface-card);
+  --pico-card-border-color: var(--line);
+  --pico-card-sectioning-background-color: var(--surface-sunken);
+  --pico-form-element-background-color: var(--surface-raised);
+  --pico-form-element-border-color: var(--line-strong);
+  --pico-form-element-color: var(--ink);
+  --pico-form-element-placeholder-color: var(--ink-muted);
+}
+
+/* =====================================================================
+ * DARK (deep plum) — [data-theme="dark"] or OS pref unless forced light
+ * ===================================================================== */
+:root[data-theme="dark"],
+:root[data-theme="dark"] :is(*),
+.theme-dark {
+  color-scheme: dark;
+
+  --surface-canvas: #0e1626;       /* deep blue-tinted navy page */
+  --surface-canvas-2: #131e33;
+  --surface-card: #18233a;         /* slate-navy card */
+  --surface-raised: #1f2c46;
+  --surface-sunken: #0e1626;
+  --ink: #eaf0fa;                  /* cool near-white text */
+  --ink-soft: #c2cde0;
+  --ink-muted: #8595af;
+  --line: #283750;
+  --line-strong: #344766;
+  --glass: rgba(24, 35, 58, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --shadow-color: 0 0 0;
+  --halo: color-mix(in oklab, var(--brand-blue) 40%, #0e1626);
+
+  --pico-background-color: var(--surface-canvas);
+  --pico-color: var(--ink);
+  --pico-h1-color: var(--ink);
+  --pico-h2-color: var(--ink);
+  --pico-h3-color: var(--ink-soft);
+  --pico-muted-color: var(--ink-muted);
+  --pico-muted-border-color: var(--line);
+  --pico-card-background-color: var(--surface-card);
+  --pico-card-border-color: var(--line);
+  --pico-card-sectioning-background-color: var(--surface-canvas-2);
+  --pico-form-element-background-color: var(--surface-raised);
+  --pico-form-element-border-color: var(--line-strong);
+  --pico-form-element-color: var(--ink);
+  --pico-form-element-placeholder-color: var(--ink-muted);
+}
+
+/* When OS is dark and the user hasn't forced light, adopt dark tokens. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-canvas: #0e1626;
+    --surface-canvas-2: #131e33;
+    --surface-card: #18233a;
+    --surface-raised: #1f2c46;
+    --surface-sunken: #0e1626;
+    --ink: #eaf0fa;
+    --ink-soft: #c2cde0;
+    --ink-muted: #8595af;
+    --line: #283750;
+    --line-strong: #344766;
+    --glass: rgba(24, 35, 58, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --scrim: rgba(0, 0, 0, 0.5);
+    --shadow-color: 0 0 0;
+    --halo: color-mix(in oklab, var(--brand-blue) 40%, #0e1626);
+    --pico-background-color: var(--surface-canvas);
+    --pico-color: var(--ink);
+    --pico-card-background-color: var(--surface-card);
+    --pico-card-border-color: var(--line);
+    --pico-card-sectioning-background-color: var(--surface-canvas-2);
+    --pico-form-element-background-color: var(--surface-raised);
+    --pico-form-element-border-color: var(--line-strong);
+    --pico-form-element-color: var(--ink);
+    --pico-form-element-placeholder-color: var(--ink-muted);
+    --pico-muted-color: var(--ink-muted);
+    --pico-muted-border-color: var(--line);
+  }
+}
+
+/* ---- Soft, layered shadow scale (warm-tinted) ---- */
+:root {
+  --shadow-sm: 0 1px 2px rgba(var(--shadow-color) / 0.06),
+    0 2px 6px rgba(var(--shadow-color) / 0.05);
+  --shadow-md: 0 4px 12px rgba(var(--shadow-color) / 0.08),
+    0 12px 28px -8px rgba(var(--shadow-color) / 0.12);
+  --shadow-lg: 0 8px 24px rgba(var(--shadow-color) / 0.10),
+    0 28px 60px -16px rgba(var(--shadow-color) / 0.22);
+  --shadow-pop: 0 10px 30px -6px color-mix(in oklab, var(--brand-blue) 35%, transparent);
+}
+
+/* =====================================================================
+ * Overdue urgency — a container marked [data-urgent="true"] tints toward
+ * red to signal "this needs attention". Used by the task detail pane when
+ * the open task is past due.
+ * ===================================================================== */
+[data-urgent="true"] {
+  --line: color-mix(in oklab, var(--brand-red) 42%, var(--line));
+  --urgent-wash: radial-gradient(
+    135% 90% at 50% 0%,
+    color-mix(in oklab, var(--brand-red) 15%, transparent) 0%,
+    transparent 60%
+  );
+  --urgent-accent: var(--brand-red);
+}
+
+/* =====================================================================
+ * Global niceties
+ * ===================================================================== */
+html {
+  background: var(--surface-canvas);
+}
+
+h1, h2, h3, .display-font {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+p, li {
+  text-wrap: pretty;
+}
+
+/* Smooth theme transitions (color/background only — never layout) */
+body, .theme-transition,
+[class*="card"], [class*="surface"] {
+  transition: background-color var(--trans), color var(--trans),
+    border-color var(--trans);
+}
+
+/* Brand-tinted custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--brand-blue) 35%, var(--line)) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--brand-blue) 35%, var(--line));
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Reusable helpers */
+.fab-gradient-text {
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@keyframes fab-grad-spin {
+  to { --grad-angle: 495deg; }
+}
+.fab-living-gradient {
+  animation: fab-grad-spin 12s linear infinite;
+}
+
+/* Staggered entrance — set --i on each child (article toolkit) */
+@keyframes fab-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.fab-rise {
+  animation: fab-rise var(--dur-slow) var(--ease-soft) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* Focus ring uses the brand */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Native form controls adopt the brand accent (tightens the Pollen default
+   --color-blue accent to the popcorn245 brand blue). */
+:where(progress, [type="checkbox"], [type="radio"], [type="range"]) {
+  accent-color: var(--brand-blue);
+}
+
+/* =====================================================================
+ * Accessibility: honor reduced-motion (mandatory for a motion-rich UI)
+ * ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fab-living-gradient { animation: none !important; }
+}

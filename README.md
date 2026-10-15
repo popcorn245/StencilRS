@@ -37,6 +37,10 @@ The plugin compiles component files with stencilrs and leaves everything else to
 `@stencil/unplugin` (CSS modules and preprocessors, the runtime, build flags). Files using a
 feature stencilrs hasn't ported fall back to Stencil's compiler automatically.
 
+**[`examples/ui-kit`](examples/ui-kit/README.md)** is the old bucket component set (136
+components) on Stencil v5: `stencil build` is clean, stencilrs matches the full build's
+metadata for all 136, and the spec suite gives identical results with either compiler.
+
 **[`examples/starter`](examples/starter/README.md)** is a ready project: dev server with hot
 reload, a component generator, tests in happy-dom and in headless Chrome, app and library builds.
 

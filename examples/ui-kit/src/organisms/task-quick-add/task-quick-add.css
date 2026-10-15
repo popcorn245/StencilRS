@@ -1,0 +1,115 @@
+.tqa-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.tqa-popover {
+  width: 100%;
+  max-width: 400px;
+  background: var(--pico-card-background-color);
+  border-radius: 16px 16px 0 0;
+  padding: 1.25rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+  animation: tqa-slide-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes tqa-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tqa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tqa-input {
+  width: 100%;
+  background: var(--pico-background-color);
+  border: 1.5px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+  padding: 0.7rem 0.875rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  font-family: inherit;
+  margin: 0;
+  transition: border-color 0.15s;
+}
+
+.tqa-input:focus {
+  border-color: var(--section-accent, #a855f7);
+  outline: none;
+}
+
+.tqa-input--error {
+  border-color: #ef4444;
+}
+
+.tqa-error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: -0.5rem;
+}
+
+.tqa-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tqa-date,
+.tqa-quest-select {
+  flex: 1;
+  background: var(--pico-background-color);
+  border: 1.5px solid var(--pico-muted-border-color);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--pico-color);
+  font-family: inherit;
+  margin: 0;
+  min-height: 44px;
+}
+
+.tqa-date:focus,
+.tqa-quest-select:focus {
+  border-color: var(--section-accent, #a855f7);
+  outline: none;
+}
+
+.tqa-submit {
+  background: var(--section-accent, #a855f7);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  min-height: 44px;
+  transition: opacity 0.15s;
+}
+
+.tqa-submit:hover {
+  opacity: 0.9;
+}
+
+.tqa-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

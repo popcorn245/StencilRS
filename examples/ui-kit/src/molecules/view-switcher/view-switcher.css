@@ -1,0 +1,50 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   pop-view-switcher — compact segmented icon toggle (list/card/kanban/table).
+
+   NO role=group and fixed square buttons so pico.css can't stretch it. Tokens
+   carry --pico-* + literal fallbacks so it reads well light AND dark.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.pvs {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.18)));
+}
+
+.pvs__btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--surface-card, rgba(127, 127, 127, 0.06));
+  color: var(--ink, var(--pico-color, inherit));
+  cursor: pointer;
+  line-height: 0;
+  transition: background 0.15s ease;
+}
+.pvs__btn pop-icon {
+  --size: 1.1rem;
+}
+.pvs__btn + .pvs__btn {
+  border-left: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.14)));
+}
+.pvs__btn:hover {
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.12));
+}
+.pvs__btn:focus-visible {
+  outline: 2px solid var(--accent, var(--brand-blue, #4299e1));
+  outline-offset: -2px;
+}
+.pvs__btn--on {
+  background: color-mix(in oklab, var(--accent, #6366f1) 20%, transparent);
+  color: var(--accent, var(--pico-color, inherit));
+}

@@ -1,0 +1,20 @@
+/* pop-async-view — lifecycle regions. All four stay mounted; `hidden` toggles. */
+
+pop-async-view {
+  display: block;
+}
+
+/* All regions stay mounted; only the active one displays (morph-friendly —
+   class-driven, no attribute removal needed). */
+.av__region:not(.av__region--active) {
+  display: none;
+}
+
+.av__region--loading,
+.av__region--empty,
+.av__region--error {
+  display: grid;
+  place-items: center;
+  padding: 1rem 0.5rem;
+  min-height: 72px;
+}

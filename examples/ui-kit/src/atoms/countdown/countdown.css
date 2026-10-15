@@ -1,0 +1,30 @@
+/* pop-countdown — ticking H/M/S readout (token-themed, tabular digits). */
+
+.cd {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  color: var(--ink, inherit);
+}
+
+.cd__label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 18ch;
+}
+
+.cd__time {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted, var(--pico-muted-color, inherit));
+}
+
+.cd--overdue .cd__time {
+  color: var(--danger, #d9534f);
+  font-weight: 600;
+}
+
+.cd--idle {
+  color: var(--ink-muted, var(--pico-muted-color, inherit));
+}

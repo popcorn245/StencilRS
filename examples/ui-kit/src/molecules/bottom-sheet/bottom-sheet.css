@@ -1,0 +1,105 @@
+:host {
+  display: block;
+}
+
+.bs-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: 100;
+  /* Don't let a touch scroll on the backdrop chain to the page behind it. */
+  overscroll-behavior: none;
+}
+
+.bs-backdrop--open {
+  display: block;
+}
+
+.bs-sheet {
+  display: none;
+  flex-direction: column;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface-card, var(--pico-card-background-color));
+  /* Top corners only — the sheet is flush with the bottom edge of the viewport. */
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  padding: 1rem 1.5rem 2.5rem;
+  z-index: 101;
+  /* Fallback for engines without dvh; the component sets an inline 85dvh
+     (dynamic viewport) that supersedes this so the sheet respects the phone's
+     real visible area — URL bar / keyboard — instead of the larger vh, which
+     pushed the action bar below the fold ("cut off"). */
+  max-height: 85vh;
+  transform: translateY(100%);
+  transition: transform var(--dur) var(--ease-soft);
+}
+
+.bs-sheet--open {
+  display: flex;
+  transform: translateY(0);
+}
+
+/* While the user is dragging, follow the pointer 1:1 with no transition; the
+   snap-back / close transition kicks back in the moment the drag ends. */
+.bs-sheet--dragging {
+  transition: none;
+}
+
+.bs-sheet--full {
+  max-height: 100vh;
+  height: 100vh;
+  border-radius: 0;
+}
+
+/* The grab area for swipe-to-dismiss — the handle + title. touch-action:none
+   so a vertical drag here doesn't scroll the sheet body underneath. Pinned
+   (no shrink) at the top of the flex column. */
+.bs-grip {
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+.bs-sheet--dragging .bs-grip {
+  cursor: grabbing;
+}
+
+.bs-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pico-muted-border-color);
+  margin: 0 auto 1rem;
+}
+
+.bs-title {
+  margin: 0 0 1.25rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* The only scroll region — so the grip/title stay pinned at the top and the
+   actions stay pinned at the bottom while a tall form scrolls between them
+   (min-height:0 lets it shrink inside the flex column so overflow engages). */
+.bs-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Contain scroll to the sheet body: reaching the top/bottom must not chain to
+     the page behind the open sheet, and pulling down at the top must not trigger
+     PWA pull-to-refresh. */
+  overscroll-behavior: contain;
+}
+
+.bs-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+}

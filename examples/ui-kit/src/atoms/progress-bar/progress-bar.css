@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.pb-track {
+  width: 100%;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--pico-muted-border-color, rgba(255, 255, 255, 0.1));
+}
+
+.pb-track--sm {
+  height: 6px;
+}
+
+.pb-track--md {
+  height: 10px;
+}
+
+.pb-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--pb-color, var(--section-accent, var(--pico-primary)));
+  transition: width 0.3s ease;
+}

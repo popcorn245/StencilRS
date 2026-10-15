@@ -1,0 +1,181 @@
+:host {
+  display: block;
+  width: 100%;
+  position: relative;
+  font-family: inherit;
+}
+
+.psp {
+  position: relative;
+  width: 100%;
+}
+
+.psp__field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 9px;
+  border: 1.5px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-sm, 12px);
+  background: var(--surface-card, var(--pico-form-element-background-color, #fff));
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink, inherit);
+  transition: border-color var(--trans-fast, 0.15s ease), box-shadow var(--trans-fast, 0.15s ease);
+}
+
+.psp__field:focus,
+.psp__field:hover {
+  border-color: var(--brand-blue, var(--pico-primary, #1976d2));
+}
+.psp__field:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-blue, #4299e1) 16%, transparent);
+}
+
+.psp__placeholder {
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+  padding: 0 4px;
+}
+
+.psp__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--brand-blue, #4299e1) 24%, transparent);
+  color: var(--ink, #1b2333);
+  padding: 3px 5px 3px 9px;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.psp__chip-icon {
+  font-size: 1em;
+}
+
+.psp__chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft, inherit);
+  cursor: pointer;
+  font-size: 1.1em;
+  padding: 0 4px;
+  line-height: 1;
+  min-height: unset;
+  min-width: unset;
+  border-radius: var(--radius-pill, 999px);
+  transition: background var(--trans-fast, 0.12s ease), color var(--trans-fast, 0.12s ease);
+}
+.psp__chip-remove:hover {
+  background: color-mix(in oklab, var(--brand-red, #e53e3e) 16%, transparent);
+  color: var(--brand-red, inherit);
+}
+
+.psp__popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--surface-card, var(--pico-background-color, #fff));
+  border: 1px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-sm, 12px);
+  box-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.12));
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.psp__search {
+  width: 100%;
+  padding: 7px 11px;
+  border: 1.5px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-xs, 10px);
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ink, inherit);
+  background: var(--surface-raised, transparent);
+}
+.psp__search:focus {
+  outline: none;
+  border-color: var(--brand-blue, #4299e1);
+}
+
+.psp__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.psp__opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-xs, 10px);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink, inherit);
+}
+
+.psp__opt:hover {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 10%, transparent);
+}
+
+.psp__opt--picked {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 16%, transparent);
+  color: var(--ink, inherit);
+  font-weight: 600;
+}
+
+.psp__opt-name {
+  flex: 1;
+}
+
+.psp__opt-room {
+  font-size: 0.85em;
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+}
+
+.psp__opt-check {
+  font-weight: bold;
+  color: var(--brand-blue, #4299e1);
+}
+
+.psp__empty {
+  padding: 8px 10px;
+  color: var(--ink-muted, var(--pico-muted-color, #999));
+  font-style: italic;
+  font-size: 14px;
+}
+
+.psp__new {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 10px;
+  border: 1px dashed color-mix(in oklab, var(--brand-blue, #4299e1) 40%, var(--line, #ddd));
+  background: transparent;
+  border-radius: var(--radius-xs, 10px);
+  color: var(--brand-blue, var(--pico-primary, #1976d2));
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.psp__new:hover {
+  border-color: var(--brand-blue, #4299e1);
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 10%, transparent);
+}

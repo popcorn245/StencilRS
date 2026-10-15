@@ -1,0 +1,139 @@
+/* pop-thread-card-showtimes — themed with Pico tokens only (no hardcoded colors). */
+.tcs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--pico-border-radius, 0.5rem);
+  background: var(--pico-card-background-color, transparent);
+  color: var(--pico-color, inherit);
+  font-size: 0.9rem;
+}
+
+/* Frozen = a past date: muted chrome, still navigable. */
+.tcs--frozen {
+  color: var(--pico-muted-color, #8b97a6);
+  background: var(--pico-card-sectioning-background-color, transparent);
+  border-style: dashed;
+}
+
+.tcs--broken {
+  color: var(--pico-muted-color, #8b97a6);
+  font-style: italic;
+}
+
+.tcs__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.tcs__glyph {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  font-size: 1.15rem;
+  color: var(--pico-primary, currentColor);
+}
+.tcs--frozen .tcs__glyph {
+  color: inherit;
+}
+.tcs__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tcs__title {
+  font-weight: 600;
+}
+.tcs__subtitle,
+.tcs__address,
+.tcs__empty,
+.tcs__no-times {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color, #8b97a6);
+}
+.tcs__empty {
+  margin: 0;
+}
+
+.tcs__theaters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.tcs__theater {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+}
+.tcs__theater:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+.tcs__theater-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.tcs__theater-name {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tcs__times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.tcs__time {
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-sectioning-background-color, transparent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tcs__actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.tcs__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-sectioning-background-color, transparent);
+  color: var(--pico-color, inherit);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.tcs__btn:hover:not(:disabled) {
+  border-color: var(--pico-primary, currentColor);
+  color: var(--pico-primary, currentColor);
+}
+.tcs__btn ion-icon {
+  font-size: 1.05rem;
+}
+.tcs__btn--inline {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-color: transparent;
+}

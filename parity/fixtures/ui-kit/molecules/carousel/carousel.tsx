@@ -38,7 +38,7 @@ export class PopCarousel {
    * Switches the carousel to gallery view (grid).
    */
   @Method()
-  async viewGallery() {
+  async viewGallery(): Promise<any> {
     if (!this.carouselElement) return;
 
     this.isGalleryView = true;
@@ -49,7 +49,7 @@ export class PopCarousel {
    * Scrolls to a specific slide by index.
    */
   @Method()
-  async slideTo(index: number) {
+  async slideTo(index: number): Promise<any> {
     if (!this.viewportElement) return;
 
     const slideWidth = this.viewportElement.offsetWidth;
@@ -77,7 +77,7 @@ export class PopCarousel {
    * Scrolls the carousel to the next slide.
    */
   @Method()
-  async next() {
+  async next(): Promise<any> {
     if (!this.viewportElement) return;
 
     const slideWidth = this.viewportElement.offsetWidth;
@@ -105,7 +105,7 @@ export class PopCarousel {
    * Scrolls the carousel to the previous slide.
    */
   @Method()
-  async prev() {
+  async prev(): Promise<any> {
     if (!this.viewportElement) return;
 
     const slideWidth = this.viewportElement.offsetWidth;

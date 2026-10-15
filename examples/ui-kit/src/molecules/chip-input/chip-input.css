@@ -1,0 +1,153 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.pci__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1.5px solid var(--line, var(--pico-form-element-border-color));
+  border-radius: var(--radius-sm, 12px);
+  background: var(--surface-card, var(--pico-form-element-background-color));
+  min-height: 42px;
+  cursor: text;
+  transition: border-color var(--trans-fast, 0.15s ease), box-shadow var(--trans-fast, 0.15s ease);
+}
+
+.pci__chips:focus-within {
+  border-color: var(--brand-blue, var(--pico-primary, #1976d2));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-blue, #4299e1) 16%, transparent);
+}
+
+.pci__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px 3px 11px;
+  border-radius: var(--radius-pill, 9999px);
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--brand-blue, #4299e1) 24%, transparent);
+  color: var(--ink, var(--pico-color));
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: 100%;
+}
+
+.pci__chip-emoji {
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+.pci__chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pci__chip-remove {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft, var(--pico-muted-color));
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill, 9999px);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--trans-fast, 0.12s ease), color var(--trans-fast, 0.12s ease);
+}
+
+.pci__chip-remove:hover {
+  background: color-mix(in oklab, var(--brand-red, #e53e3e) 16%, transparent);
+  color: var(--brand-red, var(--pico-color));
+}
+
+.pci__input {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  padding: 4px 2px;
+  flex: 1;
+  min-width: 80px;
+  margin: 0;
+}
+
+.pci--readonly .pci__chip {
+  padding-right: 10px;
+}
+
+/* Suggestions popover */
+.pci__suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--surface-card, var(--pico-dropdown-background-color, var(--pico-card-background-color)));
+  border: 1px solid var(--line, var(--pico-muted-border-color));
+  border-radius: var(--radius-sm, 12px);
+  box-shadow: var(--shadow-lg, 0 10px 30px -10px rgba(0, 0, 0, 0.35));
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.pci__suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--ink, inherit);
+}
+
+.pci__suggestion:hover {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 12%, transparent);
+}
+
+.pci__suggestion-emoji {
+  width: 18px;
+  text-align: center;
+  line-height: 1;
+}
+
+.pci__suggestion-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill, 9999px);
+  flex: 0 0 auto;
+  margin: 0 4px;
+}
+
+.pci__suggestion-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pci__suggestion--create {
+  border-top: 1px solid var(--line, var(--pico-muted-border-color));
+  color: var(--brand-blue, var(--pico-primary, #1976d2));
+  font-weight: 600;
+}
+
+.pci__suggestion-plus {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}

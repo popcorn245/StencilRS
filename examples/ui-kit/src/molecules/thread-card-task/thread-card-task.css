@@ -1,0 +1,108 @@
+/* pop-thread-card-task — themed with Pico tokens only (no hardcoded colors). */
+.tcta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--pico-border-radius, 0.5rem);
+  background: var(--pico-card-background-color, transparent);
+  color: var(--pico-color, inherit);
+  font-size: 0.9rem;
+}
+
+/* Frozen = the task is done/historical: muted + struck through. */
+.tcta--frozen {
+  color: var(--pico-muted-color, #8b97a6);
+  background: var(--pico-card-sectioning-background-color, transparent);
+  border-style: dashed;
+}
+.tcta--frozen .tcta__title {
+  text-decoration: line-through;
+}
+
+.tcta--broken {
+  color: var(--pico-muted-color, #8b97a6);
+  font-style: italic;
+}
+
+.tcta__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.tcta__glyph {
+  flex: 0 0 auto;
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  color: var(--pico-primary, currentColor);
+}
+.tcta--frozen .tcta__glyph {
+  color: inherit;
+}
+.tcta__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.tcta__title {
+  font-weight: 600;
+}
+.tcta__subtitle {
+  font-size: 0.78rem;
+  color: var(--pico-muted-color, #8b97a6);
+}
+
+.tcta__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.tcta__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  font-size: 0.72rem;
+  color: var(--pico-muted-color, #8b97a6);
+  white-space: nowrap;
+}
+.tcta__chip--priority {
+  border-color: var(--pico-primary, currentColor);
+  color: var(--pico-primary, currentColor);
+  text-transform: capitalize;
+}
+.tcta--frozen .tcta__chip--priority {
+  border-color: var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  color: inherit;
+}
+.tcta__chip--status {
+  text-transform: capitalize;
+}
+
+.tcta__actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.tcta__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--pico-border-radius, 0.5rem);
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--pico-card-sectioning-background-color, transparent);
+  color: var(--pico-color, inherit);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.tcta__btn:hover:not(:disabled) {
+  border-color: var(--pico-primary, currentColor);
+  color: var(--pico-primary, currentColor);
+}
+.tcta__btn ion-icon {
+  font-size: 1.05rem;
+}

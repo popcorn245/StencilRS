@@ -1,0 +1,165 @@
+/* valheim-shop — tier banner, Haldor stock, weekly proposal. Tokens only. */
+
+.vsh-tier {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid color-mix(in oklab, var(--vlh-accent, #6366f1) 40%, var(--vlh-border, #d5dbe5));
+  background: color-mix(in oklab, var(--vlh-accent, #6366f1) 8%, transparent);
+}
+.vsh-tier-ic {
+  font-size: 1.2rem;
+  color: var(--vlh-accent, #6366f1);
+}
+.vsh-tier-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--vlh-text, #1b2333);
+  font-family: var(--vlh-font-display, inherit);
+}
+.vsh-tier-tag {
+  font-size: 0.7rem;
+  color: var(--vlh-text-dim, #8492a8);
+  margin-top: 0.05rem;
+}
+
+.vsh-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.1rem;
+}
+.vsh-item + .vsh-item {
+  border-top: 1px solid var(--vlh-border, #d5dbe5);
+}
+.vsh-ic {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  color: var(--vlh-accent, #6366f1);
+}
+.vsh-name {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vlh-text, #1b2333);
+  min-width: 0;
+}
+.vsh-desc {
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-weight: 400;
+}
+.vsh-price {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--vlh-coin, #f59e0b);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.vsh-item--locked {
+  opacity: 0.5;
+}
+.vsh-item--locked .vsh-ic {
+  color: var(--vlh-text-dim, #8492a8);
+}
+.vsh-lock {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--vlh-text-dim, #8492a8);
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px dashed var(--vlh-border-strong, #c2cbd9);
+  white-space: nowrap;
+}
+.vsh-empty {
+  font-size: 0.78rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-style: italic;
+  padding: 0.2rem 0.1rem;
+}
+
+.vsh-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.65rem;
+  margin-top: 0.35rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid color-mix(in oklab, var(--vlh-accent, #6366f1) 40%, transparent);
+  background: color-mix(in oklab, var(--vlh-accent, #6366f1) 8%, transparent);
+}
+.vsh-pr-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.vsh-pr-bot {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid color-mix(in oklab, var(--vlh-accent, #6366f1) 40%, var(--vlh-border, #d5dbe5));
+  color: var(--vlh-accent, #6366f1);
+}
+.vsh-pr-t {
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--vlh-text, #1b2333);
+}
+.vsh-pr-t small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-weight: 400;
+  margin-top: 0.1rem;
+}
+.vsh-pr-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--vlh-text-soft, #475067);
+}
+.vsh-pr-line pop-icon {
+  font-size: 0.95rem;
+  flex: 0 0 auto;
+}
+.vsh-pr-ic--raise { color: var(--vlh-danger, #ef4444); }
+.vsh-pr-ic--add { color: var(--vlh-success, #48bb78); }
+.vsh-pr-ic--unlock { color: var(--vlh-accent, #6366f1); }
+.vsh-pr-text b {
+  color: var(--vlh-text, #1b2333);
+  font-weight: 600;
+}
+.vsh-pr-val {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--vlh-text, #1b2333);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.vsh-pr-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+.vsh-pr-note {
+  font-size: 0.7rem;
+  color: var(--vlh-text-dim, #8492a8);
+  font-style: italic;
+}

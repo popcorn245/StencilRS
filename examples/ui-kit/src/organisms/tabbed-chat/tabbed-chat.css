@@ -1,0 +1,112 @@
+/* ── pop-tabbed-chat ────────────────────────────────────────────────────── */
+
+:host { display: flex; flex-direction: column; height: 100%; }
+
+.tc-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Tab bar ── */
+.tc-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.1));
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.tc-tabs::-webkit-scrollbar { height: 3px; }
+.tc-tabs::-webkit-scrollbar-thumb { background: var(--pico-muted-border-color); border-radius: 2px; }
+
+.tc-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+}
+.tc-tab:hover { background: rgba(255,255,255,0.05); color: var(--pico-color); }
+.tc-tab--active {
+  background: var(--pico-card-background-color, rgba(255,255,255,0.07));
+  color: var(--pico-color);
+  border-color: var(--pico-muted-border-color, rgba(255,255,255,0.1));
+}
+
+.tc-tab-label { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+.tc-tab-close {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--pico-muted-color);
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s;
+}
+.tc-tab:hover .tc-tab-close { opacity: 1; }
+.tc-tab-close:hover { background: rgba(255,255,255,0.1); color: var(--pico-color); }
+
+.tc-new-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.1));
+  border-radius: 6px;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  transition: background 0.1s, color 0.1s;
+}
+.tc-new-btn:hover { background: rgba(255,255,255,0.07); color: var(--pico-color); }
+
+/* ── Body ── */
+.tc-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tc-body pop-ai-chat { flex: 1; }
+
+.tc-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--pico-muted-color);
+}
+.tc-start-btn {
+  padding: 8px 20px;
+  background: var(--pico-primary, #5865f2);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.tc-start-btn:hover { filter: brightness(1.1); }

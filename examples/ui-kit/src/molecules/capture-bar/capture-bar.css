@@ -1,0 +1,76 @@
+:host {
+  display: block;
+}
+
+.cb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 14px;
+  min-height: 52px;
+  background: color-mix(in oklab, var(--surface-card, var(--pico-card-background-color)) 78%, transparent);
+  border: 1px solid var(--line, var(--pico-muted-border-color));
+  border-radius: var(--radius-pill, 9999px);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: border-color var(--trans-fast, 0.15s ease), box-shadow var(--trans-fast, 0.15s ease);
+}
+.cb:focus-within {
+  border-color: var(--brand-blue, var(--pico-primary));
+  box-shadow: var(--shadow-pop, 0 6px 20px rgba(0, 0, 0, 0.12));
+}
+
+.cb__lead {
+  flex-shrink: 0;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+
+.cb__input {
+  flex: 1;
+  min-width: 0;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink, var(--pico-color));
+  padding: 0;
+  margin: 0;
+}
+.cb__input::placeholder {
+  color: var(--ink-muted, var(--pico-muted-color));
+  opacity: 0.85;
+}
+
+.cb__send {
+  appearance: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-pill, 9999px);
+  color: #fff;
+  background: var(--grad-brand, var(--pico-primary));
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+  transition: transform var(--trans-fast, 0.15s ease), opacity var(--trans-fast, 0.15s ease), filter var(--trans-fast, 0.15s ease);
+}
+.cb__send:hover:not(:disabled) { transform: translateY(-1px); filter: saturate(1.1); }
+.cb__send:active:not(:disabled) { transform: translateY(0) scale(0.96); }
+.cb__send:focus-visible { outline: 2px solid var(--brand-blue, var(--pico-primary)); outline-offset: 2px; }
+.cb__send:disabled {
+  cursor: default;
+  opacity: 0.4;
+  filter: grayscale(0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb,
+  .cb__send { transition: none; }
+  .cb__send:hover:not(:disabled) { transform: none; }
+}

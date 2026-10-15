@@ -1,0 +1,57 @@
+:host {
+  display: block;
+}
+
+.mb-thread-summary {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  margin-left: 8px;
+}
+
+.mb-thread-spine {
+  position: absolute;
+  top: -12px;
+  left: -26px;
+  width: 30px;
+  height: 22px;
+  border-bottom: 2px solid var(--pico-muted-border-color, #4f545c);
+  border-left: 2px solid var(--pico-muted-border-color, #4f545c);
+  border-bottom-left-radius: 6px;
+  pointer-events: none;
+}
+
+.mb-thread-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pico-code-background-color, #2a2a3a);
+  border-radius: 4px;
+  padding: 3px 8px;
+  max-width: 100%;
+}
+
+.mb-thread-avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mb-thread-preview {
+  font-size: 0.82rem;
+  color: var(--pico-muted-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-weight: 500;
+}
+
+.mb-thread-time {
+  font-size: 0.72rem;
+  color: var(--pico-muted-color);
+  white-space: nowrap;
+}

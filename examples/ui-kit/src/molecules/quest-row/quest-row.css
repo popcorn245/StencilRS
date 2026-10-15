@@ -1,0 +1,72 @@
+.qr-root {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--pico-card-background-color);
+  border-radius: 8px;
+  border-left: 3px solid var(--pico-muted-border-color);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 44px;
+}
+
+.qr-root:hover {
+  background: color-mix(in srgb, var(--pico-card-background-color) 90%, var(--section-accent, #a855f7));
+}
+
+.qr-root + .qr-root {
+  margin-top: 2px;
+}
+
+.qr-emoji {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.qr-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qr-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.qr-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--pico-muted-border-color);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.qr-progress-fill {
+  height: 100%;
+  background: var(--section-accent, #a855f7);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.qr-progress-fill--done {
+  background: #22c55e;
+}
+
+.qr-count {
+  font-size: 0.7rem;
+  color: var(--pico-muted-color);
+  font-weight: 600;
+  min-width: 24px;
+  text-align: right;
+}

@@ -1,0 +1,82 @@
+.pre {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.pre__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pre__toggle {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.pre__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 24px;
+}
+
+.pre__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pre__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pico-muted-color, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pre__select,
+.pre__input {
+  border: 1.5px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  background: var(--pico-form-element-background-color, transparent);
+  color: inherit;
+  outline: none;
+  font-family: inherit;
+  margin: 0;
+}
+
+.pre__select:focus,
+.pre__input:focus {
+  border-color: var(--pico-primary, #7c3aed);
+}
+
+.pre__weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pre__day {
+  border: 1.5px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pre__day--active {
+  background: var(--pico-primary, #7c3aed);
+  color: #fff;
+  border-color: var(--pico-primary, #7c3aed);
+}

@@ -1,4 +1,6 @@
-// Copy the old bucket ui-kit (Stencil 4) into this harness, migrated to Stencil v5.
+// One-time import of the old bucket ui-kit (Stencil 4) into this project, migrated to Stencil v5.
+// The result is committed and has since been fixed by hand for a clean `stencil build`:
+// re-running this overwrites src/, styles/ and vendor/.
 //
 //   node import.mjs [path to the bucket repo]   (default J:/apps/@popcorn245/bucket)
 //
@@ -95,6 +97,7 @@ const src = copyTree(join(bucket, 'packages/ui-kit/src'), join(here, 'src'), (te
 mkdirSync(join(here, 'src/test-utils'), { recursive: true });
 copyFileSync(join(here, 'harness/spec-page.ts'), join(here, 'src/test-utils/spec-page.ts'));
 
+copyTree(join(bucket, 'packages/ui-kit/styles'), join(here, 'styles'));
 const vendor = ['cards-core', 'floorplan-core'].map((p) => copyTree(join(bucket, 'packages', p, 'src'), join(here, 'vendor', p)));
 
 console.log(`src/: ${src} files · vendor/: ${vendor.join(' + ')} files · ${annotated} async @Method() annotated`);

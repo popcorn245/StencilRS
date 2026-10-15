@@ -1,0 +1,172 @@
+/* pop-tile — presentational tile face. Themed via theme-fabulous / Pico tokens. */
+
+:host,
+pop-tile {
+  display: inline-block;
+  position: relative;
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  color: var(--ink, var(--pico-color, inherit));
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--dur-fast, 150ms) var(--ease-soft, ease),
+    box-shadow var(--dur-fast, 150ms) var(--ease-soft, ease),
+    border-color var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+.tile:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.tile:focus-visible {
+  outline: 2px solid var(--pico-primary, #3b82f6);
+  outline-offset: 2px;
+}
+.tile:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* ── square variant: emoji on top, label + rich face below ─────────────────── */
+.tile--square {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  width: var(--pop-tile-size, 96px);
+  height: var(--pop-tile-size, 96px);
+  padding: 0.55rem 0.5rem;
+  border-radius: var(--radius-card, 22px);
+  text-align: center;
+}
+.tile--square .tile__emoji {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.tile--square .tile__icon {
+  font-size: 1.5rem;
+}
+.tile--square .tile__label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile--square .tile__face {
+  font-size: 0.68rem;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile--square .tile__face:empty {
+  display: none;
+}
+
+/* ── chip variant: compact pill, everything inline ─────────────────────────── */
+.tile--chip {
+  flex-direction: row;
+  gap: 0.4rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: var(--radius-pill, 999px);
+  white-space: nowrap;
+}
+.tile--chip .tile__emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+.tile--chip .tile__icon {
+  font-size: 1rem;
+}
+.tile--chip .tile__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.tile--chip .tile__face {
+  font-size: 0.72rem;
+  color: var(--ink-muted, var(--pico-muted-color, #8492a8));
+}
+.tile--chip .tile__face:empty {
+  display: none;
+}
+
+/* ── pressed (aria-pressed) ────────────────────────────────────────────────── */
+.tile--pressed {
+  border-color: var(--pico-primary, #3b82f6);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pico-primary, #3b82f6) 30%, transparent);
+}
+
+/* ── corner badge ──────────────────────────────────────────────────────────── */
+.tile__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+}
+.tile__badge:empty {
+  display: none;
+}
+.tile__badge ::slotted(*),
+.tile__badge > * {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--pico-primary, #3b82f6);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── edit mode: wiggle + delete ────────────────────────────────────────────── */
+.pop-tile--editing .tile--editing {
+  animation: pop-tile-wiggle 0.32s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop-tile--editing .tile--editing {
+    animation: none;
+  }
+}
+@keyframes pop-tile-wiggle {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+
+.tile__delete {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-raised, var(--pico-card-background-color, #fff));
+  color: var(--ink-soft, var(--pico-color, inherit));
+  font-size: 0.8rem;
+  line-height: 0;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+.tile__delete:hover {
+  color: var(--pico-del-color, #d93848);
+  border-color: currentColor;
+}

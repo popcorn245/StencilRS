@@ -66,7 +66,7 @@ export class PopPoll {
    * Programmatically set the user's current vote.
    */
   @Method()
-  async setUserVote(value: string) {
+  async setUserVote(value: string): Promise<any> {
     this.selectedValues = value ? value.split(',').filter(Boolean) : [];
     this.hasVoted = this.selectedValues.length > 0;
   }

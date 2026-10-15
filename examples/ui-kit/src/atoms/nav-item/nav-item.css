@@ -1,0 +1,33 @@
+:host { display: flex; }
+
+.ni {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.25rem; padding: 0.5rem 0.75rem;
+  text-decoration: none; color: var(--pico-muted-color);
+  font-size: 0.7rem; font-weight: 500;
+  transition: color 0.2s ease;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.ni:hover {
+  color: var(--pico-color);
+  background: color-mix(in srgb, var(--section-accent, var(--pico-primary)) 8%, transparent);
+}
+.ni--active {
+  color: var(--pico-color);
+  border-bottom-color: var(--section-accent, var(--pico-primary));
+}
+
+.ni-icon { font-size: 1.25rem; line-height: 1; }
+.ni-label { line-height: 1; }
+
+/* Vertical mode (set by parent) */
+:host(.ni--vertical) .ni {
+  flex-direction: row; gap: 0.75rem;
+  padding: 0.625rem 1rem; border-bottom: none;
+  border-radius: var(--pico-border-radius, 8px);
+  font-size: 0.85rem;
+}
+:host(.ni--vertical) .ni--active {
+  background: color-mix(in srgb, var(--section-accent, var(--pico-primary)) 12%, transparent);
+}

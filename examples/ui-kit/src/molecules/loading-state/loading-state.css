@@ -1,0 +1,129 @@
+:host {
+  display: block;
+}
+
+/* ── spinner variant ─────────────────────────────────────────────────── */
+.ls--spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--size-3);
+  padding: var(--size-8) var(--size-4);
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+
+.ls-spinner {
+  width: var(--size-8, 32px);
+  height: var(--size-8, 32px);
+  border-radius: var(--radius-pill, 999px);
+  border: 3px solid color-mix(in oklab, var(--brand-blue, #4299e1) 22%, transparent);
+  border-top-color: var(--brand-blue, #4299e1);
+  animation: ls-spin var(--dur-slow, 800ms) linear infinite;
+}
+
+.ls-label {
+  font-size: var(--scale-fluid-0, 0.9rem);
+}
+
+/* ── card-skeleton variant ───────────────────────────────────────────── */
+.ls--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+}
+
+.ls--skeleton.ls--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--size-3);
+}
+
+.ls-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: var(--size-3) var(--size-3);
+  border-radius: var(--radius-sm, 12px);
+  background: color-mix(in oklab, var(--surface-card, #fff) 55%, transparent);
+}
+
+.ls-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-2);
+}
+
+.ls-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  margin-top: var(--size-1);
+}
+
+/* The shared shimmer bar — a token-driven gradient sweep. */
+.ls-bar {
+  display: block;
+  height: 0.7rem;
+  border-radius: var(--radius-xs, 8px);
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--line, #dde6f2) 60%, transparent) 30%,
+    color-mix(in oklab, var(--line, #dde6f2) 30%, transparent) 50%,
+    color-mix(in oklab, var(--line, #dde6f2) 60%, transparent) 70%
+  );
+  background-size: 200% 100%;
+  animation: ls-shimmer 1.3s ease-in-out infinite;
+}
+
+.ls-bar--title {
+  height: 0.95rem;
+  width: 62%;
+}
+.ls-bar--pin {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: var(--radius-pill, 999px);
+  flex: 0 0 auto;
+}
+.ls-bar--snippet {
+  width: 100%;
+  height: 0.7rem;
+}
+.ls-bar--snippet-short {
+  width: 78%;
+}
+.ls-bar--tag {
+  width: 3.2rem;
+  height: 0.7rem;
+  border-radius: var(--radius-pill, 999px);
+}
+.ls-bar--time {
+  width: 2.4rem;
+  height: 0.7rem;
+  margin-left: auto;
+}
+
+@keyframes ls-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ls-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-spinner {
+    animation-duration: 1.6s;
+  }
+  .ls-bar {
+    animation: none;
+  }
+}

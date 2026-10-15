@@ -1,0 +1,169 @@
+/* valheim-boss-schedule — target card, countdown, RSVP, season list. Tokens only. */
+
+.vbs-target {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid color-mix(in oklab, var(--vlh-danger, #ef4444) 40%, var(--vlh-border, #d5dbe5));
+  background: color-mix(in oklab, var(--vlh-danger, #ef4444) 7%, transparent);
+}
+.vbs-sigil {
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  color: var(--vlh-danger, #ef4444);
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid color-mix(in oklab, var(--vlh-danger, #ef4444) 35%, var(--vlh-border, #d5dbe5));
+}
+.vbs-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--vlh-text, #1b2333);
+  font-family: var(--vlh-font-display, inherit);
+}
+.vbs-tag {
+  font-size: 0.72rem;
+  color: var(--vlh-text-dim, #8492a8);
+  margin-top: 0.1rem;
+}
+.vbs-countdown {
+  margin-left: auto;
+  text-align: right;
+  flex: 0 0 auto;
+}
+.vbs-cd-lab {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vlh-text-dim, #8492a8);
+}
+.vbs-cd-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--vlh-text, #1b2333);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  font-family: var(--vlh-font-display, inherit);
+}
+
+.vbs-rsvp {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--vlh-text-soft, #475067);
+}
+.vbs-rsvp > pop-icon {
+  color: var(--vlh-accent, #6366f1);
+  font-size: 1rem;
+}
+.vbs-rsvp b {
+  color: var(--vlh-text, #1b2333);
+}
+.vbs-rsvp-go {
+  margin-left: auto;
+}
+
+.vbs-list .vbs-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.1rem;
+}
+.vbs-list .vbs-row + .vbs-row {
+  border-top: 1px solid var(--vlh-border, #d5dbe5);
+}
+.vbs-node {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  border-radius: var(--vlh-radius-sm, 8px);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  background: var(--vlh-surface-2, #eef1f6);
+  border: 1px solid var(--vlh-border, #d5dbe5);
+  color: var(--vlh-text-dim, #8492a8);
+}
+.vbs-row--done .vbs-node {
+  color: var(--vlh-success, #48bb78);
+  border-color: color-mix(in oklab, var(--vlh-success, #48bb78) 40%, var(--vlh-border, #d5dbe5));
+}
+.vbs-row--now .vbs-node {
+  color: var(--vlh-danger, #ef4444);
+  border-color: color-mix(in oklab, var(--vlh-danger, #ef4444) 45%, var(--vlh-border, #d5dbe5));
+}
+.vbs-rbody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vbs-rname {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vlh-text, #1b2333);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.vbs-row--done .vbs-rname {
+  color: var(--vlh-text-soft, #475067);
+}
+.vbs-rmeta {
+  font-size: 0.7rem;
+  color: var(--vlh-text-dim, #8492a8);
+  margin-top: 0.05rem;
+}
+.vbs-slot2 {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--vlh-text-dim, #8492a8);
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px dashed var(--vlh-border-strong, #c2cbd9);
+}
+
+/* Event trials — mini-game weeks for prizes (some opt-in PvP). */
+.vbs-target--event .vbs-sigil,
+.vbs-row--event .vbs-node {
+  color: var(--vlh-coin, #f59e0b);
+}
+.vbs-pvptag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--vlh-danger, #ef4444);
+  padding: 0.05rem 0.35rem;
+  border-radius: var(--vlh-radius-sm, 8px);
+  border: 1px solid color-mix(in srgb, var(--vlh-danger, #ef4444) 45%, transparent);
+  background: color-mix(in srgb, var(--vlh-danger, #ef4444) 10%, transparent);
+}
+
+/* Sealed / finale rows (the secrecy rule). */
+.vbs-row--sealed .vbs-node,
+.vbs-row--finale .vbs-node {
+  color: var(--vlh-mystic, #8b5cf6);
+  border-color: color-mix(in oklab, var(--vlh-mystic, #8b5cf6) 45%, var(--vlh-border, #d5dbe5));
+  background: color-mix(in oklab, var(--vlh-mystic, #8b5cf6) 8%, transparent);
+}
+.vbs-row--sealed .vbs-rname,
+.vbs-row--finale .vbs-rname {
+  color: var(--vlh-mystic, #8b5cf6);
+  letter-spacing: 0.05em;
+}
+.vbs-row--sealed .vbs-rmeta,
+.vbs-row--finale .vbs-rmeta {
+  font-style: italic;
+}
+.vbs-list .vbs-row--finale {
+  margin-top: 0.3rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed color-mix(in oklab, var(--vlh-mystic, #8b5cf6) 45%, var(--vlh-border, #d5dbe5)) !important;
+}

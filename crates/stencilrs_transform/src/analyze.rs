@@ -26,6 +26,7 @@ use crate::eval::{Arg, eval_argument, property_key_name};
 use crate::locals::{LocalType, Locals};
 use crate::meta::*;
 use crate::prop_type::{classify_annotation, classify_initializer};
+use crate::resolve::Resolver;
 
 const STENCIL_DECORATORS: [&str; 11] = [
     "Component", "Prop", "State", "Event", "Method", "Element", "Watch", "Listen",
@@ -87,9 +88,10 @@ impl Ctx<'_> {
     }
 }
 
-pub fn analyze_program(program: &Program, source: &str) -> Analysis {
+/// `resolver` switches on build-accurate mode (see `resolve.rs`); `file` is this module's path.
+pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolver>, file: &str) -> Analysis {
     let mut ctx = Ctx { source, aliases: import_aliases(program), diagnostics: Vec::new() };
-    let locals = Locals::collect(program);
+    let locals = Locals::collect(program).with_resolver(resolver, file);
     let exports = value_exports(program, &locals);
     let mut components = Vec::new();
 
@@ -319,7 +321,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
 
                 if m.kind == MethodDefinitionKind::Method {
                     if !decorator_calls(&m.decorators, &method_n).is_empty() {
-                        check_method(ctx, m, &name);
+                        check_method(ctx, m, &name, locals.resolving());
                         cmp.methods.push(MethodMeta { name: name.clone() });
                     }
                     for call in decorator_calls(&m.decorators, &watch_n) {
@@ -522,7 +524,8 @@ fn build_prop(
 /// it: without the lib, `Promise` is unresolved, so only a written `Promise<...>` annotation
 /// passes. An unannotated `async` method comes out as `any` and is an error; a method that
 /// returns nothing is `void` and only a warning.
-fn check_method(ctx: &mut Ctx, m: &MethodDefinition, name: &str) {
+/// In build-accurate mode the lib is loaded, so `async` methods and returned promises are fine.
+fn check_method(ctx: &mut Ctx, m: &MethodDefinition, name: &str, full_program: bool) {
     if matches!(m.accessibility, Some(TSAccessibility::Private | TSAccessibility::Protected)) {
         ctx.push(Level::Error, "Methods decorated with the @Method() decorator cannot be \"private\" nor \"protected\". More info: https://stenciljs.com/docs/methods", m.span);
     }
@@ -537,13 +540,13 @@ fn check_method(ctx: &mut Ctx, m: &MethodDefinition, name: &str) {
             }
             _ => MethodReturn::Other,
         },
-        None if m.value.r#async => MethodReturn::Other,
-        None if returns_value(&m.value) => MethodReturn::Other,
+        None if m.value.r#async => if full_program { MethodReturn::Promise } else { MethodReturn::Other },
+        None if returns_value(&m.value) => if full_program { MethodReturn::Unknown } else { MethodReturn::Other },
         None => MethodReturn::Void,
     };
     let message = format!("External @Method() {name}() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async {name}().");
     match returns {
-        MethodReturn::Promise => {}
+        MethodReturn::Promise | MethodReturn::Unknown => {}
         MethodReturn::Void => ctx.push(Level::Warn, message, m.key.span()),
         MethodReturn::Other => ctx.push(Level::Error, message, m.key.span()),
     }
@@ -551,6 +554,8 @@ fn check_method(ctx: &mut Ctx, m: &MethodDefinition, name: &str) {
 
 enum MethodReturn {
     Promise,
+    /// Returns a value whose type needs inference we don't do: no diagnostic.
+    Unknown,
     Void,
     Other,
 }

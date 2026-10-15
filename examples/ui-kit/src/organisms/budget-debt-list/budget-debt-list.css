@@ -1,0 +1,133 @@
+.debt-list {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e1e1e6;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.total-owed {
+  font-size: 1rem;
+  color: #9ca3af;
+}
+
+.total-owed strong {
+  color: #f87171;
+  font-size: 1.2rem;
+}
+
+.add-btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #818cf8;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.add-btn:hover {
+  background: #6366f1;
+}
+
+.debt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+}
+
+.debt-card {
+  background: #161820;
+  border: 1px solid #2a2d3a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  color: #0f1117;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.card-amount {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f87171;
+  margin-bottom: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.utilization {
+  margin-bottom: 0.75rem;
+}
+
+.util-bar {
+  height: 6px;
+  background: #2a2d3a;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.3rem;
+}
+
+.util-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.util-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+}
+
+.action-btn {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #2a2d3a;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.action-btn:hover {
+  background: #1e2130;
+  color: #e1e1e6;
+}
+
+.loading, .empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}

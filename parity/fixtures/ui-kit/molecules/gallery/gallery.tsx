@@ -110,7 +110,7 @@ export class PopGallery {
 
   /** Toggle browser fullscreen for the gallery. */
   @Method()
-  async toggleFullscreen() {
+  async toggleFullscreen(): Promise<any> {
     if (!document.fullscreenElement) {
       await this.el.requestFullscreen().catch(err => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
@@ -370,7 +370,7 @@ export class PopGallery {
 
   /** Navigate to a specific slide (0-based, wraps). */
   @Method()
-  async goTo(index: number) {
+  async goTo(index: number): Promise<any> {
     const slides = this.getSlides();
     if (!slides.length || !this.viewportEl) return;
     if (index < 0) index = slides.length - 1;
@@ -383,15 +383,15 @@ export class PopGallery {
 
   /** Navigate to the next slide. */
   @Method()
-  async next() { await this.goTo(this.currentIndex + 1); }
+  async next(): Promise<any> { await this.goTo(this.currentIndex + 1); }
 
   /** Navigate to the previous slide. */
   @Method()
-  async prev() { await this.goTo(this.currentIndex - 1); }
+  async prev(): Promise<any> { await this.goTo(this.currentIndex - 1); }
 
   /** Expand the gallery. */
   @Method()
-  async expand() {
+  async expand(): Promise<any> {
     this.expanded = true;
     this.resetZoom();
     this.updateDominantColor();
@@ -399,14 +399,14 @@ export class PopGallery {
 
   /** Collapse the gallery. */
   @Method()
-  async collapse() {
+  async collapse(): Promise<any> {
     this.expanded = false;
     this.resetZoom();
   }
 
   /** Reset zoom level to 1×. */
   @Method()
-  async resetZoom() {
+  async resetZoom(): Promise<any> {
     this.scale = 1;
     this.translateX = 0;
     this.translateY = 0;
@@ -416,19 +416,19 @@ export class PopGallery {
 
   /** Zoom in by a step. */
   @Method()
-  async zoomIn() { this.applyZoom(this.scale * 1.25); }
+  async zoomIn(): Promise<any> { this.applyZoom(this.scale * 1.25); }
 
   /** Zoom out by a step. */
   @Method()
-  async zoomOut() { this.applyZoom(this.scale / 1.25); }
+  async zoomOut(): Promise<any> { this.applyZoom(this.scale / 1.25); }
 
   /** Get current slide index. */
   @Method()
-  async getCurrentIndex() { return this.currentIndex; }
+  async getCurrentIndex(): Promise<any> { return this.currentIndex; }
 
   /** Get total slides. */
   @Method()
-  async getTotal() { return this.total; }
+  async getTotal(): Promise<any> { return this.total; }
 
   /* ────────────────────────────────────────────
    * Event helpers

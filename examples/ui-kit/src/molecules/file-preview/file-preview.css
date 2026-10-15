@@ -1,0 +1,45 @@
+:host {
+  display: block;
+}
+
+.file-preview-area {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.file-preview-card {
+  position: relative;
+  display: inline-block;
+  background: #2f3136;
+  padding: 8px;
+  border-radius: 4px;
+  min-width: 60px;
+}
+
+.file-preview-card img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 4px;
+  display: block;
+}
+
+.remove-file-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ed4245;
+  color: white;
+  border: 2px solid #2f3136;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}

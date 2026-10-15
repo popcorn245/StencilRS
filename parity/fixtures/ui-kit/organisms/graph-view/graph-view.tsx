@@ -175,7 +175,7 @@ export class PopGraphView {
 
   /** Public: re-run a short simulation burst (used by "re-layout" controls). */
   @Method()
-  async reheat() {
+  async reheat(): Promise<any> {
     if (!this.sim) return;
     this.tickCount = 0;
     if (this.reduceMotion) {
@@ -189,7 +189,7 @@ export class PopGraphView {
 
   /** Public: fit + centre all nodes in the viewport. */
   @Method()
-  async zoomToFit(padding = 60) {
+  async zoomToFit(padding = 60): Promise<any> {
     this.fit(padding);
     this.clampTransform();
     this.requestPaint();

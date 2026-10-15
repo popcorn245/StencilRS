@@ -158,7 +158,7 @@ export class PopAiChat {
 
   /** Host: start an assistant turn (shows the streaming bubble). */
   @Method()
-  async beginAssistant() {
+  async beginAssistant(): Promise<any> {
     this.streamingContent = '';
     this.streamingCitations = [];
     this.isStreaming = true;
@@ -166,13 +166,13 @@ export class PopAiChat {
 
   /** Host: append a token to the in-flight assistant message. */
   @Method()
-  async appendAssistantToken(token: string) {
+  async appendAssistantToken(token: string): Promise<any> {
     this.streamingContent = this.streamingContent + token;
   }
 
   /** Host: finalize the assistant turn with optional grounding citations. */
   @Method()
-  async endAssistant(content?: string, citations?: AiCitation[]) {
+  async endAssistant(content?: string, citations?: AiCitation[]): Promise<any> {
     const finalContent = content ?? this.streamingContent;
     const msg: AiMessage = {
       id: `a-${Date.now()}`,
@@ -287,12 +287,12 @@ export class PopAiChat {
   }
 
   @Method()
-  async sendMessage(text: string) {
+  async sendMessage(text: string): Promise<any> {
     await this.handleSend({ text, files: [] });
   }
 
   @Method()
-  async setInputValue(text: string) {
+  async setInputValue(text: string): Promise<any> {
     const msgBox = this.el.querySelector('pop-message-box') as any;
     await msgBox?.setInputValue(text);
   }

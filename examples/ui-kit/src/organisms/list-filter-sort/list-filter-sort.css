@@ -1,0 +1,25 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   pop-list-filter-sort — one-row toolbar: search+filter (grows) · view
+   switcher (fixed) · [actions slot]. NO role=group/search (pico stretches
+   those); plain flex keeps compact controls compact.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.plfs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* Custom-element hosts default to display:inline — pin them so the row lays
+   out predictably. */
+.plfs__search {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.plfs__views {
+  display: inline-flex;
+  flex: 0 0 auto;
+}

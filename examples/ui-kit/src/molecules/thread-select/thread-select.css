@@ -1,0 +1,35 @@
+/* pop-thread-select — Pico tokens only, no hardcoded colors. */
+.tsel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--pico-color);
+}
+
+.tsel__label {
+  flex: 0 0 auto;
+  color: var(--pico-muted-color);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.tsel__select {
+  margin: 0;
+  padding: 0.25rem 1.6rem 0.25rem 0.5rem;
+  height: auto;
+  min-width: 0;
+  max-width: 16rem;
+  font-size: 0.85rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  background-color: var(--pico-form-element-background-color);
+  color: var(--pico-color);
+}
+
+.tsel__select:disabled {
+  color: var(--pico-muted-color);
+  cursor: not-allowed;
+}

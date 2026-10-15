@@ -1,0 +1,403 @@
+:host {
+  display: block;
+  width: 100%;
+  position: relative;
+  font-family: inherit;
+}
+
+.pc {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Slim input bar ── */
+.pc__bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid var(--pico-form-element-border-color, #d8dee6);
+  border-radius: 14px;
+  background: var(--pico-form-element-background-color, #fff);
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+.pc__bar:focus-within {
+  border-color: var(--pico-primary, #4299e1);
+}
+.pc__bar--disabled {
+  opacity: 0.6;
+}
+
+.pc__editor {
+  flex: 1 1 auto;
+  min-width: 0;
+  outline: none;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--pico-color, inherit);
+  padding: 7px 4px;
+  max-height: 8.5rem; /* grows ~5 lines then scrolls */
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.pc__editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--pico-muted-color, #8b97a6);
+  pointer-events: none;
+}
+
+/* ── Compact icons + send ── */
+.pc__icon,
+.pc__send {
+  flex: 0 0 auto;
+  /* flex-center + line-height:0 so the pop-icon glyph sits dead-center (no
+     baseline/inline drift). font-size drives the glyph size. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  font-size: 19px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--pico-muted-color, #8b97a6);
+  background: transparent;
+  transition: background 0.12s, color 0.12s;
+}
+/* The pop-icon glyph inside a composer button — centered, inherits the font-size. */
+.pc__glyph {
+  display: inline-flex;
+}
+.pc__icon:hover:not(:disabled) {
+  background: var(--pico-secondary-background, rgba(127, 127, 127, 0.12));
+  color: var(--pico-color, inherit);
+}
+.pc__send {
+  color: #fff;
+  background: var(--pico-primary, #4299e1);
+}
+.pc__send:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.pc__send:disabled,
+.pc__icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pc__send:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+/* ── Press-and-hold send button + actions popover ── */
+.pc__sendhold {
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+/* The send button reuses .pc__send; suppress the OS long-press/scroll so the
+   press-and-hold gesture reaches us cleanly. */
+.pc__send--hold {
+  touch-action: none;
+}
+
+/* The actions popover, anchored ABOVE the button (composer sits at the bottom). */
+.pc__actions {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 60;
+  min-width: 168px;
+  background: var(--pico-card-background-color, var(--pico-background-color, #fff));
+  border: 1px solid var(--pico-muted-border-color, #d8dee6);
+  border-radius: 12px;
+  box-shadow: 0 -6px 24px -8px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  animation: pc-actions-in 0.12s ease-out;
+}
+@keyframes pc-actions-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pc__act {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--pico-color, inherit);
+  font-family: inherit;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.pc__act--active,
+.pc__act:hover {
+  background: var(--pico-secondary-background, rgba(66, 153, 225, 0.14));
+}
+.pc__act-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 1rem;
+  color: var(--pico-primary, #4299e1);
+}
+.pc__act-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Mic press-hold popover (device select + Talk back) — mirrors the send popover. ── */
+.pc__michold {
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.pc__icon--mic {
+  touch-action: none; /* suppress the OS long-press so our hold gesture is clean */
+}
+.pc__micmenu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 60;
+  min-width: 220px;
+  max-width: min(280px, 78vw);
+  background: var(--pico-card-background-color, var(--pico-background-color, #fff));
+  border: 1px solid var(--pico-muted-border-color, #d8dee6);
+  border-radius: 12px;
+  box-shadow: 0 -6px 24px -8px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  animation: pc-actions-in 0.12s ease-out;
+}
+.pc__micmenu-head {
+  padding: 6px 10px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-muted-color, #94a3b8);
+}
+.pc__micmenu-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.pc__micmenu-note {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--pico-muted-color, #94a3b8);
+}
+.pc__micitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--pico-color, inherit);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.pc__micitem--active,
+.pc__micitem:hover {
+  background: var(--pico-secondary-background, rgba(66, 153, 225, 0.14));
+}
+.pc__micitem-lead {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  font-size: 1rem;
+  color: var(--pico-primary, #4299e1);
+}
+.pc__micitem-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc__micitem-check {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  color: var(--pico-primary, #4299e1);
+}
+/* Talk-back row divider. */
+.pc__talkback {
+  margin-top: 4px;
+  border-top: 1px solid var(--pico-muted-border-color, #e2e8f0);
+  border-radius: 0 0 8px 8px;
+  padding-top: 10px;
+}
+/* App-native switch (blue when on) — matches the hub Lights toggle. */
+.pc__switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--pico-muted-border-color, #cbd5e1);
+  transition: background 0.15s ease;
+}
+.pc__switch--on {
+  background: var(--pico-primary, #4299e1);
+}
+.pc__switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease;
+}
+.pc__switch--on .pc__switch-knob {
+  transform: translateX(16px);
+}
+
+.pc__file {
+  display: none;
+}
+
+/* ── Pills (people mentions) ── */
+.pc__pill {
+  display: inline-block;
+  background: var(--pico-primary-background, rgba(66, 153, 225, 0.16));
+  color: var(--pico-primary, #4299e1);
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin: 0 1px;
+  font-size: 0.9em;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+
+/* ── Inline popover anchored ABOVE the input ── */
+.pc__popover {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--pico-card-background-color, var(--pico-background-color, #fff));
+  border: 1px solid var(--pico-muted-border-color, #d8dee6);
+  border-radius: 12px;
+  box-shadow: 0 -6px 24px -8px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+}
+.pc__opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--pico-color, inherit);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.pc__opt--active {
+  background: var(--pico-secondary-background, rgba(66, 153, 225, 0.14));
+}
+.pc__opt-icon,
+.pc__opt-avatar {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--pico-secondary-background, rgba(127, 127, 127, 0.12));
+  font-size: 0.85rem;
+  overflow: hidden;
+}
+.pc__opt-avatar--initial {
+  font-weight: 700;
+  color: var(--pico-primary, #4299e1);
+}
+.pc__opt-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pc__opt-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.pc__opt-label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc__opt-detail {
+  font-size: 0.78rem;
+  color: var(--pico-muted-color, #8b97a6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Attachment chips ── */
+.pc__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 2px 6px;
+}
+.pc__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  padding: 3px 6px 3px 8px;
+  border-radius: 999px;
+  background: var(--pico-secondary-background, rgba(127, 127, 127, 0.12));
+  color: var(--pico-color, inherit);
+}
+.pc__chip-x {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+.pc__chip-x:hover {
+  opacity: 1;
+}

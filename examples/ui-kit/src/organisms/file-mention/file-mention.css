@@ -1,0 +1,107 @@
+:host {
+  display: block;
+  font-family: var(--pico-font-family);
+  position: relative;
+}
+
+.wrap {
+  position: relative;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--pico-form-element-border-color, rgba(255,255,255,0.15));
+  background: var(--pico-form-element-background-color, rgba(255,255,255,0.05));
+  color: var(--pico-color, #e2e8f0);
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.textarea:focus {
+  border-color: var(--pico-primary, #0172ad);
+  box-shadow: 0 0 0 2px rgba(1, 114, 173, 0.15);
+}
+
+.textarea::placeholder {
+  color: var(--pico-muted-color, #888);
+  opacity: 0.6;
+}
+
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Dropdown ── */
+
+.dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--pico-card-background-color, #1e2638);
+  border: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.12));
+  border-radius: var(--radius-md, 8px);
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  animation: dropdown-in 140ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown::-webkit-scrollbar { width: 3px; }
+.dropdown::-webkit-scrollbar-track { background: transparent; }
+.dropdown::-webkit-scrollbar-thumb {
+  background: var(--pico-muted-color, #555);
+  border-radius: 9999px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 80ms ease;
+}
+
+.dropdown-item:last-child { border-bottom: none; }
+
+.dropdown-item:hover,
+.dropdown-item.is-focused {
+  background: rgba(1, 114, 173, 0.12);
+}
+
+.dropdown-item.is-focused .item-label {
+  color: var(--pico-primary, #0172ad);
+}
+
+.item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pico-color, #e2e8f0);
+  flex-shrink: 0;
+  transition: color 80ms ease;
+}
+
+.item-full {
+  font-size: 10px;
+  color: var(--pico-muted-color, #888);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--pico-font-family-monospace, monospace);
+}

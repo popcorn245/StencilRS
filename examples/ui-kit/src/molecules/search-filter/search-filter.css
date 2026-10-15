@@ -1,0 +1,250 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   pop-search-filter — a search field with the funnel filter button INSIDE the
+   field's right edge (leading search glyph on the left) + a filter popover.
+
+   Field mirrors the hub search styling (rounded rect --radius-md,
+   --surface-sunken bg); the popover mirrors the hub's funnel menus (card,
+   --radius-lg, shadow). Tokens carry --pico-* + literal fallbacks so the
+   molecule reads correctly in light AND dark, standalone or in a Pico host.
+   NB: deliberately no role=search/group — pico.css styles those as full-width
+   stretched groups.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.psf {
+  position: relative;
+  min-width: 0;
+}
+
+/* ── field (input + inset icons) ── */
+.psf__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.psf__lead {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  --size: 1rem;
+  color: var(--ink-muted, var(--pico-muted-color, rgba(120, 130, 150, 0.85)));
+}
+/* NB: pico.css styles input[type=search] at (0,2,1) — its own inset search
+   icon, pill radius and padding. The `.psf__field` ancestor (+ the scoped
+   class) outranks it so OUR field styling (and our pop-icon lead glyph) wins. */
+.psf__field .psf__input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  height: 2.35rem;
+  padding: 0.45rem 2.5rem 0.45rem 2rem; /* room for the lead glyph + funnel */
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.18)));
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.08)); /* shorthand: also clears pico's background-image glyph */
+  color: var(--ink, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.9rem;
+}
+.psf__field .psf__input--nofunnel {
+  padding-right: 0.7rem;
+}
+.psf__field .psf__input:focus-visible {
+  outline: 2px solid var(--accent, var(--brand-blue, #4299e1));
+  outline-offset: 1px;
+}
+.psf__field .psf__input::-webkit-search-cancel-button {
+  margin-right: 0.1rem;
+}
+
+/* ── custom input slot (slot mode) ──
+   The `input` slot wrapper is ALWAYS in the DOM (scoped-slot rule) but only
+   takes the input's place when the host actually slotted a widget
+   (`.psf--slotted` from the light-DOM check). */
+.psf__slot {
+  display: none;
+}
+.psf--slotted .psf__field {
+  gap: 0.4rem;
+}
+.psf--slotted .psf__slot {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* In slot mode the funnel can't safely inset into an arbitrary widget (it
+   would overlap the widget's own trailing controls) — it rides the row as a
+   static field-height sibling with its own field chrome instead. */
+.psf--slotted .psf__funnel {
+  position: relative; /* in-flow, and the active dot anchors to the button */
+  top: auto;
+  right: auto;
+  transform: none;
+  flex: 0 0 auto;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.18)));
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.08));
+}
+/* Static funnel: the active dot anchors to the button box itself. */
+.psf--slotted .psf__funnel .psf__dot {
+  top: 3px;
+  right: 3px;
+}
+
+/* ── funnel button inside the field's right edge ── */
+.psf__funnel {
+  appearance: none;
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--ink, var(--pico-color, inherit));
+  cursor: pointer;
+  line-height: 0;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.psf__funnel pop-icon {
+  --size: 1.05rem;
+}
+.psf__funnel:hover {
+  background: var(--surface-card, rgba(127, 127, 127, 0.1));
+}
+.psf__funnel--open {
+  background: var(--surface-card, rgba(127, 127, 127, 0.1));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent, #6366f1) 30%, transparent);
+}
+.psf__dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, var(--brand-blue, #6366f1));
+  border: 2px solid var(--surface-sunken, var(--surface-card, #fff));
+}
+
+/* ── popover (below the field) + backdrop ── */
+.psf__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+}
+.psf__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  min-width: 230px;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--surface-raised, var(--surface-card, var(--pico-card-background-color, #fff)));
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.2)));
+  box-shadow: var(--shadow-lg, var(--shadow-md, 0 12px 30px -10px rgba(0, 0, 0, 0.3)));
+  animation: psf-pop 0.15s ease both;
+  transform-origin: top right;
+}
+@keyframes psf-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── filter groups ── */
+.psf__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.psf__group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, var(--pico-muted-color, rgba(120, 130, 150, 0.9)));
+}
+
+/* tabs (pill row) */
+.psf__tabs {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.psf__tab {
+  appearance: none;
+  margin: 0;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill, var(--radius-full, 999px));
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.14)));
+  background: var(--surface-card, rgba(127, 127, 127, 0.06));
+  color: var(--ink, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.psf__tab--on {
+  background: color-mix(in oklab, var(--accent, #6366f1) 16%, transparent);
+  border-color: var(--accent, #6366f1);
+}
+
+/* select (styled, with caret) */
+.psf__select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.4rem 1.6rem 0.4rem 0.6rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--line, var(--surface-border, rgba(127, 127, 127, 0.18)));
+  background-color: var(--surface-raised, rgba(255, 255, 255, 0.02));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  color: var(--ink, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* clear-all affordance */
+.psf__clear {
+  appearance: none;
+  align-self: flex-start;
+  margin: 0;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  color: var(--accent, var(--brand-blue, #4299e1));
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.psf__clear:hover {
+  text-decoration: underline;
+}

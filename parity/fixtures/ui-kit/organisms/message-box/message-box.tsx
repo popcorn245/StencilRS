@@ -55,12 +55,12 @@ export class PopMessageBox {
   }
 
   @Method()
-  async setFocus() {
+  async setFocus(): Promise<any> {
       this.inputDiv?.focus();
   }
   
   @Method()
-  async clear() {
+  async clear(): Promise<any> {
       if (this.inputDiv) {
           this.inputDiv.innerHTML = '';
           this.checkEmpty();
@@ -69,7 +69,7 @@ export class PopMessageBox {
   }
 
   @Method()
-  async setInputValue(text: string) {
+  async setInputValue(text: string): Promise<any> {
       if (this.inputDiv) {
           this.inputDiv.innerText = text;
           this.checkEmpty();

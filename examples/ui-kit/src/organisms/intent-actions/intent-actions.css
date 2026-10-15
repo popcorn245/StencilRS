@@ -1,0 +1,276 @@
+/* ── pop-intent-actions ─────────────────────────────────────────────────── */
+
+:host {
+  display: block;
+}
+
+.ia-root {
+  background: var(--pico-background-color);
+  border-radius: 24px 24px 0 0;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 80dvh;
+  overflow-y: auto;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+}
+
+/* ── Goal ── */
+.ia-goal {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  background: color-mix(in srgb, var(--section-accent, #a855f7) 8%, transparent);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--section-accent, #a855f7) 20%, transparent);
+}
+
+.ia-goal-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.ia-goal-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--pico-color);
+  line-height: 1.4;
+}
+
+/* ── Summary ── */
+.ia-summary {
+  font-size: 0.85rem;
+  color: var(--pico-muted-color);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Section ── */
+.ia-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ia-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+}
+
+.ia-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pico-muted-color);
+}
+
+.ia-section-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--section-accent, #a855f7);
+  background: color-mix(in srgb, var(--section-accent, #a855f7) 12%, transparent);
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+}
+
+/* ── Empty ── */
+.ia-empty {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+  margin: 0;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* ── List ── */
+.ia-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+/* ── Item ── */
+.ia-item {
+  background: var(--pico-card-background-color, #fff);
+  border-radius: 12px;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-left: 3px solid var(--intent-color, #a855f7);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  transition: opacity 200ms ease, transform 150ms ease;
+  cursor: default;
+}
+
+.ia-item:hover {
+  transform: translateX(2px);
+}
+
+.ia-item--active {
+  opacity: 1;
+}
+
+.ia-item--rejected {
+  opacity: 0.4;
+  border-left-color: var(--pico-muted-border-color);
+}
+
+/* ── Checkbox ── */
+.ia-checkbox {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--intent-color, #a855f7);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  transition: background 150ms ease, border-color 150ms ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.ia-item--active .ia-checkbox {
+  background: var(--intent-color, #a855f7);
+}
+
+.ia-item--rejected .ia-checkbox {
+  border-color: var(--pico-muted-border-color);
+  color: transparent;
+}
+
+.ia-checkbox:hover {
+  border-color: var(--intent-color, #a855f7);
+}
+
+/* ── Item body ── */
+.ia-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ia-item-type {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ia-type-icon {
+  font-size: 0.75rem;
+}
+
+.ia-type-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--intent-color, #a855f7);
+}
+
+.ia-item-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--pico-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Other section (collapsible) ── */
+.ia-other-section {
+  border-top: 1px solid var(--pico-muted-border-color);
+  padding-top: 0.75rem;
+}
+
+.ia-other-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  padding: 0.375rem 0.25rem;
+  border-radius: 8px;
+  transition: color 150ms ease, background 150ms ease;
+  list-style: none; /* Remove default disclosure triangle */
+  user-select: none;
+}
+
+.ia-other-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.ia-other-toggle:hover {
+  color: var(--pico-color);
+  background: color-mix(in srgb, var(--pico-color) 5%, transparent);
+}
+
+.ia-other-chevron {
+  font-size: 0.7rem;
+  transition: transform 200ms ease;
+}
+
+.ia-list--other {
+  margin-top: 0.5rem;
+}
+
+/* ── Footer ── */
+.ia-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+.ia-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 150ms ease, opacity 150ms ease;
+  font-family: var(--font-display);
+}
+
+.ia-btn:active { transform: scale(0.98); }
+
+.ia-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ia-btn:not(:disabled):hover { opacity: 0.9; }
+
+.ia-btn--confirm {
+  background: var(--section-accent, var(--pico-primary, #a855f7));
+  color: #fff;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--section-accent, #a855f7) 30%, transparent);
+}
+
+.ia-btn--ghost {
+  background: none;
+  border: 1px solid var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+  flex: 0 0 auto;
+  padding: 0.75rem 1.25rem;
+}

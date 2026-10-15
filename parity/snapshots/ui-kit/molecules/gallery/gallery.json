@@ -73,10 +73,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -87,7 +92,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(index: number) => any",
+            "signature": "(index: number) => Promise<any>",
             "parameters": [
               {
                 "name": "index",
@@ -95,8 +100,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -107,10 +117,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -121,10 +136,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -135,10 +155,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -149,10 +174,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -163,10 +193,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -177,10 +212,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -191,10 +231,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -205,10 +250,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => unknown",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "unknown"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -219,10 +269,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => unknown",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "unknown"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         }
@@ -347,52 +402,7 @@
       "styleDocs": []
     }
   ],
-  "diagnostics": [
-    {
-      "level": "error",
-      "messageText": "External @Method() toggleFullscreen() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async toggleFullscreen()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() goTo() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async goTo()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() next() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async next()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() prev() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async prev()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() expand() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async expand()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() collapse() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async collapse()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() resetZoom() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async resetZoom()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() zoomIn() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async zoomIn()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() zoomOut() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async zoomOut()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() getCurrentIndex() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async getCurrentIndex()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() getTotal() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async getTotal()."
-    }
-  ],
+  "diagnostics": [],
   "imports": [
     {
       "path": "@stencil/core/runtime/client/standalone"

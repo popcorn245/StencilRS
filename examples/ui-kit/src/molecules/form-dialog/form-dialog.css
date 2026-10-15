@@ -1,0 +1,121 @@
+/* Backdrop */
+:host { display: block; }
+.fd-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.fd-backdrop--open { opacity: 1; pointer-events: all; }
+
+/* Dialog card */
+.fd-card {
+  position: fixed; inset: 0; z-index: 101;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.fd-panel {
+  box-sizing: border-box;
+  padding: 30px; position: relative;
+  background: var(--surface-card, var(--pico-card-background-color));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  max-width: 500px; width: 90%;
+  /* --ink is the theme-fabulous foreground (light #1b2333 / dark #eaf0fa) — always
+     contrasts the card. --pico-color is only a fallback for a bare consumer; on its
+     own it resolved to a dark-theme white and left everything invisible in light. */
+  color: var(--ink, var(--pico-color));
+  opacity: 0; transform: scale(0.95) translateY(20px);
+  transition: opacity var(--trans), transform var(--trans);
+  pointer-events: all;
+  /* Never taller than the viewport — a long form (e.g. the Research tile with
+     Advanced expanded) would otherwise overflow equally past the top AND bottom,
+     clipping the title/first field off-screen with no way to reach them. Cap the
+     panel and scroll the BODY (below), keeping the title + footer pinned. 100dvh
+     tracks the mobile URL bar; 100vh is the fallback for older engines. */
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.fd-panel--open { opacity: 1; transform: scale(1) translateY(0); }
+
+/* The form fills the remaining panel height; its body scrolls, footer stays put. */
+.fd-panel > form {
+  display: flex; flex-direction: column;
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+}
+
+/* Close button */
+.fd-close {
+  position: absolute; top: 15px; right: 15px;
+  /* Neutral gray-alpha reads on BOTH the light (white) and dark (navy) card; the
+     glyph uses --ink so it always contrasts (was var(--pico-color) → white-on-white
+     in light mode → an invisible ×). */
+  background: rgba(127,127,127,0.10); border: none;
+  font-size: 1.2rem; cursor: pointer; border-radius: 50%;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink, var(--pico-color));
+}
+.fd-close:hover { background: rgba(127,127,127,0.18); }
+
+/* Slotted header bar (headerBar=true): [ title/controls …grow… ] [ actions ][ × ].
+   The × is INLINE at the end of the row here — not absolutely positioned — so a
+   consumer-supplied right-side control can never overlap or hide it. */
+.fd-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.fd-header-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.fd-header-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+/* Inline × sits in the row (static), not the absolute corner variant. */
+.fd-close--inline { position: static; top: auto; right: auto; }
+/* With the header bar owning the top row, the panel no longer needs the reserved
+   top padding for an absolute × — the header handles its own spacing. */
+.fd-panel--headerbar { padding-top: 18px; }
+
+/* Title */
+.fd-title { margin: 0; font-size: 1.8rem; font-weight: 700; }
+.fd-description { margin: 4px 0 0; font-size: 0.9rem; opacity: 0.6; }
+
+/* Form area — the ONLY scroll region when the panel is capped to the viewport.
+   min-height:0 lets it shrink below content size inside the flex column so
+   overflow actually engages; the negative-margin/padding pair keeps focus rings
+   from being clipped at the scroll edges. */
+.fd-body {
+  margin-top: 1.5rem;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  margin-left: -30px; margin-right: -30px;
+  padding-left: 30px; padding-right: 30px;
+}
+/* Theme-correct field chrome (was dark-only white-alpha → invisible borders +
+   white text on a white card in light mode). Tokens fall back to the originals
+   for a bare consumer without theme-fabulous. */
+.fd-body input,
+.fd-body textarea,
+.fd-body select {
+  width: 100%; padding: 12px 14px; border-radius: 8px;
+  border: 1px solid var(--line, rgba(255,255,255,0.1));
+  background: var(--surface-sunken, rgba(255,255,255,0.05));
+  color: var(--ink, var(--pico-color)); font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+/* Footer */
+.fd-footer {
+  display: flex; justify-content: flex-end; gap: 12px; margin-top: 1.5rem;
+}

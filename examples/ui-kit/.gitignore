@@ -1,4 +1,5 @@
-# Imported from the bucket repo by import.mjs; not committed here.
-/src/
-/vendor/
 /results/
+/dist/
+/www/
+/loader/
+/.stencil/

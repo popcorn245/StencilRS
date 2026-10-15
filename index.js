@@ -14,15 +14,16 @@ export const buildId = (() => {
 /**
  * Read the Stencil components in one module.
  * @param {string} source module source (TS/TSX)
- * @param {string} fileName used to pick the parser (`.ts`, `.tsx`)
+ * @param {string} fileName used to pick the parser (`.ts`, `.tsx`) and resolve relative imports
+ * @param {{ resolveImports?: boolean }} [options] build-accurate: follow imports like `stencil build`
  * @returns {{ components: object[], diagnostics: object[] }}
  */
-export const analyze = (source, fileName) => native.analyze(source, fileName);
+export const analyze = (source, fileName, options = {}) => native.analyze(source, fileName, options.resolveImports ?? false);
 
 /**
  * Generate the customelement module (what Stencil's transpileSync emits for @stencil/unplugin).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string }} options
+ * @param {{ file: string, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean }} options
  * @returns {{ code: string, components: object[], diagnostics: object[] }}
  */
 export const transpile = (source, options) => native.transpile(source, options);

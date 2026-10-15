@@ -1,0 +1,140 @@
+/* pop-metric-card — a tappable stat tile. Themed via the ui-kit tokens
+   (--ink, --line, --surface-card, --brand-blue) with fallbacks so it renders
+   in plain HTML / Storybook light + dark. */
+:host {
+  display: block;
+  /* Allow the card to shrink inside a grid/flex track (else its content's
+     min-content width forces the track wider → row overflow). */
+  min-width: 0;
+}
+
+.mc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line, #e2e8f0);
+  background: var(--surface-card, #fff);
+  border-radius: var(--radius-lg, 16px);
+  padding: 13px 12px 12px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--trans-fast, 140ms ease), transform var(--trans-fast, 140ms ease), background var(--trans-fast, 140ms ease);
+}
+.mc:hover {
+  border-color: var(--brand-blue-soft, #93c5fd);
+  transform: translateY(-1px);
+}
+.mc:focus-visible {
+  outline: 2px solid var(--brand-blue, #3b82f6);
+  outline-offset: 2px;
+}
+/* Active / just-logged: brand-tinted surface. */
+.mc--on {
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 14%, var(--surface-card, #fff));
+  border-color: var(--brand-blue, #3b82f6);
+}
+
+.mc__title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ink-muted, #64748b);
+  /* Reserve room on the right so a long title ("Blood sugar", "Workouts")
+     never collides with the "+" badge on loggable cards. */
+  min-width: 0;
+}
+.mc--loggable .mc__title {
+  padding-right: 20px;
+}
+.mc__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mc__glyph {
+  font-size: 0.9rem;
+  line-height: 1;
+  flex: none;
+}
+
+.mc__value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink, #0f172a);
+  /* Keep values like "150.7 lbs" on one line in the narrow card; if it truly
+     can't fit, degrade to an ellipsis rather than an ugly mid-token wrap. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mc__sub {
+  font-size: 0.7rem;
+  color: var(--ink-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── tap-to-log affordance ──────────────────────────────────────────────── */
+.mc__plus {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.95rem;
+  line-height: 1;
+  background: color-mix(in srgb, var(--ink-muted, #64748b) 16%, transparent);
+  color: var(--ink-muted, #64748b);
+  transition: background var(--trans-fast, 140ms ease), color var(--trans-fast, 140ms ease), transform var(--trans-fast, 140ms ease);
+}
+.mc:hover .mc__plus,
+.mc:focus-visible .mc__plus {
+  background: var(--brand-blue, #3b82f6);
+  color: #fff;
+  transform: scale(1.08);
+}
+/* Active → rotate the "+" into a "✕". */
+.mc--on .mc__plus {
+  background: var(--brand-blue, #3b82f6);
+  color: #fff;
+  transform: rotate(45deg);
+}
+
+.mc__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: var(--brand-blue, #3b82f6);
+  background: color-mix(in srgb, var(--brand-blue, #3b82f6) 12%, transparent);
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity var(--trans-fast, 140ms ease), transform var(--trans-fast, 140ms ease);
+}
+.mc:hover .mc__hint,
+.mc:focus-visible .mc__hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* When active the form is open — the hint would be redundant/noisy. */
+.mc--on .mc__hint {
+  display: none;
+}

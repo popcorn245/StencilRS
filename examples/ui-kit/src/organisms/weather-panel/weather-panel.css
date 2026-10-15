@@ -1,0 +1,377 @@
+/* pop-weather-panel — presentational forecast panel. Scoped component, so all
+   rules target the light-DOM classes (no :host cascade). Themed entirely with
+   pico / pollen / theme-fabulous tokens so it reads correctly in BOTH light and
+   dark ([data-theme]); accent = blue (the hub panel convention). */
+
+.wx {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  color: var(--ink, #1b2333);
+  font-family: inherit;
+}
+
+/* ── header: heading + place + refresh ─────────────────────────────────────── */
+.wx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+.wx-header-titles {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.wx-title {
+  margin: 0;
+  font-family: var(--font-display, var(--font-sans, inherit));
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+.wx-place {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-muted, #8492a8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wx-refresh {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line, #dde6f2);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-card, #fff);
+  color: var(--ink-soft, #475067);
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition: background var(--trans-fast, 150ms ease), color var(--trans-fast, 150ms ease);
+}
+.wx-refresh:hover {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 12%, transparent);
+  color: var(--brand-blue, #4299e1);
+}
+
+/* ── current conditions (lead block) ───────────────────────────────────────── */
+.wx-now {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-lg, 20px);
+  border: 1px solid var(--line, #dde6f2);
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 8%, var(--surface-card, transparent));
+  flex: 0 0 auto;
+}
+/* Host-slotted location/place control — pinned to the top-right of the card.
+   Collapses to 0 width when nothing is slotted (standalone / Storybook). */
+.wx-now-place {
+  margin-left: auto;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.wx-now-place:empty {
+  display: none;
+}
+.wx-now-icon {
+  font-size: 2.4rem;
+  color: var(--brand-blue, #4299e1);
+  flex: 0 0 auto;
+}
+.wx-now-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.wx-now-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.wx-now-temp {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.wx-now-cond {
+  font-size: 0.85rem;
+  color: var(--ink-muted, #8492a8);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Feels-like · wind · sunrise/sunset chips under the big number. */
+.wx-now-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.65rem;
+  font-size: 0.76rem;
+  color: var(--ink-soft, #475067);
+}
+.wx-now-metaitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wx-now-metaitem pop-icon {
+  font-size: 0.95rem;
+  color: var(--brand-blue, #4299e1);
+}
+
+/* ── Hourly / Daily segmented tabs ─────────────────────────────────────────── */
+.wx-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+  padding: 0.18rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.1));
+  border: 1px solid var(--line, #dde6f2);
+}
+.wx-tab {
+  flex: 1 1 0;
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  line-height: 1.2;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--ink-muted, #8492a8);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--trans-fast, 150ms ease), color var(--trans-fast, 150ms ease);
+}
+.wx-tab--on {
+  background: var(--surface-card, #fff);
+  color: var(--ink, inherit);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(30 41 66 / 0.12));
+}
+
+/* ── forecast area: legend + scroll + two columns ──────────────────────────── */
+.wx-forecast {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: -0.35rem;
+}
+
+.wx-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+  padding: 0 0.1rem;
+  font-size: 0.72rem;
+  color: var(--ink-muted, #8492a8);
+}
+.wx-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.wx-legend-swatch {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* The single scroll region: holds the two columns (list + vertical chart). Only
+   THIS scrolls; the two columns share one height so they scroll together
+   row-for-row. */
+.wx-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  max-height: clamp(5rem, calc(100dvh - 24rem), 30rem);
+}
+.wx-cols {
+  display: flex;
+  align-items: flex-start;
+  /* Air between the row list (its right-edge precip %) and the chart's left-edge
+     value labels so they never touch — worst at dock width (~400px). */
+  gap: 0.85rem;
+}
+.wx-cols .wx-days,
+.wx-cols .wx-hours {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* The vertical chart column beside the list. It is a REAL column now (not the old
+   ~72px sliver) so the temp/humidity lines have room to separate and the per-point
+   value labels + sun markers are legible. Its width MUST equal the chart's viewBox
+   width (WX_CHART_W / vbWidth) so the SVG renders 1:1 and the labels aren't
+   horizontally stretched by preserveAspectRatio="none". Its intrinsic SVG height is
+   count*rowHeight, so it still lines up row-for-row with the list and scrolls with
+   it inside .wx-scroll. */
+.wx-vchart {
+  flex: 0 0 140px;
+  width: 140px;
+  align-self: flex-start;
+  display: block;
+}
+
+/* The forecast list. Rows have a FIXED 44px pitch (no inter-row gap) so each row
+   lines up exactly with its data point in the vertical chart. */
+.wx-days,
+.wx-hours {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Hourly row: time · icon · temp · precip%. FIXED 44px pitch. */
+.wx-hour {
+  display: grid;
+  grid-template-columns: 3.2rem 1.6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 0.65rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--line, #dde6f2);
+  border-bottom-width: 3px;
+  border-bottom-color: transparent;
+  background: var(--surface-card, rgba(127, 127, 127, 0.05));
+  background-clip: padding-box;
+  font-size: 0.85rem;
+}
+.wx-hour-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wx-hour-icon {
+  font-size: 1.25rem;
+  color: var(--brand-blue, #4299e1);
+}
+.wx-hour-icon--night {
+  color: var(--brand-indigo, #6366f1);
+  opacity: 0.85;
+}
+.wx-hour-temp {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.wx-hour-precip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--brand-blue, #4299e1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wx-hour-precip--dry {
+  color: var(--ink-muted, #8492a8);
+}
+
+/* Daily row: label · icon · conditions · hi/lo · precip%. FIXED 44px pitch. */
+.wx-day {
+  display: grid;
+  grid-template-columns: 4.5rem 1.6rem 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 0.65rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--line, #dde6f2);
+  border-bottom-width: 3px;
+  border-bottom-color: transparent;
+  background: var(--surface-card, rgba(127, 127, 127, 0.05));
+  background-clip: padding-box;
+  font-size: 0.85rem;
+}
+.wx-day-label {
+  font-weight: 600;
+}
+.wx-day-icon {
+  font-size: 1.25rem;
+  color: var(--brand-blue, #4299e1);
+}
+.wx-day-cond {
+  color: var(--ink-muted, #8492a8);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wx-day-temp {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wx-lo {
+  color: var(--ink-muted, #8492a8);
+}
+.wx-day-precip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--brand-blue, #4299e1);
+  white-space: nowrap;
+}
+
+/* ── loading skeleton + empty state ────────────────────────────────────────── */
+.wx-skeleton,
+.wx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2.75rem 1rem;
+  color: var(--ink-muted, #8492a8);
+  font-size: 0.9rem;
+}
+.wx-empty-icon {
+  font-size: 1.9rem;
+  opacity: 0.75;
+}
+.wx-spin {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill, 999px);
+  border: 2px solid color-mix(in oklab, var(--brand-blue, #4299e1) 30%, transparent);
+  border-top-color: var(--brand-blue, #4299e1);
+  animation: wx-spin 0.7s linear infinite;
+}
+.wx-skeleton-text {
+  font-size: 0.85rem;
+}
+
+@keyframes wx-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-refresh,
+  .wx-tab { transition: none; }
+  .wx-spin { animation-duration: 1.4s; }
+}

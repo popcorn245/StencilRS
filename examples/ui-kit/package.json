@@ -2,15 +2,26 @@
   "name": "stencilrs-ui-kit-harness",
   "private": true,
   "type": "module",
-  "description": "The old bucket ui-kit's spec suite, run on real components compiled by stencilrs and by Stencil v5",
+  "description": "The old bucket ui-kit, migrated to Stencil v5: built with stencil build, and checked against stencilrs",
+  "module": "./dist/loader-bundle/index.js",
+  "types": "./dist/types/index.d.ts",
+  "collection": "dist/collection/collection-manifest.json",
+  "files": [
+    "dist/loader-bundle/",
+    "dist/standalone/",
+    "dist/types/",
+    "dist/collection/"
+  ],
   "scripts": {
     "import": "node import.mjs",
     "test": "vitest run",
     "test:stencil": "cross-env COMPILER=stencil vitest run",
-    "compare": "node compare.mjs"
+    "compare": "node compare.mjs",
+    "build": "stencil build"
   },
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",
+    "@stencil/cli": "5.0.0-beta.25",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
     "cross-env": "10.1.0",
@@ -38,6 +49,7 @@
     "editorjs-parser": "^1.8.0",
     "editorjs-style": "^3.0.3",
     "editorjs-undo": "^2.0.28",
+    "firebase": "^12.19.0",
     "highlight.js": "^10.7.3",
     "lottie-web": "^5.13.0",
     "marked": "^13.0.3",

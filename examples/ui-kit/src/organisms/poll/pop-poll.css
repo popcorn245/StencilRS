@@ -1,0 +1,4 @@
+/* pop-poll component styles — base layout only. Injected dynamic styles are in component. */
+:host {
+  display: block;
+}

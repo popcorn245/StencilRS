@@ -1,0 +1,141 @@
+:host { display: block; }
+
+.bn-wrap { display: block; }
+/* Compact measures the BAR's own width (pop-tab-bar's container pattern). */
+.bn-wrap--compact { container-type: inline-size; }
+
+/* Detached-fixed: float above the viewport bottom, lifted over the safe area
+   (pop-nav-bar bottom-variant's env() handling, but detached, not edge-to-edge). */
+.bn-wrap--fixed {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+}
+
+.bn-bar {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 64px;
+  padding: 0 10px;
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  border: 1px solid var(--line, var(--pico-muted-border-color, #ddd));
+  border-radius: var(--radius-lg, 28px);
+  box-shadow: var(--shadow-pop, 0 10px 30px -6px rgba(0, 0, 0, 0.25));
+}
+
+.bn-side {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  min-width: 0;
+}
+
+/* The notch the center button sits in. */
+.bn-notch { flex: 0 0 84px; }
+
+.bn-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 52px;
+  padding: 6px 4px;
+  /* Reset Pico's default button margin-bottom — in the flex row it offsets the
+     tab's vertical centering (content rode ~8px high in the bar). */
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted, var(--pico-muted-color, #889));
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: color var(--trans-fast, 150ms ease);
+}
+.bn-tab:disabled { cursor: not-allowed; opacity: 0.55; }
+.bn-tab-ic {
+  position: relative;
+  display: inline-flex;
+  --size: 1.3rem;
+}
+.bn-tab--active { color: var(--brand-blue, var(--pico-primary, #4299e1)); }
+.bn-tab--active .bn-tab-ic {
+  filter: drop-shadow(0 2px 6px color-mix(in oklab, var(--brand-blue, #4299e1) 60%, transparent));
+}
+
+/* Count bubble (the .app-root__tab-badge idiom). */
+.bn-tab-badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--brand-violet, #8b5cf6);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* ── center action button — --grad-brand (blue→red), press-scale ── */
+.bn-centerwrap {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  /* Lifted above the bar, seated deeper INTO it (was -42% → -32% → -24%). */
+  transform: translate(-50%, -24%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bn-center {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--grad-brand, linear-gradient(135deg, #4299e1, #e53e3e));
+  border: 4px solid var(--surface-canvas, var(--pico-background-color, #0e1626));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  box-shadow:
+    var(--shadow-pop, 0 10px 30px -6px rgba(0, 0, 0, 0.25)),
+    0 8px 20px -4px color-mix(in oklab, var(--brand-red, #e53e3e) 50%, transparent);
+  transition: transform var(--trans-fast, 150ms ease);
+}
+.bn-center:active { transform: scale(0.92); }
+.bn-center:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
+.bn-center-ic { --size: 1.85rem; }
+.bn-center-label {
+  margin-top: 3px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft, var(--pico-muted-color, #889));
+}
+.bn-wrap--disabled .bn-center-label { opacity: 0.6; }
+
+/* ── compact: under 400px of BAR width, tab labels visually collapse
+   (kept in the DOM for a11y — the pop-tab-bar pattern). ── */
+@container (max-width: 399px) {
+  .bn-wrap--compact .bn-tab { min-width: 44px; padding: 6px 2px; }
+  .bn-wrap--compact .bn-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .bn-wrap--compact .bn-tab { position: relative; }
+}

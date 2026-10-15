@@ -1,0 +1,121 @@
+.cel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--scrim);
+  animation: cel-fade-in 300ms ease-out;
+}
+
+@keyframes cel-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Confetti */
+.cel-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cel-piece {
+  position: absolute;
+  border-radius: 2px;
+  animation: cel-fall 2.5s ease-in forwards;
+}
+
+@keyframes cel-fall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* Content */
+.cel-content {
+  position: relative;
+  text-align: center;
+  color: #fff;
+  animation: cel-bounce-in 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cel-bounce-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.cel-emoji {
+  font-size: 4rem;
+  margin-bottom: 0.5rem;
+  animation: cel-wiggle 0.6s ease-in-out 0.3s;
+}
+
+@keyframes cel-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+.cel-message {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.cel-points {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  animation: cel-counter-in 500ms ease-out 0.2s both;
+}
+
+@keyframes cel-counter-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.cel-coin {
+  font-size: 2rem;
+}
+
+.cel-points-value {
+  color: #fbbf24;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cel-points-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.cel-tap-hint {
+  margin: 1.5rem 0 0;
+  font-size: 0.75rem;
+  opacity: 0.5;
+}

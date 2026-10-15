@@ -1,0 +1,134 @@
+/* pop-line-chart — themed via Pico tokens; series colors are passed in. */
+.plc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+.plc__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* Vertical orientation: a slim strip whose height is fixed (count*rowHeight) so
+   it lines up row-for-row with an external list. The host (parent) sets the
+   column width + scrolls it in lockstep; the SVG keeps its intrinsic height. */
+.plc--vertical {
+  width: 100%;
+  gap: 0;
+}
+/* The vertical SVG must render at its EXACT pixel height (count*rowHeight) so its
+   points line up with the external list rows. We therefore do NOT let height be
+   `auto` (which, with a viewBox + preserveAspectRatio:none, would scale height by
+   the width ratio and break alignment). Width fills the slim column; height comes
+   from the inline `height` attribute (in px). */
+.plc__svg--vertical {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+.plc__band {
+  fill: var(--pico-muted-color, #94a3b8);
+  opacity: 0.12;
+}
+/* Night bands are stronger in the vertical strip so they read as real shading
+   (indigo tint), not a barely-there wash. */
+.plc__svg--vertical .plc__band {
+  fill: var(--brand-indigo, #6366f1);
+  opacity: 0.14;
+}
+/* Per-point dots anchor each line so overlapping temp/humidity curves stay
+   readable instead of smearing into one near-vertical line. */
+.plc__dot {
+  opacity: 0.9;
+}
+/* Per-point value labels (vertical mode). The vertical SVG renders 1:1 (viewBox
+   width == CSS width) so this text is crisp, not stretched. */
+.plc__vval {
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--surface-card, #fff);
+  stroke-width: 2.4px;
+  stroke-linejoin: round;
+}
+.plc__svg--vertical .plc__marker {
+  stroke-width: 1;
+  opacity: 0.85;
+}
+.plc__svg--vertical .plc__marker-label {
+  font-size: 10px;
+  opacity: 0.9;
+}
+.plc__grid {
+  stroke: var(--pico-muted-border-color, var(--pico-border-color, rgba(127, 127, 127, 0.2)));
+  stroke-width: 0.5;
+  opacity: 0.5;
+}
+.plc__line {
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.plc__area {
+  opacity: 0.22;
+}
+/* Baseline-anchored bars (e.g. calories/day). Color comes from the series. */
+.plc__bar {
+  opacity: 0.85;
+}
+/* Shaded y-VALUE range (e.g. glucose normal band). */
+.plc__rangeband {
+  opacity: 0.18;
+}
+/* Horizontal reference line (goal). Dashed by default; --solid for a solid rule. */
+.plc__refline {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.9;
+}
+.plc__refline--solid {
+  stroke-dasharray: none;
+}
+.plc__marker {
+  stroke: var(--pico-muted-color, #94a3b8);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+  opacity: 0.7;
+}
+.plc__marker-label {
+  font-size: 7px;
+  fill: var(--pico-muted-color, #94a3b8);
+}
+.plc__axis {
+  font-size: 7px;
+  fill: var(--pico-muted-color, #94a3b8);
+}
+.plc__xlabel {
+  font-size: 7px;
+  fill: var(--pico-muted-color, #94a3b8);
+}
+.plc__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: var(--pico-muted-color, #8b97a6);
+}
+.plc__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.plc__legend-swatch {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}

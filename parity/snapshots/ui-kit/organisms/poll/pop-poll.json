@@ -262,7 +262,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(value: string) => any",
+            "signature": "(value: string) => Promise<any>",
             "parameters": [
               {
                 "name": "value",
@@ -270,8 +270,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         }
@@ -436,12 +441,7 @@
       "styleDocs": []
     }
   ],
-  "diagnostics": [
-    {
-      "level": "error",
-      "messageText": "External @Method() setUserVote() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async setUserVote()."
-    }
-  ],
+  "diagnostics": [],
   "imports": [
     {
       "path": "@stencil/core/runtime/client/standalone"

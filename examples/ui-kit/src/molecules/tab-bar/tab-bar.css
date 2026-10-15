@@ -1,0 +1,88 @@
+:host { display: block; }
+
+.tb-wrap { display: block; }
+/* The compact variant measures ITS OWN width (panel width, not viewport). */
+.tb-wrap--compact { container-type: inline-size; }
+
+.tb-bar {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+}
+.tb-bar--scrollable {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tb-bar--scrollable::-webkit-scrollbar { display: none; }
+
+.tb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none; border: none;
+  padding: 0.75rem 1rem;
+  color: var(--pico-muted-color);
+  cursor: pointer; font-size: 0.9rem; font-weight: 500;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  margin-bottom: -1px;
+}
+/* Active/hover text: prefer `--text`, then INHERIT the surface's actual text
+   color (the hub-panel pattern). Never fall back to `--pico-color` — in hub
+   panels it resolves to the wrong scheme (white on a light panel), turning the
+   active label invisible. */
+.tb-tab:hover { color: var(--text, inherit); }
+.tb-tab--active {
+  color: var(--text, inherit);
+  border-bottom-color: var(--section-accent, var(--pico-primary));
+}
+
+/* Optional count bubble after the label ({ label, value, count }). */
+.tb-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.14));
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.tb-tab--active .tb-tab-count {
+  background: color-mix(in oklab, var(--section-accent, var(--pico-primary, #6366f1)) 18%, transparent);
+  color: var(--section-accent, var(--pico-primary, #6366f1));
+}
+
+/* Optional leading ionicon ({ label, value, icon }). */
+.tb-tab-icon {
+  flex: 0 0 auto;
+  --pop-icon-size: 1.05rem;
+  display: inline-flex;
+}
+
+/* ── compact: under 480px of BAR width, inactive iconed tabs drop their label
+   (icon + count only); the active tab keeps its label. Tabs without an icon
+   keep their label — there'd be nothing left to show. Browsers without
+   container queries keep full labels (graceful). ── */
+@container (max-width: 479px) {
+  .tb-wrap--compact .tb-tab {
+    padding: 0.55rem 0.3rem;
+    gap: 0.2rem;
+  }
+  .tb-wrap--compact .tb-tab-icon { --pop-icon-size: 1rem; }
+  .tb-wrap--compact .tb-tab--iconed:not(.tb-tab--active) .tb-tab-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tb-wrap--compact .tb-tab--iconed:not(.tb-tab--active) {
+    position: relative;
+  }
+}

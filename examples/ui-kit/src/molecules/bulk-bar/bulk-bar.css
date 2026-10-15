@@ -1,0 +1,92 @@
+/* pop-bulk-bar — sticky multi-select action bar. */
+
+pop-bulk-bar {
+  display: block;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+}
+
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-card, 16px);
+  background: var(--surface-raised, var(--pico-card-background-color, #1c1c22));
+  border: 1px solid var(--border-soft, var(--pico-muted-border-color, rgba(128, 128, 128, 0.25)));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.bulk--busy {
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.bulk__count {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  color: var(--text-secondary, var(--pico-muted-color, #9a9aa5));
+}
+.bulk__count strong {
+  color: var(--text-primary, var(--pico-color, inherit));
+  font-variant-numeric: tabular-nums;
+}
+
+.bulk__actions {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.bulk__actions::-webkit-scrollbar {
+  display: none;
+}
+
+/* Pill styling for slotted action buttons that opt in via .bulk__act. */
+.bulk__actions ::slotted(.bulk__act),
+.bulk__actions .bulk__act,
+.bulk__done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--border-soft, var(--pico-muted-border-color, rgba(128, 128, 128, 0.25)));
+  background: transparent;
+  color: var(--text-primary, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast, 150ms) var(--ease-soft, ease),
+    border-color var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+.bulk__actions ::slotted(.bulk__act:hover),
+.bulk__actions .bulk__act:hover,
+.bulk__done:hover {
+  background: var(--surface-hover, rgba(128, 128, 128, 0.12));
+}
+.bulk__actions ::slotted(.bulk__act--danger),
+.bulk__actions .bulk__act--danger {
+  color: var(--danger, #e5484d);
+  border-color: color-mix(in srgb, var(--danger, #e5484d) 45%, transparent);
+}
+.bulk__done {
+  flex: 0 0 auto;
+}
+.bulk__done:disabled,
+.bulk__actions ::slotted(.bulk__act:disabled),
+.bulk__actions .bulk__act:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

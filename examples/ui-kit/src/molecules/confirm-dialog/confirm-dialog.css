@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.cd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.cd-backdrop--open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.cd-panel-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 101;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.cd-panel-wrap--open {
+  display: flex;
+}
+
+.cd-panel {
+  background: var(--surface-card, var(--pico-card-background-color));
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  width: 90%;
+  color: var(--pico-color);
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity var(--trans), transform var(--trans);
+}
+
+.cd-panel--open {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cd-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.cd-message {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.cd-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.cd-actions button {
+  margin: 0;
+}
+
+.cd-btn-danger {
+  background: var(--color-red-600, #dc2626);
+  border-color: var(--color-red-600, #dc2626);
+  color: white;
+}
+
+.cd-btn-danger:hover {
+  background: var(--color-red-700, #b91c1c);
+  border-color: var(--color-red-700, #b91c1c);
+}

@@ -70,7 +70,7 @@ export class PopChipInput {
 
   /** Imperatively focus the input. */
   @Method()
-  async focusInput() {
+  async focusInput(): Promise<any> {
     this.inputRef?.focus();
   }
 

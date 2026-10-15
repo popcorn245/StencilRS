@@ -1,0 +1,278 @@
+/* The host custom element defaults to `display: inline`; that inline
+ * formatting context collapses the flex rows inside to height:0 (invisible
+ * tasks). Force a block/flex host that fills its pane so the timeline can
+ * scroll internally. */
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-list__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.task-list__select {
+  border: 1.5px solid var(--line, var(--pico-muted-border-color, #e2e8f0));
+  border-radius: 10px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: var(--surface-card, var(--pico-form-element-background-color, transparent));
+  color: var(--ink, inherit);
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  margin: 0;
+}
+
+.task-list__select:focus {
+  border-color: var(--brand-blue, #4299e1);
+}
+
+.task-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-list__item-wrap {
+  cursor: pointer;
+  border-radius: var(--radius-sm, 14px);
+  transition: background 0.1s;
+  display: block;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--ink, var(--pico-h1-color));
+}
+
+.task-list__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--ink-muted, var(--pico-muted-color, #94a3b8));
+  font-size: 14px;
+  font-style: italic;
+}
+
+.task-list__item-wrap--selected .task-item {
+  background: color-mix(in oklab, var(--brand-blue, #4299e1) 12%, transparent);
+  border-color: color-mix(in oklab, var(--brand-blue, #4299e1) 45%, transparent);
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--brand-blue, #4299e1) 18%, transparent);
+}
+
+.task-list--timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.task-list__pinned {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: color-mix(in oklab, var(--surface-canvas, #fff) 86%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line, var(--pico-muted-border-color, #e2e8f0));
+  padding: 4px 0;
+}
+
+.task-list__bucket {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.task-list__bucket--archive {
+  opacity: 0.82;
+}
+
+/* ──────────────── Drag-and-drop feedback ──────────────── */
+/* The row being dragged is dimmed + flattened so the floating ghost reads as
+   the "lifted" copy (mirrors the kanban is-dragging treatment). */
+.task-list__item-wrap--dragging {
+  opacity: 0.4;
+}
+.task-list__item-wrap--dragging .task-item {
+  transform: none !important;
+}
+
+/* Manual-sort reorder: a bright insertion line above/below the row the ghost
+   would drop next to. Uses a box-shadow inset so it doesn't shift layout. */
+.task-list__item-wrap--insert-before,
+.task-list__item-wrap--insert-after {
+  position: relative;
+}
+.task-list__item-wrap--insert-before::before,
+.task-list__item-wrap--insert-after::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--brand-blue, #2f6bff);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--brand-blue, #2f6bff) 60%, transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+.task-list__item-wrap--insert-before::before { top: -2px; }
+.task-list__item-wrap--insert-after::after { bottom: -2px; }
+
+/* A bucket section highlighted as the current drop target. */
+.task-list__bucket--drop {
+  border-radius: 14px;
+  outline: 2px dashed color-mix(in oklab, var(--brand-blue, #2f6bff) 55%, transparent);
+  outline-offset: 2px;
+  background: color-mix(in oklab, var(--brand-blue, #2f6bff) 8%, transparent);
+}
+
+/* "Move to <bucket>" affordance shown at the top of the hovered bucket. */
+.task-list__drop-hint {
+  align-self: flex-start;
+  margin: 2px 0 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand-blue, #2f6bff);
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--brand-blue, #2f6bff) 36%, transparent);
+}
+.task-list__drop-hint strong { font-weight: 800; }
+
+/* ──────────────── Bucket header ──────────────── */
+.task-list__bucket-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: color-mix(in oklab, var(--surface-canvas, #fff) 84%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  padding: 7px 8px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-muted, var(--pico-muted-color, #64748b));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-family: var(--font-display, inherit);
+}
+
+.task-list__bucket-label {
+  position: relative;
+}
+
+.task-list__bucket-count {
+  font-weight: 700;
+  font-size: 0.625rem;
+  color: var(--ink-soft, var(--pico-muted-color));
+  background: color-mix(in oklab, var(--ink, #2c2030) 9%, transparent);
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-pill, 9999px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
+}
+
+.task-list__bucket-header--overdue {
+  color: #ef4444;
+}
+.task-list__bucket-header--overdue .task-list__bucket-count {
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444;
+}
+
+/* ──────────────── Today anchor ──────────────── */
+.task-list__anchor {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+}
+/* gradient hairlines flanking the pill */
+.task-list__anchor::before,
+.task-list__anchor::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--brand-blue, #4299e1) 40%, transparent)
+  );
+}
+.task-list__anchor::after {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--brand-red, #e53e3e) 40%, transparent),
+    transparent
+  );
+}
+
+.task-list__anchor-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 13px;
+  border-radius: var(--radius-pill, 9999px);
+  background: var(--grad-brand, linear-gradient(135deg, #4299e1, #e53e3e));
+  color: #fff;
+  font-family: var(--font-display, inherit);
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--brand-red, #e53e3e) 28%, transparent);
+  white-space: nowrap;
+}
+.task-list__anchor-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  animation: anchor-pulse 2.4s ease-out infinite;
+}
+@keyframes anchor-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+.task-list__anchor-date {
+  font-weight: 600;
+  font-size: 0.7rem;
+  opacity: 0.92;
+}
+
+.task-list__bucket-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list__anchor-dot { animation: none; }
+}

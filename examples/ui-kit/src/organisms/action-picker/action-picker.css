@@ -1,0 +1,134 @@
+.ap-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: ap-fade-in 0.2s ease-out;
+}
+
+@keyframes ap-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ap-panel {
+  width: 100%;
+  max-width: 480px;
+  background: var(--pico-card-background-color, #1e1e2e);
+  border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1rem 1.5rem;
+  animation: ap-slide-up 0.25s ease-out;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+@keyframes ap-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.ap-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pico-muted-border-color, #444);
+  margin: 0 auto 1rem;
+}
+
+.ap-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  text-align: center;
+  color: var(--pico-color, #fff);
+}
+
+.ap-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ap-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--pico-muted-border-color, #333);
+  border-radius: 12px;
+  background: var(--pico-form-element-background-color, #2a2a3c);
+  color: var(--pico-color, #fff);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.95rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ap-action-btn:hover,
+.ap-action-btn:focus-visible {
+  background: var(--pico-card-sectionning-background-color, #333);
+  border-color: var(--section-accent, #a855f7);
+  outline: none;
+}
+
+.ap-action-btn:active {
+  transform: scale(0.98);
+}
+
+.ap-action-icon {
+  font-size: 1.4rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--pico-background-color, #111);
+  border-radius: 8px;
+}
+
+.ap-action-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.ap-action-label {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ap-action-type {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color, #888);
+  text-transform: capitalize;
+}
+
+.ap-cancel-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--pico-form-element-background-color, #2a2a3c);
+  color: var(--pico-muted-color, #888);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ap-cancel-btn:hover {
+  background: var(--pico-muted-border-color, #444);
+  color: var(--pico-color, #fff);
+}

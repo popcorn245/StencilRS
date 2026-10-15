@@ -1,0 +1,90 @@
+:host {
+  display: contents;
+}
+
+.mb-actions {
+  position: absolute;
+  top: -14px;
+  right: 12px;
+  background: var(--pico-dropdown-background-color, #2f3136);
+  border: 1px solid var(--pico-muted-border-color, #202225);
+  border-radius: 6px;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+:host(:hover) .mb-actions,
+:host-context(.mb-root:hover) .mb-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Always visible when thread exists */
+.mb-actions--thread {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Non-thread buttons hidden until hover when thread exists */
+.mb-actions--thread .mb-act-btn:not(.mb-act-thread--active) {
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.15s, width 0.15s;
+}
+
+:host(:hover) .mb-actions--thread .mb-act-btn:not(.mb-act-thread--active),
+:host-context(.mb-root:hover) .mb-actions--thread .mb-act-btn:not(.mb-act-thread--active) {
+  opacity: 1;
+  width: 28px;
+}
+
+.mb-act-btn {
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pico-muted-color);
+  border-radius: 4px;
+  position: relative;
+  transition: color 0.1s, background 0.1s;
+}
+
+.mb-act-btn:hover {
+  color: var(--pico-color);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mb-act-delete:hover {
+  color: #ed4245;
+}
+
+.mb-thread-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  background: var(--pico-primary, #5865f2);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1;
+  border: 2px solid var(--pico-dropdown-background-color, #2f3136);
+}

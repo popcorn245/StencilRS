@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.nl {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.nl--empty {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── section header ───────────────────────────────────────────── */
+.nl__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nl__section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0 2px;
+  font-family: var(--font-display, inherit);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+
+.nl__section-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--ink-muted, var(--pico-muted-color));
+  background: color-mix(in oklab, var(--ink, currentColor) 8%, transparent);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 1px 8px;
+}
+
+/* ── item container: list vs grid ─────────────────────────────── */
+.nl__items--list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nl__items--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+.nl__items--grid pop-note-card {
+  height: 100%;
+}
+
+/* Loading skeletons now render through pop-loading-state (card-skeleton) so the
+   loading silhouette matches the note-card shape (title + snippet + meta). */

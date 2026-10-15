@@ -1,0 +1,221 @@
+.transaction-list {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e1e1e6;
+  /* Measure our own width so the table can shed columns on a narrow sheet. */
+  container-type: inline-size;
+  max-width: 100%;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.filter-btn {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  background: #161820;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.filter-btn:hover {
+  background: #1e2130;
+  color: #e1e1e6;
+}
+
+.filter-btn.active {
+  background: #252840;
+  color: #818cf8;
+  border-color: #818cf8;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  background: #161820;
+  color: #e1e1e6;
+  font-size: 0.85rem;
+}
+
+.search-input::placeholder {
+  color: #6b7280;
+}
+
+.add-btn {
+  padding: 0.4rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #818cf8;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.add-btn:hover {
+  background: #6366f1;
+}
+
+table {
+  width: 100%;
+  /* Fixed layout so long descriptions truncate instead of widening the table
+     past the panel (was causing a horizontal scrollbar on the narrow sheet). */
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+/* Column sizing: Date + Amount stay compact; Name (col 2) takes the remainder
+   and ellipsizes; Tags + Actions are fixed and drop on a narrow sheet. */
+th:nth-child(1),
+td.date {
+  width: 4.75rem;
+}
+th:nth-child(3),
+td.amount {
+  width: 6rem;
+}
+th:nth-child(4),
+td.tags {
+  width: 22%;
+}
+th:nth-child(5),
+td.actions {
+  width: 5rem;
+}
+
+thead th {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #2a2d3a;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+thead th:hover {
+  color: #e1e1e6;
+}
+
+tbody tr {
+  border-bottom: 1px solid #1e2130;
+  transition: background 0.1s;
+}
+
+tbody tr:hover {
+  background: #1a1d2a;
+}
+
+td {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
+/* The description column: never wrap/overflow — ellipsize instead. */
+td.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date {
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.amount.income {
+  color: #34d399;
+}
+
+.amount.expense {
+  color: #f87171;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: #252840;
+  color: #818cf8;
+  font-size: 0.7rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.action-btn {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #2a2d3a;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.action-btn:hover {
+  background: #1e2130;
+  color: #e1e1e6;
+}
+
+.action-btn.delete:hover {
+  color: #f87171;
+  border-color: #f87171;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* Narrow sheet (~≤480px, e.g. the Bucket Hub panel): shed the Tags + Actions
+   columns so Date | Description | Amount always fit with zero overflow.
+   NOTE: the `.transaction-list` prefix is load-bearing — Stencil's scoped-CSS
+   pass does NOT scope selectors inside @container, so a bare `td.tags` (0,1,1)
+   would lose to the scoped base `.tags` (0,2,0) rule and never hide. The prefix
+   raises specificity so the override wins in both scoped and unscoped builds. */
+@container (max-width: 480px) {
+  .transaction-list th:nth-child(4),
+  .transaction-list td.tags,
+  .transaction-list th:nth-child(5),
+  .transaction-list td.actions {
+    display: none;
+  }
+}

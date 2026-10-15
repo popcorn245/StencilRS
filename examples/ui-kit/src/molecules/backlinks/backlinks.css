@@ -1,0 +1,154 @@
+:host {
+  display: block;
+}
+
+.bl {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── empty state ─────────────────────────────────────────────────── */
+.bl__empty {
+  margin: 0;
+  padding: 6px 2px;
+  font-size: 0.85rem;
+  color: var(--ink-muted, var(--pico-muted-color));
+}
+
+/* ── item ────────────────────────────────────────────────────────── */
+.bl__item {
+  margin: 0;
+}
+
+.bl__link {
+  appearance: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px; /* touch target */
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink, var(--pico-color));
+  background: color-mix(
+    in oklab,
+    var(--surface-card, var(--pico-card-background-color)) 60%,
+    transparent
+  );
+  border: 1px solid var(--line, var(--pico-muted-border-color));
+  border-radius: var(--radius-sm, 10px);
+  font-family: var(--font-sans, inherit);
+  transition:
+    border-color var(--trans-fast, 0.15s ease),
+    background var(--trans-fast, 0.15s ease),
+    transform var(--trans-fast, 0.15s ease);
+}
+
+.bl__link:hover {
+  border-color: var(--brand-blue, var(--pico-primary));
+  background: var(--brand-blue-soft, color-mix(in oklab, var(--brand-blue, #0077cc) 8%, transparent));
+  transform: translateY(-1px);
+}
+
+.bl__link:focus-visible {
+  outline: 2px solid var(--brand-blue, var(--pico-primary));
+  outline-offset: 2px;
+}
+
+.bl__icon {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--brand-blue, var(--pico-primary));
+  opacity: 0.8;
+}
+
+.bl__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bl__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink, var(--pico-color));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl__snippet {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--ink-muted, var(--pico-muted-color));
+  /* clamp to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── loading skeleton ────────────────────────────────────────────── */
+.bl--loading {
+  pointer-events: none;
+}
+
+.bl__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line, var(--pico-muted-border-color));
+  border-radius: var(--radius-sm, 10px);
+}
+
+.bl__skeleton-title,
+.bl__skeleton-snippet {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-pill, 999px);
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunken, color-mix(in oklab, var(--pico-muted-border-color) 40%, transparent)) 25%,
+    color-mix(in oklab, var(--pico-muted-border-color) 20%, transparent) 50%,
+    var(--surface-sunken, color-mix(in oklab, var(--pico-muted-border-color) 40%, transparent)) 75%
+  );
+  background-size: 200% 100%;
+  animation: bl-shimmer 1.2s ease-in-out infinite;
+}
+
+.bl__skeleton-title {
+  width: 70%;
+}
+
+.bl__skeleton-snippet {
+  width: 90%;
+  height: 8px;
+}
+
+@keyframes bl-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl__link {
+    transition: none;
+  }
+  .bl__skeleton-title,
+  .bl__skeleton-snippet {
+    animation: none;
+  }
+}

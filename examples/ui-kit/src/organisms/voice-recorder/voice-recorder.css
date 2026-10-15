@@ -1,0 +1,163 @@
+/* ── pop-voice-recorder ─────────────────────────────────────────────────── */
+
+:host {
+  display: inline-block;
+}
+
+/* ── Expanded (active recording) ─────────────────────────────────────────── */
+
+.vr-expanded {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-raised, #1e1e2e);
+  border-radius: 999px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Record / Pause toggle */
+.vr-record-btn {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-red-500, #ef4444);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease;
+}
+
+.vr-record-btn.is-paused {
+  background: var(--color-amber-500, #f59e0b);
+}
+
+/* Waveform */
+.vr-waveform {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 2rem;
+  overflow: hidden;
+}
+
+.vr-bar {
+  flex: 1;
+  min-width: 2px;
+  height: 100%;
+  background: var(--color-purple-400, #c084fc);
+  border-radius: 999px;
+  transform-origin: center;
+  transition: transform 60ms linear;
+}
+
+/* Actions */
+.vr-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.vr-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 150ms ease;
+}
+
+.vr-btn--cancel {
+  background: var(--color-surface-sunken, #13131d);
+  color: var(--color-muted, #888);
+}
+
+.vr-btn--save {
+  background: var(--color-green-500, #22c55e);
+  color: #fff;
+}
+
+.vr-btn:hover { opacity: 0.8; }
+
+/* ── Collapsed (playback ring) ───────────────────────────────────────────── */
+
+.vr-collapsed {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+}
+
+/* SVG ring */
+.vr-ring {
+  position: absolute;
+  inset: 0;
+}
+
+.vr-ring-track {
+  fill: none;
+  stroke: var(--color-surface-sunken, #13131d);
+  stroke-width: 3;
+}
+
+.vr-ring-progress {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 200ms linear;
+}
+
+/* Play / Pause button centred inside ring */
+.vr-play-btn {
+  position: relative;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-purple-500, #a855f7);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease;
+}
+
+.vr-collapsed.is-playing .vr-play-btn {
+  background: var(--color-blue-500, #3b82f6);
+}
+
+/* Discard button — top-right corner */
+.vr-discard-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 2;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-surface-sunken, #13131d);
+  color: var(--color-muted, #888);
+  font-size: 0.6rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vr-discard-btn:hover { color: var(--color-red-400, #f87171); }

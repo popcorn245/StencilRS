@@ -1,0 +1,126 @@
+/* pop-thread-settings-sheet — Pico tokens only, no hardcoded colors. */
+.tss {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: var(--pico-color);
+  font-size: 0.9rem;
+}
+
+.tss__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tss__heading {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pico-muted-color);
+}
+
+.tss__note,
+.tss__empty,
+.tss__addr {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+}
+
+.tss__seg {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--pico-border-color);
+  border-radius: var(--pico-border-radius);
+  overflow: hidden;
+}
+
+.tss__segbtn {
+  margin: 0;
+  width: auto;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.8rem;
+  border: 0;
+  background: transparent;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+}
+
+.tss__segbtn--on {
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+}
+
+.tss__channel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--pico-border-color);
+}
+
+.tss__rowline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.tss__chan-labels {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tss__chan {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.tss__addr {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Noise warning: a firehose thread mirrored to a phone is a real hazard. */
+.tss__warn {
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-del-color, var(--pico-border-color));
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-color);
+}
+
+.tss__confirm {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tss__confirm-btn,
+.tss__cancel-btn {
+  margin: 0;
+  width: auto;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.78rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-border-color);
+  cursor: pointer;
+}
+
+.tss__confirm-btn {
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+  border-color: var(--pico-primary);
+}
+
+.tss__cancel-btn {
+  background: transparent;
+  color: var(--pico-muted-color);
+}

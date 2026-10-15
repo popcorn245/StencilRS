@@ -1,0 +1,166 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--chat-bg, #1e1e1e);
+  color: #dcddde;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent spill */
+  position: relative; /* Context */
+}
+
+:host * {
+    box-sizing: border-box;
+}
+
+/* Fallback Defaults if not provided by host context */
+:host {
+  --chat-message-hover: #32353b;
+  --chat-item-hover: #393c43;
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Header */
+header {
+  height: 48px;
+  border-bottom: 1px solid #202225;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  font-weight: bold;
+  color: white;
+  background: var(--chat-bg, #1e1e1e);
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Messages Area */
+.messages {
+  flex: 1 1 0px; /* Force basis 0 to ensure it takes available space */
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Cozy mode from app */
+  overflow-x: hidden;
+  overflow-x: hidden;
+  height: 0; /* Flexbox scrolling fix: forces shrinking */
+  min-height: 0;
+}
+
+/* Scrollbar styling (optional, matching dark theme typical) */
+.messages::-webkit-scrollbar {
+    width: 8px;
+    background: #2e3338;
+}
+.messages::-webkit-scrollbar-thumb {
+    background: #202225;
+    border-radius: 4px;
+}
+
+
+/* Footer / Input */
+footer {
+  padding: 0 8px 8px 8px; /* Match Main Chat padding */
+  flex-shrink: 0;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  background: #383a40; /* --chat-input-bg */
+  border: none;
+  border-radius: 8px;
+  color: white;
+  outline: none;
+}
+input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.empty-state {
+    text-align: center;
+    color: #72767d;
+    margin-top: 2rem;
+    font-style: italic;
+}
+
+.login-prompt-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: #5865f2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    transition: background 0.2s;
+}
+.login-prompt-btn:hover {
+    background: #4752c4;
+}
+
+
+
+
+
+
+
+/* Full Chat Link */
+.full-chat-link {
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.full-chat-link:hover {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+/* Sort Menu */
+.sort-btn {
+    opacity: 0.8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #b9bbbe;
+    padding: 0;
+    display: flex;
+    transition: color 0.2s;
+}
+.sort-btn:hover {
+    color: white;
+}
+
+.sort-dropdown {
+    overflow: hidden;
+}
+
+.sort-option {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #dcddde;
+    cursor: pointer;
+    transition: background 0.1s;
+    white-space: nowrap;
+}
+.sort-option:hover {
+    background: #35393e;
+}
+.sort-option.active {
+    background: #40444b;
+    color: white;
+    font-weight: 500;
+}
+

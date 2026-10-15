@@ -1,0 +1,231 @@
+/* message-box.css */
+
+:host {
+  display: block;
+  width: 100%;
+  --mb-bg: var(--pico-form-element-background-color);
+  --mb-text: var(--pico-color);
+  --mb-placeholder: var(--pico-muted-color);
+  --mb-radius: 8px;
+  --mb-padding: 0 16px;
+  --mb-primary: var(--pico-primary);
+}
+
+/* Outer wrapper for input row + toolbar row */
+.mb-outer {
+  width: 100%;
+  border: 1px solid var(--pico-form-element-border-color);
+  border-radius: var(--mb-radius);
+  overflow: visible;
+}
+
+.mb-outer pop-chat-toolbar {
+  border-top: 1px solid var(--pico-form-element-border-color, rgba(255,255,255,0.08));
+  display: block;
+}
+
+.mb-outer .message-box-container {
+  border: none;
+  border-radius: var(--mb-radius) var(--mb-radius) 0 0;
+}
+
+.message-box-container {
+  display: flex;
+  align-items: flex-end; /* Align bottom */
+  background-color: var(--mb-bg);
+  border-radius: var(--mb-radius);
+  padding: 8px 12px; 
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 8px;
+  border: 1px solid var(--pico-form-element-border-color);
+}
+
+.message-box-container.has-file {
+    border-radius: var(--mb-radius);
+}
+
+/* Attachment Button */
+.attach-button-wrapper {
+    height: 24px;
+    margin-bottom: 2px; /* Visual alignment with single line text */
+}
+
+.attach-btn {
+  background: transparent;
+  border: none;
+  color: #b9bbbe;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.circle-plus {
+    background-color: transparent;
+    color: #b9bbbe;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #b9bbbe;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 4px; /* Add padding inside the border */
+}
+
+.circle-plus svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.attach-btn:hover .circle-plus {
+    color: #dcddde;
+    border-color: #dcddde;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.attach-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Content Area (Preview + Input) */
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 8px;
+}
+
+/* File Preview */
+.file-preview-area {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.file-preview-card {
+    position: relative;
+    display: inline-block;
+    background: #2f3136;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.file-preview-card img {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 4px;
+    display: block;
+}
+
+.remove-file-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ed4245;
+    color: white;
+    border: 2px solid #2f3136;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Input Wrapper */
+.input-wrapper {
+  position: relative;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rich-input {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--mb-text);
+  font-family: inherit;
+  font-weight: 400;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 50vh;
+  overflow-y: auto;
+  line-height: 1.375rem;
+  user-select: text;
+  cursor: text;
+}
+
+.rich-input:empty:before {
+  content: attr(data-placeholder);
+  color: var(--mb-placeholder);
+  pointer-events: none;
+  display: block;
+}
+
+/* Send Button */
+.actions-wrapper {
+  display: flex;
+  align-items: flex-end; /* Align bottom */
+  height: 24px;
+  margin-bottom: 2px;
+}
+
+.send-btn {
+  background: transparent;
+  border: none;
+  color: var(--mb-primary);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.send-btn:hover:not(:disabled) {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.send-btn:disabled {
+    color: #4f545c;
+    cursor: default;
+    opacity: 0.5;
+}
+
+/* Scrollbar for input */
+.rich-input::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.rich-input::-webkit-scrollbar-track {
+  background-color: #2e3338;
+  border-radius: 4px;
+}
+.rich-input::-webkit-scrollbar-thumb {
+  background-color: #202225;
+  border-radius: 4px;
+}

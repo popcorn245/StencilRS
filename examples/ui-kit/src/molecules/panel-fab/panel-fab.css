@@ -1,0 +1,160 @@
+/* pop-panel-fab — bottom-right panel FAB + list-controls tray.
+
+   ABSOLUTE, not fixed: the bucket-hub panels this serves render inside a bottom
+   sheet / dialog / dock, and two of those tiers keep persistent CSS transforms
+   that re-base fixed positioning. See the component doc comment. */
+
+pop-panel-fab {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: block;
+  pointer-events: none; /* the gap around the controls stays click-through */
+}
+
+.pfab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.pfab > * {
+  pointer-events: auto;
+}
+
+/* ── The controls tray, above the button ──────────────────────────────────── */
+.pfab__tray {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-card, 16px);
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  border: 1px solid var(--line, var(--pico-muted-border-color, rgba(0, 0, 0, 0.12)));
+  box-shadow: var(--shadow-lg, 0 12px 30px -10px rgba(0, 0, 0, 0.3));
+  transform-origin: bottom right;
+  max-width: min(20rem, calc(100vw - 2rem));
+
+  /* Shut: visibility (not display:none) so slotted controls keep their layout
+     and any measurement they do stays valid across open/close. `inert` on the
+     element removes them from the tab order. */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.5rem) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.pfab--open .pfab__tray {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ── The button row ───────────────────────────────────────────────────────── */
+.pfab__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pfab__btn {
+  box-shadow: var(--shadow-lg, 0 10px 24px -8px rgba(0, 0, 0, 0.35));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.75rem;
+  padding: 0 1.05rem;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--pop-primary, var(--hub-primary, var(--pico-primary, #7c5cff)));
+  color: var(--pop-on-primary, #fff);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+
+.pfab__btn--compact {
+  width: 2.75rem;
+  padding: 0;
+  justify-content: center;
+}
+
+.pfab__btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.pfab__btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.pfab__btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.pfab__btn:focus-visible,
+.pfab__toggle:focus-visible {
+  outline: 2px solid var(--pop-primary, var(--hub-primary, #7c5cff));
+  outline-offset: 2px;
+}
+
+/* Tray toggle — a small companion circle beside the primary action, or the
+   FAB itself when the panel has controls but no create verb. */
+.pfab__toggle {
+  box-shadow: var(--shadow-lg, 0 10px 24px -8px rgba(0, 0, 0, 0.35));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.18));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  color: var(--pico-color, inherit);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.pfab__toggle--solo {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.pfab__toggle:hover {
+  background: var(--surface-sunken, rgba(127, 127, 127, 0.08));
+}
+
+/* Point the chevron down once the tray is up, so it reads as "close". */
+.pfab--open .pfab__toggle {
+  transform: rotate(180deg);
+}
+.pfab--open .pfab__toggle--solo {
+  transform: none; /* the options glyph has no up/down meaning to invert */
+}
+
+/* The ion-icon host has no intrinsic size until its shadow SVG lays out, and
+   inside a flex button it collapses (~4px wide) — size the host explicitly. */
+.pfab__icon {
+  pointer-events: none;
+  display: block;
+  flex: 0 0 auto;
+  width: 1.2rem;
+  height: 1.2rem;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfab__tray,
+  .pfab__btn,
+  .pfab__toggle {
+    transition: none;
+  }
+}

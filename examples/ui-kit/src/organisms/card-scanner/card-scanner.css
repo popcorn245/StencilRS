@@ -1,0 +1,52 @@
+/**
+ * pop-card-scanner — the camera surface chrome. Intentionally minimal: the
+ * consumer projects its own overlays (labels, pills, tap-catch, added-log) into
+ * the slots and styles those itself. This file owns only the viewport frame and
+ * the single stable <video>.
+ */
+
+pop-card-scanner {
+  display: block;
+}
+
+.pcs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* The viewport is a stable positioning context; the <video> is always its first
+ * child and never conditionally rendered, so no re-render reindexes it. A
+ * consumer overlay (scoped-slot light DOM) lands as a child here and positions
+ * itself absolutely against this box. */
+.pcs-viewport {
+  position: relative;
+  width: 100%;
+  /* Fallback shape until the stream reports its real aspect — the component sets
+   * an inline aspect-ratio from videoWidth/videoHeight on loadedmetadata. */
+  aspect-ratio: 3 / 4;
+  max-height: 52vh;
+  overflow: hidden;
+  border-radius: var(--radius-md, var(--radius, 12px));
+  background: #000;
+}
+
+.pcs-video {
+  width: 100%;
+  height: 100%;
+  /* contain (not cover) so the FULL frame is visible — matching the viewport's
+   * aspect-ratio to the stream removes the letterbox. */
+  object-fit: contain;
+  display: block;
+}
+
+.pcs-error {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--color-on-error, #fff);
+  background: color-mix(in srgb, var(--color-error, #c62828) 88%, transparent);
+}

@@ -93,19 +93,19 @@ export class PopCafeteriaPanel {
 
   /** Public method to toggle expanded state (called from game) */
   @Method()
-  async toggle() {
+  async toggle(): Promise<any> {
     this.toggleExpanded();
   }
 
   /** Public method to set chat text (for autoplay typing animation) */
   @Method()
-  async setChatText(text: string) {
+  async setChatText(text: string): Promise<any> {
     this.chatText = text;
   }
 
   /** Public method to focus the chat input */
   @Method()
-  async focusChat() {
+  async focusChat(): Promise<any> {
     if (!this.expanded) {
       this.toggleExpanded();
     }

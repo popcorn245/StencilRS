@@ -1,0 +1,66 @@
+:host {
+  display: block;
+}
+
+.li {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--pico-border-radius, 8px);
+  text-decoration: none;
+  color: var(--pico-color);
+  transition: background 0.15s ease;
+  cursor: default;
+}
+
+a.li {
+  cursor: pointer;
+}
+
+a.li:hover,
+.li:hover {
+  background: color-mix(in srgb, var(--pico-color) 5%, transparent);
+}
+
+.li--selected {
+  background: color-mix(in srgb, var(--pico-primary) 10%, transparent);
+}
+
+.li-thumb {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pico-muted-color) 10%, transparent);
+  font-size: 1.4rem;
+}
+
+.li-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.li-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.li-subtitle {
+  font-size: 0.8rem;
+  color: var(--pico-muted-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.1rem;
+}
+
+.li-trailing {
+  flex-shrink: 0;
+}

@@ -1,0 +1,399 @@
+/* ── pop-message-bubble ─────────────────────────────────────────────────── */
+
+:host { display: block; width: 100%; }
+
+.mb-root {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+  position: relative;
+  color: var(--pico-color);
+  font-family: system-ui, -apple-system, sans-serif;
+  animation: mb-in 160ms ease both;
+}
+
+@keyframes mb-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Alignment ── */
+.mb-own { flex-direction: row-reverse; }
+.mb-role--user { flex-direction: row-reverse; }
+
+/* ── Avatar ── */
+.mb-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  align-self: flex-end;
+  background: var(--pico-muted-border-color, #444);
+}
+.mb-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.mb-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-purple-600, #9333ea);
+}
+
+/* ── Body ── */
+.mb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: min(80%, 32rem);
+  min-width: 0;
+}
+.mb-role--user .mb-body,
+.mb-own .mb-body { align-items: flex-end; }
+.mb-role--assistant .mb-body,
+.mb-role--member .mb-body { align-items: flex-start; }
+
+/* ── Header ── */
+.mb-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.mb-name  { font-weight: 600; font-size: 0.875rem; color: var(--pico-h4-color); }
+.mb-time  { font-size: 0.72rem; color: var(--pico-muted-color); }
+
+/* ── Bubble wrap ── */
+.mb-bubble-wrap { position: relative; display: flex; flex-direction: column; gap: 4px; }
+
+/* ── Bubble (shared) ── */
+.mb-bubble {
+  padding: 0.6rem 0.9rem;
+  border-radius: 18px;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+/* member role: Discord-style flat */
+.mb-role--member .mb-bubble {
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* user bubble */
+.mb-role--user .mb-bubble,
+.mb-own.mb-role--member .mb-bubble {
+  background: var(--color-purple-600, #9333ea);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  padding: 0.6rem 0.9rem;
+}
+
+/* assistant bubble */
+.mb-role--assistant .mb-bubble {
+  background: var(--pico-card-background-color, #fff);
+  color: var(--pico-color, #000);
+  border: 1px solid var(--pico-muted-border-color);
+  border-bottom-left-radius: 4px;
+}
+.mb-role--assistant .mb-bubble.mb-streaming {
+  border-color: var(--section-accent, var(--color-purple-500, #a855f7));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--section-accent, #a855f7) 18%, transparent);
+}
+
+/* ── Prose layout overrides ── */
+.mb-layout--prose .mb-bubble {
+  border-radius: 8px;
+  max-width: 100%;
+  padding: 1rem 1.25rem;
+}
+.mb-layout--prose .mb-body { max-width: 100%; }
+
+/* ── Markdown inside bubbles ── */
+.mb-markdown { line-height: 1.65; }
+.mb-markdown p { margin: 0 0 0.5rem; }
+.mb-markdown p:last-child { margin-bottom: 0; }
+.mb-markdown a { color: inherit; text-decoration: underline; font-weight: 500; }
+.mb-markdown ul, .mb-markdown ol { margin: 0.4rem 0; padding-left: 1.25rem; }
+.mb-markdown li { margin-bottom: 0.2rem; }
+.mb-markdown strong { font-weight: 700; }
+.mb-markdown em { font-style: italic; }
+.mb-markdown blockquote {
+  border-left: 3px solid var(--pico-muted-border-color);
+  margin: 0.5rem 0;
+  padding-left: 0.75rem;
+  color: var(--pico-muted-color);
+}
+.mb-markdown code {
+  background: rgba(0,0,0,0.06);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.84em;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+.mb-markdown h1, .mb-markdown h2, .mb-markdown h3 {
+  margin: 0.75rem 0 0.35rem;
+  line-height: 1.3;
+}
+
+/* ── Code blocks ── */
+.mb-code-block {
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  overflow: auto;
+  background: #1e1e2e;
+  padding: 1rem;
+}
+.mb-code-block code {
+  background: none;
+  padding: 0;
+  font-size: 0.82em;
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  color: #cdd6f4;
+}
+
+/* ── Streaming cursor ── */
+.mb-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 0.9em;
+  background: currentColor;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  animation: mb-blink 0.8s step-end infinite;
+}
+@keyframes mb-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── Typing dots ── */
+.mb-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 2px;
+}
+.mb-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: mb-dot 1.2s ease-in-out infinite;
+}
+.mb-dots span:nth-child(2) { animation-delay: 0.2s; }
+.mb-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes mb-dot { 0%, 80%, 100% { opacity: 0.4; transform: scale(1); } 40% { opacity: 1; transform: scale(1.2); } }
+
+/* ── Plain text (member) ── */
+.mb-text { white-space: pre-wrap; word-wrap: break-word; line-height: 1.4; }
+
+/* ── AI action buttons (copy, TTS) ── */
+.mb-ai-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.mb-root:hover .mb-ai-actions { opacity: 1; }
+
+.mb-action-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: var(--pico-card-background-color, #fff);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pico-muted-color);
+  transition: color 0.1s, background 0.1s;
+}
+.mb-action-btn:hover { color: var(--pico-color); background: var(--pico-secondary-background, #f0f0f0); }
+.mb-action-btn.mb-copied { color: #22c55e; border-color: #22c55e; }
+
+/* ── Intent chips ── */
+.mb-intents { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.mb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--chip-color, #a855f7) 16%, transparent);
+  color: var(--chip-color, #a855f7);
+  border: 1px solid color-mix(in srgb, var(--chip-color, #a855f7) 32%, transparent);
+  animation: mb-chip-in 160ms ease both;
+}
+@keyframes mb-chip-in { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+.mb-chip-icon { font-size: 0.75rem; }
+
+/* ── Thread summary ── */
+.mb-thread-summary {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  margin-left: 8px;
+}
+.mb-thread-spine {
+  position: absolute;
+  top: -12px;
+  left: -26px;
+  width: 30px;
+  height: 22px;
+  border-bottom: 2px solid var(--pico-muted-border-color, #4f545c);
+  border-left: 2px solid var(--pico-muted-border-color, #4f545c);
+  border-bottom-left-radius: 6px;
+  pointer-events: none;
+}
+.mb-thread-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--pico-code-background-color, #2a2a3a);
+  border-radius: 4px;
+  padding: 3px 8px;
+  max-width: 100%;
+}
+.mb-thread-avatar { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; }
+.mb-thread-preview {
+  font-size: 0.82rem;
+  color: var(--pico-muted-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  font-weight: 500;
+}
+.mb-thread-time { font-size: 0.72rem; color: var(--pico-muted-color); white-space: nowrap; }
+
+/* ── Hover actions (member) ── */
+.mb-root:hover { background: var(--chat-message-hover, rgba(255,255,255,0.03)); }
+
+.mb-actions {
+  position: absolute;
+  top: -14px;
+  right: 12px;
+  background: var(--pico-dropdown-background-color, #2f3136);
+  border: 1px solid var(--pico-muted-border-color, #202225);
+  border-radius: 6px;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+.mb-root:hover .mb-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* Always visible when thread exists */
+.mb-actions--thread {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+/* Non-thread buttons hidden until hover when thread exists */
+.mb-actions--thread .mb-act-btn:not(.mb-act-thread--active) {
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: opacity 0.15s, width 0.15s;
+}
+.mb-root:hover .mb-actions--thread .mb-act-btn:not(.mb-act-thread--active) {
+  opacity: 1;
+  width: 28px;
+}
+
+.mb-act-btn {
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pico-muted-color);
+  border-radius: 4px;
+  position: relative;
+  transition: color 0.1s, background 0.1s;
+}
+.mb-act-btn:hover { color: var(--pico-color); background: rgba(255,255,255,0.08); }
+.mb-act-delete:hover { color: #ed4245; }
+
+.mb-thread-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  background: var(--pico-primary, #5865f2);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1;
+  border: 2px solid var(--pico-dropdown-background-color, #2f3136);
+}
+
+/* ── Edit mode ── */
+.mb-edit { width: 100%; }
+.mb-edit-textarea {
+  width: 100%;
+  background: var(--pico-code-background-color, #40444b);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  color: var(--pico-color);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  resize: none;
+  outline: none;
+  min-height: 48px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.mb-edit-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+.mb-edit-hint { font-size: 0.72rem; color: var(--pico-muted-color); }
+.mb-edit-btns { display: flex; gap: 6px; }
+.mb-btn-save {
+  background: var(--pico-primary, #5865f2);
+  color: #fff;
+  border: none;
+  padding: 5px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.mb-btn-save:hover { filter: brightness(1.1); }
+.mb-btn-cancel {
+  background: transparent;
+  color: var(--pico-muted-color);
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+.mb-btn-cancel:hover { text-decoration: underline; }

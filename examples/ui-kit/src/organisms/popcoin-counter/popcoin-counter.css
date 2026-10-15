@@ -1,0 +1,92 @@
+/* ── pop-popcoin-counter ────────────────────────────────────────────────── */
+
+:host {
+  display: inline-block;
+}
+
+.pc-root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+  overflow: visible;
+}
+
+.pc-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.pc-value {
+  font-weight: 700;
+  font-size: 1em;
+}
+
+.pc-label {
+  font-size: 0.75em;
+  color: var(--color-muted, #888);
+}
+
+/* Delta badge */
+.pc-delta {
+  position: absolute;
+  top: -1.25rem;
+  right: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  animation: pc-delta-fly 2s ease both;
+  pointer-events: none;
+}
+
+.pc-delta--gain {
+  color: var(--color-green-400, #4ade80);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.pc-delta--loss {
+  color: var(--color-red-400, #f87171);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+@keyframes pc-delta-fly {
+  0%   { opacity: 0; transform: translateY(4px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(-8px); }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+
+/* Confetti */
+.pc-confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: pc-confetti-fall 1.6s ease both;
+}
+
+@keyframes pc-confetti-fall {
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translateY(40px) rotate(360deg) scale(0.5); }
+}
+
+/* Compact format */
+.pc-format--compact .pc-value {
+  font-size: 0.95rem;
+}
+
+/* Full format */
+.pc-format--full {
+  padding: 0.5rem 0.875rem;
+  background: var(--color-surface-raised, #1e1e2e);
+  border-radius: 999px;
+}
+
+.pc-format--full .pc-value {
+  font-size: 1.1rem;
+}

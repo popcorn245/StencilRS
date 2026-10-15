@@ -57,7 +57,7 @@ export class Toast {
     type: 'default' | 'error' | 'success' = 'default',
     action?: ToastAction,
     options?: ToastOptions,
-  ) {
+  ): Promise<any> {
     const id = this.nextId++;
     this.toasts = [...this.toasts, { id, message, type, action }];
 
@@ -82,7 +82,7 @@ export class Toast {
    * timers. The single programmatic way to clear a sticky (persistent) toast.
    */
   @Method()
-  async hide() {
+  async hide(): Promise<any> {
     for (const t of [...this.toasts]) this.dismiss(t.id);
   }
 

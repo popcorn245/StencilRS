@@ -1,0 +1,333 @@
+.pfb-root {
+  position: relative;
+  display: contents; /* Let children participate in parent flex layout */
+}
+
+.pfb-trigger-wrap {
+  position: relative;
+}
+
+/* ── Trigger — outline pill button ── */
+button.pfb-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 var(--size-3, 12px) !important;
+  border-radius: var(--radius-full, 999px) !important;
+  border: 1.5px solid var(--pico-muted-border-color, rgba(0,0,0,0.15)) !important;
+  background: transparent !important;
+  color: #333 !important;
+  font-size: var(--scale-000, 0.75rem);
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: auto !important;
+  margin: 0;
+  box-shadow: none !important;
+  transition: border-color 150ms, color 150ms, background 150ms;
+}
+
+button.pfb-trigger:hover {
+  border-color: var(--pico-primary, #2563eb) !important;
+  color: var(--pico-primary, #2563eb) !important;
+}
+
+button.pfb-trigger.is-open {
+  border-color: var(--pico-primary, #2563eb) !important;
+  color: var(--pico-primary, #2563eb) !important;
+  background: color-mix(in srgb, var(--pico-primary, #2563eb) 8%, transparent) !important;
+}
+
+button.pfb-trigger.has-active {
+  border-color: var(--pico-primary, #2563eb) !important;
+  color: var(--pico-primary, #2563eb) !important;
+}
+
+/* Dark mode: filter trigger text */
+@media (prefers-color-scheme: dark) {
+  button.pfb-trigger { color: #ccc !important; }
+}
+[data-theme="dark"] button.pfb-trigger { color: #ccc !important; }
+
+/* Icon styling */
+.pfb-icon,
+.pfb-icon-svg {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.pfb-icon {
+  opacity: 0.8;
+  filter: invert(1) brightness(2);
+}
+
+.pfb-icon-svg {
+  color: currentColor;
+}
+
+.pfb-icon-svg svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* When active/open: tint the icon blue */
+button.pfb-trigger.has-active .pfb-icon,
+button.pfb-trigger.is-open .pfb-icon,
+button.pfb-trigger:hover .pfb-icon {
+  filter: invert(29%) sepia(93%) saturate(1352%) hue-rotate(205deg) brightness(102%) contrast(90%);
+}
+
+button.pfb-trigger:hover .pfb-icon-svg,
+button.pfb-trigger.is-open .pfb-icon-svg,
+button.pfb-trigger.has-active .pfb-icon-svg {
+  transform: scale(1.1);
+}
+
+.pfb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 99px;
+  background: var(--pico-primary, #2563eb);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--weight-bold, 700);
+}
+
+/* ── Active filter chips container ── */
+.pfb-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Active filter chips ── */
+.pfb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 4px 0 var(--size-2, 8px);
+  border-radius: var(--radius-full, 999px);
+  background: color-mix(in srgb, var(--pico-primary, #2563eb) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pico-primary, #2563eb) 30%, transparent);
+  font-size: var(--scale-000, 0.75rem);
+}
+
+.pfb-chip-label {
+  color: var(--pico-primary, #2563eb);
+  white-space: nowrap;
+  font-weight: var(--weight-medium, 500);
+}
+
+button.pfb-chip-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: color-mix(in srgb, var(--pico-primary, #2563eb) 20%, transparent);
+  color: var(--pico-primary, #2563eb);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  transition: background 150ms;
+}
+
+button.pfb-chip-dismiss:hover {
+  background: var(--pico-primary, #2563eb);
+  color: white;
+}
+
+/* ═══════════════════════════════════
+   ── Popover ──
+   ═══════════════════════════════════ */
+.pfb-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 200;
+  width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Hardcoded opaque background — will NOT bleed through */
+  background: #ffffff;
+  backdrop-filter: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: var(--size-4, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4, 16px);
+  animation: pfb-fade-in 0.18s ease-out;
+}
+
+/* Dark mode override */
+@media (prefers-color-scheme: dark) {
+  .pfb-popover {
+    background: #1e1e2e;
+    border-color: rgba(255,255,255,0.1);
+    box-shadow:
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Also respect Pico's data-theme attribute */
+[data-theme="dark"] .pfb-popover {
+  background: #1e1e2e;
+  border-color: rgba(255,255,255,0.1);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pfb-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Filter group ── */
+.pfb-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2, 8px);
+}
+
+.pfb-group + .pfb-group {
+  border-top: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.08));
+  padding-top: var(--size-3, 12px);
+}
+
+.pfb-group-label {
+  font-size: 0.65rem;
+  font-weight: var(--weight-bold, 700);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #666;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Segmented option buttons ── */
+.pfb-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Override Pico's aggressive button resets */
+.pfb-popover button.pfb-option,
+button.pfb-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  height: auto;
+  min-height: 30px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.03);
+  color: #555;
+  font-size: 0.75rem;
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  width: auto;
+  margin: 0;
+  line-height: 1.2;
+  transition: all 120ms ease;
+  flex: 0 0 auto;
+}
+
+.pfb-popover button.pfb-option:hover,
+button.pfb-option:hover {
+  border-color: var(--pico-primary, #2563eb);
+  color: #333;
+  background: rgba(0,0,0,0.06);
+}
+
+.pfb-popover button.pfb-option.selected,
+button.pfb-option.selected {
+  background: var(--pico-primary, #2563eb);
+  border-color: var(--pico-primary, #2563eb);
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+/* Dark mode option overrides */
+@media (prefers-color-scheme: dark) {
+  .pfb-group-label { color: #999; }
+  .pfb-popover button.pfb-option,
+  button.pfb-option {
+    border-color: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.04);
+    color: #aaa;
+  }
+  .pfb-popover button.pfb-option:hover,
+  button.pfb-option:hover {
+    color: white;
+    background: rgba(255,255,255,0.08);
+  }
+}
+
+[data-theme="dark"] .pfb-group-label { color: #999; }
+[data-theme="dark"] .pfb-popover button.pfb-option,
+[data-theme="dark"] button.pfb-option {
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+  color: #aaa;
+}
+[data-theme="dark"] .pfb-popover button.pfb-option:hover,
+[data-theme="dark"] button.pfb-option:hover {
+  color: white;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Done button ── */
+.pfb-popover button.pfb-done,
+button.pfb-done {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 20px;
+  height: auto;
+  min-height: 30px;
+  border-radius: var(--radius-full, 999px);
+  border: 1.5px solid var(--pico-primary, #2563eb);
+  background: transparent;
+  color: var(--pico-primary, #2563eb);
+  font-size: 0.8rem;
+  font-weight: var(--weight-semibold, 600);
+  cursor: pointer;
+  width: auto;
+  margin: 0;
+  transition: background 150ms, color 150ms;
+}
+
+.pfb-popover button.pfb-done:hover,
+button.pfb-done:hover {
+  background: var(--pico-primary, #2563eb);
+  color: white;
+}

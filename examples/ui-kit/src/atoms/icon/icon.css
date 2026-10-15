@@ -1,0 +1,28 @@
+/* pop-icon is a SCOPED component (no shadow root), so `:host` does NOT apply —
+   the real centering + sizing is set inline in render() AND mirrored here on the
+   scoped `.pop-icon` class.
+
+   Size is driven by font-size, in precedence order:
+   - the `size` prop → font-size inline on the host (highest), OR
+   - the `--size` custom property, OR
+   - a sane VISIBLE DEFAULT (1.25rem) — NOT `inherit`. Inheriting would collapse
+     the glyph to 0 on icon-only buttons that set `font-size: 0` to hide text,
+     making the icon invisible. The default keeps it visible; a caller that wants
+     a specific size still wins via `size` / `--size` / setting font-size on the
+     pop-icon element directly. */
+:host,
+.pop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  font-size: var(--size, 1.25rem);
+}
+
+/* The glyph tracks 1em square so it stays centered with zero baseline offset. */
+.pop-icon__glyph {
+  display: block;
+  width: 1em;
+  height: 1em;
+  font-size: inherit;
+}

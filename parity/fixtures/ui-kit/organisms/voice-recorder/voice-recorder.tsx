@@ -44,7 +44,7 @@ export class PopVoiceRecorder {
 
   /** Call this to begin recording — only invoke from an explicit user gesture. */
   @Method()
-  async begin() {
+  async begin(): Promise<any> {
     if (!this.isRecording && !this.savedBlob) {
       await this.startRecording();
     }

@@ -1,0 +1,49 @@
+/* pop-switch — token-themed ARIA toggle (extracted from hub-switch). */
+
+.sw {
+  --sw-width: 42px;
+  --sw-height: 24px;
+  --sw-pad: 3px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: var(--sw-width);
+  height: var(--sw-height);
+  padding: var(--sw-pad);
+  margin: 0;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.3));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-sunken, var(--pico-card-sectioning-background-color, #e5e7eb));
+  cursor: pointer;
+  transition:
+    background var(--dur-fast, 150ms) var(--ease-soft, ease),
+    border-color var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+.sw:focus-visible {
+  outline: 2px solid var(--pico-primary, #3b82f6);
+  outline-offset: 2px;
+}
+.sw:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.sw__knob {
+  display: block;
+  width: calc(var(--sw-height) - var(--sw-pad) * 2 - 2px);
+  height: calc(var(--sw-height) - var(--sw-pad) * 2 - 2px);
+  border-radius: 50%;
+  background: var(--surface-card, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transform: translateX(0);
+  transition: transform var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+
+.sw--on {
+  background: var(--pico-primary, #3b82f6);
+  border-color: var(--pico-primary, #3b82f6);
+}
+.sw--on .sw__knob {
+  transform: translateX(calc(var(--sw-width) - var(--sw-height)));
+}

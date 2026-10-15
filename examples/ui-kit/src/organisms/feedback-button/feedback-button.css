@@ -1,0 +1,165 @@
+/* pop-feedback-button — trigger + the bespoke screenshot control. The form
+   chrome comes from pop-presenter / pop-field / pop-actions-footer, so only
+   these two pieces are styled here. Tokens only. */
+
+pop-feedback-button {
+  display: inline-block;
+}
+
+/* ── placement (the `position` prop) ────────────────────────────────────────
+   `inline` (an in-flow button for a toolbar / panel header) needs no rules —
+   the trigger is already a static inline-flex button. The four CORNERS pin it
+   to the viewport instead, and take the HOST out of flow (display: contents) so
+   a floating trigger reserves no layout space in whatever shell it lands in.
+
+   Two documented custom properties nudge a floating trigger. They are GUTTERS
+   from the chosen corner (not absolute coordinates), so one pair works for all
+   four corners:
+
+     --pop-feedback-x   horizontal gutter, default 1rem
+     --pop-feedback-y   vertical gutter,   default 1rem
+
+   Both are ADDED to the matching safe-area inset, so the button clears a phone's
+   home indicator / notch without the host doing the arithmetic. They're read
+   with var() fallbacks (never declared on the host) so a host can set them on
+   any ancestor and have them inherit. */
+pop-feedback-button.fb--floating {
+  display: contents;
+}
+.fb--floating .fb__trigger {
+  position: fixed;
+  /* Above page content, below the presenter's own sheet/dialog overlays. */
+  z-index: 40;
+}
+.fb--bottom-right .fb__trigger,
+.fb--bottom-left .fb__trigger {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--pop-feedback-y, 1rem));
+}
+.fb--top-right .fb__trigger,
+.fb--top-left .fb__trigger {
+  top: calc(env(safe-area-inset-top, 0px) + var(--pop-feedback-y, 1rem));
+}
+.fb--bottom-right .fb__trigger,
+.fb--top-right .fb__trigger {
+  right: calc(env(safe-area-inset-right, 0px) + var(--pop-feedback-x, 1rem));
+}
+.fb--bottom-left .fb__trigger,
+.fb--top-left .fb__trigger {
+  left: calc(env(safe-area-inset-left, 0px) + var(--pop-feedback-x, 1rem));
+}
+
+/* ── trigger ───────────────────────────────────────────────────────────────── */
+.fb__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.42rem 0.9rem;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.3));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  color: var(--ink-soft, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast, 150ms) var(--ease-soft, ease),
+    color var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+.fb__trigger:hover {
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+.fb__trigger:focus-visible {
+  outline: 2px solid var(--pico-primary, #3b82f6);
+  outline-offset: 2px;
+}
+/* Icon-only: a square hit area with the glyph centered (never a bare glyph). */
+.fb__trigger--icon-only {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+/* ── form body ─────────────────────────────────────────────────────────────── */
+.fb__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: min(340px, 78vw);
+}
+
+/* ── screenshot control ────────────────────────────────────────────────────── */
+.fb__shot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.fb__shot-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft, var(--pico-color, inherit));
+}
+.fb__shot-capture {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.42rem 0.85rem;
+  border: 1px dashed var(--pico-border-color, rgba(127, 127, 127, 0.35));
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--ink-soft, var(--pico-color, inherit));
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.fb__shot-capture:hover:not(:disabled) {
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+.fb__shot-capture:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.fb__shot-preview {
+  position: relative;
+  align-self: flex-start;
+  line-height: 0;
+}
+.fb__shot-img {
+  max-width: 100%;
+  max-height: 150px;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-card, 22px);
+}
+/* Square icon hit area over the preview corner. */
+.fb__icon-btn {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.25));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-card, var(--pico-card-background-color, #fff));
+  color: var(--ink-soft, var(--pico-color, inherit));
+  cursor: pointer;
+  line-height: 0;
+}
+.fb__icon-btn:hover {
+  border-color: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary, #3b82f6);
+}
+.fb__shot-note {
+  font-size: 0.75rem;
+  color: var(--ink-muted, var(--pico-muted-color, inherit));
+}

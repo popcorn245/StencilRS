@@ -1,0 +1,143 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.pfa-card {
+  max-width: 380px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  border-radius: 16px;
+  background: var(--pico-background-color, #fff);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  font-family: inherit;
+}
+
+.pfa-logo {
+  font-size: 48px;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.pfa-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pfa-subtitle {
+  text-align: center;
+  color: var(--pico-muted-color, #666);
+  margin: 0 0 8px;
+}
+
+.pfa-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 8px;
+  background: var(--pico-background-color, #fff);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.pfa-google-btn:hover:not(:disabled) {
+  background: var(--pico-secondary-background, #f5f5f5);
+}
+
+.pfa-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pfa-divider {
+  text-align: center;
+  color: var(--pico-muted-color, #999);
+  font-size: 13px;
+  margin: 4px 0;
+  position: relative;
+}
+
+.pfa-divider::before,
+.pfa-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 24px);
+  height: 1px;
+  background: var(--pico-muted-border-color, #e0e0e0);
+}
+
+.pfa-divider::before { left: 0; }
+.pfa-divider::after { right: 0; }
+
+.pfa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pfa-form input[type='email'],
+.pfa-form input[type='password'] {
+  padding: 10px 12px;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 8px;
+  font-size: 14px;
+  background: var(--pico-form-element-background-color, #fff);
+  color: inherit;
+}
+
+.pfa-submit {
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--pico-primary, #1976d2);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pfa-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pfa-toggle-mode {
+  background: transparent;
+  border: none;
+  color: var(--pico-primary, #1976d2);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+}
+
+.pfa-toggle-mode:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pfa-error {
+  color: var(--pico-del-color, #c62828);
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+  min-height: 1.2em;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.pfa-error--visible {
+  opacity: 1;
+}

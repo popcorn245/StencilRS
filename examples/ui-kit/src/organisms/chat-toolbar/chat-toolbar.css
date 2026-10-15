@@ -1,0 +1,171 @@
+/* ── pop-chat-toolbar ───────────────────────────────────────────────────── */
+
+:host { display: block; }
+
+.ct-root {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Shared button base ── */
+.ct-pill,
+.ct-tools-btn,
+.ct-mic-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.12));
+  border-radius: 999px;
+  background: var(--pico-card-background-color, rgba(255,255,255,0.05));
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  padding: 3px 8px;
+}
+
+.ct-pill:hover,
+.ct-tools-btn:hover,
+.ct-mic-btn:hover {
+  background: var(--pico-secondary-background, rgba(255,255,255,0.1));
+  color: var(--pico-color);
+  border-color: var(--pico-primary, #5865f2);
+}
+
+.ct-pill--open,
+.ct-tools-btn--open {
+  background: var(--pico-secondary-background, rgba(255,255,255,0.12));
+  color: var(--pico-color);
+  border-color: var(--pico-primary, #5865f2);
+}
+
+.ct-mic-btn { padding: 4px 8px; }
+
+/* ── Pill internals ── */
+.ct-pill-mode-icon { font-size: 0.85rem; }
+.ct-pill-model {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Chevron ── */
+.ct-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ── Tools button ── */
+.ct-tools-label { font-size: 0.78rem; }
+.ct-active-tool-icon { font-size: 0.9rem; }
+
+/* ── Shared dropdown panel ── */
+.ct-dropdown-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  background: var(--pico-dropdown-background-color, #1e1e2e);
+  border: 1px solid var(--pico-muted-border-color, rgba(255,255,255,0.12));
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  z-index: 200;
+  min-width: 180px;
+  padding: 6px;
+  animation: ct-pop 120ms ease both;
+}
+@keyframes ct-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ct-pill-wrap,
+.ct-tools-wrap {
+  position: relative;
+}
+
+/* ── Sections inside dropdown ── */
+.ct-section { margin-bottom: 6px; }
+.ct-section:last-child { margin-bottom: 0; }
+
+.ct-section-label,
+.ct-group-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pico-muted-color);
+  padding: 4px 8px 2px;
+}
+
+/* ── Option rows ── */
+.ct-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  color: var(--pico-color);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.1s;
+}
+.ct-option:hover { background: rgba(255,255,255,0.07); }
+.ct-option--active { color: var(--pico-primary, #7c8cf8); }
+
+.ct-option-icon { width: 18px; text-align: center; }
+.ct-option-label { flex: 1; }
+.ct-checkmark { font-size: 0.8rem; color: var(--pico-primary, #7c8cf8); }
+
+/* ── Tools popover ── */
+.ct-tools-panel { min-width: 200px; }
+
+.ct-tool-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  color: var(--pico-color);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.ct-tool-item:hover { background: rgba(255,255,255,0.07); }
+.ct-tool-item--on .ct-tool-label { color: var(--pico-color); }
+
+.ct-tool-icon { width: 20px; text-align: center; font-size: 0.9rem; }
+.ct-tool-label { flex: 1; text-align: left; }
+
+.ct-toggle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: var(--pico-muted-color);
+}
+.ct-toggle--on {
+  background: color-mix(in srgb, var(--pico-primary, #5865f2) 20%, transparent);
+  color: var(--pico-primary, #7c8cf8);
+}
+
+.ct-empty {
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--pico-muted-color);
+  text-align: center;
+}

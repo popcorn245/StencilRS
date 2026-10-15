@@ -1,0 +1,73 @@
+:host {
+  display: inline-block;
+  vertical-align: middle;
+  --fill-color: var(--color-blue-500, #3b82f6);
+}
+
+.pill-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--size-6, 24px);
+  min-width: var(--size-24, 96px);
+  padding: 0 var(--size-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--pico-muted-border-color, rgba(255, 255, 255, 0.1));
+  background-color: var(--pico-form-element-background-color, rgba(125, 125, 125, 0.05));
+  backdrop-filter: blur(4px);
+  overflow: hidden;
+  font-family: var(--pico-font-family, system-ui, sans-serif);
+  cursor: help;
+  transition: border-color 200ms ease;
+}
+
+.progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background-color: var(--fill-color);
+  opacity: 0.25;
+  transition: width 0.3s ease-in-out, background-color 0.3s ease;
+  z-index: 1;
+}
+
+.label {
+  position: relative;
+  z-index: 2;
+  font-size: var(--scale-000, 0.65rem);
+  font-weight: var(--weight-bold, 700);
+  letter-spacing: var(--letter-lg, 0.025em);
+  /* currentColor (not a hard white) so the label stays legible outside Storybook
+     on both light and dark host backgrounds when --pico-color is undefined. */
+  color: var(--pico-color, currentColor);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* State overrides using Pollen variables */
+.pill-container.warn {
+  border-color: var(--color-yellow-500, #eab308);
+  --fill-color: var(--color-yellow-500, #eab308);
+}
+.pill-container.warn .progress-fill {
+  opacity: 0.45;
+}
+
+.pill-container.crit {
+  border-color: var(--color-red-500, #ef4444);
+  --fill-color: var(--color-red-500, #ef4444);
+}
+.pill-container.crit .progress-fill {
+  opacity: 0.65;
+}
+
+.pill-container.over {
+  border-color: var(--color-red-700, #b91c1c);
+  --fill-color: var(--color-red-700, #b91c1c);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+.pill-container.over .progress-fill {
+  opacity: 0.85;
+}

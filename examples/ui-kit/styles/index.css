@@ -1,0 +1,37 @@
+/*
+ * pico.css is vendored as a sibling (from @picocss/pico@2.1.1) rather than
+ * imported from node_modules. This file is consumed as source by both Vite
+ * (bare specifiers) and Stencil (the `~` resolver), and through the
+ * node_modules/@popcorn245/ui-kit symlink — no single node_modules `@import`
+ * specifier resolves correctly across all of them. A plain sibling import does.
+ * To refresh on a Pico bump: cp node_modules/@picocss/pico/css/pico.css ./pico.css
+ */
+@import "./pico.css";
+@import "./pollen.css";
+@import "./fonts.css";
+/* "Fabulous × popcorn245" design language — re-skins --pico-* and adds brand,
+ * gradient, and motion tokens plus dual (light/dark) theming. Imported last so
+ * it wins over pico + pollen. */
+@import "./theme-fabulous.css";
+/* Editor.js body-portaled chrome (popover/toolbar/tune-menu) dark+light
+ * theming. After theme-fabulous so its tokens are defined first and these
+ * rules win over Editor.js defaults. Reaches every pop-editor consumer. */
+@import "./editor-chrome.css";
+/* valheim-* component family skin layers (--vlh-* token mappings): the `hub`
+ * skin rides the theme-fabulous tokens above; `norse` is the in-universe
+ * public-page palette. Components style ONLY via --vlh-*. */
+@import "./valheim-skins.css";
+
+/* 
+ * Pollen config now generates --pico-* variables that override Pico CSS defaults.
+ * The import order above ensures pollen.css comes after pico.css, so the variables
+ * defined in pollen.config.js take precedence.
+ */
+
+/* Accent color for modern browsers */
+progress,
+[type="checkbox"],
+[type="radio"],
+[type="range"] {
+  accent-color: var(--color-blue);
+}

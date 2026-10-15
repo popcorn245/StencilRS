@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.prg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.prg__opt {
+  appearance: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-form-element-background-color);
+  /* NOT var(--pico-color): Pico redefines --pico-color to primary-inverse
+   * (white) on every <button>, which would make unselected chips invisible.
+   * --ink is our theme's real text colour and isn't hijacked. */
+  color: var(--ink, var(--pico-contrast, currentColor));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.2;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.prg__opt:hover:not(:disabled) {
+  background: var(--pico-secondary-background);
+}
+
+.prg__opt--selected {
+  background: var(--pico-primary, #1976d2);
+  border-color: var(--pico-primary, #1976d2);
+  color: var(--pico-primary-inverse, #fff);
+}
+
+.prg__opt--selected:hover:not(:disabled) {
+  background: var(--pico-primary-hover, var(--pico-primary, #1976d2));
+}
+
+.prg__opt:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.prg__icon {
+  display: inline-flex;
+  align-items: center;
+}

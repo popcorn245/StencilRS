@@ -1,0 +1,85 @@
+/* pop-actions-footer — tier-aware Cancel/Send pair. */
+
+pop-actions-footer {
+  display: block;
+}
+
+.af {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.af button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-pill, 999px);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast, 150ms) var(--ease-soft, ease),
+    border-color var(--dur-fast, 150ms) var(--ease-soft, ease),
+    opacity var(--dur-fast, 150ms) var(--ease-soft, ease);
+}
+.af button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.af button:focus-visible {
+  outline: 2px solid var(--pico-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+.af__cancel {
+  border: 1px solid var(--pico-border-color, rgba(127, 127, 127, 0.3));
+  background: transparent;
+  color: var(--ink-soft, var(--pico-color, inherit));
+}
+.af__submit {
+  border: 1px solid var(--pico-primary, #3b82f6);
+  background: var(--pico-primary, #3b82f6);
+  color: var(--pico-primary-inverse, #fff);
+}
+
+/* sheet — full-width, thumb-friendly */
+.af--sheet {
+  width: 100%;
+}
+.af--sheet button {
+  flex: 1 1 0;
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+}
+
+/* dialog — right-aligned pair */
+.af--dialog {
+  justify-content: flex-end;
+}
+
+/* dock — compact inline pair */
+.af--dock {
+  justify-content: flex-end;
+}
+.af--dock button {
+  padding: 0.38rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+/* busy spinner-in-button */
+.af__spin {
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: af-spin 0.7s linear infinite;
+}
+@keyframes af-spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,236 @@
+:host {
+    display: block;
+    width: 100%;
+}
+
+.message {
+    display: flex;
+    gap: 12px;
+    padding: 4px 0; /* Cozy mode */
+    position: relative; /* Context for actions */
+    color: var(--pico-color);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.message:hover {
+    background: var(--chat-message-hover, #32353b);
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #444;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.message-content-wrapper {
+    flex: 1;
+    min-width: 0;
+}
+
+.message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.message-meta {
+    font-weight: 500;
+    color: var(--pico-h4-color);
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: var(--pico-muted-color);
+}
+
+.message-text {
+    color: var(--pico-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.375rem;
+}
+
+/* Thread Summary */
+.thread-summary {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    margin-left: 10px;
+}
+
+.thread-spine {
+    position: absolute;
+    top: -14px;
+    left: -28px;
+    width: 34px;
+    height: 26px;
+    border-bottom: 2px solid #4f545c;
+    border-left: 2px solid #4f545c;
+    border-bottom-left-radius: 6px;
+    pointer-events: none;
+}
+
+.thread-info {
+    background: var(--pico-code-background-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+}
+
+/* Actions */
+.message-actions-container {
+    position: absolute;
+    top: -16px;
+    right: 16px;
+    background: var(--pico-dropdown-background-color);
+    border: 1px solid #2f3136;
+    border-radius: 4px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+    
+    /* Animation Props */
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-out;
+}
+
+.message:hover .message-actions-container {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.message-actions-container.has-thread {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pico-muted-color);
+    transition: color 0.1s;
+    border-radius: 4px;
+}
+
+/* Visiblity logic inside container */
+.message-actions-container.has-thread .action-btn:not(.thread-visible) {
+    opacity: 0;
+    width: 0;
+    padding: 0;
+    margin: 0;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.message:hover .message-actions-container.has-thread .action-btn:not(.thread-visible) {
+    opacity: 1;
+    width: 32px;
+    margin: 0 4px;
+    pointer-events: auto;
+}
+
+.thread-btn {
+    position: relative;
+}
+
+.thread-btn:hover {
+    color: #dcddde;
+    background: rgba(255,255,255,0.1);
+}
+
+/* Edit/Delete */
+.edit-btn:hover {
+    color: #dcddde;
+}
+.delete-btn:hover {
+    color: #ed4245; /* Red on hover */
+}
+
+/* Edit Mode */
+.edit-mode {
+    background: #40444b;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 4px;
+}
+
+.edit-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #dcddde;
+    font-family: inherit;
+    font-size: 1rem;
+    resize: none;
+    outline: none;
+    min-height: 40px;
+}
+
+.edit-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.edit-hint {
+    font-size: 0.75rem;
+    color: #72767d;
+}
+
+.edit-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.save-edit-btn {
+    background: var(--pico-primary);
+    color: var(--pico-primary-inverse);
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.save-edit-btn:hover {
+    background: #4752c4;
+}
+
+.cancel-edit-btn {
+    background: transparent;
+    color: var(--pico-muted-color);
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+.cancel-edit-btn:hover {
+    text-decoration: underline;
+}

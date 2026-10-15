@@ -1,0 +1,48 @@
+:host {
+  display: inline-flex;
+}
+
+.sb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  line-height: 1;
+  background: color-mix(in srgb, var(--sb-color, var(--pico-muted-color)) 10%, transparent);
+  color: var(--sb-color, var(--pico-muted-color));
+}
+
+/* Chip: pill-shaped with text */
+.sb--chip {
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+.sb--chip.sb--sm {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+}
+
+/* Dot: small circle, no text */
+.sb--dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sb-color, var(--pico-muted-color));
+  padding: 0;
+}
+.sb--dot.sb--sm {
+  width: 6px;
+  height: 6px;
+}
+
+/* Pill: rounded rectangle with text */
+.sb--pill {
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+.sb--pill.sb--sm {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+}

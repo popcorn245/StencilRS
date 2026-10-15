@@ -488,10 +488,15 @@
             "tags": []
           },
           "complexType": {
-            "signature": "() => any",
+            "signature": "() => Promise<any>",
             "parameters": [],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -502,7 +507,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(token: string) => any",
+            "signature": "(token: string) => Promise<any>",
             "parameters": [
               {
                 "name": "token",
@@ -510,8 +515,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -522,7 +532,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(content?: string, citations?: AiCitation[]) => any",
+            "signature": "(content?: string, citations?: AiCitation[]) => Promise<any>",
             "parameters": [
               {
                 "name": "content",
@@ -536,6 +546,10 @@
               }
             ],
             "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
               "AiCitation": {
                 "location": "local",
                 "path": "ui-kit/organisms/ai-chat/ai-chat.tsx",
@@ -547,7 +561,7 @@
                 "id": "ui-kit/organisms/ai-chat/ai-chat.tsx::AiMessage"
               }
             },
-            "return": "any"
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -582,7 +596,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(text: string) => any",
+            "signature": "(text: string) => Promise<any>",
             "parameters": [
               {
                 "name": "text",
@@ -590,8 +604,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         },
@@ -602,7 +621,7 @@
             "tags": []
           },
           "complexType": {
-            "signature": "(text: string) => any",
+            "signature": "(text: string) => Promise<any>",
             "parameters": [
               {
                 "name": "text",
@@ -610,8 +629,13 @@
                 "docs": ""
               }
             ],
-            "references": {},
-            "return": "any"
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
           },
           "internal": false
         }
@@ -877,28 +901,7 @@
       "styleDocs": []
     }
   ],
-  "diagnostics": [
-    {
-      "level": "error",
-      "messageText": "External @Method() beginAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async beginAssistant()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() appendAssistantToken() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async appendAssistantToken()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() endAssistant() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async endAssistant()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() sendMessage() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async sendMessage()."
-    },
-    {
-      "level": "error",
-      "messageText": "External @Method() setInputValue() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async setInputValue()."
-    }
-  ],
+  "diagnostics": [],
   "imports": [
     {
       "path": "@stencil/core/runtime/client/standalone"

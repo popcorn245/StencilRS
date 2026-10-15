@@ -12,6 +12,7 @@ mod eval;
 mod locals;
 pub mod meta;
 mod prop_type;
+mod resolve;
 
 use oxc::allocator::Allocator;
 use oxc::parser::{ParserReturn, Parser};
@@ -53,11 +54,19 @@ fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (Par
     (parsed, diagnostics)
 }
 
-/// Parse one component module and return the metadata of every `@Component` class in it.
+/// Parse one component module and return the metadata of every `@Component` class in it,
+/// as Stencil's single-file `transpileSync` sees it.
 pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
+    analyze_with(source, file_name, false)
+}
+
+/// `analyze`, optionally build-accurate: relative imports followed, lib types known, as a full
+/// `stencil build` sees the component.
+pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool) -> AnalyzeResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, file_name);
-    let analysis = analyze::analyze_program(&parsed.program, source);
+    let resolver = resolve_imports.then(resolve::Resolver::new);
+    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name);
     diagnostics.extend(analysis.diagnostics);
     AnalyzeResult { components: analysis.components, diagnostics }
 }
@@ -66,7 +75,8 @@ pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
-    let analysis = analyze::analyze_program(&parsed.program, source);
+    let resolver = opts.resolve_imports.then(resolve::Resolver::new);
+    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
     diagnostics.extend(analysis.diagnostics);
     let code = match codegen::generate(&parsed.program, source, &analysis.components, opts) {
         Ok(code) => code,

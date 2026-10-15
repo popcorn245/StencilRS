@@ -1,0 +1,160 @@
+:host {
+  display: block;
+  width: 100%;
+  position: relative;
+  font-family: inherit;
+}
+
+.pmi {
+  width: 100%;
+}
+
+.pmi__field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 8px;
+  padding: 4px 4px 4px 10px;
+  background: var(--pico-form-element-background-color, #fff);
+  transition: border-color 0.15s;
+}
+
+.pmi__field:focus-within {
+  border-color: var(--pico-primary, #1976d2);
+}
+
+.pmi__editor {
+  flex: 1;
+  min-height: 28px;
+  outline: none;
+  font-size: 14px;
+  line-height: 28px;
+  color: inherit;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: text;
+}
+
+.pmi__editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--pico-muted-color, #999);
+  pointer-events: none;
+}
+
+.pmi__pill {
+  display: inline-block;
+  background: var(--pico-primary-background, #e3f2fd);
+  color: var(--pico-primary, #1976d2);
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin: 0 2px;
+  font-size: 0.9em;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+
+.pmi__submit {
+  flex: 0 0 auto;
+  /* Center in the (align-items:center) field. Pico gives every <button> a
+     `margin-bottom: var(--pico-spacing)` (~16px), which otherwise shoves the
+     button ~8px above the field's vertical centre — zero it out. */
+  align-self: center;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--grad-brand, linear-gradient(135deg, #4299e1, #e53e3e));
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 3px 10px color-mix(in oklab, var(--brand-blue, #4299e1) 40%, transparent);
+  transition: transform 0.18s var(--ease-soft, ease), box-shadow 0.18s ease, opacity 0.15s ease;
+}
+.pmi__submit svg { display: block; }
+.pmi__submit:hover:not(:disabled) { transform: scale(1.06); }
+.pmi__submit:active:not(:disabled) { transform: scale(0.94); }
+
+.pmi__submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pmi__dropdown {
+  position: fixed;
+  z-index: 10000;
+  background: var(--pico-background-color, #fff);
+  border: 1px solid var(--pico-muted-border-color, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+  min-width: 220px;
+  padding: 4px;
+  font-family: inherit;
+}
+
+.pmi__group-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-muted-color, #999);
+  padding: 6px 10px 2px;
+}
+
+.pmi__opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  color: inherit;
+  font-family: inherit;
+}
+
+.pmi__opt--active {
+  background: var(--pico-secondary-background, #f0f4ff);
+}
+
+.pmi__opt-avatar,
+.pmi__opt-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pico-secondary-background, #f5f5f5);
+  flex-shrink: 0;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.pmi__opt-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pmi__opt-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
