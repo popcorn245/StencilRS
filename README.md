@@ -52,6 +52,13 @@ migrating to v5, how the compiler works and was built, parity, benchmarks, quirk
 cd storybook && npm install && npm run storybook   # http://localhost:6007
 ```
 
+The built Storybook is live, on the tailnet only, at **https://stencilrs.popcorn245.com**. Every
+push to `main` runs [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml):
+[`scripts/ci.sh`](scripts/ci.sh) builds and tests the compiler, then the components (starter and
+ui-kit: tests, then a stencilrs library build), then the Storybook, and the workflow publishes
+it. Pull requests run the same build without publishing. Run the CI build locally in the same
+image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts/ci.sh`.
+
 ## Plan
 
 1. **Study** – catalogue every v5 transformer: input shape, emitted code, and whether it needs
