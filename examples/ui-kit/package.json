@@ -17,15 +17,19 @@
     "test": "vitest run",
     "test:stencil": "cross-env COMPILER=stencil vitest run",
     "compare": "node compare.mjs",
-    "build": "stencil build"
+    "build": "stencil build",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",
     "@stencil/cli": "5.0.0-beta.25",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
+    "@vitest/browser-playwright": "5.0.4",
     "cross-env": "10.1.0",
     "happy-dom": "21.0.1",
+    "jsdom": "27.4.0",
+    "playwright": "1.64.1",
     "typescript": "6.0.3",
     "vite": "8.3.4",
     "vitest": "5.0.4"

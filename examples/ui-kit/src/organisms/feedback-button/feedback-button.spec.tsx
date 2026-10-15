@@ -147,8 +147,9 @@ describe('pop-feedback-button', () => {
     expect(page.root.querySelector('pop-async-view')).not.toBeNull();
     const footer = page.root.querySelector('pop-actions-footer') as HTMLElement & { submitDisabled?: boolean };
     expect(footer.getAttribute('slot')).toBe('actions');
-    // No native <form> — submission flows through popSubmit only.
-    expect(page.root.querySelector('form')).toBeNull();
+    // No native <form> of its own — submission flows through popSubmit only. (Child components
+    // render for real here; the scoped class marks elements this component rendered.)
+    expect(page.root.querySelector('form.sc-pop-feedback-button')).toBeNull();
     // Both required fields empty → Submit disabled.
     expect(footer.submitDisabled).toBe(true);
   });

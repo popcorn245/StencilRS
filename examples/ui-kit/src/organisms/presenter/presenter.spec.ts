@@ -99,19 +99,16 @@ describe('pop-presenter', () => {
     const sheet = page.root.querySelector('pop-bottom-sheet') as HTMLElement;
     expect(sheet).not.toBeNull();
 
-    // The inner overlay's own (bubbling) popClose — the harness wires the JSX
-    // onPopClose listener under the lowercased event name.
-    const innerSpy = vi.fn();
-    const outerSpy = vi.fn();
-    page.root.addEventListener('popclose', innerSpy); // the inner event, if it bubbled
-    page.root.addEventListener('popClose', outerSpy); // the presenter's re-emit
+    // The inner overlay's own (bubbling) popClose. The presenter stops it and re-emits its
+    // own, so a listener on the presenter sees exactly ONE popClose (two would mean the
+    // inner event also bubbled through).
+    const spy = vi.fn();
+    page.root.addEventListener('popClose', spy);
 
-    sheet.dispatchEvent(new CustomEvent('popclose', { bubbles: true }));
+    sheet.dispatchEvent(new CustomEvent('popClose', { bubbles: true, composed: true }));
 
-    // Inner event was stopped at the sheet → never reaches the presenter root.
-    expect(innerSpy).not.toHaveBeenCalled();
-    // Presenter re-emits exactly one popClose for the consumer.
-    expect(outerSpy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][0].target).toBe(page.root); // the presenter's re-emit, not the sheet's
   });
 
   it('shows the "Dock to side" affordance only in a wide forced dialog, and emits popRedock', async () => {

@@ -60,8 +60,8 @@ describe('pop-floor-map — geometry-driven rooms', () => {
     const page = await newSpecPage({ components: [PopFloorMap], html: mk() });
     const select = page.root.querySelector('.fm__floor-select') as HTMLSelectElement;
     expect(select).toBeTruthy();
-    const selected = select.querySelector('option[selected]') as HTMLOptionElement;
-    expect(selected.value).toBe('main');
+    // `selected` is set as a property, not an attribute.
+    expect(select.value).toBe('main');
   });
 
   it('renders the basement in the floor switcher', async () => {

@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, textOf } from '../../test-utils/spec-page';
 import { AppShell } from './app-shell';
 
 describe('pop-app-shell', () => {
@@ -9,7 +9,7 @@ describe('pop-app-shell', () => {
     });
     const head = page.root.querySelector('.shell__head')!;
     expect(head).not.toBeNull();
-    expect(page.root.textContent).toContain('Settings');
+    expect(textOf(page.root)).toContain('Settings');
   });
 
   it('honours the headingLevel prop', async () => {

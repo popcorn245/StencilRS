@@ -72,12 +72,12 @@ describe('pop-task-controls', () => {
     expect(page.root.querySelector('.ptc__dd-menu')).toBeNull();
   });
 
-  it('emits sortChange and statusChange from their dropdowns', async () => {
+  it('emits sortChange and taskStatusChange from their dropdowns', async () => {
     const page = await newSpecPage({ components: [PopTaskControls], html: mk() });
     const sortEvents: any[] = [];
     const statusEvents: any[] = [];
     page.root.addEventListener('sortChange', (e: any) => sortEvents.push(e.detail));
-    page.root.addEventListener('statusChange', (e: any) => statusEvents.push(e.detail));
+    page.root.addEventListener('taskStatusChange', (e: any) => statusEvents.push(e.detail));
     const dds = page.root.querySelectorAll('.ptc__dd');
 
     (dds[1].querySelector('.ptc__dd-btn') as HTMLButtonElement).click();

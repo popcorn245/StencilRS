@@ -19,11 +19,15 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.ts'],
     globals: true,
     include: ['src/**/*.spec.ts', 'src/**/*.spec.tsx'],
     // One JSON report per compiler, for compare.mjs.
     reporters: ['default', ['json', { outputFile: `results/${compiler}.json` }]],
+    // Fake timers leave requestAnimationFrame real: Stencil renders on animation frames, so
+    // components keep rendering while a spec's setTimeout / setInterval / Date are frozen.
+    fakeTimers: { toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] },
     // Some specs leave timers or open handles behind; keep runs bounded.
     testTimeout: 10_000,
   },

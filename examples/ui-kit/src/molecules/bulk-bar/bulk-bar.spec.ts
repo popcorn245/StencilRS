@@ -9,8 +9,9 @@ describe('pop-bulk-bar', () => {
         <button class="bulk__act" id="move">Move</button>
       </pop-bulk-bar>`,
     });
-    expect(page.root.textContent).toContain('3');
-    expect(page.root.textContent).toContain('cards');
+    const count = page.root.querySelector('.bulk__count')!.textContent;
+    expect(count).toContain('3');
+    expect(count).toContain('cards');
     expect(page.root.querySelector('#move')).not.toBeNull();
     expect(page.root.getAttribute('role')).toBe('toolbar');
   });

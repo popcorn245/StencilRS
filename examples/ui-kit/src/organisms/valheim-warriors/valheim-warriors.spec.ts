@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { ValheimWarriors } from './valheim-warriors';
 
 const PLAYERS = JSON.stringify([
@@ -35,8 +35,9 @@ describe('valheim-warriors', () => {
   it('renders offline state', async () => {
     const page = await newSpecPage({
       components: [ValheimWarriors],
-      html: `<valheim-warriors players='[]' online="false"></valheim-warriors>`,
+      html: `<valheim-warriors players='[]'></valheim-warriors>`,
     });
+    await setProps(page, { online: false });
     expect(page.root.querySelector('.vlh-count').textContent).toContain('offline');
     expect(page.root.querySelector('.vw-health').textContent).toContain('unreachable');
   });

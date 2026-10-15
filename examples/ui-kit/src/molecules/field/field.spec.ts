@@ -21,7 +21,7 @@ describe('pop-field type→widget mapping', () => {
     const page = await fieldPage({ key: 'topic', label: 'Topic', type: 'text', required: true });
     const ff = page.root.querySelector('pop-fillable-field');
     expect(ff).not.toBeNull();
-    expect(ff?.getAttribute('label')).toBe('Topic *');
+    expect((ff as any)?.label).toBe('Topic *');
   });
 
   it('select → pop-fillable-field with options (optional gets a "—" placeholder)', async () => {
@@ -84,7 +84,7 @@ describe('pop-field type→widget mapping', () => {
     const page = await fieldPage({ key: 'loc', label: 'Location', type: 'location', defaultValue: '63385' });
     const loc = page.root.querySelector('pop-location');
     expect(loc).not.toBeNull();
-    expect(loc?.getAttribute('default')).toBe('63385');
+    expect((loc as any)?.default).toBe('63385');
   });
 
   it('depth → slider + ticks + count box; preset emits {depth, maxSources:""}', async () => {

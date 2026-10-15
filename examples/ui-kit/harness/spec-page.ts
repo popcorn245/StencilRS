@@ -1,5 +1,3 @@
-import { vi } from 'vitest';
-
 /**
  * `newSpecPage` for the ui-kit specs, on real compiled components.
  *
@@ -24,42 +22,39 @@ export interface SpecPageOptions {
 type Ready = Element & { componentOnReady?: () => Promise<unknown> };
 
 // Captured at import, before a spec can call `vi.useFakeTimers()`: waiting must use real time.
-// Under fake timers Stencil's own scheduling is frozen too, so a spec drives it with
-// `vi.advanceTimersByTime` / `vi.runAllTimers`, and this helper only yields.
+// (requestAnimationFrame is left real under fake timers; see vitest.config.ts.)
 const realSetTimeout = globalThis.setTimeout.bind(globalThis);
 const realRaf = globalThis.requestAnimationFrame?.bind(globalThis);
-const timersAreFake = () => globalThis.setTimeout !== realSetTimeout;
-const nextFrame = () =>
-  new Promise<void>((resolve) => (timersAreFake() || !realRaf ? realSetTimeout(resolve, 16) : realRaf(() => resolve())));
+const nextFrame = () => new Promise<void>((resolve) => (realRaf ? realRaf(() => resolve()) : realSetTimeout(resolve, 16)));
 const macrotask = () => new Promise<void>((resolve) => realSetTimeout(resolve));
 
 async function allReady(container: Element) {
   const els = [container, ...container.querySelectorAll('*')] as Ready[];
-  const ready = Promise.all(els.map((el) => el.componentOnReady?.()));
-  if (!vi.isFakeTimers()) {
-    await ready;
-    return;
-  }
-  // Stencil schedules the first render on a (fake) frame: step frames until it lands.
-  let done = false;
-  void ready.then(() => (done = true));
-  for (let i = 0; i < 50 && !done; i++) {
-    vi.advanceTimersToNextFrame();
-    await macrotask();
-  }
+  // requestAnimationFrame stays real under fake timers (vitest.config.ts), so this resolves
+  // without moving a spec's fake clock.
+  await Promise.all(els.map((el) => el.componentOnReady?.()));
 }
 
 /** Let Stencil's batched updates (queued to the next frame) run, twice for chained updates. */
 async function settle(container: Element) {
   for (let i = 0; i < 2; i++) {
-    if (vi.isFakeTimers()) vi.advanceTimersToNextFrame();
-    else await nextFrame();
+    await nextFrame();
     await macrotask();
   }
   await allReady(container);
 }
 
+let componentsLoaded: Promise<unknown> | undefined;
+
+/** Register every component once per spec file (see vitest.setup.ts). */
+function loadAllComponents(): Promise<unknown> {
+  const modules = (globalThis as { __uiKitComponents?: Record<string, () => Promise<unknown>> }).__uiKitComponents ?? {};
+  componentsLoaded ??= Promise.all(Object.values(modules).map((load) => load()));
+  return componentsLoaded;
+}
+
 export async function newSpecPage<T = any>(opts: SpecPageOptions): Promise<SpecPage<T>> {
+  await loadAllComponents();
   document.body.innerHTML = opts.html;
   const root = document.body.firstElementChild as SpecPage['root'];
   await allReady(document.body);
@@ -71,3 +66,22 @@ export async function newSpecPage<T = any>(opts: SpecPageOptions): Promise<SpecP
     waitForChanges: () => settle(document.body),
   };
 }
+
+/**
+ * Set props as properties and re-render. Stencil v5 no longer reads the attribute string
+ * `"false"` as `false` for boolean props (`show-header="false"` is now true, as in HTML), so
+ * specs turn such props off here instead.
+ */
+export async function setProps(page: SpecPage, props: Record<string, unknown>): Promise<void> {
+  Object.assign(page.root, props);
+  await page.waitForChanges();
+}
+
+const nativeTextContent = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent')!.get!;
+
+/**
+ * Everything the element renders, as text. Stencil v5 patches `textContent` on a scoped
+ * component that has slots to return only its slotted (light DOM) content, as a shadow root
+ * would; this reads the DOM the component actually rendered.
+ */
+export const textOf = (el: Node | null | undefined): string => (el ? (nativeTextContent.call(el) as string) : '');

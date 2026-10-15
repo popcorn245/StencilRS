@@ -44,7 +44,7 @@ describe('pop-command-palette', () => {
     });
     const iconHost = page.root.querySelector('.cp-row-icon pop-brand-icon');
     expect(iconHost).not.toBeNull();
-    expect(iconHost?.getAttribute('name')).toBe('edit');
+    expect((iconHost as any)?.name).toBe('edit');
   });
 
   it('falls back to the "dot-outline" brand-icon when a row has no `icon`', async () => {
@@ -55,6 +55,6 @@ describe('pop-command-palette', () => {
       ])}"></pop-command-palette>`,
     });
     const iconHost = page.root.querySelector('.cp-row-icon pop-brand-icon');
-    expect(iconHost?.getAttribute('name')).toBe('dot-outline');
+    expect((iconHost as any)?.name).toBe('dot-outline');
   });
 });

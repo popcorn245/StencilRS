@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopWeatherPanel } from './weather-panel';
 
 const forecast = {
@@ -64,12 +64,14 @@ describe('pop-weather-panel', () => {
   it('slots a host-supplied place control into the current-conditions card', async () => {
     const page = await newSpecPage({
       components: [PopWeatherPanel],
-      html: `<pop-weather-panel show-header="false" data="${asAttr(forecast)}"><span slot="place" class="probe-place">St. Charles</span></pop-weather-panel>`,
+      html: `<pop-weather-panel data="${asAttr(forecast)}"><span slot="place" class="probe-place">St. Charles</span></pop-weather-panel>`,
     });
+    await setProps(page, { showHeader: false });
     // The place slot wrapper renders inside the current-conditions card…
     const place = page.root.querySelector('.wx-now');
     expect(place?.querySelector('.wx-now-place')).not.toBeNull();
-    expect(place?.querySelector('slot[name="place"]')).not.toBeNull();
+    // Scoped components emulate <slot>: the slotted control lands inside the place wrapper.
+    expect(page.root.querySelector('.probe-place')?.closest('.wx-now-place')).not.toBeNull();
     // …and the host-slotted control is accepted (projected into the panel).
     expect(page.root.querySelector('.probe-place')?.textContent).toBe('St. Charles');
   });
@@ -121,8 +123,9 @@ describe('pop-weather-panel', () => {
   it('hides its own header when showHeader is false (host supplies chrome)', async () => {
     const page = await newSpecPage({
       components: [PopWeatherPanel],
-      html: `<pop-weather-panel show-header="false" data="${asAttr(forecast)}"></pop-weather-panel>`,
+      html: `<pop-weather-panel data="${asAttr(forecast)}"></pop-weather-panel>`,
     });
+    await setProps(page, { showHeader: false });
     expect(page.root.querySelector('.wx-header')).toBeNull();
     // Body still renders (current + tabs + rows).
     expect(page.root.querySelector('.wx-now')).not.toBeNull();

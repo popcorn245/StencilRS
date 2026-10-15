@@ -49,6 +49,7 @@ function fakeStream(): MediaStream {
   return { getTracks: () => [{ stop() {} }] } as unknown as MediaStream;
 }
 
+// Stencil names the attribute for `draw2Url` with toDashCase: `draw-2-url` (a dash before digits too).
 describe('pop-card-scanner', () => {
   beforeEach(() => {
     h.warm.mockReset().mockResolvedValue(false);
@@ -61,7 +62,7 @@ describe('pop-card-scanner', () => {
   it('runs the LNA permission warm on open and keeps streaming false while draw2 is unreachable', async () => {
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
     });
     await flush();
     // The warm long-leash probe is invoked so Chrome's tailnet prompt can be
@@ -89,7 +90,7 @@ describe('pop-card-scanner', () => {
     // does NOT flip/emit — streaming stays off (recoverably).
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
     });
     await flush();
     expect((page.rootInstance as PopCardScanner).streaming).toBe(false);
@@ -120,7 +121,7 @@ describe('pop-card-scanner', () => {
     stubCanvas();
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://funnel.test" draw2-url-fallback="https://tailnet.test" mode="scan"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://funnel.test" draw-2-url-fallback="https://tailnet.test" mode="scan"></pop-card-scanner>`,
     });
     await flush();
     const inst = page.rootInstance as PopCardScanner & { activeDraw2Url?: string };
@@ -145,7 +146,7 @@ describe('pop-card-scanner', () => {
     stubCanvas();
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
     });
     await flush();
     const inst = page.rootInstance as PopCardScanner & { activeDraw2Url?: string };
@@ -248,7 +249,7 @@ describe('pop-card-scanner', () => {
     // does NOT re-POST the SAME card every steady frame while the worker catches up.
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://draw2.test" mode="capture"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://draw2.test" mode="capture"></pop-card-scanner>`,
     });
     const inst = page.rootInstance as any;
     // A live video + streaming so the tick WOULD otherwise run a detect/capture.
@@ -271,7 +272,7 @@ describe('pop-card-scanner', () => {
   it('demoting streaming retracts the live detection and emits streamingChange(false)', async () => {
     const page = await newSpecPage({
       components: [PopCardScanner],
-      html: `<pop-card-scanner draw2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
+      html: `<pop-card-scanner draw-2-url="https://draw2.test" mode="scan"></pop-card-scanner>`,
     });
     const inst = page.rootInstance as PopCardScanner & { setStreaming(v: boolean): void };
     const streamingEvents: boolean[] = [];

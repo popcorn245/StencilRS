@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopSpacePicker, Space } from './space-picker';
 
 const SPACES: Space[] = [
@@ -104,8 +104,9 @@ describe('pop-space-picker', () => {
   it('does not show the New space button when allowCreate is false', async () => {
     const page = await newSpecPage({
       components: [PopSpacePicker],
-      html: `<pop-space-picker allow-create="false"></pop-space-picker>`,
+      html: `<pop-space-picker></pop-space-picker>`,
     });
+    await setProps(page, { allowCreate: false });
     (page.rootInstance as any).open = true;
     await page.waitForChanges();
     expect(page.root.querySelector('.psp__new')).toBeNull();

@@ -138,8 +138,10 @@ describe('pop-snout-work', () => {
     const page = await newSpecPage({ components: [PopSnoutWork], html: html() });
     const bar = page.root.querySelector('pop-tab-bar');
     expect(bar).not.toBeNull();
-    expect(bar!.getAttribute('activeTab') ?? bar!.getAttribute('active-tab')).toBe('team');
-    const tabsJson = JSON.parse(bar!.getAttribute('tabs')!);
+    // Child components receive props as properties.
+    const tabBar = bar as HTMLElement & { activeTab?: string; tabs?: unknown };
+    expect(tabBar.activeTab).toBe('team');
+    const tabsJson = (typeof tabBar.tabs === 'string' ? JSON.parse(tabBar.tabs) : tabBar.tabs) as { value: string; label: string; count: number }[];
     expect(tabsJson.map((t: { value: string }) => t.value)).toEqual(['action', 'me', 'team']);
     // Live per-tab MATCH counts from the loaded tasks (a,b,c,d visible; a inAction; a,b are me).
     const team = tabsJson.find((t: { value: string }) => t.value === 'team');

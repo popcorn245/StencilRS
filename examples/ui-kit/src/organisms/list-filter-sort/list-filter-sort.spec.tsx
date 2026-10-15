@@ -75,7 +75,8 @@ describe('pop-list-filter-sort', () => {
     });
     // the pass-through slot sits INSIDE the pop-search-filter element and is
     // rendered unconditionally (scoped-slot rule)
-    expect(page.root.querySelector('pop-search-filter slot[name="input"]')).toBeTruthy();
+    // (scoped components emulate <slot>: the widget ends up inside pop-search-filter)
+    expect(page.root.querySelector('#mi')?.closest('pop-search-filter')).toBeTruthy();
     // slotted widget survives (scoped-mode light-DOM projection)
     expect(page.root.querySelector('#mi')).toBeTruthy();
   });

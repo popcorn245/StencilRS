@@ -31,7 +31,7 @@ describe('pop-tile', () => {
     });
     const icon = page.root.querySelector('pop-icon.tile__icon');
     expect(icon).not.toBeNull();
-    expect(icon?.getAttribute('name')).toBe('add');
+    expect((icon as any)?.name).toBe('add');
   });
 
   it('reflects pressed via class + aria-pressed', async () => {
@@ -68,7 +68,7 @@ describe('pop-tile', () => {
     });
     const del = page.root.querySelector('.tile__delete') as HTMLButtonElement;
     expect(del).not.toBeNull();
-    expect(del.querySelector('pop-icon')?.getAttribute('name')).toBe('close');
+    expect((del.querySelector('pop-icon') as any)?.name).toBe('close');
     const tap = vi.fn();
     const remove = vi.fn();
     page.root.addEventListener('popTap', tap);
@@ -82,8 +82,11 @@ describe('pop-tile', () => {
   it('honours deletable=false and a custom delete icon/label', async () => {
     const none = await newSpecPage({
       components: [PopTile],
-      html: `<pop-tile label="Settings" editing deletable="false"></pop-tile>`,
+      html: `<pop-tile label="Settings" editing></pop-tile>`,
     });
+    // v5: the attribute string "false" no longer turns a boolean prop off; set the property.
+    none.root.deletable = false;
+    await none.waitForChanges();
     expect(none.root.querySelector('.tile__delete')).toBeNull();
 
     const custom = await newSpecPage({
@@ -92,7 +95,7 @@ describe('pop-tile', () => {
     });
     const del = custom.root.querySelector('.tile__delete') as HTMLButtonElement;
     expect(del.getAttribute('aria-label')).toBe('Hide');
-    expect(del.querySelector('pop-icon')?.getAttribute('name')).toBe('eye-off-outline');
+    expect((del.querySelector('pop-icon') as any)?.name).toBe('eye-off-outline');
   });
 
   it('uses tileTitle for the face tooltip when provided', async () => {

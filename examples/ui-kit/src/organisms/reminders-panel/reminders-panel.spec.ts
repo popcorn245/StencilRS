@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopRemindersPanel } from './reminders-panel';
 
 const now = Date.now();
@@ -200,8 +200,9 @@ describe('pop-reminders-panel', () => {
     });
     expect(withHeader.root.querySelector('.rp-head')).not.toBeNull();
     expect(withHeader.root.querySelector('.rp-title')?.textContent).toBe('Reminders');
-    // show-header="false" (the default in html()) → no standalone head.
+    // showHeader false → no standalone head (v5 reads the attribute string "false" as true, so set the property).
     const noHeader = await newSpecPage({ components: [PopRemindersPanel], html: html() });
+    await setProps(noHeader, { showHeader: false });
     expect(noHeader.root.querySelector('.rp-head')).toBeNull();
   });
 });

@@ -21,15 +21,31 @@ node coverage.mjs       # which files stencilrs compiles vs hands to Stencil
 | `stencil build` (v5.0.0-beta.25, TypeScript 6.0.3) | **0 errors, 0 warnings**, ~12 s |
 | stencilrs metadata vs the full build (`check-build.mjs`) | **136 / 136 components identical** (props incl. types, attributes, reflect, defaults; states, events, methods, listeners, watchers, element ref, encapsulation) |
 | stencilrs vs Stencil's `transpileSync`, per file (`../../parity`) | **136 / 136 identical** metadata, diagnostics and code |
-| Spec suite, Stencil v5 | 793 / 874 |
-| Spec suite, stencilrs | 793 / 874, **no test differs** |
+| Spec suite (jsdom), Stencil v5 | **874 / 874** |
+| Spec suite (jsdom), stencilrs | **874 / 874**, no test differs |
+| Spec suite in headless Chrome (`npm run test:browser`) | 863 / 874 (the 11 mock browser APIs only jsdom lets a test replace) |
 | Files stencilrs compiles itself | 136 / 136 (no fallback to Stencil) |
 
-The 81 failing specs fail identically with both compilers: they were written for the ui-kit's
-mock renderer (decorators stubbed out, vnodes drawn by hand into light DOM), so they assume
-things real components don't do: children a spec never imports, `shadow` components rendering
-into light DOM, events named after the property. A few rely on v4 behaviour v5 changed: the
-attribute string `"false"` no longer turns a boolean prop off.
+## Making the specs green
+
+The specs were written for the ui-kit's mock renderer (decorators stubbed out, vnodes drawn by
+hand into light DOM). Against real compiled components 81 failed with either compiler. Fixes:
+
+- **Harness** (`harness/spec-page.ts`, `vitest.setup.ts`): every component is registered, as in an
+  app, so children render for real; components load in `beforeAll` after the spec's `vi.mock`s;
+  animation frames run on the real clock so `vi.useFakeTimers()` doesn't freeze rendering; jsdom
+  (the ui-kit's original environment) instead of happy-dom.
+- **Real DOM, not the mock's**: child components get props as properties (`(el as any).name`, not
+  `getAttribute('name')`); `shadow` components are queried through `shadowRoot`; scoped
+  components emulate `<slot>` (assert where slotted content lands) and v5 patches their
+  `textContent` to the slotted content (`textOf()` reads what they rendered); `<option selected>`
+  is a property; `draw2Url`'s attribute is `draw-2-url` (toDashCase puts a dash before digits);
+  array props have no attribute (set the property).
+- **Stencil v5**: the attribute string `"false"` no longer turns a boolean prop off
+  (`setProps(page, { showHeader: false })`).
+- **Stale specs**: the component changed and the spec never caught up (task-list bucket keys,
+  task-controls' `taskStatusChange` event).
+- **Vitest 5**: a mock implementation used with `new` must be a `function`, not an arrow.
 
 ## Migration to v5 (what changed)
 

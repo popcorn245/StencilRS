@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { ValheimBossSchedule } from './valheim-boss-schedule';
 
 const BOSSES = JSON.stringify([
@@ -112,8 +112,9 @@ describe('valheim-boss-schedule', () => {
   it('showList=false renders only the glance (target + rsvp, no list)', async () => {
     const page = await newSpecPage({
       components: [ValheimBossSchedule],
-      html: `<valheim-boss-schedule bosses='${BOSSES}' show-list="false"></valheim-boss-schedule>`,
+      html: `<valheim-boss-schedule bosses='${BOSSES}'></valheim-boss-schedule>`,
     });
+    await setProps(page, { showList: false });
     expect(page.root.querySelector('.vbs-target')).not.toBeNull();
     expect(page.root.querySelector('.vbs-list')).toBeNull();
   });

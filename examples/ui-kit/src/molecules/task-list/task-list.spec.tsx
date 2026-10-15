@@ -3,6 +3,12 @@ import { PopTaskList } from './task-list';
 
 const today = new Date();
 today.setHours(0, 0, 0, 0);
+/** The bucket key the component gives a droppable day bucket: `date:<local YYYY-MM-DD>`. */
+const dayKey = (offset: number) => {
+  const d = new Date(today.getTime());
+  d.setDate(d.getDate() + offset);
+  return `date:${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const isoDay = (offset: number) => {
   const d = new Date(today.getTime());
   d.setDate(d.getDate() + offset);
@@ -50,7 +56,8 @@ describe('pop-task-list', () => {
         html: `<pop-task-list mode="timeline" tasks='[]'></pop-task-list>`,
       });
       expect(page.root.querySelector('.task-list--timeline')).toBeTruthy();
-      expect(page.root.querySelector('.task-list__anchor')!.textContent).toContain('TODAY');
+      // The anchor pill reads "Today" + the date (upper-cased by CSS, not in the DOM).
+      expect(page.root.querySelector('.task-list__anchor')!.textContent).toMatch(/today/i);
     });
 
     it('buckets tasks into Overdue / Today / Tomorrow / Later', async () => {
@@ -66,10 +73,11 @@ describe('pop-task-list', () => {
       });
       const bucketKeys = Array.from(page.root.querySelectorAll('[data-bucket]'))
         .map(el => (el as HTMLElement).dataset.bucket);
+      // Droppable day buckets carry the drop key the host applies (date:<day> / date:none).
       expect(bucketKeys).toContain('overdue');
-      expect(bucketKeys).toContain('today');
-      expect(bucketKeys).toContain('tomorrow');
-      expect(bucketKeys).toContain('inbox');
+      expect(bucketKeys).toContain(dayKey(0));
+      expect(bucketKeys).toContain(dayKey(1));
+      expect(bucketKeys).toContain('date:none');
     });
 
     it('hides done tasks by default but surfaces today-completed in today bucket', async () => {
@@ -83,7 +91,7 @@ describe('pop-task-list', () => {
         components: [PopTaskList],
         html: `<pop-task-list mode="timeline" tasks='${tasks}'></pop-task-list>`,
       });
-      const todayBucket = page.root.querySelector('[data-bucket="today"]')!;
+      const todayBucket = page.root.querySelector(`[data-bucket="${dayKey(0)}"]`)!;
       const todayIds = Array.from(todayBucket.querySelectorAll('[data-task-id]'))
         .map(el => (el as HTMLElement).dataset.taskId);
       expect(todayIds).toContain('o');

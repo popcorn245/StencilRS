@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopSlideshow } from './slideshow';
 
 // Mock reveal.js
@@ -13,7 +13,8 @@ const mockReveal = {
 };
 
 vi.mock('reveal.js', () => {
-  return { default: vi.fn().mockImplementation(() => mockReveal) };
+  // A `function`, not an arrow: Vitest 4+ calls mock implementations with `new` as constructors.
+  return { default: vi.fn().mockImplementation(function () { return mockReveal; }) };
 });
 
 describe('pop-slideshow', () => {
@@ -49,8 +50,9 @@ describe('pop-slideshow', () => {
   it('hides the fullscreen button when fullscreen prop is false', async () => {
     const page = await newSpecPage({
       components: [PopSlideshow],
-      html: `<pop-slideshow fullscreen="false"><div>Slide</div></pop-slideshow>`,
+      html: `<pop-slideshow><div>Slide</div></pop-slideshow>`,
     });
+    await setProps(page, { fullscreen: false });
 
     const btn = page.root.querySelector('.fullscreen-btn');
     expect(btn).toBeNull();
@@ -68,8 +70,9 @@ describe('pop-slideshow', () => {
   it('applies fullpage class when embedded is false', async () => {
     const page = await newSpecPage({
       components: [PopSlideshow],
-      html: `<pop-slideshow embedded="false"><div>Slide</div></pop-slideshow>`,
+      html: `<pop-slideshow><div>Slide</div></pop-slideshow>`,
     });
+    await setProps(page, { embedded: false });
 
     expect(page.root.classList.contains('is-fullpage')).toBe(true);
   });

@@ -35,10 +35,14 @@ describe('pop-thread-select', () => {
   });
 
   it('marks the value as selected', async () => {
-    const page = await mount({ threads, value: 't-kitchen' });
-    const selected = Array.from(page.root.querySelectorAll('option')).filter((o) =>
-      o.hasAttribute('selected'),
-    );
+    // Options first, then the value. Setting both at once also passes in Chrome
+    // (`npm run test:browser`), but jsdom resolves two selected options inserted together
+    // differently from browsers; a value change on rendered options is unambiguous everywhere.
+    const page = await mount({ threads });
+    page.rootInstance.value = 't-kitchen';
+    await page.waitForChanges();
+    // Stencil sets `selected` as a property, not an attribute.
+    const selected = Array.from(page.root.querySelectorAll('option')).filter((o) => (o as HTMLOptionElement).selected);
     expect(selected).toHaveLength(1);
     expect(selected[0].getAttribute('value')).toBe('t-kitchen');
   });

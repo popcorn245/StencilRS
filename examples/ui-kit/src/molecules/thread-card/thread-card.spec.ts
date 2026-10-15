@@ -48,7 +48,8 @@ describe('pop-thread-card', () => {
 
   it('renders every action when live and emits popCardAction on tap', async () => {
     const page = await mount(payload, { renderer: 'pop-thread-card-timer', actions });
-    const labels = Array.from(page.root.querySelectorAll('button')).map((b) =>
+    // The wrapper's own action buttons (the inner renderer draws its own controls too).
+    const labels = Array.from(page.root.querySelectorAll('.tcw__actions > button')).map((b) =>
       b.getAttribute('aria-label'),
     );
     expect(labels).toEqual(['Complete', 'Open panel']);

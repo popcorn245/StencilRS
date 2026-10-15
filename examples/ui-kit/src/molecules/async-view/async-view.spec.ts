@@ -41,8 +41,8 @@ describe('pop-async-view', () => {
       components: [PopAsyncView],
       html: `<pop-async-view state="empty" empty-label="No tags yet" error-label="Fetch failed"></pop-async-view>`,
     });
-    expect(page.root.querySelector('pop-empty-state')?.getAttribute('message')).toBe('No tags yet');
-    expect(page.root.querySelector('pop-error-state')?.getAttribute('heading')).toBe('Fetch failed');
+    expect((page.root.querySelector('pop-empty-state') as any)?.message).toBe('No tags yet');
+    expect((page.root.querySelector('pop-error-state') as any)?.heading).toBe('Fetch failed');
   });
 
   it('re-emits the inner retry as popRetry', async () => {

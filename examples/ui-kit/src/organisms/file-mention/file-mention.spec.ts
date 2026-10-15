@@ -6,23 +6,23 @@ const FILES = JSON.stringify(['src/server/ollama.ts', 'src/server/modelRouter.ts
 describe('pop-file-mention', () => {
   it('renders a textarea', async () => {
     const page = await newSpecPage({ components: [PopFileMention], html: `<pop-file-mention></pop-file-mention>` });
-    expect(page.root.querySelector('textarea')).toBeTruthy();
+    expect(page.root.shadowRoot.querySelector('textarea')).toBeTruthy();
   });
 
   it('dropdown is hidden when no files prop', async () => {
     const page = await newSpecPage({ components: [PopFileMention], html: `<pop-file-mention></pop-file-mention>` });
-    expect(page.root.querySelector('.dropdown')).toBeFalsy();
+    expect(page.root.shadowRoot.querySelector('.dropdown')).toBeFalsy();
   });
 
   it('applies disabled attribute to textarea', async () => {
     const page = await newSpecPage({ components: [PopFileMention], html: `<pop-file-mention disabled="true"></pop-file-mention>` });
-    const ta = page.root.querySelector('textarea') as HTMLTextAreaElement;
+    const ta = page.root.shadowRoot.querySelector('textarea') as HTMLTextAreaElement;
     expect(ta.disabled).toBe(true);
   });
 
   it('sets placeholder on textarea', async () => {
     const page = await newSpecPage({ components: [PopFileMention], html: `<pop-file-mention placeholder="Type here"></pop-file-mention>` });
-    const ta = page.root.querySelector('textarea') as HTMLTextAreaElement;
+    const ta = page.root.shadowRoot.querySelector('textarea') as HTMLTextAreaElement;
     expect(ta.placeholder).toBe('Type here');
   });
 

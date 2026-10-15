@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopSearchFilter } from './search-filter';
 
 const FILTERS = JSON.stringify([
@@ -180,8 +180,9 @@ describe('pop-search-filter', () => {
     ]);
     const page = await newSpecPage({
       components: [PopSearchFilter],
-      html: `<pop-search-filter filters='${activeFilters}' debounce="0" show-clear="false"></pop-search-filter>`,
+      html: `<pop-search-filter filters='${activeFilters}' debounce="0"></pop-search-filter>`,
     });
+    await setProps(page, { showClear: false });
     (page.root.querySelector('.psf__funnel') as HTMLButtonElement).click();
     await page.waitForChanges();
     expect(page.root.querySelector('.psf__clear')).toBeNull();
@@ -192,8 +193,9 @@ describe('pop-search-filter', () => {
       components: [PopSearchFilter],
       html: `<pop-search-filter filters='${FILTERS}' debounce="0"><input slot="input" id="custom" /></pop-search-filter>`,
     });
-    // The input slot itself is ALWAYS rendered (scoped-slot rule).
-    expect(page.root.querySelector('slot[name="input"]')).toBeTruthy();
+    // The input slot is ALWAYS rendered (scoped-slot rule). Scoped components emulate <slot>,
+    // so look for the slotted widget inside the slot's wrapper rather than a <slot> element.
+    expect(page.root.querySelector('#custom')?.parentElement?.classList.contains('psf__slot')).toBe(true);
     // The harness appends slotted children AFTER the first render (mirroring
     // late projection); the didLoad recheck flags it — the next render flips
     // into slot mode.

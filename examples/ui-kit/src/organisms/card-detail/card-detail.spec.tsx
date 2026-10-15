@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, textOf } from '../../test-utils/spec-page';
 import { PopCardDetail } from './card-detail';
 import {
   CARD_CONDITIONS,
@@ -109,7 +109,7 @@ describe('pop-card-detail rendering', () => {
     expect(page.root.querySelector('.pcd__printing-code')?.textContent).toBe('SDY-006');
     expect(page.root.querySelector('.pcd__rowbtn--danger')).toBeTruthy();
     // qty 1 → no split action
-    expect(page.root.textContent).not.toContain('Split stack');
+    expect(textOf(page.root)).not.toContain('Split stack');
     // no review badge
     expect(page.root.querySelector('.pcd__review-badge')).toBeNull();
   });
@@ -163,13 +163,13 @@ describe('pop-card-detail rendering', () => {
     expect(page.root.querySelector('.pcd__stepper')).toBeNull();
     expect(page.root.querySelector('.pcd__price-row')).toBeNull();
     expect(page.root.querySelector('.pcd__printing')).toBeNull();
-    expect(page.root.textContent).not.toContain('Split stack');
+    expect(textOf(page.root)).not.toContain('Split stack');
     expect(page.root.querySelector('.pcd__rowbtn--danger')).toBeTruthy();
   });
 
   it('quantity ≥ 2 → the Split stack action appears with the condition chips', async () => {
     const page = await newSpecPage({ components: [PopCardDetail], html: mk({ ...CARD, quantity: 3 }) });
-    expect(page.root.textContent).toContain('Split stack');
+    expect(textOf(page.root)).toContain('Split stack');
     const inst = page.rootInstance as PopCardDetail;
     inst.splitOpen = true;
     await page.waitForChanges();

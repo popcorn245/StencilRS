@@ -1,4 +1,4 @@
-import { newSpecPage } from '../../test-utils/spec-page';
+import { newSpecPage, setProps } from '../../test-utils/spec-page';
 import { PopComposer } from './composer';
 
 const COMMANDS = [
@@ -40,8 +40,9 @@ describe('pop-composer', () => {
   it('trims to a plain text box (no attach/mic) when both are off', async () => {
     const page = await newSpecPage({
       components: [PopComposer],
-      html: `<pop-composer show-attach="false" show-mic="false"></pop-composer>`,
+      html: `<pop-composer></pop-composer>`,
     });
+    await setProps(page, { showAttach: false, showMic: false });
     expect(page.root.querySelectorAll('.pc__icon').length).toBe(0); // no attach, no mic
     expect(page.root.querySelector('.pc__send')).toBeTruthy();      // submit remains
   });
@@ -52,7 +53,7 @@ describe('pop-composer', () => {
       const send = page.root.querySelector('.pc__send')!;
       expect(send.getAttribute('aria-label')).toBe('Send');
       // The send glyph is a centered pop-icon (paper-plane).
-      expect(send.querySelector('pop-icon')!.getAttribute('name')).toBe('paper-plane');
+      expect((send.querySelector('pop-icon') as any).name).toBe('paper-plane');
     });
 
     it('renders a + glyph + "new thread" label when submit-icon="add"', async () => {
@@ -60,7 +61,7 @@ describe('pop-composer', () => {
       const send = page.root.querySelector('.pc__send')!;
       expect(send.getAttribute('aria-label')).toBe('Add to a new thread');
       // The add-mode glyph is a centered pop-icon (plus).
-      expect(send.querySelector('pop-icon')!.getAttribute('name')).toBe('add');
+      expect((send.querySelector('pop-icon') as any).name).toBe('add');
     });
   });
 
@@ -192,7 +193,7 @@ describe('pop-composer', () => {
       expect(btn.getAttribute('aria-haspopup')).toBe('menu');
       expect(btn.getAttribute('aria-expanded')).toBe('false');
       // Always the default paper-plane glyph (no icon swap).
-      expect(btn.querySelector('pop-icon')!.getAttribute('name')).toBe('paper-plane');
+      expect((btn.querySelector('pop-icon') as any).name).toBe('paper-plane');
       // Popover starts closed.
       expect(page.root.querySelector('.pc__actions')).toBeNull();
     });

@@ -92,11 +92,11 @@ describe('pop-remote-panel', () => {
   it('shows the state-aware play glyph: ⏸ when playing, ▶ when paused', async () => {
     const playing = await newSpecPage({ components: [PopRemotePanel], html: mount() });
     const playIcon = playing.root.querySelector('.rp-tbtn--play pop-icon');
-    expect(playIcon?.getAttribute('name')).toBe('pause');
+    expect((playIcon as any)?.name).toBe('pause');
 
     const paused = await newSpecPage({ components: [PopRemotePanel], html: mount('', 'paused') });
     const pausedIcon = paused.root.querySelector('.rp-tbtn--play pop-icon');
-    expect(pausedIcon?.getAttribute('name')).toBe('play');
+    expect((pausedIcon as any)?.name).toBe('play');
   });
 
   it('emits popTransport with the action when a transport button is tapped', async () => {
