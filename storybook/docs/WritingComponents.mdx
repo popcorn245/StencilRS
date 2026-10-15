@@ -59,11 +59,64 @@ export class PopCounter {
 | TypeScript | Everything oxc strips; enums are emitted the way TypeScript emits them |
 | Imports | Aliased decorator imports (`import { Prop as P }`), other modules, packages |
 
+## Inheritance and mixins
+
+A component can extend a base class, or compose mixin factories with `Mixin(...)`. Stencil
+decorators on the base class or in the mixin work as if they were on the component: stencilrs
+merges them in, parents first, and the component's own members win (a prop the component
+redeclares, or redeclares as a state, replaces the inherited one).
+
+```tsx
+// src/shared/pressable.ts: no @Component on a base class
+export class Pressable {
+  @Prop({ reflect: true }) disabled = false;
+  @State() pressCount = 0;
+  @Event() pressed: EventEmitter<number>;
+  protected press = () => { if (!this.disabled) this.pressed.emit(++this.pressCount); };
+}
+
+// src/components/pop-press-button/pop-press-button.tsx
+@Component({ tag: 'pop-press-button', encapsulation: { type: 'shadow' } })
+export class PopPressButton extends Pressable {
+  @Prop() label = 'Press me';
+  render() {
+    return <button disabled={this.disabled} onClick={this.press}>{this.label} ({this.pressCount})</button>;
+  }
+}
+```
+
+```tsx
+// A mixin factory returns a class literal that extends its argument.
+export const withTone = <B extends MixedInCtor>(Base: B) => {
+  class WithTone extends Base {
+    @Prop({ reflect: true, mutable: true }) tone: 'red' | 'blue' = 'red';
+  }
+  return WithTone;
+};
+
+@Component({ tag: 'pop-tone-chip' })
+export class PopToneChip extends Mixin(withTone) { /* … */ }
+```
+
+The starter has both (`pop-press-button`, `pop-tone-chip`). The rules are Stencil's:
+
+- The parent is found in the same file or through a **relative import**, following one barrel
+  re-export (`export { Base } from './base'`). A parent from a package isn't read, so nothing is
+  inherited from it; Stencil warns when an imported name can't be found.
+- A mixin factory has to return a **class literal** (`(Base) => class extends Base {}` or
+  `(Base) => { class X extends Base {} return X; }`). Returning an existing class by reference
+  isn't recognised (Stencil warns).
+- `@Element()` is **not** inherited: declare it on the component.
+- `Mixin` must be imported under that name.
+
+The Vite plugin compiles the files your ancestors live in as **base classes**, as
+`@stencil/unplugin` does: a class that extends nothing gets `extends HTMLElement`, so the
+chain ends in a real element.
+
 ## Falls back to Stencil's compiler (for now)
 
 These compile through Stencil's own compiler, per file, automatically:
 
-- components that `extend` a class or use mixins;
 - `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`;
 - per-mode `styleUrls` (`{ ios: …, md: … }`);
 - inline `styles` on **scoped** components (they need Stencil's `scopeCss`);

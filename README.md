@@ -79,23 +79,26 @@ image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts
 ## Status
 
 - Step 1 done: [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
-- Step 2 done: [`parity/`](parity/README.md), 165 fixtures (29 features + the 136 ui-kit
-  components) with golden output from real Stencil v5.
+- Step 2 done: [`parity/`](parity/README.md), 180 fixtures (29 features, 15 inheritance and
+  mixins, and the 136 ui-kit components) with golden output from real Stencil v5.
 - Step 3, first seam done: `transpile()` produces what Stencil's `transpileSync` emits for
   `@stencil/unplugin` (`componentExport: 'customelement'`): metadata, diagnostics and code.
-  **165/165 fixtures identical** to Stencil v5 (code compared after reprinting both through
+  **180/180 fixtures identical** to Stencil v5 (code compared after reprinting both through
   oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer. With
   `resolveImports` it also matches a full `stencil build`'s metadata: 136/136 on the ui-kit.
 - The ui-kit spec suite: 874/874 green with either compiler.
 - Benchmark (`npm run bench`), same 165 files, one process: about **41× faster** per file than
   Stencil v5 warm; a production Vite build of the whole ui-kit is about **4.7× faster**. Numbers:
   the Benchmarks page in Storybook.
-- Source maps back to the original TypeScript, through the Vite plugin in dev and build. All 165
+- Source maps back to the original TypeScript, through the Vite plugin in dev and build. All
   fixture maps are valid, and 97.7% of mapped identifiers land on the same identifier in the
   source, against 94.3% for Stencil's own maps (`node parity/sourcemaps.mjs`).
+- Inheritance and mixins: `extends Base` and `extends Mixin(a, b)`, in the same file or through
+  relative imports (one barrel hop), with Stencil's member merging and warnings. The Vite plugin
+  serves the files ancestors live in as base-class modules, as @stencil/unplugin does.
 - Not yet: computed member names, const evaluation for decorator arguments,
-  serializers, `@AttachInternals`, inheritance and mixins, scoped inline `styles` (needs
-  `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR outputs.
+  serializers, `@AttachInternals`, scoped inline `styles` (needs `scopeCss`), style modes,
+  JSDoc and full `complexType`, the lazy and SSR outputs.
 
 Stencil behaviours copied on purpose (upstream bug candidates): [`docs/quirks.md`](docs/quirks.md).
 

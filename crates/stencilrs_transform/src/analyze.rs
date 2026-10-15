@@ -22,6 +22,7 @@ use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
 use crate::default_value::initializer_text;
+use crate::inherit;
 use crate::eval::{Arg, eval_argument, property_key_name};
 use crate::locals::{LocalType, Locals};
 use crate::meta::*;
@@ -54,6 +55,9 @@ pub struct Analysis {
 
 struct Ctx<'s> {
     source: &'s str,
+    /// This module's path, for following imports (ancestors, build-accurate types).
+    file: &'s str,
+    resolver: Option<&'s Resolver>,
     /// Stencil decorator name → local name (`import { Prop as P }` maps `Prop` → `P`).
     aliases: HashMap<&'static str, String>,
     diagnostics: Vec<Diagnostic>,
@@ -90,11 +94,12 @@ impl Ctx<'_> {
 
 /// `resolver` switches on build-accurate mode (see `resolve.rs`); `file` is this module's path.
 pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolver>, file: &str) -> Analysis {
-    let mut ctx = Ctx { source, aliases: import_aliases(program), diagnostics: Vec::new() };
+    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
     let locals = Locals::collect(program).with_resolver(resolver, file);
     let exports = value_exports(program, &locals);
     let mut components = Vec::new();
 
+    let mut top_level = Vec::new();
     for stmt in &program.body {
         let class = match stmt {
             Statement::ClassDeclaration(c) => Some(&**c),
@@ -109,13 +114,42 @@ pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolv
             _ => None,
         };
         if let Some(class) = class {
-            if let Some(cmp) = analyze_class(&mut ctx, class, &locals, &exports) {
+            top_level.push(class.span);
+            if let Some(cmp) = analyze_class(&mut ctx, class, &locals, &exports, program) {
                 components.push(cmp);
             }
         }
     }
 
+    // Every other class declaration with decorated members (base classes, mixins, at any
+    // depth) goes through `convertDecoratorsToStatic` too, which reports on its members.
+    let mut others = OtherDecoratedClasses { ctx: &mut ctx, locals: &locals, skip: top_level };
+    others.visit_program(program);
+
     Analysis { components, diagnostics: ctx.diagnostics }
+}
+
+/// Reads the members of every class declaration (not expression) that has a decorated member,
+/// other than the top-level classes `analyze_program` already read, for their diagnostics.
+struct OtherDecoratedClasses<'c, 's, 'l, 'x, 'y> {
+    ctx: &'c mut Ctx<'s>,
+    locals: &'l Locals<'x, 'y>,
+    skip: Vec<Span>,
+}
+
+impl<'a> Visit<'a> for OtherDecoratedClasses<'_, '_, '_, '_, 'a> {
+    fn visit_class(&mut self, class: &Class<'a>) {
+        let decorated = class.body.body.iter().any(|el| match el {
+            ClassElement::PropertyDefinition(p) => !p.decorators.is_empty(),
+            ClassElement::MethodDefinition(m) => !m.decorators.is_empty(),
+            ClassElement::AccessorProperty(a) => !a.decorators.is_empty(),
+            _ => false,
+        });
+        if class.is_declaration() && decorated && !self.skip.contains(&class.span) {
+            class_members(self.ctx, class, self.locals);
+        }
+        oxc::ast_visit::walk::walk_class(self, class);
+    }
 }
 
 /// Port of `ImportAliasMap`: Stencil matches any import whose specifier contains `@stencil/core`.
@@ -210,7 +244,7 @@ fn opt_bool(v: &Option<Value>, key: &str) -> Option<bool> {
     v.as_ref()?.get(key)?.as_bool()
 }
 
-fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(String, Span)]) -> Option<ComponentMeta> {
+fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(String, Span)], program: &Program) -> Option<ComponentMeta> {
     let component_name = ctx.name("Component");
     let cmp_call = *decorator_calls(&class.decorators, &component_name).first()?;
     let class_name = class.id.as_ref().map(|id| id.name.to_string()).unwrap_or_default();
@@ -220,19 +254,22 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     let component = component_options(ctx, cmp_call, &class_name, exports);
     report_unported(ctx, class, component.as_ref().map(|c| &c.3));
 
+    let own = class_members(ctx, class, locals);
     let mut cmp = ComponentMeta {
         tag_name: String::new(),
         component_class_name: class_name,
         encapsulation: Encapsulation::None,
         style_urls: Vec::new(),
-        properties: Vec::new(),
-        states: Vec::new(),
-        events: Vec::new(),
-        methods: Vec::new(),
-        listeners: Vec::new(),
-        watchers: Vec::new(),
-        element_ref: None,
+        properties: own.properties,
+        states: own.states,
+        events: own.events,
+        methods: own.methods,
+        listeners: own.listeners,
+        watchers: own.watchers,
+        element_ref: own.element_ref,
         options: Value::Null,
+        does_extend: false,
+        base_class_files: Vec::new(),
     };
     if let Some((tag, encapsulation, style_urls, options)) = &component {
         cmp.options = options.clone();
@@ -240,6 +277,59 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
     }
+
+    // `mergeExtendedClassMetaWithResolveImport`: inherited members, parents first; the class's
+    // own members win.
+    if class.heritage.is_some() {
+        let found = inherit::ancestors(class, inherit::Module { program, source: ctx.source, file: ctx.file }, ctx.resolver);
+        ctx.diagnostics.extend(found.warnings);
+        for parent in found.members {
+            cmp.does_extend = true;
+            let props: Vec<PropMeta> = parent.properties.into_iter().filter(|p| !cmp.states.iter().any(|s| s.name == p.name)).collect();
+            let states: Vec<StateMeta> = parent.states.into_iter().filter(|s| !cmp.properties.iter().any(|p| p.name == s.name)).collect();
+            cmp.properties = inherit::prepend(props, std::mem::take(&mut cmp.properties), |p| p.name.clone());
+            cmp.states = inherit::prepend(states, std::mem::take(&mut cmp.states), |s| s.name.clone());
+            cmp.methods = inherit::prepend(parent.methods, std::mem::take(&mut cmp.methods), |m| m.name.clone());
+            cmp.events = inherit::prepend(parent.events, std::mem::take(&mut cmp.events), |e| e.name.clone());
+            cmp.listeners = inherit::prepend(parent.listeners, std::mem::take(&mut cmp.listeners), |l| l.name.clone());
+            cmp.watchers = inherit::prepend(parent.watchers, std::mem::take(&mut cmp.watchers), |w| w.method_name.clone());
+        }
+        cmp.base_class_files = found.files;
+    }
+
+    component.map(|_| cmp)
+}
+
+/// The Stencil members of one class, from its decorators: what `convertDecoratorsToStatic`
+/// writes as static getters, read back. Components, base classes and mixins alike.
+pub(crate) struct Members {
+    pub properties: Vec<PropMeta>,
+    pub states: Vec<StateMeta>,
+    pub events: Vec<EventMeta>,
+    pub methods: Vec<MethodMeta>,
+    pub listeners: Vec<ListenerMeta>,
+    pub watchers: Vec<WatcherMeta>,
+    pub element_ref: Option<String>,
+}
+
+/// The members of a class in another module (or this one): an ancestor. Its diagnostics are
+/// dropped, as Stencil drops those of the throwaway program it reads an ancestor with.
+pub(crate) fn foreign_class_members(class: &Class, program: &Program, source: &str, file: &str, resolver: Option<&Resolver>) -> Members {
+    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
+    let locals = Locals::collect(program).with_resolver(resolver, file);
+    class_members(&mut ctx, class, &locals)
+}
+
+fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
+    let mut cmp = Members {
+        properties: Vec::new(),
+        states: Vec::new(),
+        events: Vec::new(),
+        methods: Vec::new(),
+        listeners: Vec::new(),
+        watchers: Vec::new(),
+        element_ref: None,
+    };
 
     let [prop_n, state_n, event_n, method_n, element_n, watch_n, listen_n] =
         ["Prop", "State", "Event", "Method", "Element", "Watch", "Listen"].map(|d| ctx.name(d));
@@ -354,15 +444,12 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         }
     }
 
-    component.map(|_| cmp)
+    cmp
 }
 
 /// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
 fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
-    if let Some(h) = &class.heritage {
-        ctx.push(Level::Error, "stencilrs: components that extend a class or mixin are not ported yet.", h.expression.span());
-    }
     let unported = ["AttachInternals", "PropSerialize", "AttrDeserialize"].map(|d| (d, ctx.name(d)));
     for el in &class.body.body {
         let decorators = match el {

@@ -1,0 +1,19 @@
+:host {
+  display: inline-block;
+  cursor: pointer;
+}
+
+span {
+  display: inline-block;
+  padding: 0.2em 0.8em;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.red {
+  background: #e53e3e;
+}
+
+.blue {
+  background: #4299e1;
+}

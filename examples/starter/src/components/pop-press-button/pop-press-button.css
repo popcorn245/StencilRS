@@ -1,0 +1,17 @@
+:host {
+  display: inline-block;
+}
+
+button {
+  font: inherit;
+  padding: 0.4em 0.9em;
+  border: 2px solid #e53e3e;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+:host([disabled]) button {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

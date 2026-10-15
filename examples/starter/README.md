@@ -46,7 +46,9 @@ src/
 
 ## What compiles with stencilrs
 
-Everything above. A file that uses something stencilrs hasn't ported yet (class inheritance or
-mixins, `@AttachInternals`, `@PropSerialize` / `@AttrDeserialize`, per-mode styles, inline
-`styles` on scoped components) is compiled by Stencil's own compiler instead, automatically.
+Everything above, including inheritance (`pop-press-button` extends `src/shared/pressable.ts`)
+and mixins (`pop-tone-chip` extends `Mixin(withTone)` from `src/shared/with-tone.ts`). A file
+that uses something stencilrs hasn't ported yet (`@AttachInternals`, `@PropSerialize` /
+`@AttrDeserialize`, per-mode styles, inline `styles` on scoped components) is compiled by
+Stencil's own compiler instead, automatically.
 `stencilrs({ verbose: true })` (set in `vite.config.ts`) logs how many files each compiler handled.

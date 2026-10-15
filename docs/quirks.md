@@ -60,6 +60,23 @@ A component with no members, styles, lifecycle methods, listeners or JSX is "pla
 `length-firstChar-lastChar`. An edit that keeps all three (`10` → `20`) probably isn't
 re-emitted in watch mode. See `docs/pipeline.md`.
 
+## 8. An inherited `@Element()` is `undefined`
+
+`mergeExtendedClassMetaWithResolveImport` merges a base class's props, states, methods,
+events, listeners and watchers, but not its `elementRef`. The base class, compiled with
+`transformAsBaseClass`, keeps `el` as a plain class field, and the component gets no
+`get el() { return this; }`, so `this.el` in either class is `undefined` at runtime (checked
+with a component extending a base that declares `@Element() el` and reads `this.el`).
+Declaring `@Element()` on the component itself works. Fixture:
+`parity/fixtures/inheritance/bases/base-props.ts` with `cmp-extends-import.tsx`.
+
+## 9. `Mixin` is recognised by name only
+
+`getExtendsClassNames` checks `expr.expression.getText() === 'Mixin'`, so
+`import { Mixin as compose } from '@stencil/core'` compiles but inherits nothing from the
+mixins. Likewise an aliased parent (`import { Base as B }` with `extends B`) is looked up as
+`B` in the parent's module, where it doesn't exist, and Stencil warns.
+
 ## Single-file type inference
 
 Not bugs, but worth knowing when reading parity results: in single-file mode every imported

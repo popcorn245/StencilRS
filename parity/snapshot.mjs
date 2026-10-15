@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 
 import { transpileSync, versions } from '@stencil/core/compiler';
 
-import { listFixtures, plain, snapshotsDir, transpileOptions } from './lib.mjs';
+import { listFixtures, plain, portable, snapshotsDir, transpileOptions } from './lib.mjs';
 
 const suite = process.argv[2];
 const fixtures = listFixtures(suite);
@@ -23,17 +23,19 @@ for (const { id, file } of fixtures) {
   const result = transpileSync(code, transpileOptions(code, id));
   const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
   mkdirSync(dirname(base), { recursive: true });
-  writeFileSync(`${base}.js`, result.code);
+  writeFileSync(`${base}.js`, portable(result.code));
   writeFileSync(
     `${base}.json`,
-    JSON.stringify(
-      {
-        data: plain(result.data ?? []),
-        diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: d.messageText })),
-        imports: result.imports ?? [],
-      },
-      null,
-      2,
+    portable(
+      JSON.stringify(
+        {
+          data: plain(result.data ?? []),
+          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: d.messageText })),
+          imports: result.imports ?? [],
+        },
+        null,
+        2,
+      ),
     ) + '\n',
   );
   if (result.diagnostics.some((d) => d.level === 'error')) errors++;

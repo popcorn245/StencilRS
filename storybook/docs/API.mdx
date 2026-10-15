@@ -17,15 +17,22 @@ with `componentExport: 'customelement'`, the shape `@stencil/unplugin` and Stenc
 output use.
 
 ```ts
-const { code, map, components, diagnostics } = transpile(source, {
+const { code, map, components, diagnostics, baseClasses } = transpile(source, {
   file: '/abs/path/my-counter.tsx', // picks the parser (.ts / .tsx), resolves style and relative imports
   jsx: 'automatic',                  // 'classic' (h) or 'automatic' (default)
   jsxImportSource: '@stencil/core',  // automatic runtime source (default)
   coreImportPath: '@stencil/core/runtime/client/standalone', // runtime import (default)
   resolveImports: true,              // build-accurate metadata (default false here; true in the Vite plugin)
   sourceMap: true,                   // return `map` (default true, as transpileSync does)
+  transformAsBaseClass: false,       // compile the file as base classes (see below)
 });
 ```
+
+A component that extends a class or `Mixin(...)` gets its ancestors' members merged in. They're
+read from the same file or through relative imports of `file` (so `file` must be the real path).
+`baseClasses` lists the other files read. Compile those with `transformAsBaseClass: true` and
+serve them in place of the originals, as the Vite plugin does: every class there that extends
+nothing then extends `HTMLElement`.
 
 `map` is a source map v3 JSON string from `code` back to `source` (`null` with
 `sourceMap: false`). Its one source is the file's name, with the original embedded as

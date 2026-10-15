@@ -9,6 +9,7 @@ pub mod codegen;
 mod default_value;
 mod edits;
 mod eval;
+mod inherit;
 mod locals;
 pub mod meta;
 mod prop_type;
@@ -37,6 +38,10 @@ pub struct TranspileResult {
     pub map: Option<String>,
     pub components: Vec<ComponentMeta>,
     pub diagnostics: Vec<Diagnostic>,
+    /// The other files the components' ancestor classes were read from. A bundler compiles
+    /// those with `transform_as_base_class` (as @stencil/unplugin does), so they extend `HTMLElement`.
+    #[serde(rename = "baseClasses")]
+    pub base_classes: Vec<String>,
 }
 
 fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (ParserReturn<'a>, Vec<Diagnostic>) {
@@ -88,5 +93,11 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
             (String::new(), None)
         }
     };
-    TranspileResult { code, map, components: analysis.components, diagnostics }
+    let mut base_classes: Vec<String> = Vec::new();
+    for file in analysis.components.iter().flat_map(|c| &c.base_class_files) {
+        if !base_classes.contains(file) {
+            base_classes.push(file.clone());
+        }
+    }
+    TranspileResult { code, map, components: analysis.components, diagnostics, base_classes }
 }

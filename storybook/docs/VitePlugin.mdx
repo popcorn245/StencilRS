@@ -38,8 +38,19 @@ Stencil runtime, build flags, docs, global stylesheets.
    (`hotModuleReplacement`, `isDev`), `vdomSignals` when the file imports `@stencil/core/signals`,
    the component class export, and the HMR snippet in dev.
 6. Marks the file so unplugin doesn't transform it again.
+7. For a component that extends something, remembers the files its ancestors were read from
+   (`baseClasses` in the result) and watches them.
 
 In production builds it also folds `Build.isBrowser` / `Build.isServer`, as unplugin does.
+
+### Base classes
+
+An import of a file an ancestor lives in resolves to a virtual module (`\0stencilrs-base:<path>`),
+which the plugin compiles with `transformAsBaseClass`: a class that extends nothing gets
+`extends HTMLElement`, decorated classes get a constructor calling `super()`, and the Stencil
+decorators go. That is what `@stencil/unplugin` does with its `\0stencil-base:` modules, so the
+chain under a component ends in a real element. A base-class file that uses something stencilrs
+hasn't ported goes through Stencil's `transpileSync` instead.
 
 ## Hot reload
 

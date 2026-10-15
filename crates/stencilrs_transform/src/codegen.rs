@@ -53,6 +53,10 @@ pub struct CodegenOptions2 {
     pub jsx: Jsx,
     /// Also return a source map from the generated module to the original source.
     pub source_map: bool,
+    /// Compile every class in the file as a base class a component can extend (Stencil's
+    /// `transformAsBaseClass`, which @stencil/unplugin uses for the files ancestors live in):
+    /// `extends HTMLElement` where a class extends nothing, and a constructor calling `super()`.
+    pub transform_as_base_class: bool,
 }
 
 /// A generated module and, when asked for, its source map (v3 JSON).
@@ -154,6 +158,22 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     let mut style_imports = Vec::new();
     let mut define_calls = Vec::new();
 
+    // Every other class: base classes and mixins.
+    let meta_decorators: Vec<String> =
+        META_DECORATORS.iter().map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned())).collect();
+    let mut bases = BaseClasses {
+        ed: &mut ed,
+        component: &component_decorator,
+        remove: &remove_decorators,
+        meta: &meta_decorators,
+        as_base: opts.transform_as_base_class,
+        html_element: false,
+    };
+    bases.visit_program(program);
+    if bases.html_element {
+        add(&mut target_apis, "HTMLElement");
+    }
+
     for stmt in &program.body {
         let (class, stmt_span) = match stmt {
             Statement::ClassDeclaration(c) => (&**c, c.span),
@@ -228,7 +248,8 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
                 let flags = (if ev.bubbles { 4 } else { 0 }) | (if ev.composed { 2 } else { 0 }) | (if ev.cancelable { 1 } else { 0 });
                 stmts.push(format!("this.{} = __stencil_createEvent(this, {}, {flags});", ev.method, json(&ev.name)));
             }
-            let super_call = if info.does_extend { "super(false);" } else { "super();" };
+            // `super(false)` when an ancestor was found (`cmp.doesExtend`), not merely when the class has an `extends`.
+            let super_call = if cmp.does_extend { "super(false);" } else { "super();" };
             match ctor {
                 Some(c) => {
                     let params = &c.value.params;
@@ -240,7 +261,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
                     let first = match found {
                         Some(s) => {
                             ed.remove(s.span().start, s.span().end);
-                            if info.does_extend { super_call.to_owned() } else { text(s.span()).to_owned() }
+                            if cmp.does_extend { super_call.to_owned() } else { text(s.span()).to_owned() }
                         }
                         None => super_call.to_owned(),
                     };
@@ -345,6 +366,80 @@ fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {
     }
 }
 
+/// The member decorators that leave static meta getters behind, which is how Stencil tells a
+/// base class (`isStencilBaseClass`).
+const META_DECORATORS: [&str; 6] = ["Prop", "State", "Event", "Listen", "Watch", "Method"];
+
+/// Classes that are not components, at any depth. Their Stencil member decorators go. A class
+/// declaration is a base class when the file is compiled as one (`transformAsBaseClass`) or it
+/// has meta decorators: it then extends `HTMLElement` unless it already extends something
+/// (`updateNativeBaseClass`). A base class, or any class with a decorated member,
+/// that extends something gets a constructor calling `super()` (`updateConstructor`, from
+/// `convertDecoratorsToStatic` and `updateNativeBaseClass`). Class expressions (mixin factories'
+/// `(Base) => class extends Base {}`) only lose their decorators.
+struct BaseClasses<'e, 's, 'n> {
+    ed: &'e mut Edits<'s>,
+    component: &'n str,
+    remove: &'n [String],
+    meta: &'n [String],
+    as_base: bool,
+    html_element: bool,
+}
+
+impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
+    fn visit_class(&mut self, class: &Class<'a>) {
+        if has_decorator(&class.decorators, self.component) {
+            return; // components are compiled on their own
+        }
+        let mut decorated = false;
+        let mut meta = false;
+        let mut ctor = None;
+        for el in &class.body.body {
+            let decorators = match el {
+                ClassElement::PropertyDefinition(p) => &p.decorators,
+                ClassElement::MethodDefinition(m) => {
+                    if m.kind == MethodDefinitionKind::Constructor && m.value.body.is_some() {
+                        ctor = Some(m);
+                    }
+                    &m.decorators
+                }
+                ClassElement::AccessorProperty(a) => &a.decorators,
+                _ => continue,
+            };
+            decorated |= !decorators.is_empty();
+            for d in decorators {
+                let Some(name) = decorator_name(d) else { continue };
+                meta |= self.meta.iter().any(|m| m == name);
+                if self.remove.iter().any(|r| r == name) {
+                    self.ed.remove(d.span.start, d.span.end);
+                }
+            }
+        }
+        if class.is_declaration() {
+            let base = self.as_base || meta;
+            let mut extends = class.heritage.is_some();
+            // `implements` doesn't count: TypeScript has erased it by the time Stencil looks.
+            if base && !extends {
+                // After the name and type parameters: `extends` has to come before `implements`.
+                match class.type_parameters.as_ref().map(|t| t.span.end).or(class.id.as_ref().map(|id| id.span.end)) {
+                    Some(at) => self.ed.insert(at, " extends HTMLElement"),
+                    None => self.ed.insert(class.body.span.start, "extends HTMLElement "),
+                }
+                self.html_element = true;
+                extends = true;
+            }
+            if (decorated || base) && extends {
+                match ctor.and_then(|m| m.value.body.as_ref()) {
+                    None => self.ed.insert(class.body.span.start + 1, " constructor() { super(); } "),
+                    Some(body) if !body.statements.iter().any(is_super_call) => self.ed.insert(body.span.start + 1, " super(); "),
+                    Some(_) => {}
+                }
+            }
+        }
+        walk::walk_class(self, class);
+    }
+}
+
 fn is_super_call(s: &Statement) -> bool {
     matches!(s, Statement::ExpressionStatement(e) if matches!(&e.expression, Expression::CallExpression(c) if matches!(c.callee, Expression::Super(_))))
 }
@@ -360,7 +455,8 @@ struct ClassInfo {
     has_vdom_render: bool,
     tag_names: Vec<String>,
     has_modern_property_decls: bool,
-    does_extend: bool,
+    /// The class has an `extends` clause, resolvable or not.
+    has_heritage: bool,
 }
 
 impl ClassInfo {
@@ -380,7 +476,7 @@ impl ClassInfo {
         let has_modern_property_decls = class.body.body.iter().any(|el| match el {
             ClassElement::PropertyDefinition(p) => property_key_name(&p.key).is_some_and(|n| names.contains(&n.as_str())),
             _ => false,
-        }) || class.heritage.is_some();
+        }) || cmp.does_extend;
         let mut tag_names = Vec::new();
         for t in vdom.tags {
             if !tag_names.contains(&t) {
@@ -393,7 +489,7 @@ impl ClassInfo {
             has_vdom_render: vdom.render,
             tag_names,
             has_modern_property_decls,
-            does_extend: class.heritage.is_some(),
+            has_heritage: class.heritage.is_some(),
         }
     }
 
@@ -401,7 +497,7 @@ impl ClassInfo {
     fn is_plain(&self, cmp: &ComponentMeta) -> bool {
         let has_member = !cmp.properties.is_empty() || !cmp.states.is_empty() || !cmp.methods.is_empty();
         let has_lifecycle = self.methods.iter().any(|m| LIFECYCLE_METHODS.contains(&m.as_str()));
-        !has_member && !has_style(cmp) && !has_lifecycle && cmp.listeners.is_empty() && !self.has_vdom_render && !self.does_extend
+        !has_member && !has_style(cmp) && !has_lifecycle && cmp.listeners.is_empty() && !self.has_vdom_render && !self.has_heritage
     }
 
     fn has_slot(&self) -> bool {

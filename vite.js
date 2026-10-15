@@ -7,13 +7,17 @@
 // each component file. Everything else (CSS modules and preprocessors, the runtime, build
 // flags, docs, global stylesheets) is still @stencil/unplugin, which is added after this plugin.
 //
-// A file that uses something stencilrs has not ported yet (inheritance, serializers,
-// @AttachInternals, …) is left to @stencil/unplugin, which compiles it with Stencil's own
-// compiler. Pass `{ fallback: false }` to make that an error instead.
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// A file that uses something stencilrs has not ported yet (serializers, @AttachInternals, …)
+// is left to @stencil/unplugin, which compiles it with Stencil's own compiler. Pass
+// `{ fallback: false }` to make that an error instead.
+//
+// Inheritance works as in @stencil/unplugin: a component's ancestors (`extends Base`,
+// `extends Mixin(a, b)`) are read for their members, and the files they live in are served as
+// virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
-import { foldBuildFlags } from '@stencil/core/compiler';
+import { foldBuildFlags, transpileSync } from '@stencil/core/compiler';
 import { stencilVite } from '@stencil/unplugin';
 
 import { buildId, transpile } from './index.js';
@@ -22,6 +26,16 @@ const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
+const BASE_PREFIX = '\0stencilrs-base:';
+
+/** @stencil/unplugin's `resolveSpecifier`, which stencilrs' ancestor walk mirrors. */
+const resolveSpecifier = (specifier, importer) => {
+  const base = resolve(dirname(importer), specifier);
+  const candidates = [base, ...['.tsx', '.ts', '.js'].map((ext) => base + ext)];
+  if (base.endsWith('.js')) candidates.push(base.slice(0, -3) + '.ts', base.slice(0, -3) + '.tsx');
+  const found = candidates.find((c) => existsSync(c) && statSync(c).isFile());
+  return found ? found.replaceAll('\\', '/') : null;
+};
 
 /** tsconfig `jsx`, or @stencil/unplugin's heuristic: classic `h` when the file imports it. */
 const jsxFor = (code, tsconfigJsx) => {
@@ -76,6 +90,8 @@ export function stencilrs(options = {}) {
   const counts = { stencilrs: 0, stencil: 0 };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
+  // Files ancestor classes were read from, served as base-class virtual modules.
+  const baseClasses = new Set();
 
   /** @type {import('vite').Plugin} */
   const plugin = {
@@ -124,6 +140,10 @@ export function stencilrs(options = {}) {
       if (!result.components.length) return null;
       counts.stencilrs++;
       handled.add(file);
+      for (const base of result.baseClasses) {
+        baseClasses.add(base);
+        this.addWatchFile(base); // the component's inherited members come from it
+      }
 
       const { tagName, componentClassName } = result.components[0];
       fileToTag.set(file, tagName);
@@ -147,6 +167,33 @@ export function stencilrs(options = {}) {
       }
       if (isDev) out += hmrSnippet(tagName, componentClassName);
       return { code: out, map };
+    },
+
+    // An import of a file an ancestor lives in gets its base-class compilation instead
+    // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
+    // imports resolve, so the set is filled in time.
+    resolveId(id, importer) {
+      if (!baseClasses.size || !importer) return null;
+      const from = importer.startsWith(BASE_PREFIX) ? importer.slice(BASE_PREFIX.length) : importer.split('?')[0];
+      const abs = resolveSpecifier(id, from);
+      return abs && baseClasses.has(abs) ? BASE_PREFIX + abs : null;
+    },
+
+    load(id) {
+      if (!id.startsWith(BASE_PREFIX)) return null;
+      const file = id.slice(BASE_PREFIX.length);
+      this.addWatchFile(file);
+      const code = readFileSync(file, 'utf8');
+      const result = transpile(code, { file, resolveImports, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
+      if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
+        if (!fallback) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
+        // As @stencil/unplugin's `transpileBaseClass`.
+        const st = transpileSync(code, { file, componentExport: 'customelement', styleImportData: 'queryparams', transformAsBaseClass: true });
+        return { code: st.code, map: st.map ?? null };
+      }
+      const errors = result.diagnostics.filter((d) => d.level === 'error');
+      if (errors.length) this.error(`[stencilrs] transpile error in ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+      return { code: result.code, map: result.map ? JSON.parse(result.map) : null };
     },
 
     handleHotUpdate({ file, server }) {
@@ -174,7 +221,7 @@ function skipHandled(p, handled) {
   if (!hook) return;
   const fn = typeof hook === 'function' ? hook : hook.handler;
   const wrapped = function (code, id, ...rest) {
-    if (handled.has(id.split('?')[0].replaceAll('\\', '/'))) return null;
+    if (id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/'))) return null;
     return fn.call(this, code, id, ...rest);
   };
   p.transform = typeof hook === 'function' ? wrapped : { ...hook, handler: wrapped };

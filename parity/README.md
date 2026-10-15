@@ -18,6 +18,11 @@ Build the native binding first (`npm run build:native` at the repo root).
 - `fixtures/ui-kit/`: the old bucket's 136 Stencil 4 components, migrated to v5 by
   `import-ui-kit.mjs` (only `shadow` / `scoped` → `encapsulation` was needed). Re-import with
   `node import-ui-kit.mjs <path to bucket>/packages/ui-kit/src`.
+- `fixtures/inheritance/`: components that extend a class or `Mixin(...)` (imported, same-file,
+  chained, through a barrel, overriding, unresolvable), and under `bases/` the files their
+  ancestors live in. These compile as @stencil/unplugin runs them: components under their
+  absolute path with a `resolveImport` callback (unplugin's `makeResolver`), and `bases/` files
+  with `transformAsBaseClass`. Snapshots write the fixtures folder as `FIXTURES`.
 
 ## Mode
 

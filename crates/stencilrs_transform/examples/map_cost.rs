@@ -35,6 +35,7 @@ fn main() {
                     jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
                     resolve_imports: false,
                     source_map,
+                    transform_as_base_class: false,
                 };
                 bytes += transpile(src, &opts).map.map_or(0, |m| m.len());
             }

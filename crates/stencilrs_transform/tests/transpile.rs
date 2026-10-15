@@ -4,7 +4,7 @@
 use stencilrs_transform::{DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile};
 
 fn run(src: &str, jsx: Jsx) -> String {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, source_map: false };
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, source_map: false, transform_as_base_class: false };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     normalize(&out.code).expect("valid JS")

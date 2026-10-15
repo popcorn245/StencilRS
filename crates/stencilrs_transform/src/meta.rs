@@ -40,6 +40,13 @@ pub struct ComponentMeta {
     /// The evaluated `@Component({...})` options, for code generation.
     #[serde(skip)]
     pub options: serde_json::Value,
+    /// An ancestor class was found and its members merged (Stencil's `doesExtend`): the
+    /// constructor then calls `super(false)`.
+    #[serde(skip)]
+    pub does_extend: bool,
+    /// The other files the ancestors were read from (absolute, `/`-separated).
+    #[serde(skip)]
+    pub base_class_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
