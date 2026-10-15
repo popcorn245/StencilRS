@@ -602,6 +602,9 @@ export class Editor {
         },
       },
       onReady: () => {
+        // Removed from the page before Editor.js finished starting: its holder is gone, and the
+        // plugins below would query it.
+        if (!this.el.isConnected) return;
         new Undo({ editor: this.editorInstance });
         new DragDrop(this.editorInstance);
         (window as any).__editorInstance = this.editorInstance;

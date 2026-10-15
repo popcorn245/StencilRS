@@ -18,6 +18,21 @@ globalThis.requestAnimationFrame = (cb: FrameRequestCallback) =>
   realSetTimeout(() => cb(performance.now()), 0) as unknown as number;
 globalThis.cancelAnimationFrame = (id: number) => realClearTimeout(id as unknown as ReturnType<typeof setTimeout>);
 
+// jsdom has no matchMedia; Editor.js (pop-editor) and theme code call it. Nothing matches.
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query: string) =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }) as MediaQueryList;
+}
+
 // Compile + register every component before the file's first test, with room to spare: under
 // Stencil's own compiler (COMPILER=stencil) transpiling ~136 components on demand can take over
 // 10 s, which would otherwise be charged to whichever test happens to run first.

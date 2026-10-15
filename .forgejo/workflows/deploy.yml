@@ -1,0 +1,88 @@
+name: deploy
+# Build the compiler, the components and the Storybook, then publish the Storybook at
+# https://stencilrs.popcorn245.com (tailnet-only: the name resolves to the tower's Tailscale IP).
+#
+# HOW IT IS HOSTED (the same way as docs.popcorn245.com)
+# The tower's Forgejo runner mounts the devops-stack_docs_site volume into every job container
+# at /docs-deploy (runner config.yml, `container.options`). Caddy serves that volume at
+# /var/www/docs; its stencilrs.popcorn245.com block (buildless-bucket,
+# stacks/devops-stack/Caddyfile) points at the stencilrs/ folder this job writes. No container
+# of its own, no port.
+#
+# WHY ubuntu-22.04
+# The runner maps that label to node:22-bookworm: node 22, git, gcc for the Rust build. Rust
+# itself is installed by scripts/ci.sh (rustup, minimal profile) and cached below.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # never interrupt an in-flight publish
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      SITE_HOST: stencilrs.popcorn245.com
+      PUBLISH_DIR: /docs-deploy/stencilrs
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # The Rust toolchain and the cargo registry and build directory, keyed on Cargo.lock: a push
+      # that leaves the Rust code alone rebuilds nothing native.
+      - name: Restore the Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup
+            ~/.cargo/bin
+            ~/.cargo/env
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-v1-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: rust-v1-${{ runner.os }}-
+
+      - name: Restore the npm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: npm-v1-${{ runner.os }}-
+
+      # Compiler (cargo build, cargo test, node tests), then the components (starter and ui-kit:
+      # tests, then a stencilrs library build of each), then the Storybook.
+      - name: Build and test
+        run: bash scripts/ci.sh
+
+      - name: Publish to ${{ env.SITE_HOST }}
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -eu
+          [ -d /docs-deploy ] || { echo "::error::/docs-deploy is not mounted (runner container.options)"; exit 1; }
+          # Swap whole folders, so a visitor never sees half a Storybook.
+          rm -rf "$PUBLISH_DIR.new" "$PUBLISH_DIR.old"
+          cp -a storybook/dist "$PUBLISH_DIR.new"
+          if [ -d "$PUBLISH_DIR" ]; then mv "$PUBLISH_DIR" "$PUBLISH_DIR.old"; fi
+          mv "$PUBLISH_DIR.new" "$PUBLISH_DIR"
+          rm -rf "$PUBLISH_DIR.old"
+          echo "published $(du -sh "$PUBLISH_DIR" | cut -f1) to $PUBLISH_DIR"
+
+      # Through Caddy itself (the job shares its docker network), with the real name and
+      # certificate: proves the block, the volume and the TLS together.
+      - name: Check the site
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -eu
+          CADDY_IP=$(getent hosts caddy | awk '{print $1}')
+          for path in / /index.json /iframe.html; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --resolve "$SITE_HOST:443:$CADDY_IP" "https://$SITE_HOST$path")
+            echo "$code https://$SITE_HOST$path"
+            [ "$code" = 200 ] || exit 1
+          done

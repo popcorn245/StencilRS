@@ -18,6 +18,7 @@
     "test:stencil": "cross-env COMPILER=stencil vitest run",
     "compare": "node compare.mjs",
     "build": "stencil build",
+    "build:stencilrs": "vite build --config vite.lib.config.ts",
     "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "devDependencies": {
