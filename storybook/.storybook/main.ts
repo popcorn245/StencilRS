@@ -20,6 +20,9 @@ const config: StorybookConfig = {
   // GitHub-flavoured markdown (tables) in the MDX docs.
   addons: [{ name: '@storybook/addon-docs', options: { mdxPluginOptions: { mdxCompileOptions: { remarkPlugins: [remarkGfm] } } } }],
   framework: { name: '@storybook/web-components-vite', options: {} },
+  // Tailnet names (npm run storybook:tailnet → http://<machine>.<tailnet>.ts.net:6007). Storybook
+  // hands this list to Vite too; host validation stays on for every other name.
+  core: { allowedHosts: ['.ts.net'] },
   // ui-kit images, and self-hosted ionicons (pop-icon wraps <ion-icon>; see preview-head.html).
   staticDirs: [
     { from: join(uiKit, 'src/assets'), to: '/assets' },

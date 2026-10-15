@@ -6,6 +6,7 @@
   "scripts": {
     "manifest": "node scripts/custom-elements.mjs",
     "storybook": "npm run manifest && storybook dev -p 6007 --no-open",
+    "storybook:tailnet": "npm run manifest && storybook dev -p 6007 --host 0.0.0.0 --no-open",
     "build": "npm run manifest && storybook build -o dist"
   },
   "devDependencies": {
