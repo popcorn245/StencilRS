@@ -9,7 +9,7 @@
 //! The Stencil-specific rewrites are applied as text edits on the original TypeScript, then
 //! oxc strips the types and compiles the JSX, the way TypeScript's own emit does in Stencil.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::builder::AstBuilder;
@@ -51,6 +51,14 @@ pub struct CodegenOptions2 {
     pub resolve_imports: bool,
     pub core_import_path: String,
     pub jsx: Jsx,
+    /// Also return a source map from the generated module to the original source.
+    pub source_map: bool,
+}
+
+/// A generated module and, when asked for, its source map (v3 JSON).
+pub struct Generated {
+    pub code: String,
+    pub map: Option<String>,
 }
 
 const KEEP_IMPORTS: [&str; 24] = [
@@ -79,7 +87,7 @@ const LIFECYCLE_METHODS: [&str; 9] = [
 
 /// Generate the customelement module for an already analysed program. `components` are the
 /// valid components `analyze_program` found, in source order.
-pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<String, String> {
+pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
     let text = |s: Span| s.source_text(source);
     let aliases = import_aliases(program);
@@ -310,15 +318,17 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         ed.insert(source.len() as u32, format!("\n{}\n", define_calls.join("\n")));
     }
 
-    let edited = ed.apply();
-    let js = strip_types_and_jsx(&edited, opts)?;
+    let (edited, offsets) = ed.apply_mapped();
+    let (js, printed_map) = strip_types_and_jsx(&edited, opts)?;
 
     let apis: Vec<&str> = runtime_apis.iter().chain(target_apis.iter()).copied().collect();
-    Ok(if apis.is_empty() {
-        js
+    let (code, prefix_lines) = if apis.is_empty() {
+        (js, 0)
     } else {
-        format!("import {{ {} }} from {};\n{js}", apis.join(", "), json(&opts.core_import_path))
-    })
+        (format!("import {{ {} }} from {};\n{js}", apis.join(", "), json(&opts.core_import_path)), 1)
+    };
+    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, source, &opts.file, prefix_lines));
+    Ok(Generated { code, map })
 }
 
 fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
@@ -861,7 +871,8 @@ fn fmt_num(v: f64) -> String {
 }
 
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
-fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<String, String> {
+/// With `opts.source_map`, also oxc's map from the output back to `edited`.
+fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>), String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
@@ -914,7 +925,9 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<String, S
             program.body[..=i].rotate_right(1);
         }
     }
-    Ok(Codegen::new().build(&program).code)
+    let options = CodegenOptions { source_map_path: opts.source_map.then(|| PathBuf::from(&opts.file)), ..CodegenOptions::default() };
+    let printed = Codegen::new().with_options(options).build(&program);
+    Ok((printed.code, printed.map.map(|m| m.into_owned())))
 }
 
 /// Spans of the argument of JSX elements whose only attribute is a spread (`<svg {...p}>`).

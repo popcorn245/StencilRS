@@ -26,9 +26,11 @@ pub struct JsTranspileOptions {
     /// Build-accurate metadata, as a full `stencil build` computes it: follow relative imports and
     /// know lib types. Default false: exactly what single-file `transpileSync` produces.
     pub resolve_imports: Option<bool>,
+    /// Return a source map (v3 JSON string) in `map`. Default true, as in `transpileSync`.
+    pub source_map: Option<bool>,
 }
 
-/// Generate the `customelement` module: `{ code, components, diagnostics }`.
+/// Generate the `customelement` module: `{ code, map, components, diagnostics }`.
 #[napi]
 pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<serde_json::Value> {
     let jsx = match options.jsx.as_deref() {
@@ -40,6 +42,7 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
         core_import_path: options.core_import_path.unwrap_or_else(|| DEFAULT_CORE_IMPORT_PATH.into()),
         jsx,
         resolve_imports: options.resolve_imports.unwrap_or(false),
+        source_map: options.source_map.unwrap_or(true),
     };
     to_js(stencilrs_transform::transpile(&source, &opts))
 }

@@ -17,14 +17,21 @@ with `componentExport: 'customelement'`, the shape `@stencil/unplugin` and Stenc
 output use.
 
 ```ts
-const { code, components, diagnostics } = transpile(source, {
+const { code, map, components, diagnostics } = transpile(source, {
   file: '/abs/path/my-counter.tsx', // picks the parser (.ts / .tsx), resolves style and relative imports
   jsx: 'automatic',                  // 'classic' (h) or 'automatic' (default)
   jsxImportSource: '@stencil/core',  // automatic runtime source (default)
   coreImportPath: '@stencil/core/runtime/client/standalone', // runtime import (default)
   resolveImports: true,              // build-accurate metadata (default false here; true in the Vite plugin)
+  sourceMap: true,                   // return `map` (default true, as transpileSync does)
 });
 ```
+
+`map` is a source map v3 JSON string from `code` back to `source` (`null` with
+`sourceMap: false`). Its one source is the file's name, with the original embedded as
+`sourcesContent`. Code stencilrs generates (the constructor, `createEvent` calls, static
+getters, inserted `key`s) is left unmapped, as TypeScript leaves synthesized code. The Vite
+plugin hands these maps to Vite, so DevTools and stack traces show your TypeScript.
 
 ### `analyze(source, fileName, { resolveImports })`
 

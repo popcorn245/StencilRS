@@ -4,8 +4,7 @@
 //
 // Same files, same contract (the customelement module @stencil/unplugin asks for), one
 // process, single-threaded. The first round of each is reported separately (cold: module
-// load, TypeScript warm-up). Stencil is timed with and without source maps, since stencilrs
-// does not emit source maps yet.
+// load, TypeScript warm-up). Both are timed with and without source maps.
 import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
@@ -21,7 +20,8 @@ const bytes = files.reduce((n, f) => n + f.code.length, 0);
 const runners = {
   'stencil (source maps)': (f) => transpileSync(f.code, transpileOptions(f.code, f.id)),
   'stencil (no maps)': (f) => transpileSync(f.code, { ...transpileOptions(f.code, f.id), sourceMap: false }),
-  stencilrs: (f) => transpile(f.code, stencilrsOptions(f.code, f.id)),
+  'stencilrs (source maps)': (f) => transpile(f.code, stencilrsOptions(f.code, f.id)),
+  'stencilrs (no maps)': (f) => transpile(f.code, { ...stencilrsOptions(f.code, f.id), sourceMap: false }),
 };
 
 const time = (fn) => {
@@ -47,8 +47,8 @@ console.log(`${'compiler'.padEnd(24)}${'cold'.padStart(10)}${'median'.padStart(1
 for (const [name, r] of Object.entries(results)) {
   console.log(`${name.padEnd(24)}${ms(r.cold)}${ms(r.median)}${ms(r.best)}${`${((r.median / files.length) * 1000).toFixed(0)} µs`.padStart(12)}`);
 }
-const rs = results.stencilrs.median;
+const x = (a, b) => (results[a].median / results[b].median).toFixed(1);
 console.log(
-  `\nstencilrs is ${(results['stencil (source maps)'].median / rs).toFixed(1)}× faster than stencil with maps,` +
-    ` ${(results['stencil (no maps)'].median / rs).toFixed(1)}× without (median, warm).`,
+  `\nstencilrs is ${x('stencil (source maps)', 'stencilrs (source maps)')}× faster than stencil with source maps,` +
+    ` ${x('stencil (no maps)', 'stencilrs (no maps)')}× without (median, warm).`,
 );

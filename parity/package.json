@@ -6,6 +6,7 @@
   "scripts": {
     "snapshot": "node snapshot.mjs",
     "compare": "node compare.mjs",
+    "sourcemaps": "node sourcemaps.mjs",
     "bench": "node bench.mjs"
   },
   "dependencies": {

@@ -1170,6 +1170,7 @@ name = "stencilrs_transform"
 version = "0.1.0"
 dependencies = [
  "oxc",
+ "oxc_sourcemap",
  "serde",
  "serde_json",
 ]

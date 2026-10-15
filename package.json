@@ -13,6 +13,7 @@
     "test": "cargo test && node --test \"test/**/*.test.js\"",
     "parity:snapshot": "npm --prefix parity run snapshot",
     "parity": "npm --prefix parity run compare",
+    "parity:sourcemaps": "npm --prefix parity run sourcemaps",
     "bench": "npm --prefix parity run bench",
     "test:starter": "npm --prefix examples/starter test"
   },

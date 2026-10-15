@@ -13,6 +13,7 @@ mod locals;
 pub mod meta;
 mod prop_type;
 mod resolve;
+mod sourcemap;
 
 use oxc::allocator::Allocator;
 use oxc::parser::{ParserReturn, Parser};
@@ -32,6 +33,8 @@ pub struct AnalyzeResult {
 #[derive(Debug, Serialize)]
 pub struct TranspileResult {
     pub code: String,
+    /// Source map v3 JSON from `code` to the original source, when `source_map` was asked for.
+    pub map: Option<String>,
     pub components: Vec<ComponentMeta>,
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -78,12 +81,12 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let resolver = opts.resolve_imports.then(resolve::Resolver::new);
     let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
     diagnostics.extend(analysis.diagnostics);
-    let code = match codegen::generate(&parsed.program, source, &analysis.components, opts) {
-        Ok(code) => code,
+    let (code, map) = match codegen::generate(&parsed.program, source, &analysis.components, opts) {
+        Ok(generated) => (generated.code, generated.map),
         Err(message) => {
             diagnostics.push(Diagnostic { level: Level::Error, message, start: 0, end: 0 });
-            String::new()
+            (String::new(), None)
         }
     };
-    TranspileResult { code, components: analysis.components, diagnostics }
+    TranspileResult { code, map, components: analysis.components, diagnostics }
 }

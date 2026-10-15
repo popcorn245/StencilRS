@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The CI build, in order: the compiler, the components, the Storybook. The Forgejo workflow
-# (.forgejo/workflows/deploy.yml) runs this, and so can you, in the same image:
+# The CI build, in order: the compiler, parity with Stencil v5, the components, the Storybook.
+# The Forgejo workflow (.forgejo/workflows/deploy.yml) runs this, and so can you, in the same
+# image:
 #
 #   docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts/ci.sh
 #
@@ -25,6 +26,11 @@ step "Compiler: the native binding, then its tests"
 npm ci
 npm run build:native
 npm test
+
+step "Parity with Stencil v5: output on 165 fixtures, then source maps"
+npm --prefix parity ci
+npm run parity
+npm run parity:sourcemaps
 
 step "Components: starter (tests in happy-dom, then the library build)"
 npm --prefix examples/starter ci

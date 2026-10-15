@@ -15,7 +15,6 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## Missing output
 
-- **Source maps.** DevTools shows the compiled module.
 - **The lazy-loading and SSR outputs** (Stencil's `loader-bundle` and `ssr` targets). stencilrs
   produces the customelement / `standalone` shape, which is what Vite, Vitest and Storybook use.
 - **`newSpecPage` mode** (`@stencil/unplugin`'s `spec-page`).
@@ -24,10 +23,9 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## Next
 
-1. Source maps (oxc can emit them; the text-edit pass needs mapping back to the original).
-2. Inheritance and mixins (Stencil's checker-free `resolveImport` strategy is the template).
-3. The lazy and SSR transforms (they share most of the customelement code).
-4. A full `stencil build` replacement for the benchmark: stencilrs feeding Stencil's Rolldown
+1. Inheritance and mixins (Stencil's checker-free `resolveImport` strategy is the template).
+2. The lazy and SSR transforms (they share most of the customelement code).
+3. A full `stencil build` replacement for the benchmark: stencilrs feeding Stencil's Rolldown
    pipeline in place of its TypeScript transform passes.
 
 ## Upstream

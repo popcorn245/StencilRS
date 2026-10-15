@@ -136,12 +136,17 @@ export function stencilrs(options = {}) {
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
         .join('');
       let out = mutations ? `import{BUILD as __stencilBUILD}from"${APP_DATA_ID}";\n${mutations}\n${result.code}` : result.code;
+      // Positions in the map are relative to the transpiled code: shift past the two lines put
+      // in front. Lines appended below need nothing. (Like @stencil/unplugin, a map of a
+      // flag-folded file points into the folded text, which differs only within those lines.)
+      const map = result.map ? JSON.parse(result.map) : null;
+      if (map && mutations) map.mappings = `;;${map.mappings}`;
       // customelement output drops the class's `export`; consumers import it by name.
       if (!new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
         out += `\nexport { ${componentClassName} };`;
       }
       if (isDev) out += hmrSnippet(tagName, componentClassName);
-      return { code: out, map: null };
+      return { code: out, map };
     },
 
     handleHotUpdate({ file, server }) {

@@ -44,6 +44,24 @@ node bench.mjs [rounds]     # Stencil v5 transpileSync vs stencilrs transpile, s
 ```
 
 Cold (first pass) and warm (median, best) times for each, single-threaded, one process.
-Stencil is timed with source maps (as `@stencil/unplugin` runs it) and without.
+Both compilers are timed with source maps (as `@stencil/unplugin` runs Stencil) and without.
+
+## Source maps
+
+```sh
+node sourcemaps.mjs [--verbose] [--misses]
+```
+
+The two printers lay code out differently, so maps aren't compared byte for byte. Each
+stencilrs map is checked for validity (version 3, one source, the original embedded as
+`sourcesContent`, every mapping inside it), and both compilers' maps are scored the same way:
+of the mapped positions where the output starts with an identifier, how many point at that same
+identifier in the source. It fails if a stencilrs map is invalid or scores below Stencil's.
+`--misses` tallies what stencilrs got wrong.
+
+stencilrs builds its map in two steps: oxc's printer maps the output to the edited TypeScript,
+and the edits map that back to the original. Identifiers an edit kept (`export class X` →
+`const X = class`) keep their place; code an edit wrote (constructor, `createEvent` calls,
+static getters, `key`s) stays unmapped, as TypeScript leaves synthesized code.
 
 Known Stencil quirks stencilrs copies on purpose: [`../docs/quirks.md`](../docs/quirks.md).

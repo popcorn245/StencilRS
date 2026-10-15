@@ -88,9 +88,12 @@ image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts
   `resolveImports` it also matches a full `stencil build`'s metadata: 136/136 on the ui-kit.
 - The ui-kit spec suite: 874/874 green with either compiler.
 - Benchmark (`npm run bench`), same 165 files, one process: about **41× faster** per file than
-  Stencil v5 warm; a production Vite build of the whole ui-kit is about **4.7× faster**. Stencil
-  also writes source maps; stencilrs doesn't yet. Numbers: the Benchmarks page in Storybook.
-- Not yet: source maps, computed member names, const evaluation for decorator arguments,
+  Stencil v5 warm; a production Vite build of the whole ui-kit is about **4.7× faster**. Numbers:
+  the Benchmarks page in Storybook.
+- Source maps back to the original TypeScript, through the Vite plugin in dev and build. All 165
+  fixture maps are valid, and 97.7% of mapped identifiers land on the same identifier in the
+  source, against 94.3% for Stencil's own maps (`node parity/sourcemaps.mjs`).
+- Not yet: computed member names, const evaluation for decorator arguments,
   serializers, `@AttachInternals`, inheritance and mixins, scoped inline `styles` (needs
   `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR outputs.
 

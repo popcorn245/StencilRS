@@ -48,8 +48,10 @@ Same inputs, same output contract, so this is the compiler alone.
 
 <Table head={['Compiler', 'Cold', 'Warm median', 'Per file']} rows={data.transpile.rows.map((r) => [r.compiler, ms(r.coldMs), ms(r.medianMs), `${r.perFileUs.toLocaleString()} µs`])} />
 
-**stencilrs: {data.transpile.speedup} faster.** Stencil also writes source maps here; stencilrs
-doesn't yet, which is why Stencil is shown both ways.
+**stencilrs: {data.transpile.speedup} faster.** These numbers predate stencilrs' source maps, which
+is why only Stencil is shown both ways. stencilrs now writes them too (by default, as Stencil does):
+they add roughly 40–50% to its own time, and it stays well over 20× faster than Stencil with maps.
+`node parity/bench.mjs` times both compilers both ways.
 
 ## Build: the whole ui-kit through Vite
 
