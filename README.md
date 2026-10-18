@@ -118,5 +118,5 @@ A read-only clone of `stenciljs/core` at branch `v5` lives beside this repo in
 
 ## License
 
-Not chosen yet. Code ported from Stencil keeps Stencil's MIT notice; see
+[MIT](LICENSE), copyright 2026 Popcorn245. Code ported from Stencil keeps Stencil's MIT notice; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

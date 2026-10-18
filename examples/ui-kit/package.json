@@ -1,6 +1,7 @@
 {
   "name": "stencilrs-ui-kit-harness",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "The old bucket ui-kit, migrated to Stencil v5: built with stencil build, and checked against stencilrs",
   "module": "./dist/loader-bundle/index.js",

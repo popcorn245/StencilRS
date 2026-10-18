@@ -1,6 +1,7 @@
 {
   "name": "stencilrs-starter",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Stencil v5 components compiled by stencilrs: dev server, build and tests",
   "scripts": {

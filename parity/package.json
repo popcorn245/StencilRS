@@ -1,6 +1,7 @@
 {
   "name": "stencilrs-parity",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Golden output from real Stencil v5, compared against stencilrs",
   "scripts": {
