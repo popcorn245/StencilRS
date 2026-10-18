@@ -10,6 +10,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..');
 const uiKit = join(repo, 'examples/ui-kit');
 
+// Set only by the GitHub Pages build (served under /StencilRS/); every other build is at the root.
+const base = process.env.STORYBOOK_BASE_PATH;
+
 const config: StorybookConfig = {
   // Three sections in the sidebar: the docs, then each component set.
   stories: [
@@ -33,7 +36,24 @@ const config: StorybookConfig = {
     return mergeConfig(viteConfig, {
       // Every component in both sets is compiled by stencilrs (Stencil's compiler only as the
       // per-file fallback for features stencilrs hasn't ported).
-      plugins: [stencilrs({ verbose: true })],
+      plugins: [
+        stencilrs({ verbose: true }),
+        // ui-kit's fonts.css points at /fonts/..., which staticDirs serves but Vite doesn't rebase.
+        ...(base
+          ? [
+              {
+                name: 'pages-font-base',
+                generateBundle(_options: unknown, bundle: Record<string, { type: string; fileName: string; source?: string | Uint8Array }>) {
+                  for (const file of Object.values(bundle)) {
+                    if (file.type === 'asset' && file.fileName.endsWith('.css') && typeof file.source === 'string') {
+                      file.source = file.source.replaceAll('url(/fonts/', `url(${base}fonts/`);
+                    }
+                  }
+                },
+              },
+            ]
+          : []),
+      ],
       resolve: {
         alias: {
           '@popcorn245/cards-core': join(uiKit, 'vendor/cards-core/index.ts'),
@@ -47,6 +67,9 @@ const config: StorybookConfig = {
       // loads one lit-html, not a pre-bundled copy plus a raw one.
       optimizeDeps: { include: ['lit', 'lit/directive-helpers.js'] },
       server: { fs: { allow: [repo] } },
+      // GitHub Pages serves the Storybook under /StencilRS/; the Pages workflow sets
+      // STORYBOOK_BASE_PATH for that build only.
+      ...(base ? { base } : {}),
     });
   },
 };
