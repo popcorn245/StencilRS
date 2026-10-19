@@ -15,7 +15,7 @@ Build the native binding first (`npm run build:native` at the repo root).
 ## Fixtures
 
 - `fixtures/features/`: one Stencil feature per file, including the diagnostics.
-- `fixtures/ui-kit/`: the old bucket's 136 Stencil 4 components, migrated to v5 by
+- `fixtures/ui-kit/`: a production library's 136 Stencil 4 components, migrated to v5 by
   `import-ui-kit.mjs` (only `shadow` / `scoped` → `encapsulation` was needed). Re-import with
   `node import-ui-kit.mjs <path to bucket>/packages/ui-kit/src`.
 - `fixtures/inheritance/`: components that extend a class or `Mixin(...)` (imported, same-file,

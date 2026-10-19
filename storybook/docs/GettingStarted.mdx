@@ -7,29 +7,17 @@ import { Meta } from '@storybook/addon-docs/blocks';
 ## Requirements
 
 - **Node 22** or newer.
-- **Rust** (stable; built with 1.99) to compile the native module. On Windows the MSVC toolchain
-  (`rustup` default) links with the Visual Studio Build Tools.
 - **Stencil v5** packages in your project: `@stencil/core` and `@stencil/unplugin` at
   `5.0.0-beta.25`, and **Vite 8**.
 
-## Build stencilrs
-
-```sh
-git clone https://code.popcorn245.com/Popcorn245/stencilrs.git
-cd stencilrs
-npm install
-npm run build:native   # napi build: stencilrs.<platform>.node beside index.js
-npm test               # Rust tests + the Node binding test
-```
-
-`npm run build:native` fails with `EBUSY` if a running dev server (Vite, Vitest, Storybook) still
-has the old `stencilrs.<platform>.node` loaded: stop it and run the command again.
+Prebuilt binaries cover Linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and Windows x64, so no
+Rust toolchain is needed. On anything else, [build from source](#build-from-source).
 
 ## Use it in a Vite project
 
 ```sh
-npm install --save-dev vite@8 @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25 \
-  @popcorn245/stencilrs@file:../path/to/stencilrs
+npm install --save-dev @popcorn245/stencilrs vite@8 \
+  @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25
 ```
 
 ```ts
@@ -82,6 +70,23 @@ npm run test:browser      # the same tests in headless Chrome
 npm run build             # the demo app → dist/
 npm run build:lib         # dist/lib/components.js, one ES module registering every component
 ```
+
+## Build from source
+
+Needs **Rust** (stable). On Windows the MSVC toolchain (`rustup` default) links with the Visual
+Studio Build Tools.
+
+```sh
+git clone https://github.com/popcorn245/StencilRS.git
+cd StencilRS
+npm install
+npm run build:native   # stencilrs.<platform>.node beside index.js, preferred over the prebuilt one
+npm test               # Rust tests + the Node binding test
+```
+
+`npm run build:native` fails with `EBUSY` if a running dev server (Vite, Vitest, Storybook) still
+has the old binary loaded: stop it and run the command again. To use your build in another
+project, install it by path: `npm install --save-dev ../path/to/StencilRS`.
 
 ## Run this Storybook
 

@@ -1,134 +1,148 @@
-# @popcorn245/stencilrs
+# stencilrs
 
 [![CI](https://github.com/popcorn245/StencilRS/actions/workflows/ci.yml/badge.svg)](https://github.com/popcorn245/StencilRS/actions/workflows/ci.yml)
-[Storybook on GitHub Pages](https://popcorn245.github.io/StencilRS/)
+[![npm](https://img.shields.io/npm/v/@popcorn245/stencilrs)](https://www.npmjs.com/package/@popcorn245/stencilrs)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Stencil's component authoring, compiled by Rust.
+**[Stencil v5](https://github.com/stenciljs/core/tree/v5) components, compiled by Rust.**
 
-stencilrs keeps the parts of [Stencil v5](https://github.com/stenciljs/core/tree/v5) that are already
-modern (Rolldown bundling, Lightning CSS, the signals runtime, the v5 output targets) and replaces
-the part that is still slow: the TypeScript-compiler-API transform layer
-(`packages/core/src/compiler/transformers`, about 13.7k lines). In its place is a Rust crate on
-[oxc](https://oxc.rs), exposed to Node through napi-rs. TypeScript 7 (tsgo) only type-checks.
+stencilrs replaces the slow part of the Stencil compiler: the TypeScript transform layer that turns
+a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is a
+Rust port on [oxc](https://oxc.rs), runs as a Vite 8 plugin, and produces **the same output as
+Stencil v5**: about **40× faster per file** and **4.7× faster** for a production Vite build.
 
-| Layer | Stencil v5 | stencilrs |
-|---|---|---|
-| Decorator / JSX / component transforms | TypeScript `CustomTransformers` | Rust on oxc |
-| Type checking | JS TypeScript (`>5 <7`) | tsgo, in parallel with the build |
-| `.d.ts` | TypeScript emit | oxc isolated declarations, tsgo as fallback |
-| `components.d.ts`, docs, `custom-elements.json` | TypeChecker | Rust metadata from written annotations; tsgo API after TS 7.1 |
-| Bundling | Rolldown | Rolldown (unchanged) |
-| CSS | Lightning CSS | Lightning CSS (unchanged) |
-| Browser runtime | `@stencil/core/runtime` | reused as-is |
+You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
+own runtime (`@stencil/core`) runs them in the browser.
 
-Authors write the same components as Stencil v5 (`@Component`, `@Prop`, `@State`, `@Event`,
-`@Method`, `@Watch`, `@Element`, `@Listen`, `@AttachInternals`); stencilrs aims for byte-identical
-output against v5.
+**Docs and live components:** [popcorn245.github.io/StencilRS](https://popcorn245.github.io/StencilRS/)
 
-## Use it
+## Install
+
+```sh
+npm install --save-dev @popcorn245/stencilrs vite@8 \
+  @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25
+```
+
+Node 22 or newer. Prebuilt binaries ship for Linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and
+Windows x64; no Rust toolchain needed. Other platforms can [build from source](#develop).
+
+## Use it with Vite
 
 ```ts
-// vite.config.ts (Vite 8)
+// vite.config.ts
 import stencilrs from '@popcorn245/stencilrs/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({ plugins: [stencilrs()] });
 ```
 
-Peer dependencies: `@stencil/core` and `@stencil/unplugin` (both `5.0.0-beta.25`) and Vite 8.
-The plugin compiles component files with stencilrs and leaves everything else to
-`@stencil/unplugin` (CSS modules and preprocessors, the runtime, build flags). Files using a
-feature stencilrs hasn't ported fall back to Stencil's compiler automatically.
-
-**[`examples/ui-kit`](examples/ui-kit/README.md)** is the old bucket component set (136
-components) on Stencil v5: `stencil build` is clean, stencilrs matches the full build's
-metadata for all 136, and the spec suite gives identical results with either compiler.
-
-**[`examples/starter`](examples/starter/README.md)** is a ready project: dev server with hot
-reload, a component generator, tests in happy-dom and in headless Chrome, app and library builds.
-
-**[`storybook/`](storybook/README.md)** shows both component sets, compiled by stencilrs, beside
-the full documentation: getting started, writing components, the Vite plugin, the API, testing,
-migrating to v5, how the compiler works and was built, parity, benchmarks, quirks and roadmap.
-
-```sh
-cd storybook && npm install && npm run storybook   # http://localhost:6007
+```json
+// tsconfig.json (the parts that matter)
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@stencil/core"
+  }
+}
 ```
 
-The built Storybook is live on GitHub Pages at **https://popcorn245.github.io/StencilRS/**, and on the tailnet only, at **https://stencilrs.popcorn245.com**. Every
-push to `main` runs [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml):
-[`scripts/ci.sh`](scripts/ci.sh) builds and tests the compiler, then the components (starter and
-ui-kit: tests, then a stencilrs library build), then the Storybook, and the workflow publishes
-it. Pull requests run the same build without publishing. Run the CI build locally in the same
-image with `docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts/ci.sh`.
+Import a component module anywhere and its custom element is registered:
 
-## Plan
+```ts
+import './components/my-counter/my-counter';
+```
 
-1. **Study** – catalogue every v5 transformer: input shape, emitted code, and whether it needs
-   the type checker (`docs/transformers.md`, `docs/pipeline.md`).
-2. **Parity fixtures** – compile a component corpus with real Stencil v5 and snapshot the output.
-   These snapshots are the test suite the Rust port has to match.
-3. **Rust crate, first seam: `transpileSync`** – the one-function contract `@stencil/unplugin`
-   calls (`code, opts → code, map, ComponentCompilerMeta[], imports, diagnostics`). It already runs
-   with a blind type checker, so oxc can match it exactly. Order: decorator extraction straight to
-   meta (with a syntactic prop-type classifier, falling back to `any`), component analysis, key
-   insertion, component-native codegen, the standalone wrappers. See `docs/transformers.md` §5.
-4. **Second seam: Pass B** – replace the `ts.transpileModule` that Stencil's Rolldown plugin runs on
-   every module once per bundle; those transforms never use the checker. Then Pass A (the full-build
-   emit), with type-only metadata answered by a batched TS query service. tsgo `--noEmit` runs
-   alongside for diagnostics. See `docs/pipeline.md`.
-5. **Benchmark** – cold and warm builds, Stencil v5 against stencilrs.
+The plugin compiles component files with stencilrs and leaves the rest to `@stencil/unplugin`
+(CSS, the runtime, build flags). A file that uses something stencilrs hasn't ported yet falls back
+to Stencil's own compiler, so a project never breaks for want of a feature.
+
+For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
+and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 ## Status
 
-- Step 1 done: [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
-- Step 2 done: [`parity/`](parity/README.md), 185 fixtures (34 features, 15 inheritance and
-  mixins, and the 136 ui-kit components) with golden output from real Stencil v5.
-- Step 3, first seam done: `transpile()` produces what Stencil's `transpileSync` emits for
-  `@stencil/unplugin` (`componentExport: 'customelement'`): metadata, diagnostics and code.
-  **185/185 fixtures identical** to Stencil v5 (code compared after reprinting both through
-  oxc's printer). `analyze()` returns metadata only; `normalize()` is the printer. With
-  `resolveImports` it also matches a full `stencil build`'s metadata: 136/136 on the ui-kit.
-- The ui-kit spec suite: 874/874 green with either compiler.
-- Benchmark (`npm run bench`), same 165 files, one process: about **41× faster** per file than
-  Stencil v5 warm; a production Vite build of the whole ui-kit is about **4.7× faster**. Numbers:
-  the Benchmarks page in Storybook.
-- Source maps back to the original TypeScript, through the Vite plugin in dev and build. All
-  fixture maps are valid, and 97.7% of mapped identifiers land on the same identifier in the
-  source, against 94.3% for Stencil's own maps (`node parity/sourcemaps.mjs`).
-- Inheritance and mixins: `extends Base` and `extends Mixin(a, b)`, in the same file or through
-  relative imports (one barrel hop), with Stencil's member merging and warnings. The Vite plugin
-  serves the files ancestors live in as base-class modules, as @stencil/unplugin does.
-- Forms and serializers: `@AttachInternals` (form-associated components, custom states) and
-  `@PropSerialize` / `@AttrDeserialize`.
-- Not yet: computed member names, const evaluation for decorator arguments, scoped inline
-  `styles` (needs `scopeCss`), style modes, JSDoc and full `complexType`, the lazy and SSR
-  outputs.
+| Check | Result |
+|---|---|
+| Same output as Stencil v5's per-file compiler, 185 fixtures | **185/185**: metadata, diagnostics and code |
+| Same metadata as a full `stencil build`, 136-component library | **136/136** |
+| That library's spec suite (874 tests) | **874/874** with either compiler |
+| Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
+| Production `vite build` of the library | **0.82 s** vs 3.9 s (4.7×) |
 
-Stencil behaviours copied on purpose (upstream bug candidates): [`docs/quirks.md`](docs/quirks.md).
+Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
+`@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
+JSX, `styleUrl(s)` and inline `styles`, shadow and scoped encapsulation, inheritance and mixins,
+form-associated components, and source maps back to the original TypeScript.
+
+Not yet (these fall back to Stencil, or are tracked as issues):
+
+- inline `styles` on scoped components ([#1](https://github.com/popcorn245/StencilRS/issues/1)),
+  per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
+  `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
+- constants as decorator arguments and computed member names
+  ([#4](https://github.com/popcorn245/StencilRS/issues/4)); these are errors today, not fallbacks
+- the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
+  [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
+  ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
+  output Vite, Vitest and Storybook use
+- JSDoc text and full `complexType` for docs output
+  ([#8](https://github.com/popcorn245/StencilRS/issues/8))
+
+## How it works
+
+Stencil v5 already bundles with Rolldown and handles CSS with Lightning CSS. What remained slow is
+its TypeScript-compiler-API transform layer (about 13.7k lines). stencilrs ports that layer to Rust
+and exposes it to Node through napi-rs; everything else, including the browser runtime, is
+Stencil's own.
+
+| Layer | Stencil v5 | stencilrs |
+|---|---|---|
+| Decorator, JSX and component transforms | TypeScript `CustomTransformers` | Rust on oxc |
+| Bundling | Rolldown | Rolldown (unchanged) |
+| CSS | Lightning CSS | Lightning CSS (unchanged) |
+| Browser runtime | `@stencil/core` | `@stencil/core` (unchanged) |
+
+Parity is held by golden output: [`parity/`](parity/README.md) compiles a corpus with real
+Stencil v5 and compares stencilrs against it on every change. Where Stencil has a quirk,
+stencilrs copies it on purpose ([`docs/quirks.md`](docs/quirks.md)). Design notes:
+[`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
+
+## JavaScript API
+
+```js
+import { analyze, transpile } from '@popcorn245/stencilrs';
+
+analyze(source, 'my-cmp.tsx');                // { components, diagnostics }
+transpile(source, { file: 'my-cmp.tsx' });    // { code, map, components, diagnostics }
+```
+
+The full reference is in the [docs](https://popcorn245.github.io/StencilRS/).
 
 ## Develop
 
+Needs Rust (stable) and Node 22.
+
 ```sh
-npm run build:native   # napi build: stencilrs.<platform>.node, which index.js prefers
-                       # over the prebuilt @popcorn245/stencilrs-<platform> package
+git clone https://github.com/popcorn245/StencilRS.git && cd StencilRS
+npm install
+npm run build:native   # builds stencilrs.<platform>.node, which index.js prefers over the prebuilt one
 npm test               # cargo test, then node --test
+npm run parity         # compare against Stencil v5's golden output (npm --prefix parity ci first)
+bash scripts/ci.sh     # everything CI runs: compiler, parity, both example projects, Storybook
 ```
+
+[CONTRIBUTING.md](CONTRIBUTING.md) covers how changes are checked and what a good pull request
+looks like.
 
 ## Release
 
-Set `version` in `package.json`, then push a matching tag (`git tag v0.1.0 && git push origin
-v0.1.0`). [`.github/workflows/release.yml`](.github/workflows/release.yml) builds the binary for
-linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and Windows x64, installs each from the packed
-tarballs on its own OS, then publishes the five `@popcorn245/stencilrs-<platform>` packages and
-`@popcorn245/stencilrs` (with provenance). It needs an `NPM_TOKEN` repository secret.
-
-## Reference source
-
-A read-only clone of `stenciljs/core` at branch `v5` lives beside this repo in
-`../stencil-core-v5`. It is reference material: nothing in it is built or run from here.
+Set `version` in `package.json` and push a matching tag (`git tag v0.1.0 && git push origin
+v0.1.0`). [`release.yml`](.github/workflows/release.yml) builds every platform, installs each from
+its packed tarball on its own OS, then publishes the five `@popcorn245/stencilrs-<platform>`
+packages and `@popcorn245/stencilrs` with provenance (needs the `NPM_TOKEN` secret).
 
 ## License
 
-[MIT](LICENSE), copyright 2026 Popcorn245. Code ported from Stencil keeps Stencil's MIT notice; see
+[MIT](LICENSE). Code ported from Stencil keeps Stencil's MIT notice; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
