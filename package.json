@@ -2,6 +2,7 @@
   "name": "@popcorn245/stencilrs",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
   "type": "module",
   "main": "index.js",

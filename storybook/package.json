@@ -1,6 +1,7 @@
 {
   "name": "stencilrs-storybook",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Storybook for stencilrs: docs, the v5 ui-kit and the starter components, all compiled by stencilrs",
   "scripts": {

@@ -2,6 +2,7 @@
 name = "stencilrs_transform"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
 oxc = { version = "0.154.0", features = ["ast_visit", "semantic", "codegen", "transformer"] }
