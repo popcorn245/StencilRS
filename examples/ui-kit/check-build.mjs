@@ -7,6 +7,10 @@
 // single-file transpileSync / @stencil/unplugin) only sees one file at a time. This compares
 // the two, field by field, per component, and groups the differences: the member metadata,
 // the JSDoc (`docs`) and the `complexType` (original, resolved, references) are counted apart.
+//
+// Each section counts components as matched (identical), fallback (stencilrs leaves something
+// to Stencil's compiler: an error starting with `stencilrs:`; those members are not compared) or
+// mismatch (a difference stencilrs should not have). Only a mismatch fails the check.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -177,26 +181,64 @@ function memberName(root, path) {
   return name;
 }
 
+/** The members `stencilrs:` diagnostics say stencilrs leaves to Stencil, as `prop:name` keys. */
+function fellBack(diagnostics) {
+  const keys = new Set();
+  for (const d of diagnostics) {
+    const m = /^stencilrs: the type of (prop|event|method) `([^`]+)`/.exec(d.message);
+    if (m) keys.add(`${m[1]}:${m[2]}`);
+  }
+  return keys;
+}
+
+/** The complexType section without the members that fell back (they are counted, not compared). */
+function withoutFallbacks(types, keys) {
+  const kind = { properties: 'prop', events: 'event', methods: 'method' };
+  let skipped = 0;
+  const out = {};
+  for (const [group, members] of Object.entries(types)) {
+    out[group] = members.filter((m) => {
+      const fell = keys.has(`${kind[group]}:${m.name}`);
+      if (fell) skipped++;
+      return !fell;
+    });
+  }
+  return { types: out, skipped };
+}
+
 const collection = 'dist/collection';
 let components = 0;
-const sections = ['metadata', 'docs', 'complexType'].map((title) => ({ title, identical: 0, byField: new Map() }));
+const sections = ['metadata', 'docs', 'complexType'].map((title) => ({ title, matched: 0, fallback: 0, mismatch: 0, membersFallback: 0, byField: new Map() }));
 for (const file of walk(collection).filter((f) => f.endsWith('.js'))) {
   const built = readFileSync(file, 'utf8');
   if (!/static get is\(\)/.test(built)) continue;
   components++;
   const srcFile = join('src', relative(collection, file)).replace(/\.js$/, '.tsx').replace(/\\/g, '/');
-  const ours = analyze(readFileSync(srcFile, 'utf8'), srcFile, { resolveImports: true }).components[0];
+  const result = analyze(readFileSync(srcFile, 'utf8'), srcFile, { resolveImports: true, complexTypes: true });
+  const ours = result.components[0];
+  const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
+  const keys = fellBack(unported);
   const builtTypes = typesFromBuild(built, srcFile);
   const ourTypes = ours ? typesFromStencilrs(ours) : {};
+  const expectedTypes = withoutFallbacks(builtTypes.complexType, keys);
+  const actualTypes = ours ? withoutFallbacks(ourTypes.complexType, keys) : { types: undefined, skipped: 0 };
   const pairs = [
     [fromBuild(built), ours ? fromStencilrs(ours) : null],
     [builtTypes.docs, ourTypes.docs],
-    [builtTypes.complexType, ourTypes.complexType],
+    [expectedTypes.types, actualTypes.types],
   ];
   pairs.forEach(([expected, actual], i) => {
     const section = sections[i];
     const diffs = diff(expected, actual);
-    if (!diffs.length) section.identical++;
+    section.membersFallback += i === 2 ? expectedTypes.skipped : 0;
+    // A member the diagnostics name is left to Stencil; so is a component the metadata and docs
+    // cannot be read from (an unported member that is not a type).
+    const other = unported.some((d) => !/^stencilrs: the type of (prop|event|method) /.test(d.message));
+    if (!diffs.length) {
+      if (i === 2 && expectedTypes.skipped) section.fallback++;
+      else section.matched++;
+    } else if (other) section.fallback++;
+    else section.mismatch++;
     for (const d of diffs) {
       // Group by field: properties.N.type → properties[].type
       const field = d.path.replace(/\.\d+\./g, '[].').replace(/\.\d+$/, '[]');
@@ -208,8 +250,8 @@ for (const file of walk(collection).filter((f) => f.endsWith('.js'))) {
   });
 }
 
-for (const { title, identical, byField } of sections) {
-  console.log(`${identical}/${components} components identical to the full stencil build's ${title}\n`);
+for (const { title, matched, fallback, mismatch, membersFallback, byField } of sections) {
+  console.log(`${title}: ${matched} matched · ${fallback} fallback · ${mismatch} mismatch (of ${components} components)` + (membersFallback ? ` · ${membersFallback} members left to Stencil` : '') + '\n');
   for (const [field, list] of [...byField].sort((a, b) => b[1].length - a[1].length)) {
     console.log(`${String(list.length).padStart(4)} × ${field}`);
     for (const line of verbose ? list : list.slice(0, 6)) console.log(`        ${line}`);
@@ -217,5 +259,5 @@ for (const { title, identical, byField } of sections) {
   }
   console.log();
 }
-// complexType is reported but does not fail the check until it is ported (issue #8).
-process.exitCode = sections.slice(0, 2).every((s) => s.identical === components) ? 0 : 1;
+// A fallback is not a failure: the Vite plugin hands those components to Stencil. A mismatch is.
+process.exitCode = sections.every((s) => s.mismatch === 0) ? 0 : 1;

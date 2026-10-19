@@ -715,3 +715,14 @@ pub fn docs(declarations: &[Vec<JsDoc>]) -> Docs {
     }
     Docs { text: parts.join("\n"), tags }
 }
+
+/// The docs of a parameter: the comment of the `@param` tag naming it.
+pub fn param_docs(declarations: &[Vec<JsDoc>], name: &str) -> String {
+    declarations
+        .iter()
+        .flatten()
+        .flat_map(|d| &d.tags)
+        .find(|t| t.param.as_deref() == Some(name))
+        .and_then(|t| t.comment.clone())
+        .unwrap_or_default()
+}

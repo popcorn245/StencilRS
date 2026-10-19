@@ -68,6 +68,7 @@ export const transpileOptions = (code, id) => ({
 export const stencilrsOptions = (code, id) => ({
   file: inheritance(id) ? absolute(id) : id,
   jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
+  complexTypes: true,
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : {}),
 });
 

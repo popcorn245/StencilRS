@@ -85,8 +85,10 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
   output Vite, Vitest and Storybook use
-- JSDoc text and full `complexType` for docs output
-  ([#8](https://github.com/popcorn245/StencilRS/issues/8))
+- `complexType` for types that need the checker: `keyof`, `typeof`, mapped, conditional and
+  generic types, inferred object types, types from packages or tsconfig `paths`, and unions whose
+  member order depends on the whole program. `analyze(..., { complexTypes: true })` reports each
+  as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 
 ## How it works
 
