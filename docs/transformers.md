@@ -324,7 +324,7 @@ after:  [convertStaticToMeta(config, compilerCtx, buildCtx, typeChecker, null, t
   - or a `{mode: ...}` object for multiple modes (:29-73).
   - With `compat.additionalTagTransformers`, tag selectors become `${__stencil_transformTag("x")}` (`transform-utils.ts:1606`).
 - **Checker:** none.
-- **Port:** medium. It depends on porting `src/utils/shadow-css` (`scopeCss`) and a CSS selector parser.
+- **Port:** medium. `scopeCss` is ported (`stencilrs_transform::scope_css`, checked by `parity/scope-css.mjs`).
 
 #### 2.25 `component-native/add-define-custom-element-function.ts` (340) — standalone `before[0]`
 - **Entry:** `addDefineCustomElementFunctions(compilerCtx, components, outputTarget, devMode)` (:17).

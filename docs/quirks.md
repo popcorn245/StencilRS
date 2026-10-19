@@ -127,6 +127,22 @@ errors), Stencil throws instead of reporting. `transpileSync` catches it and ret
 source unchanged, no components, and that one message with its stack trace: every diagnostic
 gathered before it is lost.
 
+## 15. `scopeCss` quirks
+
+The scoped-CSS shim (`src/utils/shadow-css.ts`), reproduced by `scope_css.rs` and checked by
+`parity/scope-css.mjs`:
+
+- The `@supports selector(...)` guard in `createSupportsRuleRe` never fires (the selector must
+  follow the `@` directly, so the lookahead never sees `supports`); the placeholders in
+  `insertPolyfillHostInCssText` are what protect those conditions. `:host:host` scopes only
+  the first `:host`, because the regex consumes the character before each match.
+- Original selectors are put back with string `replace`, so `$'`, `` $` `` and `$&` in them
+  are expanded: with the runtime's `commentOriginalSelector`, `a[href$='x']` splices the rest
+  of the stylesheet into the output. The compiler passes `false`, and still hits this through
+  `@supports selector(...)` conditions and `::slotted` selectors.
+- A literal `__ph-N__` in a selector becomes `undefined`, as does a literal `%BLOCK%` in a
+  rule's body (or Stencil throws, inside a scopable at-rule).
+
 ## Single-file type inference
 
 Not bugs, but worth knowing when reading parity results: in single-file mode every imported
