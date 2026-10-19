@@ -1,6 +1,6 @@
 {
   "name": "@popcorn245/stencilrs",
-  "version": "0.1.0",
+  "version": "0.0.0-development",
   "license": "MIT",
   "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
   "keywords": [
@@ -62,8 +62,34 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "3.10.8",
+    "@semantic-release/exec": "^7.1.0",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
+    "semantic-release": "^25.0.9",
     "vite": "8.3.4"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      [
+        "@semantic-release/exec",
+        {
+          "verifyReleaseCmd": "echo ${nextRelease.version} > .release-version",
+          "prepareCmd": "node scripts/release.mjs ${nextRelease.version}",
+          "publishCmd": "bash scripts/publish.sh"
+        }
+      ],
+      [
+        "@semantic-release/github",
+        {
+          "successComment": false,
+          "releasedLabels": false
+        }
+      ]
+    ]
   }
 }

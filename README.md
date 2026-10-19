@@ -137,11 +137,14 @@ looks like.
 
 ## Release
 
-Bump `version` in `package.json` and merge it to `main`. [`release.yml`](.github/workflows/release.yml)
-sees a version with no tag yet, builds every platform, installs each from its packed tarball on its
-own OS, publishes the five `@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs`
-with provenance, then creates the `v<version>` tag and GitHub Release. It needs the `NPM_TOKEN`
-secret. A run that fails partway can be re-run: what is already on npm is skipped.
+Releases are automatic. Pull requests are squash-merged and their titles are
+[conventional commits](https://www.conventionalcommits.org) (checked on every PR): on each merge to
+`main`, [semantic-release](https://semantic-release.gitbook.io) reads the commits since the last tag
+and picks the version (`fix:` patch, `feat:` minor, `BREAKING CHANGE:` major; `docs:`, `chore:`
+and the like release nothing). [`release.yml`](.github/workflows/release.yml) then builds every
+platform, installs each from its packed tarball on its own OS, publishes the five
+`@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs` with provenance, and
+writes the tag and the GitHub Release. It needs the `NPM_TOKEN` secret.
 
 ## License
 
