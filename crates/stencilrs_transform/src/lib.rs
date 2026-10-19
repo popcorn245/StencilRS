@@ -8,6 +8,7 @@
 mod analyze;
 mod consts;
 pub mod codegen;
+mod compiler_meta;
 mod default_value;
 mod edits;
 mod eval;
@@ -25,7 +26,7 @@ use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
-pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
+pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 
 #[derive(Debug, Serialize)]
@@ -87,7 +88,19 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
     let resolver = opts.resolve_imports.then(resolve::Resolver::new);
-    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
+    let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
+    // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
+    // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.
+    if opts.component_metadata == ComponentMetadata::CompilerStatic
+        && !analysis.failed
+        && analysis.components.iter().any(|c| c.watchers.iter().any(|w| w.prop_name == "[object Object]"))
+    {
+        analysis = analyze::Analysis {
+            components: Vec::new(),
+            diagnostics: vec![Diagnostic { level: Level::Error, message: analyze::NEGATIVE_NUMBER_ERROR.into(), start: 0, end: 0 }],
+            failed: true,
+        };
+    }
     diagnostics.extend(analysis.diagnostics);
     // When Stencil throws, `transpileSync` returns the source as it came in.
     let generated = if analysis.failed { Ok(codegen::Generated { code: source.to_owned(), map: None }) } else { codegen::generate(&parsed.program, source, &analysis.components, opts) };

@@ -1,0 +1,300 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-swipe-cards",
+      "componentClassName": "PopSwipeCards",
+      "elementRef": "el",
+      "encapsulation": "shadow",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": "open",
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "hideControls",
+          "type": "boolean",
+          "attribute": "hide-controls",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "When true, hides the built-in Yes/No control buttons."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "activeIndex"
+        }
+      ],
+      "methods": [
+        {
+          "name": "init",
+          "docs": {
+            "text": "Parses the slotted article tags, applies necessary z-index to stack them,\nand resets the activeIndex.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "swipeYes",
+          "docs": {
+            "text": "Programmatically triggers a \"Yes\" (right) swipe on the currently active card.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "swipeNo",
+          "docs": {
+            "text": "Programmatically triggers a \"No\" (left) swipe on the currently active card.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "reset",
+          "docs": {
+            "text": "Resets the deck to the initial state.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popSwipeYes",
+          "method": "popSwipeYes",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when a card is swiped right or the \"Yes\" button is clicked."
+          },
+          "complexType": {
+            "original": "{ element: HTMLElement; index: number }",
+            "resolved": "{ element: HTMLElement; index: number; }",
+            "references": {
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popSwipeNo",
+          "method": "popSwipeNo",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when a card is swiped left or the \"No\" button is clicked."
+          },
+          "complexType": {
+            "original": "{ element: HTMLElement; index: number }",
+            "resolved": "{ element: HTMLElement; index: number; }",
+            "references": {
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-SWIPE-CARDS",
+          "styleStr": null,
+          "styleIdentifier": null,
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/swipe-cards/pop-swipe-cards.css",
+              "relativePath": "pop-swipe-cards.css",
+              "originalComponentPath": "pop-swipe-cards.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "ref",
+        "onPointerDown",
+        "onPointerMove",
+        "onPointerUp",
+        "onPointerCancel",
+        "onSlotchange",
+        "part",
+        "onClick",
+        "aria-label",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "d"
+      ],
+      "htmlTagNames": [
+        "div",
+        "slot",
+        "button",
+        "svg",
+        "path"
+      ],
+      "htmlParts": [
+        "controls"
+      ],
+      "htmlSlots": [
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-swipe-cards\nA Tinder-style swipeable card interface for browsing article elements."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}

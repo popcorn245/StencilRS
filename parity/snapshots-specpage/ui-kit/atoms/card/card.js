@@ -1,0 +1,190 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const Card = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    variant = 'default';
+    href;
+    padding = 'md';
+    render() {
+        const Tag = this.href ? 'a' : 'div';
+        const attrs = this.href ? { href: this.href } : {};
+        return (h(Tag, { key: '0', class: {
+                'card': true,
+                [`card--${this.variant}`]: true,
+                [`card--${this.padding}`]: true,
+            }, ...attrs },
+            h("div", { key: '1', class: "card-header" },
+                h("slot", { key: '2', name: "header" })),
+            h("div", { key: '3', class: "card-body" },
+                h("slot", { key: '4' })),
+            h("div", { key: '5', class: "card-footer" },
+                h("slot", { key: '6', name: "footer" }))));
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "pop-card",
+        "componentClassName": "Card",
+        "elementRef": null,
+        "encapsulation": "scoped",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "variant",
+                "type": "string",
+                "attribute": "variant",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'default'",
+                "complexType": {
+                    "original": "'default' | 'interactive' | 'glass'",
+                    "resolved": "\"default\" | \"glass\" | \"interactive\"",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "href",
+                "type": "string",
+                "attribute": "href",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "padding",
+                "type": "string",
+                "attribute": "padding",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'md'",
+                "complexType": {
+                    "original": "'sm' | 'md' | 'lg'",
+                    "resolved": "\"lg\" | \"md\" | \"sm\"",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "$",
+                "styleId": "POP-CARD",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./ui-kit/atoms/card/card.css",
+                        "relativePath": "card.css",
+                        "originalComponentPath": "card.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": true,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": true,
+        "hasState": false,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": true,
+        "hasVdomClass": true,
+        "hasVdomFunctional": true,
+        "hasVdomKey": true,
+        "hasVdomListener": true,
+        "hasVdomPropOrAttr": true,
+        "hasVdomPropOrAttrPrefix": true,
+        "hasVdomRef": true,
+        "hasVdomRender": true,
+        "hasVdomStyle": true,
+        "hasVdomText": false,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key", "class", "name"],
+        "htmlTagNames": ["div", "slot"],
+        "htmlParts": [],
+        "htmlSlots": ["header", "", "footer"],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=card.js.map

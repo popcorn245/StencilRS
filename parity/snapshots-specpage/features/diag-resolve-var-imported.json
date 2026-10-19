@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: resolveVar() cannot find property \"value\" on object \"IMPORTED\" at compile time."
+    }
+  ],
+  "imports": []
+}
