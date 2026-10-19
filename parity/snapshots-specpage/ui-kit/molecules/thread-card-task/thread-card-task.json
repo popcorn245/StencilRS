@@ -1,0 +1,236 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-card-task",
+      "componentClassName": "PopThreadCardTask",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "payload",
+          "type": "any",
+          "attribute": "payload",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "CardPayload",
+            "resolved": "CardPayload",
+            "references": {
+              "CardPayload": {
+                "location": "global",
+                "id": "global::CardPayload"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The validated card payload object (set as a PROPERTY, not an attribute)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "liveness",
+          "type": "any",
+          "attribute": "liveness",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'live'",
+          "complexType": {
+            "original": "CardLiveness",
+            "resolved": "CardLiveness",
+            "references": {
+              "CardLiveness": {
+                "location": "global",
+                "id": "global::CardLiveness"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "`frozen` = historical snapshot: muted chrome, no mutating actions."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Viewer / public render — no action buttons at all."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardAction",
+          "method": "popCardAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user taps one of the card's actions."
+          },
+          "complexType": {
+            "original": "CardActionDetail",
+            "resolved": "CardActionDetail",
+            "references": {
+              "CardActionDetail": {
+                "location": "global",
+                "id": "global::CardActionDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-CARD-TASK",
+          "styleStr": null,
+          "styleIdentifier": null,
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/thread-card-task/thread-card-task.css",
+              "relativePath": "thread-card-task.css",
+              "originalComponentPath": "thread-card-task.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "type",
+        "title",
+        "aria-label",
+        "onClick",
+        "name",
+        "aria-hidden"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "ion-icon",
+        "span"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-card-task — the Thread Model v2 renderer for a task card.\n\nShows the task title, its due date, a priority chip and assignee NAME chips.\n\"Complete\" and \"Reassign\" mutate and disappear once the card is frozen;\n\"Open in Tasks\" is navigational and survives a freeze.\n\n  payload.data = { taskId: string; status: string; dueDate?: string|null;\n                   priority?: string|null; questTitle?: string|null }"
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    },
+    {
+      "path": "../thread-card/thread-card-types"
+    }
+  ]
+}

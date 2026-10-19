@@ -39,6 +39,7 @@ use oxc::transformer::{JsxOptions, JsxRuntime, TransformOptions, Transformer, Ty
 use serde_json::Value;
 
 use crate::analyze::{import_aliases, style_url_modes};
+use crate::compiler_meta::{self, MetaInput, VdomMeta, scan_vdom};
 use crate::edits::Edits;
 use crate::consts::{Lit, enum_values, order_like_object_keys};
 use crate::locals::Locals;
@@ -74,9 +75,23 @@ pub enum ComponentExport {
     Ssr,
 }
 
+/// Stencil's `componentMetadata`: what the compiler's metadata is added to the class as.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ComponentMetadata {
+    #[default]
+    None,
+    /// `static get COMPILER_META()`: the metadata `newSpecPage` registers components with.
+    CompilerStatic,
+}
+
 #[derive(Debug, Clone)]
 pub struct CodegenOptions2 {
     pub file: String,
+    /// Add the compiler's metadata to each component class. Default `None`.
+    pub component_metadata: ComponentMetadata,
+    /// Import and attach the component's styles. Stencil's `style: 'static'` (default); `null`
+    /// (`false` here) leaves the styles out, as `@stencil/unplugin`'s spec-page mode does.
+    pub emit_styles: bool,
     /// The output to generate. Default `CustomElement`.
     pub component_export: ComponentExport,
     /// Build-accurate metadata: follow relative imports and know lib types, as a full
@@ -125,6 +140,20 @@ const LIFECYCLE_METHODS: [&str; 9] = [
 /// Generate the customelement module for an already analysed program. `components` are the
 /// valid components `analyze_program` found, in source order.
 pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<Generated, String> {
+    if opts.component_metadata == ComponentMetadata::None {
+        return generate_pass(program, source, components, opts, None);
+    }
+    // The metadata holds facts about the vdom calls, which Stencil reads off the `h()` calls its
+    // JSX transform wrote. So: generate once, read those calls from the output, then again with
+    // the metadata in the class.
+    let first = generate_pass(program, source, components, &CodegenOptions2 { source_map: false, ..opts.clone() }, None)?;
+    let vdom: HashMap<String, VdomMeta> =
+        components.iter().map(|c| (c.component_class_name.clone(), scan_vdom(&first.code, &c.component_class_name))).collect();
+    generate_pass(program, source, components, opts, Some(&vdom))
+}
+
+/// One run of the generator; `vdom` is the facts for `COMPILER_META` when it is added.
+fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&HashMap<String, VdomMeta>>) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
     let ssr = opts.component_export == ComponentExport::Ssr;
     // Both take over a host (`registerInstance`) instead of being the element.
@@ -394,6 +423,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         if cmp.form_associated {
             tail.push("static get formAssociated() { return true; }".into());
         }
+        // `addComponentMetaStatic` appends the metadata to the static getters of
+        // `convertDecoratorsToStatic`; the lazy and native transforms then remove some of those
+        // and write them again (below), after it.
+        if let Some(vdom) = vdom.and_then(|v| v.get(name)) {
+            let input = MetaInput { cmp, vdom, file: &opts.file, has_modern_property_decls: info.has_modern_property_decls, has_heritage: info.has_heritage };
+            tail.push(compiler_meta::getter(&input));
+        }
         if plain && info.has_render_fn {
             match connected {
                 Some(m) => {
@@ -422,7 +458,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         if plain {
             tail.push(format!("static get is() {{ return {}; }}", json(&cmp.tag_name)));
         }
-        let styles = styles_of(cmp);
+        let styles = if opts.emit_styles { styles_of(cmp) } else { Vec::new() };
         if let Some(expr) = style_expression(cmp, &styles) {
             if lazy && !ssr {
                 // `addStaticStylePropertyToClass`: an assignment after the class.

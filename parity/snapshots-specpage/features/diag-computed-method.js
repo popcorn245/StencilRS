@@ -1,0 +1,117 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+const NAME = 'reset';
+export const DiagComputedMethod = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    async [NAME]() { }
+    render() {
+        return h("div", { key: '0' });
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "diag-computed-method",
+        "componentClassName": "DiagComputedMethod",
+        "elementRef": null,
+        "encapsulation": "none",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [{
+                "name": "[NAME]",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "() => any",
+                    "parameters": [],
+                    "references": {},
+                    "return": "any"
+                },
+                "internal": false
+            }],
+        "listeners": [],
+        "events": [],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": true,
+        "hasMode": false,
+        "hasModernPropertyDecls": false,
+        "hasAttribute": false,
+        "hasProp": false,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": false,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": false,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": false,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": false,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key"],
+        "htmlTagNames": ["div"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": false,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=diag-computed-method.js.map

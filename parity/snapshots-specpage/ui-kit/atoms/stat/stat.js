@@ -1,0 +1,202 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const Stat = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    value;
+    label;
+    color;
+    size = 'md';
+    render() {
+        return (h("div", { key: '0', class: "stat" },
+            h("span", { key: '1', class: { 'stat-value': true, [`stat-value--${this.size}`]: true }, style: { '--stat-color': this.color } }, this.value),
+            this.label && h("span", { key: '2', class: "stat-label" }, this.label)));
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "pop-stat",
+        "componentClassName": "Stat",
+        "elementRef": null,
+        "encapsulation": "scoped",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "value",
+                "type": "string",
+                "attribute": "value",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "label",
+                "type": "string",
+                "attribute": "label",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "color",
+                "type": "string",
+                "attribute": "color",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "size",
+                "type": "string",
+                "attribute": "size",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'md'",
+                "complexType": {
+                    "original": "'sm' | 'md' | 'lg'",
+                    "resolved": "\"lg\" | \"md\" | \"sm\"",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "$",
+                "styleId": "POP-STAT",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./ui-kit/atoms/stat/stat.css",
+                        "relativePath": "stat.css",
+                        "originalComponentPath": "stat.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": true,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": true,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": true,
+        "hasVdomText": true,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key", "class", "style"],
+        "htmlTagNames": ["div", "span"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=stat.js.map

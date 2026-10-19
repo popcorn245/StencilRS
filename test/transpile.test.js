@@ -28,3 +28,12 @@ test('componentExport: ssr keeps the class, adds cmpMeta, and imports the server
 test('an unknown componentExport throws', () => {
   assert.throws(() => transpile(source, { ...options, componentExport: 'nope' }), /unknown componentExport/);
 });
+
+test("componentMetadata: 'compilerstatic' adds COMPILER_META, and style: null drops styles", () => {
+  const spec = { ...options, componentExport: null, componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null };
+  const code = transpile(source, spec).code;
+  assert.match(code, /from "@stencil\/core\/testing"/);
+  assert.match(code, /static get COMPILER_META\(\) \{\s*return \{[\s\S]*"tagName": "cmp-a"[\s\S]*"hasVdomRender": true/);
+  assert.doesNotMatch(transpile(source, options).code, /COMPILER_META/);
+  assert.throws(() => transpile(source, { ...options, componentMetadata: 'bogus' }), /unknown componentMetadata/);
+});

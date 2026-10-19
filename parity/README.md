@@ -39,13 +39,21 @@ and `--mode` flag (`node snapshot.mjs --mode lazy`, `node compare.mjs --mode laz
 | `module` | `'module'` | `snapshots-module/` | the class stays exported, registered with `proxyCustomElement` |
 | `lazy` | `null` (`transpileSync` only reaches it with an explicit `null`) | `snapshots-lazy/` | the lazy-loading `loader-bundle` shape, `registerInstance(this, hostRef)` |
 | `ssr` | stencilrs `'ssr'`; Stencil: `null` with `coreImportPath: '@stencil/core/runtime/server'` | `snapshots-ssr/` | the hydrate (server-side rendering) shape: `export class`, static `style` and `cmpMeta` |
+| `specpage` | `null`, plus `componentMetadata: 'compilerstatic'`, `coreImportPath: '@stencil/core/testing'`, `style: null` | `snapshots-specpage/` | @stencil/unplugin's `spec-page` mode: lazy output with `static get COMPILER_META()`, for `newSpecPage` |
 
 `ssr` is not reachable through `transpileSync`: Stencil only runs `ssrComponentTransform` from its `ssr` output target. `stencil.mjs` copies Stencil's compiler chunk with that transform in the slot `lazyComponentTransform` has in `transpileModule`, so the fixtures go through the same emit (decorators, metadata) as the other modes.
 
-`npm run parity` and `npm run parity:sourcemaps` run all four. `fallbacks` in `lib.mjs` lists what
+`npm run parity` and `npm run parity:sourcemaps` run all five. `fallbacks` in `lib.mjs` lists what
 a mode does not port: stencilrs must report a `stencilrs:` error for those fixtures (the cue to
 compile with Stencil), and they are counted apart. Today that is lazy and ssr output of decorated base
 classes and mixins, which keep their static meta getters and so need the full `complexType`.
+`specpage` falls back on the same files.
+
+`specpage` compares `COMPILER_META` as an evaluated object, apart from the code around it. Not
+compared yet, on either side: `docs`, `complexType.resolved` / `references` and a method's whole
+`complexType` (`projectMeta` in `compare.mjs`). They need the type checker and are issue #8's;
+until then stencilrs writes empty docs and the type as written. Everything else in the
+metadata (build flags, vdom facts, styles, member lists) is compared exactly.
 
 Each fixture gets `snapshots/<suite>/<name>.js` (emitted code) and `.json` (component
 metadata, diagnostics, imports).

@@ -1,0 +1,126 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const StyleModesCmp = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    render() {
+        return h("div", { key: '0' }, "modes");
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "style-modes-cmp",
+        "componentClassName": "StyleModesCmp",
+        "elementRef": null,
+        "encapsulation": "shadow",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": "open",
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "ios",
+                "styleId": "STYLE-MODES-CMP#ios",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./features/style-modes.ios.css",
+                        "relativePath": "style-modes.ios.css",
+                        "originalComponentPath": "style-modes.ios.css"
+                    }, {
+                        "absolutePath": "./features/style-modes-extra.ios.css",
+                        "relativePath": "style-modes-extra.ios.css",
+                        "originalComponentPath": "style-modes-extra.ios.css"
+                    }]
+            }, {
+                "modeName": "md",
+                "styleId": "STYLE-MODES-CMP#md",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./features/style-modes.md.css",
+                        "relativePath": "style-modes.md.css",
+                        "originalComponentPath": "style-modes.md.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": false,
+        "hasMethod": false,
+        "hasMode": true,
+        "hasModernPropertyDecls": false,
+        "hasAttribute": false,
+        "hasProp": false,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": false,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": false,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": true,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key"],
+        "htmlTagNames": ["div"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": false,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=style-modes.js.map
