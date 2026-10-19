@@ -15,16 +15,17 @@
 //! The Stencil-specific rewrites are applied as text edits on the original TypeScript, then
 //! oxc strips the types and compiles the JSX, the way TypeScript's own emit does in Stencil.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::builder::AstBuilder;
 use oxc::ast::ast::{
-    Argument, ObjectExpression, ObjectPropertyKind,
+    AccessorProperty, Argument, ObjectExpression, ObjectPropertyKind, PropertyDefinition,
     CallExpression, Class, ClassElement, ConditionalExpression, Declaration, Decorator, Expression,
     ImportDeclarationSpecifier, JSXAttributeItem, JSXAttributeName, JSXElementName, JSXFragment,
     JSXOpeningElement, MethodDefinition, MethodDefinitionKind, Program, ReturnStatement, Statement,
-    StringLiteral, TSEnumDeclaration, TSEnumMemberName, UnaryOperator,
+    StringLiteral, TSEnumDeclaration,
 };
 use oxc::ast_visit::{Visit, VisitMut, walk, walk_mut};
 use oxc::codegen::{Codegen, CodegenOptions, CommentOptions};
@@ -36,8 +37,11 @@ use serde_json::Value;
 
 use crate::analyze::import_aliases;
 use crate::edits::Edits;
+use crate::consts::{Lit, enum_values, order_like_object_keys};
+use crate::locals::Locals;
 use crate::eval::property_key_name;
 use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
+use crate::scope_css::{scope_css, scope_id};
 
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 
@@ -153,16 +157,17 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     }
 
     // Enums, emitted the way TypeScript does.
+    let locals = Locals::collect(program);
     for stmt in &program.body {
         match stmt {
             Statement::TSEnumDeclaration(e) => {
-                if let Some(lowered) = lower_enum(e, false, source) {
+                if let Some(lowered) = lower_enum(e, false, &locals) {
                     ed.replace(e.span.start, e.span.end, lowered);
                 }
             }
             Statement::ExportDeclaration(x) => {
                 if let Declaration::TSEnumDeclaration(e) = &x.declaration {
-                    if let Some(lowered) = lower_enum(e, true, source) {
+                    if let Some(lowered) = lower_enum(e, true, &locals) {
                         ed.replace(x.span.start, x.span.end, lowered);
                     }
                 }
@@ -395,7 +400,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             tail.push(format!("static get is() {{ return {}; }}", json(&cmp.tag_name)));
         }
         let styles = styles_of(cmp);
-        if let Some(expr) = style_expression(&styles) {
+        if let Some(expr) = style_expression(cmp, &styles) {
             if lazy {
                 // `addStaticStylePropertyToClass`: an assignment after the class.
                 define_calls.push(format!("{name}.style = {expr};"));
@@ -450,7 +455,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     }
 
     let (edited, offsets) = ed.apply_mapped();
-    let (js, printed_map) = strip_types_and_jsx(&edited, opts)?;
+    let (js, printed_map, anchors) = strip_types_and_jsx(&edited, opts)?;
 
     let apis: Vec<&str> = runtime_apis.iter().chain(target_apis.iter()).copied().collect();
     let (code, prefix_lines) = if apis.is_empty() {
@@ -458,7 +463,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     } else {
         (format!("import {{ {} }} from {};\n{js}", apis.join(", "), json(&opts.core_import_path)), 1)
     };
-    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, source, &opts.file, prefix_lines));
+    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, &anchors, source, &opts.file, prefix_lines));
     Ok(Generated { code, map })
 }
 
@@ -593,7 +598,10 @@ impl ClassInfo {
         let mut vdom = VdomScan::default();
         vdom.visit_class(class);
         let names: Vec<&str> = cmp.properties.iter().filter(|p| !p.getter).map(|p| p.name.as_str()).chain(cmp.states.iter().map(|s| s.name.as_str())).collect();
+        // `detectModernPropDeclarations`: a field named like a prop or state, or a computed
+        // `@Prop`/`@State` field (its `ogPropName` is the field's own expression).
         let has_modern_property_decls = class.body.body.iter().any(|el| match el {
+            ClassElement::PropertyDefinition(p) if p.computed => has_decorator(&p.decorators, "Prop") || has_decorator(&p.decorators, "State"),
             ClassElement::PropertyDefinition(p) => property_key_name(&p.key).is_some_and(|n| names.contains(&n.as_str())),
             _ => false,
         }) || cmp.does_extend;
@@ -775,7 +783,9 @@ fn handlers_value(handlers: &[WatcherMeta]) -> Value {
             items.push(Value::Object(handler));
         }
     }
-    Value::Object(obj)
+    let mut entries: Vec<(String, Value)> = obj.into_iter().collect();
+    order_like_object_keys(&mut entries, |(k, _)| k.as_str());
+    Value::Object(entries.into_iter().collect())
 }
 
 /// `attachInternalsCustomStates`: `[{ name, initialValue, docs }]`.
@@ -816,12 +826,20 @@ fn has_style(cmp: &ComponentMeta) -> bool {
 }
 
 /// The component's `style`: its imported stylesheets called and joined, or the inline CSS.
-fn style_expression(styles: &[StyleMode]) -> Option<String> {
+fn style_expression(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
     let [style] = styles else { return None };
     if !style.urls.is_empty() {
         Some((0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + "))
     } else {
         let css = style.inline.as_deref()?;
+        // `createStyleLiteral`: a scoped component's inline styles are scoped at compile time.
+        let scoped;
+        let css = if cmp.encapsulation == Encapsulation::Scoped {
+            scoped = scope_css(css, &scope_id(&cmp.tag_name, Some(&style.mode)), false).ok()?;
+            scoped.as_str()
+        } else {
+            css
+        };
         Some(format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${")))
     }
 }
@@ -1022,6 +1040,7 @@ fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
             None => dedup.push((k, v)),
         }
     }
+    order_like_object_keys(&mut dedup, |(k, _)| k.as_str());
 
     let listeners: Vec<String> = cmp
         .listeners
@@ -1071,43 +1090,21 @@ fn js_value(v: &Value) -> String {
 
 /// TypeScript's enum emit: `var E; (function (E) { E[E["A"] = 0] = "A"; })(E || (E = {}));`.
 /// Only literal and auto-increment members; anything else is left to oxc.
-fn lower_enum(e: &TSEnumDeclaration, exported: bool, source: &str) -> Option<String> {
+/// TypeScript's enum emit, with each member's constant value folded in. `None` (oxc's
+/// transform then lowers it) when a member isn't constant.
+fn lower_enum(e: &TSEnumDeclaration, exported: bool, locals: &Locals) -> Option<String> {
     if e.declare || e.r#const {
         return None;
     }
     let name = e.id.name.as_str();
-    let mut next: Option<f64> = Some(0.0);
     let mut lines = Vec::new();
-    for m in &e.body.members {
-        let key = match &m.id {
-            TSEnumMemberName::Identifier(id) => id.name.to_string(),
-            TSEnumMemberName::String(s) => s.value.to_string(),
-            _ => return None,
-        };
+    for (key, value) in enum_values(e, locals) {
         let key_json = json(&key);
-        match &m.initializer {
-            Some(Expression::StringLiteral(s)) => {
-                lines.push(format!("{name}[{key_json}] = {};", json(&s.value)));
-                next = None;
-            }
-            Some(Expression::NumericLiteral(n)) => {
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(n.value)));
-                next = Some(n.value + 1.0);
-            }
-            Some(Expression::UnaryExpression(u)) if u.operator == UnaryOperator::UnaryNegation => {
-                let Expression::NumericLiteral(n) = &u.argument else { return None };
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(-n.value)));
-                next = Some(-n.value + 1.0);
-            }
-            None => {
-                let v = next?;
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(v)));
-                next = Some(v + 1.0);
-            }
-            Some(_) => return None,
-        }
+        lines.push(match value? {
+            Lit::Str(s) => format!("{name}[{key_json}] = {};", json(&s)),
+            Lit::Num(n) => format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(n)),
+        });
     }
-    let _ = source;
     let export = if exported { "export " } else { "" };
     Some(format!("{export}var {name};\n(function ({name}) {{\n{}\n}})({name} || ({name} = {{}}));", lines.join("\n")))
 }
@@ -1117,8 +1114,9 @@ fn fmt_num(v: f64) -> String {
 }
 
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
-/// With `opts.source_map`, also oxc's map from the output back to `edited`.
-fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>), String> {
+/// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
+/// class member positions should point instead (`MemberAnchors`).
+fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>, HashMap<u32, u32>), String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
@@ -1127,6 +1125,10 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
         return Err(format!("stencilrs produced unparsable code: {}\n---\n{edited}", msgs.join("; ")));
     }
     let mut program = parsed.program;
+    let mut anchors = MemberAnchors { text: edited, map: HashMap::new() };
+    if opts.source_map {
+        anchors.visit_program(&program);
+    }
     let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
     let mut lone_spreads = LoneSpreads(Vec::new());
     if matches!(opts.jsx, Jsx::Classic) {
@@ -1173,7 +1175,60 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
     }
     let options = CodegenOptions { source_map_path: opts.source_map.then(|| PathBuf::from(&opts.file)), ..CodegenOptions::default() };
     let printed = Codegen::new().with_options(options).build(&program);
-    Ok((printed.code, printed.map.map(|m| m.into_owned())))
+    Ok((printed.code, printed.map.map(|m| m.into_owned()), anchors.map))
+}
+
+/// oxc's printer maps a class member to its span start. TypeScript modifiers don't survive
+/// into the output, so for `private foo() {}` that is the `private` the output never prints.
+/// This collects, per member start, the offset of what the output does start with: the first
+/// token after the modifiers (`static`, `async`, `get`, `*`, or the key).
+struct MemberAnchors<'t> {
+    text: &'t str,
+    map: HashMap<u32, u32>,
+}
+
+impl MemberAnchors<'_> {
+    fn add(&mut self, span: Span, decorators: &[Decorator]) {
+        let from = decorators.last().map_or(span.start, |d| d.span.end);
+        let at = skip_ts_modifiers(self.text, from, span.end);
+        if at != span.start {
+            self.map.insert(span.start, at);
+        }
+    }
+}
+
+impl<'a> Visit<'a> for MemberAnchors<'_> {
+    fn visit_method_definition(&mut self, it: &MethodDefinition<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_method_definition(self, it);
+    }
+    fn visit_property_definition(&mut self, it: &PropertyDefinition<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_property_definition(self, it);
+    }
+    fn visit_accessor_property(&mut self, it: &AccessorProperty<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_accessor_property(self, it);
+    }
+}
+
+/// The offset of the first token at or after `from` that isn't a TypeScript-only modifier. A
+/// modifier word followed by `(`, `=`, `:`, `;`, `?`, `!`, `<` or `}` is the member's name.
+fn skip_ts_modifiers(text: &str, from: u32, end: u32) -> u32 {
+    let end = (end as usize).min(text.len());
+    let mut at = from as usize;
+    loop {
+        let start = at + (text[at..end].len() - text[at..end].trim_start().len());
+        let word_len = text[start..end].find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$')).unwrap_or(end - start);
+        let word = &text[start..start + word_len];
+        let rest = text[start + word_len..end].trim_start();
+        let is_name = rest.is_empty() || rest.starts_with(['(', '=', ':', ';', '?', '!', '<', '}']);
+        if matches!(word, "public" | "private" | "protected" | "readonly" | "override" | "declare" | "abstract") && !is_name {
+            at = start + word_len;
+        } else {
+            return start as u32;
+        }
+    }
 }
 
 /// Spans of the argument of JSX elements whose only attribute is a spread (`<svg {...p}>`).

@@ -6,6 +6,7 @@
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
+mod consts;
 pub mod codegen;
 mod default_value;
 mod edits;
@@ -15,6 +16,7 @@ mod locals;
 pub mod meta;
 mod prop_type;
 mod resolve;
+pub mod scope_css;
 mod sourcemap;
 
 use oxc::allocator::Allocator;
@@ -87,7 +89,9 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let resolver = opts.resolve_imports.then(resolve::Resolver::new);
     let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
     diagnostics.extend(analysis.diagnostics);
-    let (code, map) = match codegen::generate(&parsed.program, source, &analysis.components, opts) {
+    // When Stencil throws, `transpileSync` returns the source as it came in.
+    let generated = if analysis.failed { Ok(codegen::Generated { code: source.to_owned(), map: None }) } else { codegen::generate(&parsed.program, source, &analysis.components, opts) };
+    let (code, map) = match generated {
         Ok(generated) => (generated.code, generated.map),
         Err(message) => {
             diagnostics.push(Diagnostic { level: Level::Error, message, start: 0, end: 0 });

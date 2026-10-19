@@ -12,6 +12,9 @@ import { transpileSync, versions } from '@stencil/core/compiler';
 
 import { listFixtures, modeArg, plain, portable, snapshotsDirFor, transpileOptions } from './lib.mjs';
 
+/** An error Stencil threw carries its stack, with this machine's paths: keep the message. */
+const withoutStack = (text) => text.split('\n    at ')[0];
+
 const mode = modeArg(process.argv);
 const snapshotsDir = snapshotsDirFor(mode);
 const suite = process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--mode');
@@ -32,7 +35,7 @@ for (const { id, file } of fixtures) {
       JSON.stringify(
         {
           data: plain(result.data ?? []),
-          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: d.messageText })),
+          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: withoutStack(d.messageText) })),
           imports: result.imports ?? [],
         },
         null,

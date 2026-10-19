@@ -8,6 +8,7 @@
     "snapshot": "node snapshot.mjs",
     "compare": "node compare.mjs && node compare.mjs --mode module && node compare.mjs --mode lazy",
     "sourcemaps": "node sourcemaps.mjs && node sourcemaps.mjs --mode module && node sourcemaps.mjs --mode lazy",
+    "scope-css": "node scope-css.mjs",
     "bench": "node bench.mjs"
   },
   "dependencies": {

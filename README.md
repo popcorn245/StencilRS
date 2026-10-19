@@ -64,7 +64,8 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 188 fixtures, in each of three outputs | **188/188**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 211 fixtures, in each of three outputs | **211/211**: metadata, diagnostics and code |
+| Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
 | Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
@@ -72,16 +73,15 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
 `@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
-JSX, `styleUrl(s)` and inline `styles`, shadow and scoped encapsulation, inheritance and mixins,
-form-associated components, and source maps back to the original TypeScript.
+JSX, `styleUrl(s)` and inline `styles` (scoped ones scoped at compile time, as Stencil does), shadow and scoped encapsulation, inheritance and mixins,
+form-associated components, constants as decorator arguments and computed member names
+(`@Watch(KEYS.open)`, enums, `resolveVar()`, `@Prop() [NAME]`), and source maps back to the
+original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
-- inline `styles` on scoped components ([#1](https://github.com/popcorn245/StencilRS/issues/1)),
-  per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
+- per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
   `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
-- constants as decorator arguments and computed member names
-  ([#4](https://github.com/popcorn245/StencilRS/issues/4)); these are errors today, not fallbacks
 - the SSR output ([#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
   output Vite, Vitest and Storybook use, plus the `module` and lazy-loading (`loader-bundle`)

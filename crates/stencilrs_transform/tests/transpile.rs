@@ -141,3 +141,37 @@ fn lazy_output_leaves_decorated_base_classes_to_stencil() {
     assert!(out.code.is_empty());
     assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
 }
+
+/// The source text a map sends the first occurrence of `needle` in the output to.
+fn mapped_source<'a>(src: &'a str, needle: &str) -> &'a str {
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, source_map: true, transform_as_base_class: false, component_export: Default::default() };
+    let out = transpile(src, &opts);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let json = out.map.as_deref().expect("a source map");
+    let map = oxc_sourcemap::SourceMap::from_json_string(json).expect("valid map");
+    let line = out.code.lines().position(|l| l.trim_start().starts_with(needle)).unwrap_or_else(|| panic!("`{needle}` not in\n{}", out.code));
+    let col = out.code.lines().nth(line).unwrap().find(needle).unwrap();
+    let token = map.get_tokens().find(|t| t.get_dst_line() as usize == line && t.get_dst_col() as usize == col).expect("a mapping");
+    let at = src.lines().take(token.get_src_line() as usize).map(|l| l.len() + 1).sum::<usize>() + token.get_src_col() as usize;
+    &src[at..]
+}
+
+#[test]
+fn source_map_anchors_members_after_their_modifiers() {
+    let src = "\
+import { Component, h } from '@stencil/core';
+@Component({ tag: 'cmp-a' })
+export class CmpA {
+    private foo() {}
+    protected static async bar() {}
+    public override get baz() { return 1; }
+    private readonly qux = 1;
+    private handler = () => {};
+    render() { return <div />; }
+}
+";
+    for name in ["foo", "static async bar", "get baz", "qux", "handler"] {
+        let at = mapped_source(src, name);
+        assert!(at.starts_with(name), "`{name}` maps to `{}`", &at[..at.len().min(30)]);
+    }
+}

@@ -56,6 +56,19 @@ metadata, diagnostics, imports).
   oxc's printer with comments dropped (`normalize()`), then compared exactly. Formatting
   (TypeScript's indentation, quotes, blank lines) is not compared; every token is.
 
+## Scoped CSS
+
+```sh
+node scope-css.mjs [--verbose] [--fuzz N]
+```
+
+Stencil's `scopeCss` (the scoped-CSS shim) and stencilrs' Rust port run on the same input and
+must agree byte for byte, with both the compiler's and the runtime's flags. Stencil does not
+export `scopeCss`, so its `shadow-css.ts` region is lifted from the runtime bundle. The input is
+every case in Stencil's own spec (`scope-css/stencil-spec.json`, recorded from
+`src/utils/test/scope-css.spec.ts`), every stylesheet in the repo, and N generated stylesheets
+(5000 by default, seeded) built from the selectors the shim treats specially.
+
 ## Benchmark
 
 ```sh
