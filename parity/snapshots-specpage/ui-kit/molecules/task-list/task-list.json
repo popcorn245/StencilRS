@@ -1,0 +1,776 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-task-list",
+      "componentClassName": "PopTaskList",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "mode",
+          "type": "string",
+          "attribute": "mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'flat'",
+          "complexType": {
+            "original": "TimelineMode",
+            "resolved": "\"flat\" | \"timeline\"",
+            "references": {
+              "TimelineMode": {
+                "location": "global",
+                "id": "global::TimelineMode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Display mode: `flat` (default, legacy) or `timeline` (date-bucketed)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "groupBy",
+          "type": "string",
+          "attribute": "group-by",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'date'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Grouping mode for the timeline: 'date' (date-bucketed, default), 'quest',\n'location', 'status', 'priority', or 'none' (a true flat, ungrouped, sorted\nlist with no date dividers). An unspecified value keeps the date timeline."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sortBy",
+          "type": "string",
+          "attribute": "sort-by",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'createdAt'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Sort tasks by: createdAt, priority, dueDate, title, or `manual` (a\nhost-supplied per-device order — see `manualOrder`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "manualOrder",
+          "type": "string",
+          "attribute": "manual-order",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of task ids defining the Manual sort order (used\nonly when `sortBy === 'manual'`). Tasks are sorted by their index in this\nlist; ids absent from it fall to the end (stable). The host owns this order\n(persisted per-device) and updates it on a `taskReordered` event."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "questGroupLabel",
+          "type": "string",
+          "attribute": "quest-group-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Quest'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Fallback label for a quest bucket whose task carries no `questTitle`\n(groupBy === 'quest'). A host that calls a quest a \"Project\" can override."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "questGroupEmptyLabel",
+          "type": "string",
+          "attribute": "quest-group-empty-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'No quest'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Label for the trailing \"no quest\" bucket (groupBy === 'quest'). A host that\ncalls a quest a \"Project\" passes \"No project\"."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "filter",
+          "type": "string",
+          "attribute": "filter",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified filter object: { status?, assignee? }"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tasks",
+          "type": "string",
+          "attribute": "tasks",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of task objects"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "users",
+          "type": "string",
+          "attribute": "users",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of user objects for avatar rendering"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "currentUserId",
+          "type": "string",
+          "attribute": "current-user-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Logged-in user's id — forwarded so a task assigned only to you (or\nunassigned) shows no avatar."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "hideAssignee",
+          "type": "boolean",
+          "attribute": "hide-assignee",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Suppress the per-row assignee chip on every item — set when the list is\nalready grouped by person (e.g. the tasks-app Family view) so the chip\nisn't redundant. Forwarded to each pop-task-item."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "spaces",
+          "type": "string",
+          "attribute": "spaces",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of spaces ({ id, roomId?, room? }). Used to resolve\neach task's canonical room when groupBy === 'room'."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "floorPlan",
+          "type": "string",
+          "attribute": "floor-plan",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'null'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified FloorPlan (floorplan-core). Provides the canonical room\nlist + aliases so a space's free-text `room` can be resolved when it has\nno stamped `roomId`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedTaskId",
+          "type": "string",
+          "attribute": "selected-task-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | null",
+            "resolved": "null | string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Selected task id (controlled). When set, that row pins to the top."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "anchor",
+          "type": "string",
+          "attribute": "anchor",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'today'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Anchor for timeline scroll: 'today' | 'last-completed' | ISO date."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loadPast",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "() => Promise<TaskData[]>",
+            "resolved": "(() => Promise<{}>) | undefined",
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "TaskData": {
+                "location": "global",
+                "id": "global::TaskData"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Lazy-loader for older tasks (called when user scrolls past archive)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loadFuture",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "() => Promise<TaskData[]>",
+            "resolved": "(() => Promise<{}>) | undefined",
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "TaskData": {
+                "location": "global",
+                "id": "global::TaskData"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Lazy-loader for future tasks (called when user scrolls past last month bucket)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "defaultHiddenStatuses",
+          "type": "string",
+          "attribute": "default-hidden-statuses",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[\"done\",\"cancelled\",\"skipped\"]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Statuses hidden by default in timeline mode (still surface in archive)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "localFilter"
+        },
+        {
+          "name": "localSort"
+        },
+        {
+          "name": "collapsedBuckets"
+        },
+        {
+          "name": "draggingTaskId"
+        },
+        {
+          "name": "dropBucketKey"
+        },
+        {
+          "name": "reorderTargetId"
+        },
+        {
+          "name": "reorderBefore"
+        }
+      ],
+      "methods": [],
+      "listeners": [
+        {
+          "name": "taskDragHandleDown",
+          "method": "onTaskDragHandleDown",
+          "capture": false,
+          "passive": false
+        }
+      ],
+      "events": [
+        {
+          "name": "taskClick",
+          "method": "taskClick",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task row was clicked"
+          },
+          "complexType": {
+            "original": "{ taskId: string }",
+            "resolved": "{ taskId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "filterChange",
+          "method": "filterChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Filter was changed by user"
+          },
+          "complexType": {
+            "original": "{ filter: any }",
+            "resolved": "{ filter: any; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "sortChange",
+          "method": "sortChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Sort was changed by user"
+          },
+          "complexType": {
+            "original": "{ sortBy: string }",
+            "resolved": "{ sortBy: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskComplete",
+          "method": "taskComplete",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task was marked complete via the row checkbox."
+          },
+          "complexType": {
+            "original": "{ taskId: string }",
+            "resolved": "{ taskId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "bucketExpand",
+          "method": "bucketExpand",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A bucket header was toggled/expanded."
+          },
+          "complexType": {
+            "original": "{ bucket: string; expanded: boolean }",
+            "resolved": "{ bucket: string; expanded: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "anchorReached",
+          "method": "anchorReached",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when the anchor row enters view (e.g. for \"Jump to today\" FAB)."
+          },
+          "complexType": {
+            "original": "{ anchor: string }",
+            "resolved": "{ anchor: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskMoved",
+          "method": "taskMoved",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task was dragged onto a different bucket section. The host persists the\nfield implied by `groupBy` (status/quest/location/room → see page-dashboard)."
+          },
+          "complexType": {
+            "original": "{\n    taskId: string;\n    groupBy: string;\n    toBucketKey: string;\n  }",
+            "resolved": "{ taskId: string; groupBy: string; toBucketKey: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskDroppedOnRoom",
+          "method": "taskDroppedOnRoom",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task was dragged onto a map room hit-zone (detected via DOM hit-test of\n`[data-room-drop]` elements rendered by pop-floor-map). The host moves the\ntask to that canonical room."
+          },
+          "complexType": {
+            "original": "{\n    taskId: string;\n    roomId: string;\n  }",
+            "resolved": "{ taskId: string; roomId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskReordered",
+          "method": "taskReordered",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task was re-ordered within the Manual sort (dragged to a new position in\nthe same list/group). `orderedIds` is the full new order of the currently\nvisible rows (flattened across buckets in render order). The host persists\nthis per-device. Only fired when `sortBy === 'manual'`."
+          },
+          "complexType": {
+            "original": "{\n    taskId: string;\n    orderedIds: string[];\n  }",
+            "resolved": "{ taskId: string; orderedIds: {}; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "mode",
+          "methodName": "onModeChange"
+        },
+        {
+          "propName": "anchor",
+          "methodName": "onAnchorChange"
+        },
+        {
+          "propName": "sortBy",
+          "methodName": "onSortByChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-TASK-LIST",
+          "styleStr": null,
+          "styleIdentifier": null,
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/task-list/task-list.css",
+              "relativePath": "task-list.css",
+              "originalComponentPath": "task-list.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": true,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "href",
+        "class",
+        "data-task-id",
+        "onClick",
+        "taskId",
+        "taskTitle",
+        "status",
+        "priority",
+        "dueDate",
+        "reminderAt",
+        "assignedTo",
+        "checked",
+        "users",
+        "currentUserId",
+        "hideAssignee",
+        "questLabel",
+        "tags",
+        "threadLabel",
+        "dragHandle",
+        "readonly",
+        "onTaskChecked",
+        "onChange",
+        "value",
+        "data-bucket",
+        "data-bucket-droppable",
+        "aria-hidden",
+        "ref",
+        "type",
+        "aria-expanded"
+      ],
+      "htmlTagNames": [
+        "div",
+        "a",
+        "pop-task-item",
+        "select",
+        "option",
+        "section",
+        "strong",
+        "span",
+        "button"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    },
+    {
+      "path": "@popcorn245/floorplan-core"
+    }
+  ]
+}

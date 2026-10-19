@@ -1,7 +1,7 @@
 //! Node binding for stencilrs.
 
 use napi_derive::napi;
-use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
+use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
 
 fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
     serde_json::to_value(value).map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -34,6 +34,11 @@ pub struct JsTranspileOptions {
     /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
     /// `"module"` or `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil).
     pub component_export: Option<String>,
+    /// `"compilerstatic"`: add `static get COMPILER_META()` to each component, as Stencil's
+    /// `componentMetadata`. Default none.
+    pub component_metadata: Option<String>,
+    /// Import and attach the component's styles. Default true; false is Stencil's `style: null`.
+    pub emit_styles: Option<bool>,
 }
 
 /// Generate a component module, `customelement` unless `componentExport` says otherwise:
@@ -54,8 +59,17 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
             )));
         }
     };
+    let component_metadata = match options.component_metadata.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        None | Some("") => ComponentMetadata::None,
+        Some("compilerstatic") => ComponentMetadata::CompilerStatic,
+        Some(other) => {
+            return Err(napi::Error::from_reason(format!("unknown componentMetadata {other:?}: expected \"compilerstatic\"")));
+        }
+    };
     let opts = TranspileOptions {
         component_export,
+        component_metadata,
+        emit_styles: options.emit_styles.unwrap_or(true),
         file: options.file,
         core_import_path: options.core_import_path.unwrap_or_else(|| DEFAULT_CORE_IMPORT_PATH.into()),
         jsx,

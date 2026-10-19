@@ -1,0 +1,206 @@
+import { registerInstance as __stencil_registerInstance, getElement as __stencil_getElement } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const NavBar = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    get el() { return __stencil_getElement(this); }
+    direction = 'horizontal';
+    position = 'none';
+    activeHref;
+    updateActiveItems() {
+        const items = this.el.querySelectorAll('pop-nav-item');
+        items.forEach((item) => {
+            item.active = item.href === this.activeHref;
+        });
+    }
+    componentDidLoad() {
+        if (this.direction === 'vertical') {
+            const items = this.el.querySelectorAll('pop-nav-item');
+            items.forEach(item => item.classList.add('ni--vertical'));
+        }
+        this.updateActiveItems();
+    }
+    render() {
+        return (h("nav", { key: '0', class: {
+                'nb': true,
+                [`nb--${this.direction}`]: true,
+                [`nb--${this.position}`]: this.position !== 'none',
+            } },
+            h("slot", { key: '1' })));
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "pop-nav-bar",
+        "componentClassName": "NavBar",
+        "elementRef": "el",
+        "encapsulation": "scoped",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "direction",
+                "type": "string",
+                "attribute": "direction",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'horizontal'",
+                "complexType": {
+                    "original": "'horizontal' | 'vertical'",
+                    "resolved": "\"horizontal\" | \"vertical\"",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "position",
+                "type": "string",
+                "attribute": "position",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'none'",
+                "complexType": {
+                    "original": "'top' | 'bottom' | 'side' | 'none'",
+                    "resolved": "\"bottom\" | \"none\" | \"side\" | \"top\"",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "activeHref",
+                "type": "string",
+                "attribute": "active-href",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [],
+        "watchers": [{
+                "propName": "activeHref",
+                "methodName": "updateActiveItems",
+                "handlerOptions": undefined
+            }],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "$",
+                "styleId": "POP-NAV-BAR",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./ui-kit/molecules/nav-bar/nav-bar.css",
+                        "relativePath": "nav-bar.css",
+                        "originalComponentPath": "nav-bar.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": true,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": true,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": true,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": true,
+        "hasState": false,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": true,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": false,
+        "hasSignalsImport": false,
+        "hasWatchCallback": true,
+        "isPlain": false,
+        "htmlAttrNames": ["key", "class"],
+        "htmlTagNames": ["nav", "slot"],
+        "htmlParts": [],
+        "htmlSlots": [""],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+    static get watchers() { return {
+        "activeHref": [{
+                "updateActiveItems": 0
+            }]
+    }; }
+};
+//# sourceMappingURL=nav-bar.js.map

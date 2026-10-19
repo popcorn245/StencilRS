@@ -1,0 +1,862 @@
+import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent, getElement as __stencil_getElement } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const PopTaskItem = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+        this.taskChanged = __stencil_createEvent(this, "taskChanged", 7);
+        this.taskChecked = __stencil_createEvent(this, "taskChecked", 7);
+        this.taskDeleted = __stencil_createEvent(this, "taskDeleted", 7);
+        this.taskDragHandleDown = __stencil_createEvent(this, "taskDragHandleDown", 7);
+    }
+    get el() { return __stencil_getElement(this); }
+    /** Firestore task document ID */
+    taskId = '';
+    /** Task title text */
+    taskTitle = '';
+    /** Task status */
+    status = 'open';
+    /** Priority: urgent, high, medium, low */
+    priority = 'medium';
+    /** ISO date string (YYYY-MM-DD) */
+    dueDate = null;
+    /** ISO timestamp — fire time of a reminder/timer. Shown as a time pill (⏰)
+     *  when the task has no due date (a one-off transient nudge). */
+    reminderAt = null;
+    /** JSON stringified array of user UIDs */
+    assignedTo = '[]';
+    /** Whether the task is checked (derived from status === 'done') */
+    checked = false;
+    /** If true, disables title editing (contenteditable / long-press / dblclick).
+     *  Does NOT disable the completion checkbox — see `checkable`. */
+    readonly = false;
+    /** Whether the completion checkbox can be toggled. Defaults to true so a
+     *  list row stays `readonly` (title locked) yet still lets you tap to
+     *  complete. Set false for a fully static render (e.g. read-only editor). */
+    checkable = true;
+    /** JSON stringified array of { id, displayName, photoURL } for avatar rendering */
+    users = '[]';
+    /** The logged-in user's id. Their own avatar is hidden (you don't need to see
+     *  yourself on every task) — the assignee avatar only shows OTHER people. */
+    currentUserId = '';
+    /** Suppress the assignee avatar+name chip. Useful when the surrounding list is
+     *  already grouped by person (e.g. the tasks-app Family view), where a per-row
+     *  assignee chip would be redundant. */
+    hideAssignee = false;
+    /** Optional quest title — rendered as a small chip so you can see which
+     *  quest a task belongs to (empty = no chip). */
+    questLabel = '';
+    /** JSON stringified array of tag strings — rendered as `#tag` chips in the
+     *  meta row (empty array = no chips). */
+    tags = '[]';
+    /** Presentational thread label — a teal chip shown when a task is linked to a
+     *  Bucket-Bot hub thread. Empty (default) hides it. Phase-1 hook only: the
+     *  Share-to-Thread phase will populate this from the linked-thread field. */
+    threadLabel = '';
+    /** Whether to render the right-edge drag handle. The parent list gates this
+     *  so handles only appear when a drag actually does something — i.e. when a
+     *  grouping is active (drag-to-regroup) or the sort is Manual (drag-to-reorder).
+     *  Defaults to true so standalone/legacy consumers keep the handle. */
+    dragHandle = true;
+    /** A task property was changed */
+    taskChanged;
+    /** Checkbox was toggled */
+    taskChecked;
+    /** Task was deleted */
+    taskDeleted;
+    /** The drag handle was pressed — the parent list starts a pointer drag. The
+     *  pointer info lets the list build a ghost + track the move without the row
+     *  itself owning any drag geometry. */
+    taskDragHandleDown;
+    isEditing = false;
+    pressTimer = null;
+    titleRef = null;
+    get parsedUsers() {
+        try {
+            return JSON.parse(this.users);
+        }
+        catch {
+            return [];
+        }
+    }
+    get parsedAssignedTo() {
+        try {
+            return JSON.parse(this.assignedTo);
+        }
+        catch {
+            return [];
+        }
+    }
+    get parsedTags() {
+        try {
+            const arr = JSON.parse(this.tags);
+            return Array.isArray(arr) ? arr.filter((t) => typeof t === 'string' && t) : [];
+        }
+        catch {
+            return [];
+        }
+    }
+    get isDone() {
+        return this.status === 'done';
+    }
+    /** Parse the due date to a local Date, or null. Handles both a bare
+     *  'YYYY-MM-DD' (local midnight) and a full ISO timestamp. */
+    get dueDateObj() {
+        if (!this.dueDate)
+            return null;
+        const raw = this.dueDate.includes('T') ? this.dueDate : this.dueDate + 'T00:00:00';
+        const d = new Date(raw);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    get isOverdue() {
+        const d = this.dueDateObj;
+        if (!d)
+            return false;
+        return d < new Date() && !this.isDone && !this.isToday;
+    }
+    /** True when the due date falls on today's calendar day. */
+    get isToday() {
+        const d = this.dueDateObj;
+        if (!d)
+            return false;
+        return d.toDateString() === new Date().toDateString();
+    }
+    /** Priority → a modifier class for the coloured dot (urgent/high/med/low). */
+    get priorityClass() {
+        switch (this.priority) {
+            case 'urgent': return 'task-item__pri--urgent';
+            case 'high': return 'task-item__pri--high';
+            case 'low': return 'task-item__pri--low';
+            default: return 'task-item__pri--med';
+        }
+    }
+    get formattedDate() {
+        const d = this.dueDateObj;
+        if (!d)
+            return '';
+        // Whole-day difference between the due day and today (ignores time-of-day).
+        const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+        const dayMs = 86400000;
+        const diff = Math.round((startOfDay(d) - startOfDay(new Date())) / dayMs);
+        const hasTime = !(d.getHours() === 0 && d.getMinutes() === 0);
+        const time = hasTime
+            ? ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: d.getMinutes() ? '2-digit' : undefined }).replace(':00', '')
+            : '';
+        if (diff === 0)
+            return `Today${time}`;
+        if (diff === 1)
+            return `Tomorrow${time}`;
+        if (diff === -1)
+            return 'Yesterday';
+        if (diff < -1)
+            return `${-diff} days ago`;
+        if (diff > 1 && diff < 7)
+            return d.toLocaleDateString('en-US', { weekday: 'short' }) + time;
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + time;
+    }
+    /** True when this row represents a reminder/timer with no due date. */
+    get isReminder() {
+        return !this.dueDate && !!this.reminderAt;
+    }
+    /** Reminder fire time — just the time if it's today, else date + time. */
+    get formattedReminder() {
+        if (!this.reminderAt)
+            return '';
+        const d = new Date(this.reminderAt);
+        if (isNaN(d.getTime()))
+            return '';
+        const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const sameDay = d.toDateString() === new Date().toDateString();
+        return sameDay
+            ? time
+            : `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${time}`;
+    }
+    handleCheckToggle = (e) => {
+        if (!this.checkable)
+            return;
+        // The row is wrapped in a navigating <a>; keep a checkbox tap from also
+        // bubbling up and opening the detail view.
+        e?.stopPropagation();
+        e?.preventDefault();
+        const newChecked = !this.isDone;
+        const newStatus = newChecked ? 'done' : 'open';
+        this.checked = newChecked;
+        this.status = newStatus;
+        this.taskChecked.emit({ taskId: this.taskId, checked: newChecked });
+        this.taskChanged.emit({ taskId: this.taskId, field: 'status', value: newStatus });
+    };
+    handleTitleBlur = () => {
+        if (!this.titleRef)
+            return;
+        const newTitle = this.titleRef.textContent?.trim() || '';
+        if (newTitle !== this.taskTitle) {
+            this.taskTitle = newTitle;
+            this.taskChanged.emit({ taskId: this.taskId, field: 'title', value: newTitle });
+        }
+        this.isEditing = false;
+    };
+    handleTitleKeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            this.titleRef?.blur();
+        }
+        if (e.key === 'Backspace' && !this.titleRef?.textContent?.trim()) {
+            e.preventDefault();
+            if (window.confirm('Delete this task?')) {
+                this.taskDeleted.emit({ taskId: this.taskId });
+            }
+        }
+    };
+    /** Tap-hold (long-press) → enter edit mode. Single tap stays uncaptured
+     *  so the parent row's onClick navigates normally. Cancels on
+     *  pointer-up, leave, or cancel (sloppy press = no edit). Desktop users
+     *  get the same affordance via double-click. */
+    startPress = (e) => {
+        if (this.readonly || this.isEditing)
+            return;
+        if (e.button !== undefined && e.button !== 0)
+            return; // ignore right/middle
+        this.cancelPress();
+        this.pressTimer = window.setTimeout(() => {
+            this.pressTimer = null;
+            this.enterEditMode();
+        }, 450);
+    };
+    cancelPress = () => {
+        if (this.pressTimer !== null) {
+            clearTimeout(this.pressTimer);
+            this.pressTimer = null;
+        }
+    };
+    handleTitleDblClick = (e) => {
+        if (this.readonly || this.isEditing)
+            return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.enterEditMode();
+    };
+    /** Drag handle pressed → hand off to the parent list (which owns bucket +
+     *  map geometry). Stop propagation so the press doesn't also navigate / enter
+     *  edit mode. */
+    onHandleDown = (e) => {
+        if (e.button !== undefined && e.button > 0)
+            return;
+        e.stopPropagation();
+        e.preventDefault();
+        this.taskDragHandleDown.emit({
+            taskId: this.taskId,
+            pointerId: e.pointerId,
+            clientX: e.clientX,
+            clientY: e.clientY,
+        });
+    };
+    enterEditMode = () => {
+        this.isEditing = true;
+        requestAnimationFrame(() => {
+            this.titleRef?.focus();
+            const sel = window.getSelection();
+            if (sel && this.titleRef) {
+                const range = document.createRange();
+                range.selectNodeContents(this.titleRef);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        });
+    };
+    componentDidLoad() {
+        // no-op
+    }
+    render() {
+        const users = this.parsedUsers;
+        // Only surface OTHER assignees — hide the avatar when the task is unassigned
+        // or assigned (only) to the logged-in user.
+        const assignedUsers = this.parsedAssignedTo.filter((uid) => uid && uid !== this.currentUserId);
+        const tags = this.parsedTags;
+        const hasMeta = !!this.dueDate || this.isReminder || !!this.questLabel || !!this.threadLabel ||
+            tags.length > 0 || assignedUsers.length > 0;
+        return (h("div", { key: '0', class: `task-item ${this.isDone ? 'task-item--done' : ''}` },
+            h("button", { key: '1', type: "button", class: `task-item__check ${this.isDone ? 'task-item__check--on' : ''}`, onClick: (e) => this.handleCheckToggle(e), disabled: !this.checkable, "aria-label": this.isDone ? 'Mark incomplete' : 'Mark complete' },
+                h("svg", { key: '2', width: "13", height: "13", viewBox: "0 0 24 24", fill: "none" },
+                    h("path", { key: '3', d: "M20 6 9 17l-5-5", stroke: "#fff", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round" }))),
+            h("span", { key: '4', class: `task-item__pri ${this.priorityClass}`, "aria-hidden": "true", title: `Priority: ${this.priority}` }),
+            h("div", { key: '5', class: "task-item__body" },
+                h("div", { key: '6', class: {
+                        'task-item__title': true,
+                        'task-item__title--done': this.isDone,
+                        'task-item__title--editing': this.isEditing,
+                    }, contentEditable: this.isEditing && !this.readonly, ref: el => this.titleRef = el, onBlur: this.handleTitleBlur, onKeyDown: this.handleTitleKeydown, onPointerDown: this.startPress, onPointerUp: this.cancelPress, onPointerCancel: this.cancelPress, onPointerLeave: this.cancelPress, onDblClick: this.handleTitleDblClick }, this.taskTitle),
+                hasMeta && (h("div", { key: '7', class: "task-item__meta" },
+                    this.dueDate && (h("span", { key: '8', class: {
+                            'task-item__chip': true,
+                            'task-item__chip--due': true,
+                            'task-item__chip--overdue': this.isOverdue,
+                            'task-item__chip--today': this.isToday && !this.isOverdue,
+                        } },
+                        h("svg", { key: '9', width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2" },
+                            h("circle", { key: 'a', cx: "12", cy: "12", r: "9" }),
+                            h("path", { key: 'b', d: "M12 7v5l3 2" })),
+                        this.formattedDate)),
+                    this.isReminder && (h("span", { key: 'c', class: "task-item__chip task-item__chip--reminder" },
+                        h("svg", { key: 'd', width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round" },
+                            h("circle", { key: 'e', cx: "12", cy: "12", r: "9" }),
+                            h("polyline", { key: 'f', points: "12 7 12 12 15 14" })),
+                        this.formattedReminder)),
+                    this.questLabel && (h("span", { key: 'g', class: "task-item__chip task-item__chip--quest", title: `Quest: ${this.questLabel}` },
+                        h("svg", { key: 'h', width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linejoin": "round" },
+                            h("path", { key: 'i', d: "m12 3 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 22.3 7 19.9l1-5.8L3.8 10l5.8-.8z" })),
+                        h("span", { key: 'j', class: "task-item__chip-label" }, this.questLabel))),
+                    this.threadLabel && (h("span", { key: 'k', class: "task-item__chip task-item__chip--thread", title: `Thread: ${this.threadLabel}` },
+                        h("svg", { key: 'l', width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linejoin": "round" },
+                            h("path", { key: 'm', d: "M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z" })),
+                        h("span", { key: 'n', class: "task-item__chip-label" }, this.threadLabel))),
+                    tags.slice(0, 3).map((tag) => (h("span", { class: "task-item__chip task-item__chip--tag" }, tag))),
+                    !this.hideAssignee && assignedUsers.length > 0 && (() => {
+                        const uid = assignedUsers[0];
+                        const user = users.find(u => u.id === uid);
+                        // Prefer the resolved display name; if the uid has no roster
+                        // entry, fall back to a short uid stub (not the word "Assignee").
+                        const resolved = user?.displayName || user?.email || '';
+                        const name = resolved || `${uid.slice(0, 6)}…`;
+                        const initials = (resolved || uid).split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                        const extra = assignedUsers.length - 1;
+                        return (h("span", { class: "task-item__assignee" },
+                            user?.photoURL
+                                ? h("img", { class: "task-item__assignee-av", src: user.photoURL, alt: "" })
+                                : h("span", { class: "task-item__assignee-av task-item__assignee-av--initials" }, initials),
+                            h("span", { class: "task-item__assignee-name" },
+                                name,
+                                extra > 0 ? ` +${extra}` : '')));
+                    })())),
+                h("slot", { key: 'o', name: "actions" })),
+            this.dragHandle && (h("button", { key: 'p', type: "button", class: "task-item__drag-handle", "aria-label": "Drag to move task", title: "Drag to move", onPointerDown: this.onHandleDown, onClick: (e) => { e.preventDefault(); e.stopPropagation(); } },
+                h("svg", { key: 'q', width: "18", height: "18", viewBox: "0 0 512 512", fill: "none", stroke: "currentColor", "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": "36", "aria-hidden": "true" },
+                    h("line", { key: 'r', x1: "96", y1: "176", x2: "416", y2: "176" }),
+                    h("line", { key: 's', x1: "96", y1: "256", x2: "416", y2: "256" }),
+                    h("line", { key: 't', x1: "96", y1: "336", x2: "416", y2: "336" }))))));
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "pop-task-item",
+        "componentClassName": "PopTaskItem",
+        "elementRef": "el",
+        "encapsulation": "scoped",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "taskId",
+                "type": "string",
+                "attribute": "task-id",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "''",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Firestore task document ID"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "taskTitle",
+                "type": "string",
+                "attribute": "task-title",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "''",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Task title text"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "status",
+                "type": "string",
+                "attribute": "status",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'open'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Task status"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "priority",
+                "type": "string",
+                "attribute": "priority",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'medium'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Priority: urgent, high, medium, low"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "dueDate",
+                "type": "string",
+                "attribute": "due-date",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "null",
+                "complexType": {
+                    "original": "string | null",
+                    "resolved": "null | string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "ISO date string (YYYY-MM-DD)"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "reminderAt",
+                "type": "string",
+                "attribute": "reminder-at",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "null",
+                "complexType": {
+                    "original": "string | null",
+                    "resolved": "null | string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "ISO timestamp \u2014 fire time of a reminder/timer. Shown as a time pill (\u23F0)\nwhen the task has no due date (a one-off transient nudge)."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "assignedTo",
+                "type": "string",
+                "attribute": "assigned-to",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'[]'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "JSON stringified array of user UIDs"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "checked",
+                "type": "boolean",
+                "attribute": "checked",
+                "reflect": false,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "false",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Whether the task is checked (derived from status === 'done')"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "readonly",
+                "type": "boolean",
+                "attribute": "readonly",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "false",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "If true, disables title editing (contenteditable / long-press / dblclick).\nDoes NOT disable the completion checkbox \u2014 see `checkable`."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "checkable",
+                "type": "boolean",
+                "attribute": "checkable",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "true",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Whether the completion checkbox can be toggled. Defaults to true so a\nlist row stays `readonly` (title locked) yet still lets you tap to\ncomplete. Set false for a fully static render (e.g. read-only editor)."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "users",
+                "type": "string",
+                "attribute": "users",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'[]'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "JSON stringified array of { id, displayName, photoURL } for avatar rendering"
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "currentUserId",
+                "type": "string",
+                "attribute": "current-user-id",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "''",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "The logged-in user's id. Their own avatar is hidden (you don't need to see\nyourself on every task) \u2014 the assignee avatar only shows OTHER people."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "hideAssignee",
+                "type": "boolean",
+                "attribute": "hide-assignee",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "false",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Suppress the assignee avatar+name chip. Useful when the surrounding list is\nalready grouped by person (e.g. the tasks-app Family view), where a per-row\nassignee chip would be redundant."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "questLabel",
+                "type": "string",
+                "attribute": "quest-label",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "''",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Optional quest title \u2014 rendered as a small chip so you can see which\nquest a task belongs to (empty = no chip)."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "tags",
+                "type": "string",
+                "attribute": "tags",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'[]'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "JSON stringified array of tag strings \u2014 rendered as `#tag` chips in the\nmeta row (empty array = no chips)."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "threadLabel",
+                "type": "string",
+                "attribute": "thread-label",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "''",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Presentational thread label \u2014 a teal chip shown when a task is linked to a\nBucket-Bot hub thread. Empty (default) hides it. Phase-1 hook only: the\nShare-to-Thread phase will populate this from the linked-thread field."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "dragHandle",
+                "type": "boolean",
+                "attribute": "drag-handle",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "true",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "Whether to render the right-edge drag handle. The parent list gates this\nso handles only appear when a drag actually does something \u2014 i.e. when a\ngrouping is active (drag-to-regroup) or the sort is Manual (drag-to-reorder).\nDefaults to true so standalone/legacy consumers keep the handle."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [{
+                "name": "isEditing"
+            }],
+        "methods": [],
+        "listeners": [],
+        "events": [{
+                "name": "taskChanged",
+                "method": "taskChanged",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": "A task property was changed"
+                },
+                "complexType": {
+                    "original": "{ taskId: string; field: string; value: any }",
+                    "resolved": "{ taskId: string; field: string; value: any; }",
+                    "references": {}
+                },
+                "internal": false
+            }, {
+                "name": "taskChecked",
+                "method": "taskChecked",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": "Checkbox was toggled"
+                },
+                "complexType": {
+                    "original": "{ taskId: string; checked: boolean }",
+                    "resolved": "{ taskId: string; checked: boolean; }",
+                    "references": {}
+                },
+                "internal": false
+            }, {
+                "name": "taskDeleted",
+                "method": "taskDeleted",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": "Task was deleted"
+                },
+                "complexType": {
+                    "original": "{ taskId: string }",
+                    "resolved": "{ taskId: string; }",
+                    "references": {}
+                },
+                "internal": false
+            }, {
+                "name": "taskDragHandleDown",
+                "method": "taskDragHandleDown",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": "The drag handle was pressed \u2014 the parent list starts a pointer drag. The\npointer info lets the list build a ghost + track the move without the row\nitself owning any drag geometry."
+                },
+                "complexType": {
+                    "original": "{\n    taskId: string;\n    pointerId: number;\n    clientX: number;\n    clientY: number;\n  }",
+                    "resolved": "{ taskId: string; pointerId: number; clientX: number; clientY: number; }",
+                    "references": {}
+                },
+                "internal": false
+            }],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "$",
+                "styleId": "POP-TASK-ITEM",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./ui-kit/molecules/task-item/task-item.css",
+                        "relativePath": "task-item.css",
+                        "originalComponentPath": "task-item.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": true,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": true,
+        "hasLifecycle": true,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": true,
+        "hasPropString": true,
+        "hasPropMutable": true,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": true,
+        "hasState": true,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": true,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": true,
+        "hasVdomPropOrAttr": true,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": true,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": true,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key", "class", "type", "onClick", "disabled", "aria-label", "width", "height", "viewBox", "fill", "d", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "aria-hidden", "title", "contentEditable", "ref", "onBlur", "onKeyDown", "onPointerDown", "onPointerUp", "onPointerCancel", "onPointerLeave", "onDblClick", "cx", "cy", "r", "points", "src", "alt", "name", "x1", "y1", "x2", "y2"],
+        "htmlTagNames": ["div", "button", "svg", "path", "span", "circle", "polyline", "img", "slot", "line"],
+        "htmlParts": [],
+        "htmlSlots": ["actions"],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=task-item.js.map

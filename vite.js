@@ -11,6 +11,10 @@
 // is left to @stencil/unplugin, which compiles it with Stencil's own compiler. Pass
 // `{ fallback: false }` to make that an error instead.
 //
+// `stencilrs({ mode: 'spec-page' })` (or `stencilrsSpecPage()`) is @stencil/unplugin's spec-page
+// mode: components compile for Stencil's `newSpecPage` (lazy output with `COMPILER_META`, the
+// core from `@stencil/core/testing`), for Vitest. See `docs/pipeline.md`.
+//
 // Inheritance works as in @stencil/unplugin: a component's ancestors (`extends Base`,
 // `extends Mixin(a, b)`) are read for their members, and the files they live in are served as
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
@@ -75,6 +79,14 @@ const hmrSnippet = (tagName, className) => {
   );
 };
 
+/** What @stencil/unplugin's `mode: 'spec-page'` passes to `transpileSync` (transformStencil). */
+const SPEC_PAGE_OPTIONS = {
+  componentExport: null,
+  componentMetadata: 'compilerstatic',
+  coreImportPath: '@stencil/core/testing',
+  style: null,
+};
+
 /**
  * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, resolveImports?: boolean }} [options]
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
@@ -83,6 +95,7 @@ const hmrSnippet = (tagName, className) => {
  */
 export function stencilrs(options = {}) {
   const { fallback = true, verbose = false, resolveImports = true, ...stencilOptions } = options;
+  const specPage = stencilOptions.mode === 'spec-page';
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let tsconfigJsx = null;
@@ -118,11 +131,11 @@ export function stencilrs(options = {}) {
 
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
-      if (!isDev && !transformOpts?.ssr && code.includes('Build')) {
+      if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const result = transpile(code, { file, resolveImports, ...jsxFor(code, tsconfigJsx) });
+      const result = transpile(code, { file, resolveImports, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {
@@ -150,7 +163,7 @@ export function stencilrs(options = {}) {
 
       const overrides = {
         ...(SIGNALS_IMPORT_RE.test(code) ? { vdomSignals: true } : {}),
-        ...(isDev ? { hotModuleReplacement: true, isDev: true } : {}),
+        ...(isDev && !specPage ? { hotModuleReplacement: true, isDev: true } : {}),
       };
       const mutations = Object.entries(overrides)
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
@@ -161,6 +174,7 @@ export function stencilrs(options = {}) {
       // flag-folded file points into the folded text, which differs only within those lines.)
       const map = result.map ? JSON.parse(result.map) : null;
       if (map && mutations) map.mappings = `;;${map.mappings}`;
+      if (specPage) return { code: out, map }; // lazy output keeps the class exported; no HMR
       // customelement output drops the class's `export`; consumers import it by name.
       if (!new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
         out += `\nexport { ${componentClassName} };`;
@@ -226,5 +240,8 @@ function skipHandled(p, handled) {
   };
   p.transform = typeof hook === 'function' ? wrapped : { ...hook, handler: wrapped };
 }
+
+/** @stencil/unplugin's `stencilSpecPage`, compiled by stencilrs: for `newSpecPage` in Vitest. */
+export const stencilrsSpecPage = (options = {}) => stencilrs({ ...options, mode: 'spec-page' });
 
 export default stencilrs;

@@ -304,6 +304,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         options: Value::Null,
         does_extend: false,
         base_class_files: Vec::new(),
+        class_methods: own.class_methods,
     };
     if let Some((tag, encapsulation, style_urls, options)) = &component {
         cmp.options = options.clone();
@@ -332,6 +333,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
             // callback Stencil drops them all, the component's own too: docs/quirks.md 10.
             cmp.serializers = inherit::prepend(parent.serializers, std::mem::take(&mut cmp.serializers), |w| w.method_name.clone());
             cmp.deserializers = inherit::prepend(parent.deserializers, std::mem::take(&mut cmp.deserializers), |w| w.method_name.clone());
+            cmp.class_methods.extend(parent.class_methods);
         }
         cmp.base_class_files = found.files;
     }
@@ -356,6 +358,9 @@ pub(crate) struct Members {
     pub form_associated: bool,
     pub serializers: Vec<WatcherMeta>,
     pub deserializers: Vec<WatcherMeta>,
+    /// The names of the class's methods (`classMethods`), which `hasRenderFn` and the lifecycle
+    /// flags of the compiler metadata read.
+    pub class_methods: Vec<String>,
 }
 
 /// The members of a class in another module (or this one): an ancestor. Its diagnostics are
@@ -380,6 +385,19 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         form_associated: false,
         serializers: Vec::new(),
         deserializers: Vec::new(),
+        class_methods: class
+            .body
+            .body
+            .iter()
+            .filter_map(|el| match el {
+                // `ts.isMethodDeclaration` with an identifier name.
+                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method && !m.computed => match &m.key {
+                    PropertyKey::StaticIdentifier(id) => Some(id.name.to_string()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect(),
     };
 
     let [prop_n, state_n, event_n, method_n, element_n, watch_n, listen_n] =
@@ -458,6 +476,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         bubbles: opt_bool(&opts, "bubbles").unwrap_or(true),
                         cancelable: opt_bool(&opts, "cancelable").unwrap_or(true),
                         composed: opt_bool(&opts, "composed").unwrap_or(true),
+                        complex_type_original: event_type_original(p, ctx.source),
                     });
                 }
 
@@ -779,6 +798,16 @@ fn validate_component_tag(tag: Option<&Value>) -> Option<String> {
     None
 }
 
+/// The type argument of `EventEmitter<T>` as written (the event's `complexType.original`), `any`
+/// without one.
+fn event_type_original(p: &PropertyDefinition, source: &str) -> String {
+    let arg = p.type_annotation.as_ref().and_then(|t| match &t.type_annotation {
+        TSType::TSTypeReference(r) => r.type_arguments.as_ref()?.params.first(),
+        _ => None,
+    });
+    arg.map_or_else(|| "any".to_owned(), |t| t.span().source_text(source).to_owned())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn build_prop(
     ctx: &mut Ctx,
@@ -825,6 +854,9 @@ fn build_prop(
         complex_type_original,
     }
 }
+
+/// What TypeScript's `createNumericLiteral` throws for a negative number.
+pub(crate) const NEGATIVE_NUMBER_ERROR: &str = "Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression";
 
 /// The `@Method` return check (`method-decorator.ts:82-97`), as the single-file program sees
 /// it: without the lib, `Promise` is unresolved, so only a written `Promise<...>` annotation
@@ -891,7 +923,7 @@ fn watch_key(ctx: &mut Ctx, arg: Option<Value>) -> Option<String> {
     match arg? {
         Value::String(s) => Some(s),
         Value::Number(n) if n.as_f64().is_some_and(|n| n < 0.0) => {
-            ctx.throw("Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression");
+            ctx.throw(NEGATIVE_NUMBER_ERROR);
             None
         }
         Value::Number(_) => Some("[object Object]".into()),

@@ -1,13 +1,15 @@
 // Compare the ui-kit spec results: stencilrs vs Stencil v5's own compiler.
 //
 //   npm run test:stencil && npm test && node compare.mjs [--verbose]
+//   node compare.mjs --spec-page   the results of `npm run test:spec-page[:stencil]` instead
 //
 // A test that passes with Stencil and fails with stencilrs is a stencilrs regression; one
 // that fails with both is the spec, the harness or a Stencil v5 behaviour change.
 import { readFileSync } from 'node:fs';
 
 const verbose = process.argv.includes('--verbose');
-const load = (name) => JSON.parse(readFileSync(new URL(`./results/${name}.json`, import.meta.url), 'utf8'));
+const prefix = process.argv.includes('--spec-page') ? 'spec-page-' : '';
+const load = (name) => JSON.parse(readFileSync(new URL(`./results/${prefix}${name}.json`, import.meta.url), 'utf8'));
 
 const index = (report) => {
   const tests = new Map();

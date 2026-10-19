@@ -52,12 +52,26 @@ export const analyze = (source, fileName, options = {}) => native.analyze(source
  * `proxyCustomElement`) or `'lazy'` (the lazy-loading `loader-bundle` shape; Stencil spells it
  * `null`, which is accepted too). Decorated base classes and mixins are not ported for `'lazy'`:
  * those files report an error starting with `stencilrs:`, the signal to compile with Stencil.
+ *
+ * `componentMetadata: 'compilerstatic'` adds the compiler's metadata to each class as
+ * `static get COMPILER_META()`, which `newSpecPage` registers components from. With
+ * `componentExport: null`, `coreImportPath: '@stencil/core/testing'` and `style: null` it is
+ * what @stencil/unplugin's `spec-page` mode compiles. Not yet in the metadata: JSDoc and the
+ * resolved types of members (`docs` is empty, `complexType.resolved` is the type as written).
+ * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
-export const transpile = (source, options) =>
-  native.transpile(source, options.componentExport === null ? { ...options, componentExport: 'lazy' } : options);
+export const transpile = (source, options) => {
+  const { style, componentMetadata, ...rest } = options;
+  return native.transpile(source, {
+    ...rest,
+    ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
+    ...(componentMetadata ? { componentMetadata } : {}),
+    ...(style === null ? { emitStyles: false } : {}),
+  });
+};
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
 export const normalize = (code) => native.normalize(code);

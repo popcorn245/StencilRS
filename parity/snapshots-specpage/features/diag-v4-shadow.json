@@ -1,0 +1,14 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "@Component() uses deprecated API removed in Stencil v5.\n\nThe \"shadow\", \"scoped\", and \"formAssociated\" properties have been replaced:\n  • shadow: true → encapsulation: { type: \"shadow\" }\n  • scoped: true → encapsulation: { type: \"scoped\" }\n  • formAssociated: true → Use @AttachInternals() decorator\n\nRun 'npx stencil migrate --dry-run' to see all affected files.\nRun 'npx stencil migrate' to automatically update your components."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}
