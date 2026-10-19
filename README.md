@@ -83,8 +83,8 @@ Not yet (these fall back to Stencil, or are tracked as issues):
 - the SSR output ([#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
   output Vite, Vitest and Storybook use, plus the `module` and lazy-loading (`loader-bundle`)
-  shapes with `componentExport`. Lazy output of decorated base classes and mixins falls back to
-  Stencil
+  shapes with `componentExport`. Lazy and `ssr` output of decorated base classes and mixins
+  falls back to Stencil only for members whose `complexType` is not ported
 - `complexType` for types that need the checker: `keyof`, `typeof`, mapped, conditional and
   generic types, inferred object types, types from packages or tsconfig `paths`, and unions whose
   member order depends on the whole program. `analyze(..., { complexTypes: true })` reports each

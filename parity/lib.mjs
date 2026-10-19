@@ -36,21 +36,12 @@ export const modes = {
 /**
  * Fixtures a mode does not port yet: stencilrs reports a `stencilrs:` error for them (the cue to
  * compile with Stencil) instead of code. They are still compared on metadata, and counted apart.
- * Lazy and ssr output keep a decorated base class's static meta getters (`convertDecoratorsToStatic`),
- * which need the full `complexType` and docs metadata (#8).
+ * None today: every mode ports every fixture.
  */
-const lazyFallbacks = [
-  'inheritance/bases/base-props.ts',
-  'inheritance/bases/chain-middle.ts',
-  'inheritance/bases/factories.ts',
-  'inheritance/bases/mixins.ts',
-  'inheritance/cmp-extends-same-file.tsx',
-];
 export const fallbacks = {
-  lazy: new Set(lazyFallbacks),
-  // Lazy output, so the same files.
-  specpage: new Set(lazyFallbacks),
-  ssr: new Set(lazyFallbacks),
+  lazy: new Set(),
+  specpage: new Set(),
+  ssr: new Set(),
 };
 
 export const snapshotsDirFor = (mode = 'customelement') => join(root, modes[mode].dir);

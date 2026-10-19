@@ -15,8 +15,9 @@ use oxc::parser::Parser;
 use oxc::span::SourceType;
 use serde_json::Value;
 
-use crate::analyze::style_url_modes;
+use crate::analyze::{Members, style_url_modes};
 use crate::codegen::normalize_path;
+use crate::consts::order_like_object_keys;
 use crate::meta::{ComplexType, ComponentMeta, Docs, Encapsulation, MethodComplexType, PropType, References};
 
 /// A JavaScript value, printed the way `convertValueToLiteral` does (`undefined` included).
@@ -697,5 +698,109 @@ pub fn getter(input: &MetaInput) -> String {
     let mut out = String::from("static get COMPILER_META() { return ");
     J::Obj(fields).print(&mut out);
     out.push_str("; }");
+    out
+}
+
+/// The static getters `convertDecoratorsToStatic` writes for a class that is not a component
+/// (a base class or a mixin's class), which lazy and `ssr` output keep: `serializers`,
+/// `deserializers`, `properties`, `states`, `events`, `methods`, `elementRef`, `watchers`,
+/// `listeners`, then the `@AttachInternals()` ones, each in Stencil's key order.
+pub fn decorator_getters(m: &Members) -> Vec<String> {
+    let getter = |name: &str, v: J| {
+        let mut out = format!("static get {name}() {{ return ");
+        v.print(&mut out);
+        out.push_str("; }");
+        out
+    };
+    let translators = |list: &[crate::meta::WatcherMeta]| {
+        J::Arr(list.iter().map(|w| J::Obj(vec![("propName", J::str(&w.prop_name)), ("methodName", J::str(&w.method_name))])).collect())
+    };
+    let mut out = Vec::new();
+    if !m.serializers.is_empty() {
+        out.push(getter("serializers", translators(&m.serializers)));
+    }
+    if !m.deserializers.is_empty() {
+        out.push(getter("deserializers", translators(&m.deserializers)));
+    }
+    if !m.properties.is_empty() {
+        let mut props: Vec<_> = m.properties.iter().collect();
+        order_like_object_keys(&mut props, |p| p.name.as_str());
+        let fields = props.into_iter().map(|p| {
+            let mut f = vec![
+                ("type", J::str(prop_type(p.prop_type))),
+                ("mutable", J::Bool(p.mutable)),
+                ("complexType", complex_type(&p.complex_type)),
+                ("required", J::Bool(p.required)),
+                ("optional", J::Bool(p.optional)),
+                ("docs", docs(&p.docs, true)),
+                ("getter", J::Bool(p.getter)),
+                ("setter", J::Bool(p.setter)),
+            ];
+            // `reflect` is only set for a typed prop or one with a serializer; `attribute` also
+            // for a reflected prop or one with a deserializer (and may then be `undefined`).
+            if p.prop_type != PropType::Unknown || m.serializers.iter().any(|s| s.prop_name == p.name) {
+                f.push(("reflect", J::Bool(p.reflect)));
+            }
+            if p.prop_type != PropType::Unknown || p.reflect || m.deserializers.iter().any(|s| s.prop_name == p.name) {
+                f.push(("attribute", J::opt_str(p.attribute.as_deref())));
+            }
+            if let Some(d) = &p.default_value {
+                f.push(("defaultValue", J::str(d)));
+            }
+            (p.name.clone(), J::Obj(f))
+        });
+        out.push(getter("properties", J::Map(fields.collect())));
+    }
+    if !m.states.is_empty() {
+        let mut states: Vec<_> = m.states.iter().collect();
+        order_like_object_keys(&mut states, |s| s.name.as_str());
+        out.push(getter("states", J::Map(states.into_iter().map(|s| (s.name.clone(), J::Obj(vec![]))).collect())));
+    }
+    if !m.events.is_empty() {
+        let events = m.events.iter().map(|e| {
+            J::Obj(vec![
+                ("method", J::str(&e.method)),
+                ("name", J::str(&e.name)),
+                ("bubbles", J::Bool(e.bubbles)),
+                ("cancelable", J::Bool(e.cancelable)),
+                ("composed", J::Bool(e.composed)),
+                ("docs", docs(&e.docs, true)),
+                ("complexType", complex_type(&e.complex_type)),
+            ])
+        });
+        out.push(getter("events", J::Arr(events.collect())));
+    }
+    if !m.methods.is_empty() {
+        let methods = m.methods.iter().map(|x| (x.name.clone(), J::Obj(vec![("complexType", method_complex_type(&x.complex_type)), ("docs", docs(&x.docs, false))])));
+        out.push(getter("methods", J::Map(methods.collect())));
+    }
+    if let Some(el) = &m.element_ref {
+        out.push(getter("elementRef", J::str(el)));
+    }
+    if !m.watchers.is_empty() {
+        out.push(getter("watchers", translators(&m.watchers)));
+    }
+    if !m.listeners.is_empty() {
+        let listeners = m.listeners.iter().map(|l| {
+            J::Obj(vec![
+                ("name", J::str(&l.name)),
+                ("method", J::str(&l.method)),
+                ("target", J::opt_str(l.target.as_deref())),
+                ("capture", J::Bool(l.capture)),
+                ("passive", J::Bool(l.passive)),
+            ])
+        });
+        out.push(getter("listeners", J::Arr(listeners.collect())));
+    }
+    if let Some(name) = &m.attach_internals_member_name {
+        out.push(getter("attachInternalsMemberName", J::str(name)));
+        if !m.attach_internals_custom_states.is_empty() {
+            let states = m.attach_internals_custom_states.iter().map(|s| J::Obj(vec![("name", J::str(&s.name)), ("initialValue", J::Bool(s.initial_value)), ("docs", J::str(&s.docs))]));
+            out.push(getter("attachInternalsCustomStates", J::Arr(states.collect())));
+        }
+        if m.form_associated {
+            out.push(getter("formAssociated", J::Bool(true)));
+        }
+    }
     out
 }
