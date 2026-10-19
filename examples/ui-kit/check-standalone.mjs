@@ -1,14 +1,21 @@
-// Check a patched standalone build (bench-stencil-build.mjs) against the stock one.
+// Check a patched build (bench-stencil-build.mjs) against the stock one.
 //
-//   node bench-stencil-build.mjs 1 --keep && node check-standalone.mjs
+//   node bench-stencil-build.mjs 1 --keep && node check-standalone.mjs [standalone|loader-bundle|www|all]
 //
-// 1. Both outputs have the same files (and how many .js files are byte-identical).
-// 2. Each variant's pop-*.js entry is imported in its own process under jsdom (the module
-//    auto-defines its component and dependencies); then every tag is created, connected and
-//    rendered, and the two runs are compared: custom element metadata (observed attributes,
-//    proxied members), light DOM and shadow DOM markup, adopted/injected styles, and errors.
+// The target (default: all, when the full config was built) picks the output directory under
+// .bench/out/<variant>/ (a standalone-config build puts its files directly in .bench/out/<variant>/).
+// 1. Both outputs have the same files (and how many .js files are byte-identical; the lazy
+//    bundles hash chunk names, so they are compared by behaviour only).
+// 2. Each variant is loaded in its own process under jsdom, then every tag is created,
+//    connected and rendered, and the two runs are compared: custom element metadata (observed
+//    attributes, proxied members), light DOM and shadow DOM markup, adopted/injected styles,
+//    and errors.
+//      standalone     each pop-*.js entry is imported (it auto-defines its component and
+//                     dependencies)
+//      loader-bundle  loader-bundle/esm/loader.js: defineCustomElements(), components load lazily
+//      www            www/build/pop.esm.js (the app bootstrap, same lazy bundle)
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,7 +23,7 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const out = join(root, '.bench/out');
 
 if (process.argv[2] === '--snapshot') {
-  const [dir, dest] = process.argv.slice(3);
+  const [dir, dest, target, tagsFile] = process.argv.slice(3);
   const { JSDOM } = await import('jsdom');
   const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { url: 'http://localhost/', pretendToBeVisual: true });
   const w = dom.window;
@@ -37,16 +44,28 @@ if (process.argv[2] === '--snapshot') {
   w.addEventListener('error', (e) => errors.push(`error: ${e.message}`));
   process.on('unhandledRejection', (e) => errors.push(`unhandled: ${e?.message ?? e}`));
 
-  const entries = readdirSync(dir).filter((f) => /^pop-.+\.js$/.test(f)).sort();
+  const lazy = target !== 'standalone';
+  const tags = lazy ? JSON.parse(readFileSync(tagsFile, 'utf8')) : readdirSync(dir).filter((f) => /^pop-.+\.js$/.test(f)).sort().map((f) => f.slice(0, -3));
   const result = {};
-  for (const file of entries) {
-    const tag = file.slice(0, -3);
-    errors.length = 0;
+  if (lazy) {
     try {
-      await import(join(dir, file));
+      const m = await import(join(dir, target === 'www' ? 'build/pop.esm.js' : 'esm/loader.js'));
+      await m.defineCustomElements?.(window);
     } catch (e) {
-      result[tag] = { importError: String(e?.message ?? e).slice(0, 300) };
-      continue;
+      console.error = origError;
+      console.error('bootstrap failed', e);
+      process.exit(1);
+    }
+  }
+  for (const tag of tags) {
+    errors.length = 0;
+    if (!lazy) {
+      try {
+        await import(join(dir, `${tag}.js`));
+      } catch (e) {
+        result[tag] = { importError: String(e?.message ?? e).slice(0, 300) };
+        continue;
+      }
     }
     const ctor = customElements.get(tag);
     if (!ctor) {
@@ -73,39 +92,51 @@ if (process.argv[2] === '--snapshot') {
   process.exit(0);
 }
 
-const ls = (d) => readdirSync(d, { recursive: true }).filter((f) => /\.(js|ts)$/.test(f)).sort();
-const stockFiles = ls(join(out, 'stock'));
-const patchedFiles = ls(join(out, 'patched'));
+const hasSub = existsSync(join(out, 'stock/standalone'));
+const requested = process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : 'all';
+const targets = requested === 'all' ? (hasSub ? ['standalone', 'loader-bundle', 'www'] : ['standalone']) : [requested];
 let bad = 0;
 const report = (ok, msg) => {
   if (!ok) bad++;
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${msg}`);
 };
-report(JSON.stringify(stockFiles) === JSON.stringify(patchedFiles), `same ${stockFiles.length} output files`);
+const ls = (d) => readdirSync(d, { recursive: true }).filter((f) => /\.(js|ts)$/.test(f)).sort();
+const dirOf = (v, target) => (hasSub ? join(out, v, target) : join(out, v));
+// the tags the lazy bundles register: the standalone entries' names
+const tagsFile = join(out, 'tags.json');
+writeFileSync(tagsFile, JSON.stringify(readdirSync(dirOf('stock', 'standalone')).filter((f) => /^pop-.+\.js$/.test(f)).sort().map((f) => f.slice(0, -3))));
 
-let identical = 0;
-for (const f of stockFiles.filter((f) => f.endsWith('.js'))) {
-  if (readFileSync(join(out, 'stock', f), 'utf8') === readFileSync(join(out, 'patched', f), 'utf8')) identical++;
-}
-const jsCount = stockFiles.filter((f) => f.endsWith('.js')).length;
-console.log(`      ${identical} / ${jsCount} .js files are byte-identical; the rest differ where stencilrs writes \`X=class…;proxy(X,meta)\` and Stencil \`X=proxy(class…,meta)\` (and the minifier names things differently after that)`);
-
-const snap = {};
-for (const v of ['stock', 'patched']) {
-  const dest = join(out, `${v}-snapshot.json`);
-  const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--snapshot', join(out, v), dest], { cwd: root, encoding: 'utf8' });
-  if (r.status !== 0) {
-    console.log(r.stdout + r.stderr);
-    report(false, `${v}: snapshot run failed`);
-    process.exit(1);
+for (const target of targets) {
+  console.log(`\n== ${target}`);
+  const stockFiles = ls(dirOf('stock', target));
+  const patchedFiles = ls(dirOf('patched', target));
+  const lazyTarget = target !== 'standalone';
+  if (lazyTarget) report(stockFiles.length === patchedFiles.length, `${stockFiles.length} / ${patchedFiles.length} output .js/.ts files (stock / patched)`);
+  else report(JSON.stringify(stockFiles) === JSON.stringify(patchedFiles), `same ${stockFiles.length} output files`);
+  let identical = 0;
+  for (const f of stockFiles.filter((f) => f.endsWith('.js'))) {
+    if (patchedFiles.includes(f) && readFileSync(join(dirOf('stock', target), f), 'utf8') === readFileSync(join(dirOf('patched', target), f), 'utf8')) identical++;
   }
-  snap[v] = JSON.parse(readFileSync(dest, 'utf8'));
+  const jsCount = stockFiles.filter((f) => f.endsWith('.js')).length;
+  console.log(`      ${identical} / ${jsCount} .js files are byte-identical; the rest differ where stencilrs and Stencil print the same code differently (and the minifier names things differently after that)`);
+
+  const snap = {};
+  for (const v of ['stock', 'patched']) {
+    const dest = join(out, `${v}-${target}-snapshot.json`);
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--snapshot', dirOf(v, target), dest, target, tagsFile], { cwd: root, encoding: 'utf8' });
+    if (r.status !== 0) {
+      console.log(r.stdout + r.stderr);
+      report(false, `${v}: snapshot run failed`);
+      process.exit(1);
+    }
+    snap[v] = JSON.parse(readFileSync(dest, 'utf8'));
+  }
+  const tags = Object.keys(snap.stock).filter((t) => t !== '<head>');
+  const differing = tags.filter((t) => JSON.stringify(snap.stock[t]) !== JSON.stringify(snap.patched[t]));
+  const broken = tags.filter((t) => snap.stock[t].importError || snap.stock[t].notDefined);
+  report(differing.length === 0, `${tags.length - differing.length} / ${tags.length} components behave identically under jsdom (metadata, light + shadow DOM, adopted styles, errors)${differing.length ? `; differ: ${differing.join(', ')}` : ''}`);
+  report(JSON.stringify(snap.stock['<head>']) === JSON.stringify(snap.patched['<head>']), `injected <style> elements identical (${snap.stock['<head>'].length})`);
+  const withErrors = tags.filter((t) => snap.stock[t].errors?.length);
+  console.log(`      (stock itself: ${broken.length} entries fail to import or define, ${withErrors.length} log errors; they must match, not be zero)`);
 }
-const tags = Object.keys(snap.stock).filter((t) => t !== '<head>');
-const differing = tags.filter((t) => JSON.stringify(snap.stock[t]) !== JSON.stringify(snap.patched[t]));
-const broken = tags.filter((t) => snap.stock[t].importError || snap.stock[t].notDefined);
-report(differing.length === 0, `${tags.length - differing.length} / ${tags.length} components behave identically under jsdom (metadata, light + shadow DOM, adopted styles, errors)${differing.length ? `; differ: ${differing.join(', ')}` : ''}`);
-report(JSON.stringify(snap.stock['<head>']) === JSON.stringify(snap.patched['<head>']), `injected <style> elements identical (${snap.stock['<head>'].length})`);
-const withErrors = tags.filter((t) => snap.stock[t].errors?.length);
-console.log(`      (stock itself: ${broken.length} entries fail to import or define, ${withErrors.length} log errors; they must match, not be zero)`);
 process.exit(bad ? 1 : 0);
