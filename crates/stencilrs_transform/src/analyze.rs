@@ -633,8 +633,7 @@ fn jsdoc_before(source: &str, at: u32) -> String {
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
 fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
     let Some(o) = options else { return };
-    let checks: [(bool, &str); 4] = [
-        (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
+    let checks: [(bool, &str); 3] = [
         (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
         (
             o.get("styles").is_some() && o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped"),
@@ -680,15 +679,40 @@ fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exp
         _ => Encapsulation::None,
     };
 
-    let mut style_urls = Vec::new();
-    if let Some(url) = opts.get("styleUrl").and_then(Value::as_str) {
-        style_urls.push(url.to_owned());
-    }
-    if let Some(Value::Array(urls)) = opts.get("styleUrls") {
-        style_urls.extend(urls.iter().filter_map(Value::as_str).map(str::to_owned));
-    }
+    let style_urls = style_url_modes(&opts).into_iter().flat_map(|(_, urls)| urls).collect();
 
     Some((tag.trim().to_owned(), encapsulation, style_urls, opts))
+}
+
+/// `styleToStatic`'s style URLs by mode, in order. An array (or `styleUrl`) is the default mode
+/// `$`, which comes last unless `styleUrls` is an object that already names it.
+pub(crate) fn style_url_modes(opts: &Value) -> Vec<(String, Vec<String>)> {
+    fn urls(v: &Value) -> Vec<String> {
+        match v {
+            Value::String(s) => vec![s.clone()],
+            Value::Array(a) => a.iter().filter_map(Value::as_str).map(str::to_owned).collect(),
+            _ => Vec::new(),
+        }
+    }
+    let mut modes: Vec<(String, Vec<String>)> = Vec::new();
+    let mut default = Vec::new();
+    match opts.get("styleUrls") {
+        Some(v @ Value::Array(_)) => default.extend(urls(v)),
+        Some(Value::Object(o)) => {
+            modes.extend(o.iter().map(|(k, v)| (k.clone(), urls(v))));
+            default.extend(o.get("$").map(urls).unwrap_or_default());
+        }
+        _ => {}
+    }
+    default.extend(opts.get("styleUrl").map(urls).unwrap_or_default());
+    if !default.is_empty() {
+        match modes.iter_mut().find(|(k, _)| k == "$") {
+            Some((_, u)) => *u = default,
+            None => modes.push(("$".into(), default)),
+        }
+    }
+    modes.retain(|(_, u)| !u.is_empty());
+    modes
 }
 
 /// Port of `validateComponentTag` (`src/utils/validation.ts:88-132`).
