@@ -29,7 +29,7 @@ use oxc::span::{GetSpan, SourceType, Span};
 use oxc::transformer::{JsxOptions, JsxRuntime, TransformOptions, Transformer, TypeScriptOptions};
 use serde_json::Value;
 
-use crate::analyze::import_aliases;
+use crate::analyze::{import_aliases, style_url_modes};
 use crate::edits::Edits;
 use crate::consts::{Lit, enum_values, order_like_object_keys};
 use crate::locals::Locals;
@@ -709,14 +709,19 @@ struct StyleMode {
 const DEFAULT_STYLE_MODE: &str = "$";
 
 fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
-    let base = format!("{}Style", dash_to_pascal_case(&cmp.tag_name));
-    let o = &cmp.options;
-    let mut modes = Vec::new();
-    let urls: Vec<String> = cmp.style_urls.clone();
-    if !urls.is_empty() {
-        modes.push(StyleMode { mode: DEFAULT_STYLE_MODE.into(), identifier: base.clone(), urls, inline: None });
-    } else if let Some(Value::String(s)) = o.get("styles") {
-        modes.push(StyleMode { mode: DEFAULT_STYLE_MODE.into(), identifier: base, urls: Vec::new(), inline: Some(s.clone()) });
+    let base = dash_to_pascal_case(&cmp.tag_name);
+    let mut modes: Vec<StyleMode> = style_url_modes(&cmp.options)
+        .into_iter()
+        .map(|(mode, urls)| {
+            // `createStyleIdentifier`: the mode name is part of the identifier.
+            let identifier = if mode == DEFAULT_STYLE_MODE { format!("{base}Style") } else { format!("{base}{}Style", dash_to_pascal_case(&mode)) };
+            StyleMode { mode, identifier, urls, inline: None }
+        })
+        .collect();
+    if modes.is_empty() {
+        if let Some(Value::String(s)) = cmp.options.get("styles") {
+            modes.push(StyleMode { mode: DEFAULT_STYLE_MODE.into(), identifier: format!("{base}Style"), urls: Vec::new(), inline: Some(s.clone()) });
+        }
     }
     modes
 }
@@ -726,20 +731,30 @@ fn has_style(cmp: &ComponentMeta) -> bool {
 }
 
 fn style_getter(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
-    let [style] = styles else { return None };
-    let expr = if !style.urls.is_empty() {
-        (0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + ")
-    } else {
-        let css = style.inline.as_deref()?;
-        // `createStyleLiteral`: a scoped component's inline styles are scoped at compile time.
-        let scoped;
-        let css = if cmp.encapsulation == Encapsulation::Scoped {
-            scoped = scope_css(css, &scope_id(&cmp.tag_name, Some(&style.mode)), false).ok()?;
-            scoped.as_str()
+    let expr_of = |style: &StyleMode| -> Option<String> {
+        if !style.urls.is_empty() {
+            Some((0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + "))
         } else {
-            css
-        };
-        format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${"))
+            let css = style.inline.as_deref()?;
+            // `createStyleLiteral`: a scoped component's inline styles are scoped at compile time.
+            let scoped;
+            let css = if cmp.encapsulation == Encapsulation::Scoped {
+                scoped = scope_css(css, &scope_id(&cmp.tag_name, Some(&style.mode)), false).ok()?;
+                scoped.as_str()
+            } else {
+                css
+            };
+            Some(format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${")))
+        }
+    };
+    let expr = match styles {
+        [] => return None,
+        [style] if style.mode == DEFAULT_STYLE_MODE => expr_of(style)?,
+        // `addMultipleModeStyleGetter`: an object keyed by mode.
+        _ => {
+            let props: Vec<String> = styles.iter().map(|s| Some(format!("        {}: {}", s.mode, expr_of(s)?))).collect::<Option<_>>()?;
+            format!("{{\n{}\n    }}", props.join(",\n"))
+        }
     };
     Some(format!("static get style() {{ return {expr}; }}"))
 }
