@@ -89,7 +89,6 @@ pub enum K {
     Str(String, u32),
     /// A number literal as the checker prints it (`1.5`, `-1`, `16` for `0x10`).
     Num(String, u32),
-    BigLit(String, u32),
     /// Member `i` of a union enum.
     EnumLit(Rc<EnumInfo>, usize),
     /// A union enum as a whole.
@@ -207,7 +206,7 @@ impl Ty {
             K::Void => ID_VOID,
             K::Never => ID_NEVER,
             K::NonPrimitive => ID_OBJECT,
-            K::Str(_, id) | K::Num(_, id) | K::BigLit(_, id) => *id,
+            K::Str(_, id) | K::Num(_, id) => *id,
             K::EnumLit(e, i) => e.base_id + *i as u32,
             K::Enum(e) => e.base_id + e.members.len() as u32,
             K::Ref { id, .. } => *id,
@@ -239,13 +238,6 @@ impl Ty {
         matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Function(_)))
     }
 
-    pub fn alias(&self) -> Option<&Rc<Alias>> {
-        match &*self.0 {
-            K::Union(_, a, _) => a.as_ref(),
-            K::Anon(a) => a.alias.as_ref(),
-            _ => None,
-        }
-    }
 
     /// The type as the alias it was written as, unless it already is one.
     pub fn with_alias(&self, alias: Rc<Alias>) -> Ty {
@@ -351,16 +343,15 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
     }
     // `removeRedundantLiteralTypes`: a primitive absorbs its literals, `void` absorbs `undefined`.
     let has = |f: &dyn Fn(&K) -> bool, flat: &[Ty]| flat.iter().any(|t| f(&t.0));
-    let (string, number, bigint, void) = (
+    // (bigint literal types fall back to Stencil, so `bigint` has none to absorb.)
+    let (string, number, void) = (
         has(&|k| matches!(k, K::String), &flat),
         has(&|k| matches!(k, K::Number), &flat),
-        has(&|k| matches!(k, K::BigInt), &flat),
         has(&|k| matches!(k, K::Void), &flat),
     );
     flat.retain(|t| match &*t.0 {
         K::Str(..) => !string,
         K::Num(..) => !number,
-        K::BigLit(..) => !bigint,
         K::EnumLit(e, i) => !(if e.members[*i].1 { string } else { number }),
         K::Undefined => !void,
         _ => true,
@@ -486,7 +477,6 @@ impl Printer {
             K::False => "false".into(),
             K::Str(s, _) => quote(s),
             K::Num(n, _) => n.clone(),
-            K::BigLit(n, _) => format!("{n}n"),
             K::EnumLit(e, i) => {
                 self.names.push(e.name.clone());
                 format!("{}.{}", e.name, e.members[*i].0)
