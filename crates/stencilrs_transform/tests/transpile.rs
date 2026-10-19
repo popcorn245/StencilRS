@@ -126,22 +126,38 @@ fn lazy_output_registers_the_instance_with_its_host() {
     }
 }
 
-#[test]
-fn lazy_output_leaves_decorated_base_classes_to_stencil() {
+fn lazy_base(source: &str, complex_types: bool) -> stencilrs_transform::TranspileResult {
     let opts = TranspileOptions {
         file: "cmp/base.ts".into(),
         core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
         jsx: Jsx::Classic,
         resolve_imports: false,
-        complex_types: false,
+        complex_types,
         source_map: false,
         transform_as_base_class: false,
         component_export: ComponentExport::Lazy,
         component_metadata: Default::default(),
         emit_styles: true,
     };
-    let out = transpile("import { Prop } from '@stencil/core';\nexport class Base { @Prop() a = 1; }", &opts);
+    transpile(source, &opts)
+}
+
+#[test]
+fn lazy_output_keeps_the_static_getters_of_decorated_base_classes() {
+    let out = lazy_base("import { Prop } from '@stencil/core';\nexport class Base { @Prop() a = 1; }", true);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert!(out.code.contains("static get properties()"), "{}", out.code);
+    assert!(out.code.contains("\"complexType\""), "{}", out.code);
+}
+
+#[test]
+fn lazy_output_leaves_base_class_members_it_cannot_type_to_stencil() {
+    let source = "import { Prop } from '@stencil/core';\nexport class Base { @Prop() a: typeof Math; }";
+    let out = lazy_base(source, true);
     assert!(out.code.is_empty());
+    assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
+    // Computed names and watch options are not in the metadata.
+    let out = lazy_base("import { Prop } from '@stencil/core';\nconst k = 'a';\nexport class Base { @Prop() [k] = 1; }", true);
     assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
 }
 

@@ -38,12 +38,13 @@ use oxc::span::{GetSpan, SourceType, Span};
 use oxc::transformer::{JsxOptions, JsxRuntime, TransformOptions, Transformer, TypeScriptOptions};
 use serde_json::Value;
 
-use crate::analyze::{import_aliases, style_url_modes};
-use crate::compiler_meta::{self, MetaInput, VdomMeta, scan_vdom};
+use crate::analyze::{Members, foreign_class_members, import_aliases, style_url_modes};
+use crate::compiler_meta::{self, MetaInput, VdomMeta, decorator_getters, scan_vdom};
 use crate::edits::Edits;
 use crate::consts::{Lit, enum_values, order_like_object_keys};
 use crate::locals::Locals;
 use crate::eval::property_key_name;
+use crate::resolve::Resolver;
 use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
 use crate::scope_css::{scope_css, scope_id};
 
@@ -233,6 +234,8 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
     // Every other class: base classes and mixins.
     let meta_decorators: Vec<String> =
         META_DECORATORS.iter().map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned())).collect();
+    let resolver = opts.resolve_imports.then(|| Resolver::new(&opts.file));
+    let members_of = |class: &Class| foreign_class_members(class, program, source, &opts.file, resolver.as_ref());
     let mut bases = BaseClasses {
         ed: &mut ed,
         component: &component_decorator,
@@ -240,14 +243,15 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         meta: &meta_decorators,
         as_base: opts.transform_as_base_class && !lazy,
         lazy,
+        watch: aliases.get("Watch").cloned().unwrap_or_else(|| "Watch".into()),
+        members_of: &members_of,
+        complex_types: opts.complex_types,
         html_element: false,
-        stencil_decorated: false,
+        unported: None,
     };
     bases.visit_program(program);
-    if bases.stencil_decorated {
-        // Lazy output leaves these classes' static meta getters in place (`convertDecoratorsToStatic`),
-        // which need the full `complexType` and docs metadata.
-        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy and ssr output.".into());
+    if let Some(message) = bases.unported {
+        return Err(message);
     }
     if bases.html_element {
         add(&mut target_apis, "HTMLElement");
@@ -568,11 +572,15 @@ struct BaseClasses<'e, 's, 'n> {
     remove: &'n [String],
     meta: &'n [String],
     as_base: bool,
-    /// Lazy output (`lazyComponentTransform`) leaves other classes alone, and the decorated ones
-    /// are not ported (`stencil_decorated`).
+    /// Lazy output (`lazyComponentTransform`) leaves other classes alone, except that the
+    /// decorated ones keep the static getters `convertDecoratorsToStatic` wrote (`members_of`).
     lazy: bool,
+    watch: String,
+    members_of: &'n dyn Fn(&Class) -> Members,
+    complex_types: bool,
     html_element: bool,
-    stencil_decorated: bool,
+    /// The first reason a decorated class's getters cannot be written (a `stencilrs:` error).
+    unported: Option<String>,
 }
 
 impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
@@ -607,9 +615,21 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
             }
         }
         if self.lazy {
-            // Lazy output leaves every other class alone, except that classes with Stencil
-            // decorators keep the static meta getters `convertDecoratorsToStatic` wrote.
-            self.stencil_decorated |= has_stencil_decorator;
+            // Lazy output leaves every other class alone, except that a decorated class
+            // declaration gets a `super()` constructor and keeps the static getters that
+            // `convertDecoratorsToStatic` wrote (class expressions only lose their decorators).
+            if class.is_declaration() && decorated {
+                if class.heritage.is_some() {
+                    match ctor.and_then(|m| m.value.body.as_ref()) {
+                        None => self.ed.insert(class.body.span.start + 1, " constructor() { super(); } "),
+                        Some(body) if !body.statements.iter().any(is_super_call) => self.ed.insert(body.span.start + 1, " super(); "),
+                        Some(_) => {}
+                    }
+                }
+                if has_stencil_decorator {
+                    self.keep_getters(class);
+                }
+            }
         } else if class.is_declaration() {
             let base = self.as_base || meta;
             let mut extends = class.heritage.is_some();
@@ -632,6 +652,42 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
             }
         }
         walk::walk_class(self, class);
+    }
+}
+
+impl BaseClasses<'_, '_, '_> {
+    /// Append the static getters of a lazy class declaration with Stencil decorators.
+    fn keep_getters(&mut self, class: &Class) {
+        // What the member metadata does not carry: a computed `@Prop` / `@State` name
+        // (`ogPropName`) and `@Watch` options (`handlerOptions`).
+        let unsupported = class.body.body.iter().any(|el| {
+            let (decorators, computed) = match el {
+                ClassElement::PropertyDefinition(p) => (&p.decorators, p.computed),
+                ClassElement::MethodDefinition(m) => (&m.decorators, m.computed),
+                _ => return false,
+            };
+            decorators.iter().any(|d| match (decorator_name(d), &d.expression) {
+                (Some(name), Expression::CallExpression(call)) => (name == self.watch && call.arguments.len() > 1) || (computed && (name == "Prop" || name == "State")),
+                _ => false,
+            })
+        });
+        let members = (self.members_of)(class);
+        let message = if unsupported {
+            Some("stencilrs: computed @Prop and @State names and @Watch options are not ported yet for decorated base classes in lazy and ssr output.".to_owned())
+        } else if self.complex_types {
+            members.unported.first().map(|d| d.message.clone())
+        } else {
+            None
+        };
+        if message.is_some() {
+            self.unported = self.unported.take().or(message);
+            return;
+        }
+        let getters = decorator_getters(&members);
+        if !getters.is_empty() {
+            // On its own line: the last member may lack a semicolon.
+            self.ed.insert(class.body.span.end - 1, format!("\n{}\n", getters.join("\n")));
+        }
     }
 }
 

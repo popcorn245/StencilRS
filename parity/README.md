@@ -45,9 +45,9 @@ and `--mode` flag (`node snapshot.mjs --mode lazy`, `node compare.mjs --mode laz
 
 `npm run parity` and `npm run parity:sourcemaps` run all five. `fallbacks` in `lib.mjs` lists what
 a mode does not port: stencilrs must report a `stencilrs:` error for those fixtures (the cue to
-compile with Stencil), and they are counted apart. Today that is lazy and ssr output of decorated base
-classes and mixins, which keep their static meta getters and so need the full `complexType`.
-`specpage` falls back on the same files.
+compile with Stencil), and they are counted apart. Today there are none: lazy, `ssr` and `specpage`
+output of decorated base classes and mixins keep their static meta getters (`convertDecoratorsToStatic`),
+written from the same `complexType` and docs metadata, and fall back per member like the other modes.
 
 `specpage` compares `COMPILER_META` as an evaluated object, apart from the code around it:
 build flags, vdom facts, styles, member lists, JSDoc and `complexType`. A member whose type
