@@ -113,6 +113,9 @@ jobs:
   test:
     name: install on ${{ matrix.platform }}${{ matrix.container && format(' ({0})', matrix.container) || '' }}
     needs: build
+    # build's own dependency (version) is skipped on pull requests, and GitHub carries a skip
+    # forward unless the condition says otherwise.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ${{ matrix.host }}
     container: ${{ matrix.container }}
     strategy:
