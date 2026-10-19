@@ -24,11 +24,25 @@ Build the native binding first (`npm run build:native` at the repo root).
   absolute path with a `resolveImport` callback (unplugin's `makeResolver`), and `bases/` files
   with `transformAsBaseClass`. Snapshots write the fixtures folder as `FIXTURES`.
 
-## Mode
+## Modes
 
 Fixtures are compiled with `transpileSync` exactly as `@stencil/unplugin` calls it
 (`componentExport: 'customelement'`, `styleImportData: 'queryparams'`, classic `h` JSX when
 the file imports `h`, the automatic runtime otherwise). See `snapshots/manifest.json`.
+
+The same fixtures are compiled again for the other outputs, each with its own snapshot folder
+and `--mode` flag (`node snapshot.mjs --mode lazy`, `node compare.mjs --mode lazy`):
+
+| `--mode` | `componentExport` | Folder | Output |
+|---|---|---|---|
+| `customelement` (default) | `'customelement'` | `snapshots/` | `defineCustomElement`, the Vite / Vitest / Storybook shape |
+| `module` | `'module'` | `snapshots-module/` | the class stays exported, registered with `proxyCustomElement` |
+| `lazy` | `null` (`transpileSync` only reaches it with an explicit `null`) | `snapshots-lazy/` | the lazy-loading `loader-bundle` shape, `registerInstance(this, hostRef)` |
+
+`npm run parity` and `npm run parity:sourcemaps` run all three. `fallbacks` in `lib.mjs` lists what
+a mode does not port: stencilrs must report a `stencilrs:` error for those fixtures (the cue to
+compile with Stencil), and they are counted apart. Today that is lazy output of decorated base
+classes and mixins, which keep their static meta getters and so need the full `complexType`.
 
 Each fixture gets `snapshots/<suite>/<name>.js` (emitted code) and `.json` (component
 metadata, diagnostics, imports).

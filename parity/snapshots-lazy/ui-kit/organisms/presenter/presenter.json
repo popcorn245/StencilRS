@@ -1,0 +1,334 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-presenter",
+      "componentClassName": "PopPresenter",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Visibility — when false the presenter renders nothing (parent owns state)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "attribute": "heading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Chrome heading (sheet title / dialog title / dock header). Omit when the\nslotted surface renders its own header."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sheetMax",
+          "type": "any",
+          "attribute": "sheet-max",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "PRESENTER_BREAKPOINTS.sheetMax",
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Breakpoint overrides. Defaults restore the quick-controls spec values."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "dockMin",
+          "type": "any",
+          "attribute": "dock-min",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "PRESENTER_BREAKPOINTS.dockMin",
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tier",
+          "type": "any",
+          "attribute": "tier",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "PresenterTier",
+            "resolved": "any",
+            "references": {
+              "PresenterTier": {
+                "location": "global",
+                "id": "global::PresenterTier"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Force a tier regardless of viewport (host-controlled mode — e.g. the host\nkeeps a collapsed-dock preference by forcing 'dialog')."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "viewportWidth"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "tierChange",
+          "method": "tierChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The resolved tier, emitted on open and whenever it changes while open."
+          },
+          "complexType": {
+            "original": "PresenterTier",
+            "resolved": "PresenterTier",
+            "references": {
+              "PresenterTier": {
+                "location": "global",
+                "id": "global::PresenterTier"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "× / backdrop / Esc / dock close."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRedock",
+          "method": "popRedock",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The dialog tier's \"Dock to side\" affordance was tapped (host flips its\ndock preference and re-presents)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "open",
+          "methodName": "onOpenChange"
+        },
+        {
+          "propName": "tier",
+          "methodName": "onTierPropChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-PRESENTER",
+          "styleStr": null,
+          "styleIdentifier": "PopPresenterStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/presenter/presenter.css",
+              "relativePath": "presenter.css",
+              "originalComponentPath": "presenter.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": true,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": true,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "open",
+        "sheetTitle",
+        "onPopClose",
+        "class",
+        "name",
+        "slot",
+        "aria-label",
+        "type",
+        "onClick",
+        "hideFooter",
+        "title"
+      ],
+      "htmlTagNames": [
+        "pop-bottom-sheet",
+        "div",
+        "slot",
+        "section",
+        "header",
+        "span",
+        "button",
+        "pop-icon",
+        "footer",
+        "pop-form-dialog"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "header",
+        "",
+        "actions"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-presenter — the generic presentation-tier resolver (organism).\n\nOne surface (form fields / panel body / anything slotted) presented as:\n  • sheet  (viewport < 768)      → renders `pop-bottom-sheet` itself\n  • dialog (768 … dockMin-1)     → renders `pop-form-dialog` itself\n  • dock   (viewport ≥ 1200)     → renders a PLAIN panel container that the\n                                   HOST places in its layout (\"controlled\n                                   tier + slot\": dock pushes layout, it is\n                                   not an overlay — placement is host work)\n\nThe host learns the resolved tier via `tierChange` (emitted on open and on\nevery resize across a breakpoint while open; content is re-slotted, not\nlost). Dock-collapse preference/persistence is the HOST's job — to keep a\ncollapsed dock, force `tier=\"dialog\"`; the dialog then shows a \"Dock to\nside\" affordance (viewport permitting) which emits `popRedock` so the host\ncan flip its preference back.\n\nSlots:\n  (default) — the surface content\n  header    — rich header content (title + bespoke right-side control, e.g. a\n              list select or room switcher). Rendered inline with the ×/dock\n              buttons in dialog + dock tiers, and at the top of the sheet\n              body. Omit to use the plain `heading` chrome instead.\n  actions   — footer, typically a `pop-actions-footer` (rendered by the\n              sheet's actions area / below the dialog body / dock footer).\n              Submission is driven by the footer's own events — the dialog\n              tier renders footer-less (`hideFooter`), so a stray implicit\n              submit can never fire."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "./presenter-logic"
+    }
+  ]
+}

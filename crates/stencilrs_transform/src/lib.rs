@@ -1,7 +1,8 @@
 //! stencilrs: Stencil v5's component transforms on oxc.
 //!
 //! `analyze` reads Stencil decorators into component metadata; `transpile` also generates
-//! the `customelement` module (what `transpileSync` emits for `@stencil/unplugin`).
+//! the `customelement` module (what `transpileSync` emits for `@stencil/unplugin`), or with
+//! `component_export` the `module` and lazy-loading shapes.
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
@@ -24,7 +25,7 @@ use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
-pub use codegen::{CodegenOptions2 as TranspileOptions, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
+pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 
 #[derive(Debug, Serialize)]
@@ -81,7 +82,7 @@ pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool) -> Ana
     AnalyzeResult { components: analysis.components, diagnostics }
 }
 
-/// Analyse one component module and generate its `customelement` code.
+/// Analyse one component module and generate its code: `customelement` by default.
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);

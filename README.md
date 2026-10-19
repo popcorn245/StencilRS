@@ -64,7 +64,7 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 213 fixtures | **213/213**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 216 fixtures, in each of three outputs | **216/216**: metadata, diagnostics and code |
 | Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
@@ -80,10 +80,11 @@ original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
-- the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
-  [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
+- the SSR output ([#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
-  output Vite, Vitest and Storybook use
+  output Vite, Vitest and Storybook use, plus the `module` and lazy-loading (`loader-bundle`)
+  shapes with `componentExport`. Lazy output of decorated base classes and mixins falls back to
+  Stencil
 - JSDoc text and full `complexType` for docs output
   ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 

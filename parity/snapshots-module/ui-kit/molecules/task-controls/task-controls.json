@@ -1,0 +1,588 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-task-controls",
+      "componentClassName": "PopTaskControls",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "groupBy",
+          "type": "string",
+          "attribute": "group-by",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current group-by value (controlled)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sortBy",
+          "type": "string",
+          "attribute": "sort-by",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current sort value (controlled)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "statusFilter",
+          "type": "string",
+          "attribute": "status-filter",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current status-filter value (controlled). `''` = all."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "groupOptions",
+          "type": "string",
+          "attribute": "group-options",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array `[{id,label}]` of the group modes to show. Empty → no Group dropdown."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sortOptions",
+          "type": "string",
+          "attribute": "sort-options",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array `[{id,label}]` of the sort modes to show. Empty → no Sort dropdown."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "statusOptions",
+          "type": "string",
+          "attribute": "status-options",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array `[{id,label}]` of the status filters to show. Empty → no Status dropdown."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "variant",
+          "type": "string",
+          "attribute": "variant",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'bar'",
+          "complexType": {
+            "original": "'bar' | 'sheet' | 'sidenav'",
+            "resolved": "\"bar\" | \"sheet\" | \"sidenav\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Layout hint for class hooks."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "attribute": "compact",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Tighter layout for narrow docks (e.g. the hub's 400px tile)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showClear",
+          "type": "boolean",
+          "attribute": "show-clear",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Render a \"Clear\" affordance."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "clearVariant",
+          "type": "string",
+          "attribute": "clear-variant",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'text'",
+          "complexType": {
+            "original": "'text' | 'icon'",
+            "resolved": "\"icon\" | \"text\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Clear-affordance presentation: `text` = the \"Clear\"/\"Clear all\" link\n(default, tasks/calendar unchanged); `icon` = a quiet icon-only button\n(funnel-with-slash) for hosts where a text link sticks out too much."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "layout",
+          "type": "string",
+          "attribute": "layout",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'inline'",
+          "complexType": {
+            "original": "'inline' | 'menu'",
+            "resolved": "\"inline\" | \"menu\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Presentation:\n - `inline` (default) — the three dropdown pills sit in a row (bar/compact).\n - `menu` — a single filter icon-button that opens ONE popover holding the\n   Group / Sort / Status selectors. Collapses the toolbar to a single\n   trigger (for tight headers next to a search input). An active-state dot\n   shows on the trigger when a non-default filter is set."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "defaultGroup",
+          "type": "string",
+          "attribute": "default-group",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default group id — used only to decide the `menu` trigger's active dot\n(dot shows when `groupBy` differs from this). Empty → not considered."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "defaultSort",
+          "type": "string",
+          "attribute": "default-sort",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default sort id — used only for the `menu` trigger's active dot."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "groupLabel",
+          "type": "string",
+          "attribute": "group-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Group'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Heading for the group dropdown (pill label + menu-row label). Hosts reusing\nthe control outside tasks can rename it (e.g. \"Tool\" for the hub's history)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sortLabel",
+          "type": "string",
+          "attribute": "sort-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Sort'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Heading for the sort dropdown."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "statusLabel",
+          "type": "string",
+          "attribute": "status-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Status'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Heading for the status dropdown."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "openKey"
+        },
+        {
+          "name": "menuOpen"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "groupChange",
+          "method": "groupChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The group mode changed."
+          },
+          "complexType": {
+            "original": "{ value: string }",
+            "resolved": "{ value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "sortChange",
+          "method": "sortChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The sort mode changed."
+          },
+          "complexType": {
+            "original": "{ value: string }",
+            "resolved": "{ value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskStatusChange",
+          "method": "taskStatusChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The status filter changed."
+          },
+          "complexType": {
+            "original": "{ value: string }",
+            "resolved": "{ value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "clearAll",
+          "method": "clearAll",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The clear affordance was pressed."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-TASK-CONTROLS",
+          "styleStr": null,
+          "styleIdentifier": "PopTaskControlsStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/task-controls/task-controls.css",
+              "relativePath": "task-controls.css",
+              "originalComponentPath": "task-controls.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": true,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": true,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "d",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "aria-hidden",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "class",
+        "type",
+        "aria-haspopup",
+        "aria-expanded",
+        "aria-label",
+        "title",
+        "onClick",
+        "points",
+        "role",
+        "aria-selected",
+        "id"
+      ],
+      "htmlTagNames": [
+        "svg",
+        "path",
+        "line",
+        "div",
+        "button",
+        "span",
+        "polyline"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "<pop-task-controls\n  group-by=\"date\"\n  sort-by=\"dueDate\"\n  status-filter=\"\"\n  group-options='[{\"id\":\"none\",\"label\":\"No grouping\"},{\"id\":\"date\",\"label\":\"Date\"}]'\n  sort-options='[{\"id\":\"dueDate\",\"label\":\"Due date\"},{\"id\":\"priority\",\"label\":\"Priority\"}]'\n  status-options='[{\"id\":\"\",\"label\":\"All\"},{\"id\":\"open\",\"label\":\"Open\"}]'\n  variant=\"bar\"\n  show-clear>\n</pop-task-controls>"
+          }
+        ],
+        "text": "`pop-task-controls` — a fully CONTROLLED group-by / sort / status control set.\n\nLifted (and generalised) from tasks-app's `renderFilterControls` so both the\ntasks-app and the hub's tasks tile can share ONE toolbar: a row of pill\ndropdowns (Group · Sort · Status), each a button + popover listbox with a ✓\non the current selection.\n\nThe component holds NO filter values of its own — the host passes the current\n`groupBy` / `sortBy` / `statusFilter` and the option lists, and the component\nemits a `*Change` event when the user picks something. The only internal\nstate is view-local: which popover is open."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

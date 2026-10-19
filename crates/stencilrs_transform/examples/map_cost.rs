@@ -36,6 +36,7 @@ fn main() {
                     resolve_imports: false,
                     source_map,
                     transform_as_base_class: false,
+                    component_export: Default::default(),
                 };
                 bytes += transpile(src, &opts).map.map_or(0, |m| m.len());
             }

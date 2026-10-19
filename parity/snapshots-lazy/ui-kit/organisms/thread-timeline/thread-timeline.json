@@ -1,0 +1,441 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-timeline",
+      "componentClassName": "PopThreadTimeline",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "items",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ThreadItem[]",
+            "resolved": "ThreadItem[]",
+            "references": {
+              "ThreadItem": {
+                "location": "global",
+                "id": "global::ThreadItem"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Items in SERVER order — oldest first. Never re-sorted here."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "currentUid",
+          "type": "string",
+          "attribute": "current-uid",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The viewing user; drives own-vs-other bubble rendering."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "canParticipate",
+          "type": "boolean",
+          "attribute": "can-participate",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "False ⇒ viewer mode: no action buttons, no reply/check-off affordances."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "renderers",
+          "type": "any",
+          "attribute": "renderers",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{}",
+          "complexType": {
+            "original": "Record<string, string>",
+            "resolved": "string",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "cardType → `pop-*` renderer tag. Injected; ui-kit holds no registry."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loadingOlder",
+          "type": "boolean",
+          "attribute": "loading-older",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Shows the top spinner while older items are being fetched."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "appended"
+        }
+      ],
+      "methods": [
+        {
+          "name": "scrollToItem",
+          "docs": {
+            "text": "Scroll a given item into view — used by search and back-reference stubs.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(id: string) => Promise<void>",
+            "parameters": [
+              {
+                "name": "id",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "appendItem",
+          "docs": {
+            "text": "Append a live (SSE) item without asking the host to rebuild `items`.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(item: ThreadItem) => Promise<void>",
+            "parameters": [
+              {
+                "name": "item",
+                "type": "ThreadItem",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "ThreadItem": {
+                "location": "global",
+                "id": "global::ThreadItem"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popItemAction",
+          "method": "popItemAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A card action fired from inside an item."
+          },
+          "complexType": {
+            "original": "ThreadItemActionDetail",
+            "resolved": "ThreadItemActionDetail",
+            "references": {
+              "ThreadItemActionDetail": {
+                "location": "global",
+                "id": "global::ThreadItemActionDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popItemReply",
+          "method": "popItemReply",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The user wants to reply to an item."
+          },
+          "complexType": {
+            "original": "ThreadItemRefDetail",
+            "resolved": "ThreadItemRefDetail",
+            "references": {
+              "ThreadItemRefDetail": {
+                "location": "global",
+                "id": "global::ThreadItemRefDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popItemStatus",
+          "method": "popItemStatus",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Check-off: open → done → open, or dismissed."
+          },
+          "complexType": {
+            "original": "ThreadItemStatusDetail",
+            "resolved": "ThreadItemStatusDetail",
+            "references": {
+              "ThreadItemStatusDetail": {
+                "location": "global",
+                "id": "global::ThreadItemStatusDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popItemPromote",
+          "method": "popItemPromote",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Promote a message into a card / task."
+          },
+          "complexType": {
+            "original": "ThreadItemRefDetail",
+            "resolved": "ThreadItemRefDetail",
+            "references": {
+              "ThreadItemRefDetail": {
+                "location": "global",
+                "id": "global::ThreadItemRefDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popLoadOlder",
+          "method": "popLoadOlder",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Infinite scroll upward — cursor is the oldest rendered item id."
+          },
+          "complexType": {
+            "original": "ThreadLoadOlderDetail",
+            "resolved": "ThreadLoadOlderDetail",
+            "references": {
+              "ThreadLoadOlderDetail": {
+                "location": "global",
+                "id": "global::ThreadLoadOlderDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-TIMELINE",
+          "styleStr": null,
+          "styleIdentifier": "PopThreadTimelineStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/thread-timeline/thread-timeline.css",
+              "relativePath": "thread-timeline.css",
+              "originalComponentPath": "thread-timeline.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "type",
+        "class",
+        "title",
+        "onClick",
+        "name",
+        "aria-hidden",
+        "aria-label",
+        "key",
+        "data-item-id",
+        "cardType",
+        "payload",
+        "liveness",
+        "actions",
+        "readonly",
+        "renderer",
+        "onScroll",
+        "role",
+        "aria-live"
+      ],
+      "htmlTagNames": [
+        "button",
+        "ion-icon",
+        "span",
+        "div",
+        "article",
+        "pop-thread-card",
+        "p"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-timeline — the Thread Model v2 timeline.\n\nRenders a pre-sorted list of thread items: messages as bubbles, cards through\nthe `pop-thread-card` wrapper with an INJECTED renderer tag. The component is\npure props-in / events-out — it never fetches, never touches Firebase, and\n**never re-sorts `items`**; the server owns the order.\n\nThe `renderers` map (cardType → `pop-*` tag) is injected too, so ui-kit depends\non no card registry. A cardType missing from the map falls through to the\nwrapper's fallback face rather than blanking the row."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}
