@@ -1,6 +1,6 @@
-# ui-kit: the old bucket component set on Stencil v5, checked against stencilrs
+# ui-kit: a 136-component production library on Stencil v5, checked against stencilrs
 
-The bucket ui-kit (136 Stencil 4 components, 107 spec files) migrated to Stencil v5. It builds
+The ui-kit of the Bucket app (136 Stencil 4 components, 107 spec files) migrated to Stencil v5. It builds
 with zero errors and zero warnings under `stencil build`, and stencilrs is checked against it.
 
 ```sh

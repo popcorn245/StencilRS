@@ -23,7 +23,7 @@ layer was the target.
 ## 2. Golden output first
 
 Before writing compiler code, a parity harness (`parity/`) compiled a corpus with **real Stencil v5**
-and committed its output as snapshots: 27 single-feature fixtures plus the bucket ui-kit's 136
+and committed its output as snapshots: 27 single-feature fixtures plus the ui-kit's 136
 components. Every later change was measured against those snapshots: metadata field by field,
 diagnostics by exact message, code after reprinting both sides through one printer.
 
@@ -51,7 +51,7 @@ rebuilt binary; unplugin re-compiled stencilrs' output because doc comments ment
 
 ## 6. A real component set
 
-The bucket ui-kit was migrated to Stencil v5 for real (`examples/ui-kit`) and brought to a clean
+The ui-kit, a 136-component production library, was migrated to Stencil v5 for real (`examples/ui-kit`) and brought to a clean
 `stencil build`: 0 errors, 0 warnings. Comparing stencilrs with that **full, type-checked build**
 showed 21 components where single-file compilation (stencilrs and Stencil's own Vite plugin alike)
 types props differently, because it can't see imports. stencilrs gained **build-accurate mode**,

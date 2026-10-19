@@ -13,8 +13,8 @@ copied on purpose. Each one is a candidate upstream issue. Found by the parity h
 passes. `return Promise.resolve(x)` fails the same way.
 
 `@stencil/unplugin` throws on any error diagnostic (`unplugin/src/transform.ts:178-184`), so
-these components cannot be compiled through the Vite/Rolldown plugin at all. In the old
-bucket ui-kit, 40 methods in 14 components hit this. A full `stencil build` (with lib) accepts them.
+these components cannot be compiled through the Vite/Rolldown plugin at all. In the
+ui-kit, 40 methods in 14 components hit this. A full `stencil build` (with lib) accepts them.
 
 ## 2. `@Prop({ attribute: null })` is ignored
 
@@ -43,7 +43,7 @@ off. Not yet relevant to stencilrs (no build conditionals), recorded for later.
 is how compiler-internal fields such as `complexType._astNode` stay out of the output. The
 runtime metadata passed to `__stencil_defineCustomElement` is printed with the same helper, so
 `@State() _filters` (or a `_`-prefixed prop, method, or watched prop) disappears from it and is
-not reactive in the customelement / standalone output. Two old bucket ui-kit components hit
+not reactive in the customelement / standalone output. Two ui-kit components hit
 this (`filter-bar`, `note-list`). The member is still in the compiler metadata (`data`).
 
 ## 6. Plain components call `__stencil_transformTag` without importing it

@@ -19,7 +19,7 @@ Build the native binary at the repository root first (`npm run build:native`), t
 ```sh
 npm install
 npm run storybook   # dev server on http://localhost:6007
-npm run storybook:tailnet   # same, on every interface: http://<machine>.<tailnet>.ts.net:6007
+npm run storybook:tailnet   # same, on every interface (LAN, Tailscale): http://<host>:6007
 npm run build       # static Storybook in dist/
 ```
 
