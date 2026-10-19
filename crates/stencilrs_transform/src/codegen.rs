@@ -18,7 +18,7 @@ use oxc::ast::ast::{
     CallExpression, Class, ClassElement, ConditionalExpression, Declaration, Decorator, Expression,
     ImportDeclarationSpecifier, JSXAttributeItem, JSXAttributeName, JSXElementName, JSXFragment,
     JSXOpeningElement, MethodDefinition, MethodDefinitionKind, Program, ReturnStatement, Statement,
-    StringLiteral, TSEnumDeclaration, TSEnumMemberName, UnaryOperator,
+    StringLiteral, TSEnumDeclaration,
 };
 use oxc::ast_visit::{Visit, VisitMut, walk, walk_mut};
 use oxc::codegen::{Codegen, CodegenOptions, CommentOptions};
@@ -30,6 +30,8 @@ use serde_json::Value;
 
 use crate::analyze::import_aliases;
 use crate::edits::Edits;
+use crate::consts::{Lit, enum_values, order_like_object_keys};
+use crate::locals::Locals;
 use crate::eval::property_key_name;
 use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
 use crate::scope_css::{scope_css, scope_id};
@@ -131,16 +133,17 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     }
 
     // Enums, emitted the way TypeScript does.
+    let locals = Locals::collect(program);
     for stmt in &program.body {
         match stmt {
             Statement::TSEnumDeclaration(e) => {
-                if let Some(lowered) = lower_enum(e, false, source) {
+                if let Some(lowered) = lower_enum(e, false, &locals) {
                     ed.replace(e.span.start, e.span.end, lowered);
                 }
             }
             Statement::ExportDeclaration(x) => {
                 if let Declaration::TSEnumDeclaration(e) = &x.declaration {
-                    if let Some(lowered) = lower_enum(e, true, source) {
+                    if let Some(lowered) = lower_enum(e, true, &locals) {
                         ed.replace(x.span.start, x.span.end, lowered);
                     }
                 }
@@ -494,7 +497,10 @@ impl ClassInfo {
         let mut vdom = VdomScan::default();
         vdom.visit_class(class);
         let names: Vec<&str> = cmp.properties.iter().filter(|p| !p.getter).map(|p| p.name.as_str()).chain(cmp.states.iter().map(|s| s.name.as_str())).collect();
+        // `detectModernPropDeclarations`: a field named like a prop or state, or a computed
+        // `@Prop`/`@State` field (its `ogPropName` is the field's own expression).
         let has_modern_property_decls = class.body.body.iter().any(|el| match el {
+            ClassElement::PropertyDefinition(p) if p.computed => has_decorator(&p.decorators, "Prop") || has_decorator(&p.decorators, "State"),
             ClassElement::PropertyDefinition(p) => property_key_name(&p.key).is_some_and(|n| names.contains(&n.as_str())),
             _ => false,
         }) || cmp.does_extend;
@@ -676,7 +682,9 @@ fn handlers_value(handlers: &[WatcherMeta]) -> Value {
             items.push(Value::Object(handler));
         }
     }
-    Value::Object(obj)
+    let mut entries: Vec<(String, Value)> = obj.into_iter().collect();
+    order_like_object_keys(&mut entries, |(k, _)| k.as_str());
+    Value::Object(entries.into_iter().collect())
 }
 
 /// `attachInternalsCustomStates`: `[{ name, initialValue, docs }]`.
@@ -916,6 +924,7 @@ fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
             None => dedup.push((k, v)),
         }
     }
+    order_like_object_keys(&mut dedup, |(k, _)| k.as_str());
 
     let listeners: Vec<String> = cmp
         .listeners
@@ -965,43 +974,21 @@ fn js_value(v: &Value) -> String {
 
 /// TypeScript's enum emit: `var E; (function (E) { E[E["A"] = 0] = "A"; })(E || (E = {}));`.
 /// Only literal and auto-increment members; anything else is left to oxc.
-fn lower_enum(e: &TSEnumDeclaration, exported: bool, source: &str) -> Option<String> {
+/// TypeScript's enum emit, with each member's constant value folded in. `None` (oxc's
+/// transform then lowers it) when a member isn't constant.
+fn lower_enum(e: &TSEnumDeclaration, exported: bool, locals: &Locals) -> Option<String> {
     if e.declare || e.r#const {
         return None;
     }
     let name = e.id.name.as_str();
-    let mut next: Option<f64> = Some(0.0);
     let mut lines = Vec::new();
-    for m in &e.body.members {
-        let key = match &m.id {
-            TSEnumMemberName::Identifier(id) => id.name.to_string(),
-            TSEnumMemberName::String(s) => s.value.to_string(),
-            _ => return None,
-        };
+    for (key, value) in enum_values(e, locals) {
         let key_json = json(&key);
-        match &m.initializer {
-            Some(Expression::StringLiteral(s)) => {
-                lines.push(format!("{name}[{key_json}] = {};", json(&s.value)));
-                next = None;
-            }
-            Some(Expression::NumericLiteral(n)) => {
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(n.value)));
-                next = Some(n.value + 1.0);
-            }
-            Some(Expression::UnaryExpression(u)) if u.operator == UnaryOperator::UnaryNegation => {
-                let Expression::NumericLiteral(n) = &u.argument else { return None };
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(-n.value)));
-                next = Some(-n.value + 1.0);
-            }
-            None => {
-                let v = next?;
-                lines.push(format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(v)));
-                next = Some(v + 1.0);
-            }
-            Some(_) => return None,
-        }
+        lines.push(match value? {
+            Lit::Str(s) => format!("{name}[{key_json}] = {};", json(&s)),
+            Lit::Num(n) => format!("{name}[{name}[{key_json}] = {}] = {key_json};", fmt_num(n)),
+        });
     }
-    let _ = source;
     let export = if exported { "export " } else { "" };
     Some(format!("{export}var {name};\n(function ({name}) {{\n{}\n}})({name} || ({name} = {{}}));", lines.join("\n")))
 }

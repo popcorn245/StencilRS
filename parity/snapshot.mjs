@@ -12,6 +12,9 @@ import { transpileSync, versions } from '@stencil/core/compiler';
 
 import { listFixtures, plain, portable, snapshotsDir, transpileOptions } from './lib.mjs';
 
+/** An error Stencil threw carries its stack, with this machine's paths: keep the message. */
+const withoutStack = (text) => text.split('\n    at ')[0];
+
 const suite = process.argv[2];
 const fixtures = listFixtures(suite);
 if (suite) rmSync(join(snapshotsDir, suite), { recursive: true, force: true });
@@ -30,7 +33,7 @@ for (const { id, file } of fixtures) {
       JSON.stringify(
         {
           data: plain(result.data ?? []),
-          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: d.messageText })),
+          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: withoutStack(d.messageText) })),
           imports: result.imports ?? [],
         },
         null,
