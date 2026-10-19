@@ -80,7 +80,6 @@ original TypeScript.
 Not yet (these fall back to Stencil, or are tracked as issues):
 
 - inline `styles` on scoped components ([#1](https://github.com/popcorn245/StencilRS/issues/1)),
-  per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
   `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
 - the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
   [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
