@@ -1,0 +1,29 @@
+{
+  "name": "@popcorn245/stencilrs-linux-x64-gnu",
+  "version": "0.1.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "stencilrs.linux-x64-gnu.node",
+  "files": [
+    "stencilrs.linux-x64-gnu.node"
+  ],
+  "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/popcorn245/StencilRS.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

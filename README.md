@@ -110,9 +110,18 @@ Stencil behaviours copied on purpose (upstream bug candidates): [`docs/quirks.md
 ## Develop
 
 ```sh
-npm run build:native   # cargo build --release, copies the binary to stencilrs.node
+npm run build:native   # napi build: stencilrs.<platform>.node, which index.js prefers
+                       # over the prebuilt @popcorn245/stencilrs-<platform> package
 npm test               # cargo test, then node --test
 ```
+
+## Release
+
+Set `version` in `package.json`, then push a matching tag (`git tag v0.1.0 && git push origin
+v0.1.0`). [`.github/workflows/release.yml`](.github/workflows/release.yml) builds the binary for
+linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and Windows x64, installs each from the packed
+tarballs on its own OS, then publishes the five `@popcorn245/stencilrs-<platform>` packages and
+`@popcorn245/stencilrs` (with provenance). It needs an `NPM_TOKEN` repository secret.
 
 ## Reference source
 
