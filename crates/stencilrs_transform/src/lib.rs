@@ -14,6 +14,7 @@ mod locals;
 pub mod meta;
 mod prop_type;
 mod resolve;
+pub mod scope_css;
 mod sourcemap;
 
 use oxc::allocator::Allocator;

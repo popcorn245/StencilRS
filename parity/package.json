@@ -8,6 +8,7 @@
     "snapshot": "node snapshot.mjs",
     "compare": "node compare.mjs",
     "sourcemaps": "node sourcemaps.mjs",
+    "scope-css": "node scope-css.mjs",
     "bench": "node bench.mjs"
   },
   "dependencies": {

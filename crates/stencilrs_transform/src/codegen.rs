@@ -32,6 +32,7 @@ use crate::analyze::import_aliases;
 use crate::edits::Edits;
 use crate::eval::property_key_name;
 use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
+use crate::scope_css::{scope_css, scope_id};
 
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 
@@ -721,7 +722,14 @@ fn style_getter(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
         (0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + ")
     } else {
         let css = style.inline.as_deref()?;
-        let _ = cmp;
+        // `createStyleLiteral`: a scoped component's inline styles are scoped at compile time.
+        let scoped;
+        let css = if cmp.encapsulation == Encapsulation::Scoped {
+            scoped = scope_css(css, &scope_id(&cmp.tag_name, Some(&style.mode)), false).ok()?;
+            scoped.as_str()
+        } else {
+            css
+        };
         format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${"))
     };
     Some(format!("static get style() {{ return {expr}; }}"))

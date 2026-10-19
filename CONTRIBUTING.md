@@ -16,12 +16,13 @@ npm test               # cargo test, then node --test
 ## The rule: same output as Stencil v5
 
 stencilrs is judged against real Stencil v5, not against itself. [`parity/`](parity/README.md)
-holds golden output from Stencil v5 for 185 fixtures; a change is right when they still match:
+holds golden output from Stencil v5 for 186 fixtures; a change is right when they still match:
 
 ```sh
 npm --prefix parity ci
 npm run parity              # metadata, diagnostics and code, fixture by fixture
 npm run parity:sourcemaps   # source map validity and accuracy
+npm run parity:scope-css    # scoped CSS, byte for byte against Stencil's scopeCss
 ```
 
 Porting a new Stencil feature? Add a fixture under `parity/fixtures/`, snapshot it with real

@@ -54,3 +54,12 @@ export const transpile = (source, options) => native.transpile(source, options);
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
 export const normalize = (code) => native.normalize(code);
+
+/**
+ * Stencil's `scopeCss`: CSS rewritten for a `scoped` component.
+ * @param {string} css
+ * @param {string} scopeId `sc-<tag>`, plus `-<mode>` for a named mode
+ * @param {boolean} [commentOriginalSelector] what the runtime passes; the compiler passes false
+ * @returns {string}
+ */
+export const scopeCss = (css, scopeId, commentOriginalSelector = false) => native.scopeCss(css, scopeId, commentOriginalSelector);
