@@ -1,0 +1,343 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-chip-input",
+      "componentClassName": "PopChipInput",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "string[]",
+            "resolved": "string[]",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current value array."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "suggestions",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChipSuggestion[]",
+            "resolved": "ChipSuggestion[]",
+            "references": {
+              "ChipSuggestion": {
+                "location": "local",
+                "path": "ui-kit/molecules/chip-input/chip-input.tsx",
+                "id": "ui-kit/molecules/chip-input/chip-input.tsx::ChipSuggestion"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional suggestions for autocomplete + chip label resolution."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Add…'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Placeholder for the trailing text input."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "strict",
+          "type": "boolean",
+          "attribute": "strict",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Reject values that don't match a suggestion id."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Hide the trailing add-input (read-only mode)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "allowCreate",
+          "type": "boolean",
+          "attribute": "allow-create",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show the inline \"＋ Create «text»\" row when the draft matches no suggestion.\nOff by default so existing {id,label} / free-text callers are unchanged."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "draft"
+        },
+        {
+          "name": "openSuggestions"
+        }
+      ],
+      "methods": [
+        {
+          "name": "focusInput",
+          "docs": {
+            "text": "Imperatively focus the input.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valueChanged",
+          "method": "valueChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string[]",
+            "resolved": "string[]",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "createChip",
+          "method": "createChip",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user picks the inline \"Create «text»\" row (the typed text\nmatches no existing suggestion). The host persists a new chip/tag and adds\nits id to `value`. Only fires when `allowCreate` is true."
+          },
+          "complexType": {
+            "original": "{ label: string }",
+            "resolved": "{ label: string; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-CHIP-INPUT",
+          "styleStr": null,
+          "styleIdentifier": "PopChipInputStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/chip-input/chip-input.css",
+              "relativePath": "chip-input.css",
+              "originalComponentPath": "chip-input.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "style",
+        "aria-hidden",
+        "type",
+        "aria-label",
+        "onClick",
+        "ref",
+        "placeholder",
+        "value",
+        "onInput",
+        "onFocus",
+        "onBlur",
+        "onKeyDown",
+        "role",
+        "onMouseDown"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "button",
+        "input",
+        "ul",
+        "li"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

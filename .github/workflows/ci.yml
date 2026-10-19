@@ -42,6 +42,12 @@ jobs:
           key: npm-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: npm-${{ runner.os }}-
 
+      # Chromium only, at the Playwright version the ui-kit pins, so the server-render smoke test's
+      # browser step (examples/ui-kit/ssr) runs here; it finds the download through Playwright's
+      # own executablePath(). Without a browser that step skips itself.
+      - name: Install Chromium for the browser checks
+        run: npx -y playwright@1.64.1 install --with-deps chromium
+
       - name: Build and test
         run: bash scripts/ci.sh
 

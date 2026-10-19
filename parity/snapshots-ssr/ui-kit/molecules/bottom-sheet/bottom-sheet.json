@@ -1,0 +1,256 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-bottom-sheet",
+      "componentClassName": "BottomSheet",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": true,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sheetTitle",
+          "type": "string",
+          "attribute": "sheet-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "maxHeight",
+          "type": "string",
+          "attribute": "max-height",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'85dvh'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "fullScreen",
+          "type": "boolean",
+          "attribute": "full-screen",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "dragY"
+        },
+        {
+          "name": "dragging"
+        }
+      ],
+      "methods": [],
+      "listeners": [
+        {
+          "name": "keydown",
+          "method": "handleKeydown",
+          "capture": false,
+          "passive": false,
+          "target": "window"
+        }
+      ],
+      "events": [
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-BOTTOM-SHEET",
+          "styleStr": null,
+          "styleIdentifier": "PopBottomSheetStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/bottom-sheet/bottom-sheet.css",
+              "relativePath": "bottom-sheet.css",
+              "originalComponentPath": "bottom-sheet.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": true,
+      "hasListenerTarget": true,
+      "hasListenerTargetWindow": true,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "onClick",
+        "ref",
+        "style",
+        "onPointerDown",
+        "name"
+      ],
+      "htmlTagNames": [
+        "div",
+        "h2",
+        "slot"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "",
+        "actions"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

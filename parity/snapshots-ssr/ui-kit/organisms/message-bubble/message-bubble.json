@@ -1,0 +1,705 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-message-bubble",
+      "componentClassName": "PopMessageBubble",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "role",
+          "type": "string",
+          "attribute": "role",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'member'",
+          "complexType": {
+            "original": "MessageRole",
+            "resolved": "\"assistant\" | \"member\" | \"user\"",
+            "references": {
+              "MessageRole": {
+                "location": "local",
+                "path": "ui-kit/organisms/message-bubble/message-bubble.tsx",
+                "id": "ui-kit/organisms/message-bubble/message-bubble.tsx::MessageRole"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Role determines layout: user = right bubble, assistant = left prose/bubble, member = Discord-style"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "content",
+          "type": "string",
+          "attribute": "content",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Markdown content (plain text for member role)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "messageId",
+          "type": "string",
+          "attribute": "message-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Passed back in edit/delete events"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "layout",
+          "type": "string",
+          "attribute": "layout",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'bubble'",
+          "complexType": {
+            "original": "MessageLayout",
+            "resolved": "\"bubble\" | \"prose\"",
+            "references": {
+              "MessageLayout": {
+                "location": "local",
+                "path": "ui-kit/organisms/message-bubble/message-bubble.tsx",
+                "id": "ui-kit/organisms/message-bubble/message-bubble.tsx::MessageLayout"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "bubble = rounded chat bubbles, prose = full-width document blocks"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "streaming",
+          "type": "boolean",
+          "attribute": "streaming",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the message is still streaming in"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "streamingMode",
+          "type": "string",
+          "attribute": "streaming-mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'inline'",
+          "complexType": {
+            "original": "StreamingMode",
+            "resolved": "\"dots\" | \"inline\"",
+            "references": {
+              "StreamingMode": {
+                "location": "local",
+                "path": "ui-kit/organisms/message-bubble/message-bubble.tsx",
+                "id": "ui-kit/organisms/message-bubble/message-bubble.tsx::StreamingMode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "inline = content builds token by token; dots = animated ellipsis while waiting"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "avatarUrl",
+          "type": "string",
+          "attribute": "avatar-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Avatar image URL"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "avatarInitials",
+          "type": "string",
+          "attribute": "avatar-initials",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Fallback initials when no avatarUrl"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "userName",
+          "type": "string",
+          "attribute": "user-name",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Display name shown in header"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "timestamp",
+          "type": "number",
+          "attribute": "timestamp",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Unix ms timestamp"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "isOwn",
+          "type": "boolean",
+          "attribute": "is-own",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Align bubble to the right (current user's own messages)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "isAdmin",
+          "type": "boolean",
+          "attribute": "is-admin",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Admin can delete any message"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showCopyButton",
+          "type": "boolean",
+          "attribute": "show-copy-button",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show copy-to-clipboard button on AI messages"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "isThread",
+          "type": "boolean",
+          "attribute": "is-thread",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "When true, thread action is hidden (already inside a thread)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "threadCount",
+          "type": "number",
+          "attribute": "thread-count",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Thread reply count (member role)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "threadPreview",
+          "type": "string",
+          "attribute": "thread-preview",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Last reply preview text"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "threadAvatarUrl",
+          "type": "string",
+          "attribute": "thread-avatar-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Last reply author avatar"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "threadLastAt",
+          "type": "number",
+          "attribute": "thread-last-at",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Last reply timestamp"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "intents",
+          "type": "string",
+          "attribute": "intents",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON string of IntentChip[] shown on assistant messages after streaming"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "parsedIntents"
+        },
+        {
+          "name": "editing"
+        },
+        {
+          "name": "editText"
+        },
+        {
+          "name": "copied"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popThreadOpened",
+          "method": "popThreadOpened",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popMessageEdited",
+          "method": "popMessageEdited",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string; text: string }",
+            "resolved": "{ id: string; text: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popMessageDeleted",
+          "method": "popMessageDeleted",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCopied",
+          "method": "popCopied",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "intents",
+          "methodName": "parseIntents"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-MESSAGE-BUBBLE",
+          "styleStr": null,
+          "styleIdentifier": "PopMessageBubbleStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/message-bubble/message-bubble.css",
+              "relativePath": "message-bubble.css",
+              "originalComponentPath": "message-bubble.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "src",
+        "alt",
+        "innerHTML",
+        "key",
+        "value",
+        "onInput",
+        "onKeyDown",
+        "onClick",
+        "aria-hidden",
+        "title",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "points",
+        "x",
+        "y",
+        "rx",
+        "d",
+        "role",
+        "aria-label",
+        "style",
+        "messageId",
+        "threadCount",
+        "threadPreview",
+        "threadAvatarUrl",
+        "threadLastAt",
+        "onPopThreadOpened",
+        "isOwn",
+        "isAdmin",
+        "isThread",
+        "onPopEditRequested",
+        "onPopDeleteRequested"
+      ],
+      "htmlTagNames": [
+        "div",
+        "img",
+        "span",
+        "textarea",
+        "button",
+        "svg",
+        "polyline",
+        "rect",
+        "path",
+        "polygon",
+        "pop-thread-summary",
+        "pop-message-actions"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "marked"
+    },
+    {
+      "path": "highlight.js"
+    },
+    {
+      "path": "dompurify"
+    }
+  ]
+}

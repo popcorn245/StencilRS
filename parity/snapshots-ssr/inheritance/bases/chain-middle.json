@@ -1,0 +1,9 @@
+{
+  "data": [],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "./base-props"
+    }
+  ]
+}

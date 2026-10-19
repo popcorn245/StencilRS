@@ -11,6 +11,10 @@
 // is left to @stencil/unplugin, which compiles it with Stencil's own compiler. Pass
 // `{ fallback: false }` to make that an error instead.
 //
+// `componentExport: 'ssr'` compiles the components for Stencil's hydrate (server-side rendering)
+// runtime instead, `export class` with a static `cmpMeta` (see the ui-kit's `ssr-smoke.mjs`).
+// The default, `'customelement'`, is the Vite / Vitest / Storybook shape.
+//
 // `stencilrs({ mode: 'spec-page' })` (or `stencilrsSpecPage()`) is @stencil/unplugin's spec-page
 // mode: components compile for Stencil's `newSpecPage` (lazy output with `COMPILER_META`, the
 // core from `@stencil/core/testing`), for Vitest. See `docs/pipeline.md`.
@@ -88,13 +92,17 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, resolveImports?: boolean }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, resolveImports = true, ...stencilOptions } = options;
+  const { fallback = true, verbose = false, resolveImports = true, componentExport = 'customelement', ...stencilOptions } = options;
+  if (componentExport !== 'customelement' && componentExport !== 'ssr') {
+    throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
+  }
+  const ssr = componentExport === 'ssr';
   const specPage = stencilOptions.mode === 'spec-page';
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
@@ -131,16 +139,19 @@ export function stencilrs(options = {}) {
 
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
-      if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
+      if (ssr) {
+        if (code.includes('Build')) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
+      } else if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const result = transpile(code, { file, resolveImports, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
+      const result = transpile(code, { file, resolveImports, componentExport, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {
         const why = [...new Set(unported.map((d) => d.message.replace(/^stencilrs: /, '')))].join(' ');
-        if (!fallback) this.error(`[stencilrs] ${file}: ${why}`);
+        // Stencil's compiler through @stencil/unplugin would produce the client shape, not ssr's.
+        if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${why}`);
         counts.stencil++;
         if (verbose) this.info?.(`[stencilrs] ${file}: using Stencil's compiler (${why})`);
         return null; // @stencil/unplugin compiles it
@@ -163,7 +174,7 @@ export function stencilrs(options = {}) {
 
       const overrides = {
         ...(SIGNALS_IMPORT_RE.test(code) ? { vdomSignals: true } : {}),
-        ...(isDev && !specPage ? { hotModuleReplacement: true, isDev: true } : {}),
+        ...(isDev && !ssr && !specPage ? { hotModuleReplacement: true, isDev: true } : {}),
       };
       const mutations = Object.entries(overrides)
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
@@ -175,11 +186,11 @@ export function stencilrs(options = {}) {
       const map = result.map ? JSON.parse(result.map) : null;
       if (map && mutations) map.mappings = `;;${map.mappings}`;
       if (specPage) return { code: out, map }; // lazy output keeps the class exported; no HMR
-      // customelement output drops the class's `export`; consumers import it by name.
-      if (!new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
+      // customelement output drops the class's `export`; consumers import it by name. ssr keeps it.
+      if (!ssr && !new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
         out += `\nexport { ${componentClassName} };`;
       }
-      if (isDev) out += hmrSnippet(tagName, componentClassName);
+      if (isDev && !ssr) out += hmrSnippet(tagName, componentClassName);
       return { code: out, map };
     },
 
@@ -198,9 +209,9 @@ export function stencilrs(options = {}) {
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
       const code = readFileSync(file, 'utf8');
-      const result = transpile(code, { file, resolveImports, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
+      const result = transpile(code, { file, resolveImports, componentExport, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
       if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
-        if (!fallback) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
+        if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
         // As @stencil/unplugin's `transpileBaseClass`.
         const st = transpileSync(code, { file, componentExport: 'customelement', styleImportData: 'queryparams', transformAsBaseClass: true });
         return { code: st.code, map: st.map ?? null };

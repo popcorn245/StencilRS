@@ -1,0 +1,717 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-fit-panel",
+      "componentClassName": "PopFitPanel",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "latest",
+          "type": "any",
+          "attribute": "latest",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{}",
+          "complexType": {
+            "original": "FitLatest | string",
+            "resolved": "any",
+            "references": {
+              "FitLatest": {
+                "location": "global",
+                "id": "global::FitLatest"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Latest readings (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "goals",
+          "type": "any",
+          "attribute": "goals",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{}",
+          "complexType": {
+            "original": "FitGoals | string",
+            "resolved": "any",
+            "references": {
+              "FitGoals": {
+                "location": "global",
+                "id": "global::FitGoals"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Goals / target bands (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "cards",
+          "type": "string",
+          "attribute": "cards",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "FitPanelCard[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "FitPanelCard": {
+                "location": "global",
+                "id": "global::FitPanelCard"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional precomputed metric cards. When omitted they're derived from\n`latest` + `goals` + `days` (day-aware). Lets a host reuse the panel with\na different card set. (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "days",
+          "type": "any",
+          "attribute": "days",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "localTodayStr()",
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The selected day (YYYY-MM-DD, local). Drives day-aware labels + the pill."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "weightSeries",
+          "type": "string",
+          "attribute": "weight-series",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "FitPoint[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "FitPoint": {
+                "location": "global",
+                "id": "global::FitPoint"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Weight trend points (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "glucoseSeries",
+          "type": "string",
+          "attribute": "glucose-series",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "FitGlucosePoint[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "FitGlucosePoint": {
+                "location": "global",
+                "id": "global::FitGlucosePoint"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Blood-sugar trend points (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "caloriesSeries",
+          "type": "string",
+          "attribute": "calories-series",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "FitDayBar[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "FitDayBar": {
+                "location": "global",
+                "id": "global::FitDayBar"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Calories-per-day bars (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readings",
+          "type": "any",
+          "attribute": "readings",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ glucose: [], body: [], food: [], workouts: [] }",
+          "complexType": {
+            "original": "FitDayReadings | string",
+            "resolved": "any",
+            "references": {
+              "FitDayReadings": {
+                "location": "global",
+                "id": "global::FitDayReadings"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The selected day's readings, grouped by domain (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activeCard",
+          "type": "string",
+          "attribute": "active-card",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The card whose log form is open (''=none). Controlled by the host."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "justLoggedCard",
+          "type": "string",
+          "attribute": "just-logged-card",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The card just logged — stays highlighted after its form closes."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "logReply",
+          "type": "string",
+          "attribute": "log-reply",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A confirmation line shown under the action zone (e.g. \"✓ Logged weight\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "logBusy",
+          "type": "boolean",
+          "attribute": "log-busy",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A log submit is in flight (disables the button)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "First-load state (no data yet) → a subtle loader."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "attribute": "error",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "An error message to show instead of the body (with a Retry)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showHeader",
+          "type": "boolean",
+          "attribute": "show-header",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Render the panel's own header (title + date pill + refresh). Hosts that\nsupply their own chrome (the hub's PanelShell) set this false."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "windowDays",
+          "type": "number",
+          "attribute": "window-days",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "30",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Days in the workouts rolling window (sub-line \"last Nd\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "formValues"
+        },
+        {
+          "name": "logAt"
+        },
+        {
+          "name": "editingReadingKey"
+        },
+        {
+          "name": "confirmDeleteKey"
+        },
+        {
+          "name": "rowBusy"
+        },
+        {
+          "name": "editValues"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardTap",
+          "method": "popCardTap",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popLog",
+          "method": "popLog",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ card: string; values: Record<string, string>; at: number }",
+            "resolved": "{ card: string; values: Record<string, string>; at: number; }",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popCancelLog",
+          "method": "popCancelLog",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popDayChange",
+          "method": "popDayChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRefresh",
+          "method": "popRefresh",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popEditReading",
+          "method": "popEditReading",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Save an inline reading edit — `patch` holds the domain's edited fields."
+          },
+          "complexType": {
+            "original": "{ domain: FitReadingDomain; id: string; patch: Record<string, unknown> }",
+            "resolved": "{ domain: FitReadingDomain; id: string; patch: Record<string, unknown>; }",
+            "references": {
+              "FitReadingDomain": {
+                "location": "global",
+                "id": "global::FitReadingDomain"
+              },
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popDeleteReading",
+          "method": "popDeleteReading",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Delete a logged reading (after the two-step confirm)."
+          },
+          "complexType": {
+            "original": "{ domain: FitReadingDomain; id: string }",
+            "resolved": "{ domain: FitReadingDomain; id: string; }",
+            "references": {
+              "FitReadingDomain": {
+                "location": "global",
+                "id": "global::FitReadingDomain"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "readings",
+          "methodName": "onReadingsChange"
+        },
+        {
+          "propName": "activeCard",
+          "methodName": "onActiveCardChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FIT-PANEL",
+          "styleStr": null,
+          "styleIdentifier": "PopFitPanelStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/fit-panel/fit-panel.css",
+              "relativePath": "fit-panel.css",
+              "originalComponentPath": "fit-panel.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "type",
+        "onClick",
+        "aria-label",
+        "value",
+        "max",
+        "aria-hidden",
+        "tabindex",
+        "ref",
+        "onChange",
+        "key",
+        "spec",
+        "onValueChange",
+        "disabled",
+        "glyph",
+        "label",
+        "sub",
+        "cardKey",
+        "loggable",
+        "active",
+        "onPopCardTap",
+        "title",
+        "series",
+        "refLines",
+        "leftUnit",
+        "chartTitle",
+        "rangeBands",
+        "xLabels"
+      ],
+      "htmlTagNames": [
+        "header",
+        "span",
+        "div",
+        "button",
+        "input",
+        "pop-field",
+        "pop-metric-card",
+        "pop-line-chart",
+        "section"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-fit-panel — the health panel (organism): six tappable metric cards, an\ninline log form (opens in an action zone above the grid), the readings-by-day\nlist, and three consolidated trend charts (weight line + goal, blood-sugar\nline + normal-range band, calories bars + goal) — all three via one\n`pop-line-chart`. Forms use `pop-field`; the emoji glyphs are kept as-is.\n\nPresentation-only: the HOST (the Bucket Hub's hub-fit) owns the network\n(hubApi), optimistic mutations, day/state and the PanelShell chrome. This\ncomponent displays the data it is handed and emits `pop*` events:\n  • popCardTap(cardKey)  — a metric card was tapped (host opens/closes its form)\n  • popLog(payload)      — submit the active card's form ({card, values, at})\n  • popCancelLog         — dismiss the open form\n  • popDayChange(day)    — the built-in date pill picked a day (header mode)\n  • popRefresh           — refresh requested\n\nObject/array props accept a value (property binding) OR a JSON string\n(attribute — how Storybook / plain HTML pass them), parsed defensively.\n\nThe user/child switcher of the old monolith is intentionally GONE — the panel\nis single-user (owner)."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./fit-panel.helpers"
+    }
+  ]
+}

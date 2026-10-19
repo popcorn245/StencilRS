@@ -1,0 +1,239 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-conflict-resolver",
+      "componentClassName": "PopConflictResolver",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "local",
+          "type": "string",
+          "attribute": "local",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON string of the local version of the document"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "remote",
+          "type": "string",
+          "attribute": "remote",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON string of the remote version of the document"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "attribute": "label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Document'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Human-readable label for the document (e.g. \"Note · abc123…\")"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "resolve",
+          "method": "resolve",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when user picks keep_local or use_remote"
+          },
+          "complexType": {
+            "original": "ConflictResolution",
+            "resolved": "\"keep_local\" | \"use_remote\"",
+            "references": {
+              "ConflictResolution": {
+                "location": "local",
+                "path": "ui-kit/organisms/conflict-resolver/conflict-resolver.tsx",
+                "id": "ui-kit/organisms/conflict-resolver/conflict-resolver.tsx::ConflictResolution"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "dismissConflict",
+          "method": "dismissConflict",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when user dismisses without resolving"
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-CONFLICT-RESOLVER",
+          "styleStr": null,
+          "styleIdentifier": "PopConflictResolverStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/conflict-resolver/conflict-resolver.css",
+              "relativePath": "conflict-resolver.css",
+              "originalComponentPath": "conflict-resolver.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "type",
+        "onClick",
+        "title"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "button",
+        "p"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

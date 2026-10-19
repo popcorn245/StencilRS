@@ -1,0 +1,468 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-routine-step",
+      "componentClassName": "PopRoutineStep",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "type",
+          "type": "string",
+          "attribute": "type",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'info'",
+          "complexType": {
+            "original": "RoutineStepType",
+            "resolved": "\"breathing\" | \"checkbox\" | \"confetti\" | \"custom\" | \"duration\" | \"info\" | \"photo\" | \"scale\" | \"set_reps\" | \"text_input\" | \"timer\" | \"voice\"",
+            "references": {
+              "RoutineStepType": {
+                "location": "local",
+                "path": "ui-kit/organisms/routine-step/routine-step.tsx",
+                "id": "ui-kit/organisms/routine-step/routine-step.tsx::RoutineStepType"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Step type determines the interactive widget shown"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "attribute": "heading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Step title"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "subtitle",
+          "type": "string",
+          "attribute": "subtitle",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional subtitle / instruction"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "emoji",
+          "type": "string",
+          "attribute": "emoji",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Emoji displayed above the heading"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "durationSeconds",
+          "type": "number",
+          "attribute": "duration-seconds",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "60",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Duration in seconds (for timer/breathing/duration steps)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "breathingPattern",
+          "type": "string",
+          "attribute": "breathing-pattern",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'4,4,6,2'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Breathing pattern as \"inhale,hold,exhale,hold\" seconds (e.g. \"4,4,6,2\")"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sets",
+          "type": "string",
+          "attribute": "sets",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of set objects [{reps, weight?}] for set_reps step"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "scaleMin",
+          "type": "string",
+          "attribute": "scale-min",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'1'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Scale min/max labels"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "scaleMax",
+          "type": "string",
+          "attribute": "scale-max",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'10'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "scaleMinLabel",
+          "type": "string",
+          "attribute": "scale-min-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Low'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "scaleMaxLabel",
+          "type": "string",
+          "attribute": "scale-max-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'High'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "timerRemaining"
+        },
+        {
+          "name": "timerRunning"
+        },
+        {
+          "name": "checked"
+        },
+        {
+          "name": "scaleValue"
+        },
+        {
+          "name": "textValue"
+        },
+        {
+          "name": "breathPhase"
+        },
+        {
+          "name": "breathProgress"
+        },
+        {
+          "name": "breathCycle"
+        },
+        {
+          "name": "parsedSets"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "stepComplete",
+          "method": "stepComplete",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the step is marked done — detail contains any captured value"
+          },
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "stepSkip",
+          "method": "stepSkip",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when user taps Skip"
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "type",
+          "methodName": "onTypeChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-ROUTINE-STEP",
+          "styleStr": null,
+          "styleIdentifier": "PopRoutineStepStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/routine-step/routine-step.css",
+              "relativePath": "routine-step.css",
+              "originalComponentPath": "routine-step.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "viewBox",
+        "width",
+        "height",
+        "cx",
+        "cy",
+        "r",
+        "stroke-dasharray",
+        "stroke-dashoffset",
+        "transform",
+        "type",
+        "onClick",
+        "style",
+        "key",
+        "rows",
+        "placeholder",
+        "value",
+        "onInput"
+      ],
+      "htmlTagNames": [
+        "div",
+        "svg",
+        "circle",
+        "button",
+        "span",
+        "h2",
+        "p",
+        "slot",
+        "textarea"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

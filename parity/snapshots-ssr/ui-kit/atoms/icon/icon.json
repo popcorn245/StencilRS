@@ -1,0 +1,225 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-icon",
+      "componentClassName": "Icon",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "name",
+          "type": "string",
+          "attribute": "name",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The ionicon name (e.g. \"close\", \"checkmark\", \"add\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "src",
+          "type": "string",
+          "attribute": "src",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pass-through SVG src URL (alternative to `name`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "attribute": "size",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional explicit size; sets `font-size` on the host (e.g. \"1.2rem\",\n\"20px\"). When omitted the icon inherits `1em` from the host font-size,\nwhich can also be driven via the `--size` custom property."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "attribute": "label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accessible label. When present, the icon exposes `aria-label` + `role=\"img\"`;\notherwise it is marked `aria-hidden=\"true\"`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-ICON",
+          "styleStr": null,
+          "styleIdentifier": "PopIconStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/atoms/icon/icon.css",
+              "relativePath": "icon.css",
+              "originalComponentPath": "icon.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "style",
+        "role",
+        "aria-label",
+        "aria-hidden",
+        "name",
+        "src"
+      ],
+      "htmlTagNames": [
+        "ion-icon"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "name",
+            "text": "pop-icon"
+          },
+          {
+            "name": "description",
+            "text": "A perfectly-centered icon atom that wraps `ion-icon`. Unlike a\nbare `ion-icon`, it renders as a centered inline-flex block with\n`line-height: 0`, so the glyph never picks up inline/baseline offset.\n\nSizing: the icon inherits `1em` from the host font-size, so callers can size\nit with CSS `font-size` or the `--size` custom property. The optional `size`\nprop sets `font-size` on the host directly."
+          }
+        ],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

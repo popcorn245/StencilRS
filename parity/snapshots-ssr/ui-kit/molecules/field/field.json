@@ -1,0 +1,267 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-field",
+      "componentClassName": "PopField",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "spec",
+          "type": "any",
+          "attribute": "spec",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "FieldSpec",
+            "resolved": "FieldSpec",
+            "references": {
+              "FieldSpec": {
+                "location": "global",
+                "id": "global::FieldSpec"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The field spec (object — set as a property, not an attribute)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "value",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "unknown",
+            "resolved": "unknown",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current value. string for most types; boolean for `boolean`;\n`{depth,maxSources}` for `depth`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "attribute": "disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "invalid",
+          "type": "boolean",
+          "attribute": "invalid",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Owner-driven inline \"Required\" feedback (shown under the widget)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valueChange",
+          "method": "valueChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted with `{ key, value }` on every edit (incl. re-emitted slot-fallback\nchanges)."
+          },
+          "complexType": {
+            "original": "{ key: string; value: unknown }",
+            "resolved": "{ key: string; value: unknown; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FIELD",
+          "styleStr": null,
+          "styleIdentifier": "PopFieldStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/field/field.css",
+              "relativePath": "field.css",
+              "originalComponentPath": "field.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": true,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": true,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "role",
+        "label",
+        "hint",
+        "value",
+        "placeholder",
+        "inputType",
+        "askable",
+        "onValueChange",
+        "type",
+        "min",
+        "max",
+        "step",
+        "disabled",
+        "aria-label",
+        "onInput",
+        "checked",
+        "onPopChange",
+        "default",
+        "onPopLocationChange",
+        "onClick",
+        "onChange"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "pop-fillable-field",
+        "input",
+        "pop-switch",
+        "pop-location",
+        "button",
+        "label",
+        "slot"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-field — ONE labeled form field: a `FieldSpec` → the right widget.\n\nType → widget:\n  text, select → pop-fillable-field   number → native input (CLAMPED to min/max)\n  date → native date input            boolean → pop-switch\n  location → pop-location             depth / persist → composites (below)\n  anything else → default-slot fallback (label/hint/required chrome kept,\n                  slotted widget's `valueChange` re-emitted as pop-field's own)\n\nEmits `valueChange` with `{ key, value }` for every edit.\n\nComposites:\n  depth   — value is `{ depth, maxSources }` (see DepthValue): the Quick/\n            Standard/Deep/Custom slider + source-count box. Presets set\n            `depth` and clear `maxSources`; Custom clears `depth` and drives\n            `maxSources` (the host emits --depth / --max-sources from it).\n  persist — value is 'none'|'note'|'index'|'both' computed from the two\n            checkboxes (Save as note / Add to knowledge base).\n\nSingle-field only, by decision — schema-driven pop-form is deferred; hosts\nkeep their own form-assembly loop and render each field through this."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./field-logic"
+    }
+  ]
+}

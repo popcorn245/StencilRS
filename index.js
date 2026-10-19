@@ -50,7 +50,9 @@ export const analyze = (source, fileName, options = {}) => native.analyze(source
  * `componentExport` picks the output, as in Stencil: `'customelement'` (default, what
  * @stencil/unplugin uses), `'module'` (the class stays exported and is registered with
  * `proxyCustomElement`) or `'lazy'` (the lazy-loading `loader-bundle` shape; Stencil spells it
- * `null`, which is accepted too). Decorated base classes and mixins are not ported for `'lazy'`:
+ * `null`, which is accepted too) or `'ssr'` (Stencil's hydrate / server-side rendering shape: the class stays
+ * exported, with static `style` and `cmpMeta`; `coreImportPath` defaults to `@stencil/core/runtime/server`).
+ * Decorated base classes and mixins are not ported for `'lazy'` and `'ssr'`:
  * those files report an error starting with `stencilrs:`, the signal to compile with Stencil.
  *
  * `componentMetadata: 'compilerstatic'` adds the compiler's metadata to each class as
@@ -60,7 +62,7 @@ export const analyze = (source, fileName, options = {}) => native.analyze(source
  * resolved types of members (`docs` is empty, `complexType.resolved` is the type as written).
  * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
 export const transpile = (source, options) => {

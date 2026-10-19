@@ -1,7 +1,7 @@
 // Source map check: stencilrs' maps, scored the same way as Stencil v5's own (transpileSync), on
 // the parity corpus.
 //
-//   node sourcemaps.mjs [--mode customelement|module|lazy] [--verbose] [--misses]
+//   node sourcemaps.mjs [--mode customelement|module|lazy|ssr] [--verbose] [--misses]
 //
 // --verbose lists the first identifier misses per file; --misses tallies every stencilrs miss
 // as `generated identifier => source text it points at`, most frequent first.
@@ -14,10 +14,9 @@
 // Exit code 1 if any stencilrs map is invalid, or its accuracy falls below Stencil's.
 import { readFileSync } from 'node:fs';
 
-import { transpileSync } from '@stencil/core/compiler';
-
 import { transpile } from '../index.js';
 import { fallbacks, listFixtures, modeArg, stencilrsOptions, transpileOptions } from './lib.mjs';
+import { stencilTranspile } from './stencil.mjs';
 
 const mode = modeArg(process.argv);
 const verbose = process.argv.includes('--verbose');
@@ -90,7 +89,7 @@ const fixtures = listFixtures();
 for (const { id, file } of fixtures) {
   if (fallbacks[mode]?.has(id)) continue; // stencilrs emits no code for these
   const source = readFileSync(file, 'utf8');
-  const st = transpileSync(source, transpileOptions(source, id, mode));
+  const st = stencilTranspile(source, transpileOptions(source, id, mode));
   const rs = transpile(source, stencilrsOptions(source, id, mode));
   // When Stencil throws, transpileSync hands back the source with no map, and so does stencilrs.
   if (!st.map && !rs.map) {

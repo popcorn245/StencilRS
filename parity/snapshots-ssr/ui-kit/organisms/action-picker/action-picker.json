@@ -1,0 +1,247 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-action-picker",
+      "componentClassName": "PopActionPicker",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "actions",
+          "type": "string",
+          "attribute": "actions",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON-encoded array of TagAction objects"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "actionTagName",
+          "type": "string",
+          "attribute": "action-tag-name",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Name of the scanned tag (displayed in the header)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": true,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the picker is open"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "parsedActions"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "actionSelected",
+          "method": "actionSelected",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user selects an action"
+          },
+          "complexType": {
+            "original": "TagAction",
+            "resolved": "TagAction",
+            "references": {
+              "TagAction": {
+                "location": "global",
+                "id": "global::TagAction"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "pickerDismiss",
+          "method": "pickerDismiss",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user dismisses the picker"
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "actions",
+          "methodName": "onActionsChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-ACTION-PICKER",
+          "styleStr": null,
+          "styleIdentifier": "PopActionPickerStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/action-picker/action-picker.css",
+              "relativePath": "action-picker.css",
+              "originalComponentPath": "action-picker.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": false,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "onClick",
+        "type"
+      ],
+      "htmlTagNames": [
+        "div",
+        "h3",
+        "ul",
+        "li",
+        "button",
+        "span"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

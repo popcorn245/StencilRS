@@ -1,0 +1,318 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "valheim-boss-schedule",
+      "componentClassName": "ValheimBossSchedule",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "bosses",
+          "type": "string",
+          "attribute": "bosses",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of ValheimBossItem, season order."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "isAdmin",
+          "type": "boolean",
+          "attribute": "is-admin",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Admin view — full schedule, sealed rows included."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rsvpCount",
+          "type": "number",
+          "attribute": "rsvp-count",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "number",
+            "resolved": "number | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Raiders who answered the horn for the current boss night."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "bossNightAt",
+          "type": "number",
+          "attribute": "boss-night-at",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "number",
+            "resolved": "number | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Epoch ms of the next boss night (drives the countdown)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showList",
+          "type": "boolean",
+          "attribute": "show-list",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Render the agenda list (false = the Overview \"next trial\" glance)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rsvpCta",
+          "type": "boolean",
+          "attribute": "rsvp-cta",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show the \"Answer the horn\" CTA on the RSVP row. Admin dashboards that\nonly MONITOR the count (the RSVP flow is bot-run) pass false."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "attribute": "heading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'The trials'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "nowTick"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valheimRsvp",
+          "method": "valheimRsvp",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "RSVP button — the HOST records the answer."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "bossNightAt",
+          "methodName": "onBossNightChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "VALHEIM-BOSS-SCHEDULE",
+          "styleStr": null,
+          "styleIdentifier": "ValheimBossScheduleStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/valheim-base.css",
+              "relativePath": "../valheim-base.css",
+              "originalComponentPath": "../valheim-base.css"
+            },
+            {
+              "absolutePath": "./ui-kit/organisms/valheim-boss-schedule/valheim-boss-schedule.css",
+              "relativePath": "valheim-boss-schedule.css",
+              "originalComponentPath": "valheim-boss-schedule.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "name",
+        "onClick",
+        "key"
+      ],
+      "htmlTagNames": [
+        "div",
+        "pop-icon",
+        "span",
+        "b",
+        "button",
+        "section",
+        "h3"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "`valheim-boss-schedule` — the trials block of the Popcorn's Pantheon\nsurfaces: the next-trial target card (+ live trial-night countdown + RSVP\nrow) and the agenda list. Theme-agnostic via the `--vlh-*` token layer.\n\nTRIAL SECRECY / NEXT-ONLY (the standardization rule both surfaces share):\nplayers see ONLY announced (`revealed`) + past trials — everything else\ncollapses into ONE sealed teaser row (\"??? · the gods reveal one trial at a\ntime\") so not even the season's length or week numbering leaks (player rows\nalso drop their `week` labels). `isAdmin` overrides and shows the full\nagenda with week slots (the hub panel is admin-facing). The finale row stays\nsealed to players until the season-end reveal."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

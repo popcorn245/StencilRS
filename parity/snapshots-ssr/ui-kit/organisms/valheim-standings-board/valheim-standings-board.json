@@ -1,0 +1,237 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "valheim-standings-board",
+      "componentClassName": "ValheimStandingsBoard",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "standings",
+          "type": "string",
+          "attribute": "standings",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of ValheimStandingRow, rank order."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "juggernaut",
+          "type": "string",
+          "attribute": "juggernaut",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON ValheimJuggernautState ('' = no finale state yet)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "isAdmin",
+          "type": "boolean",
+          "attribute": "is-admin",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Admins see the Juggernaut toggle even before the finale goes live."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "attribute": "heading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'The Pantheon'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "mode"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "VALHEIM-STANDINGS-BOARD",
+          "styleStr": null,
+          "styleIdentifier": "ValheimStandingsBoardStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/valheim-base.css",
+              "relativePath": "../valheim-base.css",
+              "originalComponentPath": "../valheim-base.css"
+            },
+            {
+              "absolutePath": "./ui-kit/organisms/valheim-standings-board/valheim-standings-board.css",
+              "relativePath": "valheim-standings-board.css",
+              "originalComponentPath": "valheim-standings-board.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "title",
+        "key",
+        "name",
+        "onClick"
+      ],
+      "htmlTagNames": [
+        "div",
+        "table",
+        "thead",
+        "tr",
+        "th",
+        "tbody",
+        "td",
+        "span",
+        "pop-icon",
+        "section",
+        "h3",
+        "button"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "`valheim-standings-board` — \"The Pantheon\", the hall-of-the-worthy standings\nblock of the Popcorn's Pantheon surfaces. Theme-agnostic via the `--vlh-*`\ntoken layer.\n\nThe Pantheon (default view) is CO-OP: bounties · coin · bosses · Falls\n(deaths to the world — playful ribbing, never PvP kills), with medal ranks.\nJuggernaut: the hidden FINALE bounty board — PvP banner, the current target\nand their price. The Juggernaut toggle only renders once the finale is\n`active` (or for admins) — PvP is never the everyday framing, and the\ntoggle's existence would leak the season-end twist to players."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

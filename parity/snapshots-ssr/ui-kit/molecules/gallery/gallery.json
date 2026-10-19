@@ -1,0 +1,411 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-gallery",
+      "componentClassName": "PopGallery",
+      "elementRef": "el",
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "collapsible",
+          "type": "boolean",
+          "attribute": "collapsible",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "When true, starts collapsed. Click the strip to expand."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "currentIndex"
+        },
+        {
+          "name": "total"
+        },
+        {
+          "name": "expanded"
+        },
+        {
+          "name": "dominantColor"
+        },
+        {
+          "name": "scale"
+        },
+        {
+          "name": "translateX"
+        },
+        {
+          "name": "translateY"
+        },
+        {
+          "name": "isFullscreen"
+        }
+      ],
+      "methods": [
+        {
+          "name": "toggleFullscreen",
+          "docs": {
+            "text": "Toggle browser fullscreen for the gallery.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "goTo",
+          "docs": {
+            "text": "Navigate to a specific slide (0-based, wraps).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(index: number) => Promise<any>",
+            "parameters": [
+              {
+                "name": "index",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "next",
+          "docs": {
+            "text": "Navigate to the next slide.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "prev",
+          "docs": {
+            "text": "Navigate to the previous slide.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "expand",
+          "docs": {
+            "text": "Expand the gallery.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "collapse",
+          "docs": {
+            "text": "Collapse the gallery.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "resetZoom",
+          "docs": {
+            "text": "Reset zoom level to 1×.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "zoomIn",
+          "docs": {
+            "text": "Zoom in by a step.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "zoomOut",
+          "docs": {
+            "text": "Zoom out by a step.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getCurrentIndex",
+          "docs": {
+            "text": "Get current slide index.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getTotal",
+          "docs": {
+            "text": "Get total slides.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-GALLERY",
+          "styleStr": null,
+          "styleIdentifier": "PopGalleryStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/gallery/gallery.css",
+              "relativePath": "gallery.css",
+              "originalComponentPath": "gallery.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "style",
+        "onClick",
+        "type",
+        "aria-label",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "d"
+      ],
+      "htmlTagNames": [
+        "canvas",
+        "div",
+        "slot",
+        "span",
+        "button",
+        "svg",
+        "path"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "<pop-gallery collapsible>\n  <img src=\"a.jpg\" class=\"gallery-slide\" alt=\"\" />\n  <img src=\"b.jpg\" class=\"gallery-slide\" alt=\"\" />\n</pop-gallery>"
+          }
+        ],
+        "text": "A slot-based image gallery with scroll-snap navigation.\nPass slides as children with class `.gallery-slide`.\n\nWhen `collapsible` is true the gallery starts collapsed (slim strip with dot count).\nClicking the strip expands it to the full gallery.\n\nZoom: Ctrl+Scroll or pinch to zoom. Drag to pan when zoomed.\nCSS custom properties `--gallery-scale`, `--gallery-tx`, `--gallery-ty` are\nset on the root and consumed by the slide styles."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

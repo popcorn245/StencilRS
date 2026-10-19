@@ -1,0 +1,232 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-brand-icon",
+      "componentClassName": "BrandIcon",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "name",
+          "type": "any",
+          "attribute": "name",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "BrandIconName | string",
+            "resolved": "any",
+            "references": {
+              "BrandIconName": {
+                "location": "global",
+                "id": "global::BrandIconName"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The registered icon name (e.g. \"star\", \"link\", \"trash\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "size",
+          "type": "string",
+          "attribute": "size",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional explicit size; sets `font-size` on the host (e.g. \"1.2rem\",\n\"20px\"). When omitted the icon inherits `1em` from the host font-size,\nwhich can also be driven via the `--size` custom property."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "attribute": "label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accessible label. When present, the icon exposes `aria-label` + `role=\"img\"`;\notherwise it is marked `aria-hidden=\"true\"` (decorative)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "strokeWidth",
+          "type": "number",
+          "attribute": "stroke-width",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "number",
+            "resolved": "number | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Stroke weight override for the outline vectors (default 2)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-BRAND-ICON",
+          "styleStr": null,
+          "styleIdentifier": "PopBrandIconStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/atoms/brand-icon/brand-icon.css",
+              "relativePath": "brand-icon.css",
+              "originalComponentPath": "brand-icon.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "style",
+        "role",
+        "aria-label",
+        "aria-hidden",
+        "innerHTML"
+      ],
+      "htmlTagNames": [
+        "span"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "name",
+            "text": "pop-brand-icon"
+          },
+          {
+            "name": "description",
+            "text": "A **self-contained, themeable SVG icon** atom. Unlike `pop-icon`\n(which wraps a third-party `ion-icon` web component loaded from a CDN), this\natom renders inline `<svg>` from a bundled path registry (`./icons.ts`) so it\nworks offline, ships zero network requests, and inherits `currentColor` — so\nit themes automatically with the surrounding text colour (light/dark).\n\nIt replaces the emoji-as-icon usage across the notes-app \"digital brain\":\n★🔗✎🗑ⓘ✦⌂◷⌗◍⧉⚙▸ … each maps to a named vector.\n\nSizing mirrors `pop-icon`: the glyph tracks `1em`, so callers size it with the\n`size` prop, the `--size` custom property, or an ambient `font-size`.\nAccessibility mirrors `pop-icon`: a `label` exposes `role=\"img\"` +\n`aria-label`; without one the icon is `aria-hidden` (decorative)."
+          }
+        ],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./icons"
+    }
+  ]
+}

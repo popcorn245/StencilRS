@@ -1,0 +1,287 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "props-unresolved",
+      "componentClassName": "PropsUnresolved",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "external",
+          "type": "any",
+          "attribute": "external",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "ExternalThing",
+            "resolved": "ExternalThing",
+            "references": {
+              "ExternalThing": {
+                "location": "global",
+                "id": "global::ExternalThing"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "externalEnum",
+          "type": "any",
+          "attribute": "external-enum",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "ExternalEnum",
+            "resolved": "ExternalEnum",
+            "references": {
+              "ExternalEnum": {
+                "location": "global",
+                "id": "global::ExternalEnum"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "date",
+          "type": "any",
+          "attribute": "date",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "Date",
+            "resolved": "Date",
+            "references": {
+              "Date": {
+                "location": "global",
+                "id": "global::Date"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "element",
+          "type": "any",
+          "attribute": "element",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "HTMLElement",
+            "resolved": "HTMLElement",
+            "references": {
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "externalOrString",
+          "type": "any",
+          "attribute": "external-or-string",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "ExternalThing | string",
+            "resolved": "any",
+            "references": {
+              "ExternalThing": {
+                "location": "global",
+                "id": "global::ExternalThing"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "keys",
+          "type": "string",
+          "attribute": "keys",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "keyof Options",
+            "resolved": "\"a\" | \"b\"",
+            "references": {
+              "Options": {
+                "location": "global",
+                "id": "global::Options"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "query",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "typeof globalThis",
+            "resolved": "typeof globalThis",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "div"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

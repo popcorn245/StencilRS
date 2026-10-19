@@ -10,12 +10,21 @@ export const snapshotsDir = join(root, 'snapshots');
  * The output modes `transpileSync` can be asked for, by `componentExport`. `customelement` is the
  * default (what @stencil/unplugin runs); `module` keeps the class exported and registers it with
  * `proxyCustomElement`; `null` is the lazy-loading (`loader-bundle`) shape, which `transpileSync`
- * only reaches through an explicit `null`. Each mode has its own snapshot folder.
+ * only reaches through an explicit `null`. `ssr` is the hydrate (server-side rendering) shape:
+ * Stencil never offers it through `transpileSync`, so `stencil.mjs` runs its `ssrComponentTransform`
+ * with the server runtime as `coreImportPath`; stencilrs asks for `componentExport: 'ssr'`.
+ * Each mode has its own snapshot folder.
  */
 export const modes = {
   customelement: { componentExport: 'customelement', dir: 'snapshots' },
   module: { componentExport: 'module', dir: 'snapshots-module' },
   lazy: { componentExport: null, dir: 'snapshots-lazy' },
+  ssr: {
+    componentExport: null,
+    ssrExport: 'ssr',
+    dir: 'snapshots-ssr',
+    extra: { coreImportPath: '@stencil/core/runtime/server' },
+  },
   // @stencil/unplugin's `mode: 'spec-page'` (transform.ts): lazy output plus the compiler
   // metadata as `static get COMPILER_META()`, the core from `@stencil/core/testing`, no styles.
   specpage: {
@@ -27,7 +36,7 @@ export const modes = {
 /**
  * Fixtures a mode does not port yet: stencilrs reports a `stencilrs:` error for them (the cue to
  * compile with Stencil) instead of code. They are still compared on metadata, and counted apart.
- * Lazy output keeps a decorated base class's static meta getters (`convertDecoratorsToStatic`),
+ * Lazy and ssr output keep a decorated base class's static meta getters (`convertDecoratorsToStatic`),
  * which need the full `complexType` and docs metadata (#8).
  */
 const lazyFallbacks = [
@@ -41,6 +50,7 @@ export const fallbacks = {
   lazy: new Set(lazyFallbacks),
   // Lazy output, so the same files.
   specpage: new Set(lazyFallbacks),
+  ssr: new Set(lazyFallbacks),
 };
 
 export const snapshotsDirFor = (mode = 'customelement') => join(root, modes[mode].dir);
@@ -117,7 +127,7 @@ export const transpileOptions = (code, id, mode = 'customelement') => ({
 export const stencilrsOptions = (code, id, mode = 'customelement') => ({
   file: inheritance(id) ? absolute(id) : id,
   jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
-  componentExport: modes[mode].componentExport,
+  componentExport: modes[mode].ssrExport ?? modes[mode].componentExport,
   ...modes[mode].extra,
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : {}),
 });

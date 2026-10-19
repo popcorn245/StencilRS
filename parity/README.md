@@ -38,11 +38,14 @@ and `--mode` flag (`node snapshot.mjs --mode lazy`, `node compare.mjs --mode laz
 | `customelement` (default) | `'customelement'` | `snapshots/` | `defineCustomElement`, the Vite / Vitest / Storybook shape |
 | `module` | `'module'` | `snapshots-module/` | the class stays exported, registered with `proxyCustomElement` |
 | `lazy` | `null` (`transpileSync` only reaches it with an explicit `null`) | `snapshots-lazy/` | the lazy-loading `loader-bundle` shape, `registerInstance(this, hostRef)` |
+| `ssr` | stencilrs `'ssr'`; Stencil: `null` with `coreImportPath: '@stencil/core/runtime/server'` | `snapshots-ssr/` | the hydrate (server-side rendering) shape: `export class`, static `style` and `cmpMeta` |
 | `specpage` | `null`, plus `componentMetadata: 'compilerstatic'`, `coreImportPath: '@stencil/core/testing'`, `style: null` | `snapshots-specpage/` | @stencil/unplugin's `spec-page` mode: lazy output with `static get COMPILER_META()`, for `newSpecPage` |
 
-`npm run parity` and `npm run parity:sourcemaps` run all four. `fallbacks` in `lib.mjs` lists what
+`ssr` is not reachable through `transpileSync`: Stencil only runs `ssrComponentTransform` from its `ssr` output target. `stencil.mjs` copies Stencil's compiler chunk with that transform in the slot `lazyComponentTransform` has in `transpileModule`, so the fixtures go through the same emit (decorators, metadata) as the other modes.
+
+`npm run parity` and `npm run parity:sourcemaps` run all five. `fallbacks` in `lib.mjs` lists what
 a mode does not port: stencilrs must report a `stencilrs:` error for those fixtures (the cue to
-compile with Stencil), and they are counted apart. Today that is lazy output of decorated base
+compile with Stencil), and they are counted apart. Today that is lazy and ssr output of decorated base
 classes and mixins, which keep their static meta getters and so need the full `complexType`.
 `specpage` falls back on the same files.
 

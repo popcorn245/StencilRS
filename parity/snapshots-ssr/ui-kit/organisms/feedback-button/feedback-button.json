@@ -1,0 +1,417 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-feedback-button",
+      "componentClassName": "PopFeedbackButton",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "app",
+          "type": "string",
+          "attribute": "app",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Which app is submitting. Defaults to the auto-captured page context\n(`<html data-app>` / `<meta name=\"app\">` / hostname); set it to override."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "submitEndpoint",
+          "type": "string",
+          "attribute": "submit-endpoint",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'/api/hub/feedback'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Where the submission POSTs. A prop (not a constant) so the organism can be\ndropped into a non-bucket-hub shell later without a hardcoded target."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "attribute": "label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Feedback'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Trigger label. Empty renders an icon-only square hit area."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "icon",
+          "type": "string",
+          "attribute": "icon",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'megaphone-outline'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Trigger ionicon (pop-icon name)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "attribute": "heading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Send feedback'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Presenter heading."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "authToken",
+          "type": "string",
+          "attribute": "auth-token",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Bearer token for the submission POST, sent as an `Authorization` header.\nHosts that authenticate with cookies can leave this empty — `credentials`\nalready carries them. Prefer this over a `?token=` on `submitEndpoint`:\nquery strings land in server access logs and `Referer` headers, and a POST\ncan set a header, unlike an `<img src>`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "submitter",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "(\n    body: FeedbackSubmission,\n  ) => Promise<FeedbackSubmitResult | void> | FeedbackSubmitResult | void",
+            "resolved": "((body: FeedbackSubmission) => any) | undefined",
+            "references": {
+              "FeedbackSubmission": {
+                "location": "global",
+                "id": "global::FeedbackSubmission"
+              },
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "FeedbackSubmitResult": {
+                "location": "global",
+                "id": "global::FeedbackSubmitResult"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Injected submit. When set it REPLACES the `fetch` entirely — the organism\nnever touches `submitEndpoint`/`authToken` — so a host can submit however it\nlikes (the Firestore `feedback` collection, an app-specific client, a test\ndouble) without ui-kit ever importing Firebase. Same injected-dependency\nshape as `pop-user-select`'s resolver.\n\nReturn a `FeedbackSubmitResult` when the task/issue are already known\n(synchronous filing); return nothing when the submission was merely QUEUED\nfor async intake — the organism then emits `{ queued: true }` so the host\ncan say \"sent\" instead of inventing an issue number.\n\nThrow to surface an error: the message is shown in the form and the report\nis NOT lost — the presenter stays open with the user's text intact."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "position",
+          "type": "any",
+          "attribute": "position",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'bottom-right'",
+          "complexType": {
+            "original": "FeedbackPosition",
+            "resolved": "FeedbackPosition",
+            "references": {
+              "FeedbackPosition": {
+                "location": "global",
+                "id": "global::FeedbackPosition"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Where the TRIGGER sits: one of the four viewport corners (fixed, floating,\nsafe-area aware) or `'inline'` for an in-flow button in a toolbar / panel\nheader. Nudge a floating trigger with `--pop-feedback-x` /\n`--pop-feedback-y` (gutters from the chosen corner, default `1rem`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "open"
+        },
+        {
+          "name": "tier"
+        },
+        {
+          "name": "category"
+        },
+        {
+          "name": "description"
+        },
+        {
+          "name": "screenshotDataUrl"
+        },
+        {
+          "name": "capturing"
+        },
+        {
+          "name": "captureNote"
+        },
+        {
+          "name": "submitting"
+        },
+        {
+          "name": "error"
+        },
+        {
+          "name": "showInvalid"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popFeedbackSubmit",
+          "method": "popFeedbackSubmit",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired after a successful submission, for hosts that want a toast."
+          },
+          "complexType": {
+            "original": "FeedbackSubmitResult",
+            "resolved": "FeedbackSubmitResult",
+            "references": {
+              "FeedbackSubmitResult": {
+                "location": "global",
+                "id": "global::FeedbackSubmitResult"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FEEDBACK-BUTTON",
+          "styleStr": null,
+          "styleIdentifier": "PopFeedbackButtonStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/feedback-button/feedback-button.css",
+              "relativePath": "feedback-button.css",
+              "originalComponentPath": "feedback-button.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "src",
+        "alt",
+        "type",
+        "aria-label",
+        "onClick",
+        "name",
+        "disabled",
+        "aria-busy",
+        "key",
+        "aria-haspopup",
+        "aria-expanded",
+        "open",
+        "heading",
+        "onTierChange",
+        "onPopClose",
+        "state",
+        "errorLabel",
+        "retryLabel",
+        "onPopRetry",
+        "slot",
+        "variant",
+        "label",
+        "spec",
+        "value",
+        "invalid",
+        "onValueChange",
+        "tier",
+        "submitLabel",
+        "submitDisabled",
+        "busy",
+        "onPopSubmit",
+        "onPopCancel"
+      ],
+      "htmlTagNames": [
+        "video",
+        "canvas",
+        "div",
+        "span",
+        "img",
+        "button",
+        "pop-icon",
+        "pop-presenter",
+        "pop-async-view",
+        "pop-loading-state",
+        "pop-field",
+        "pop-actions-footer"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-feedback-button — the \"report a bug / request a feature\" trigger\n(organism) for the feedback pipeline.\n\nIt is a TRIGGER, not a form primitive: everything below the button is\ncomposed from the feature-surface set, so this file adds no new form UI —\n\n  pop-presenter      → the sheet/dialog/dock tiering (used as-is: `open` +\n                       `heading` in, `tierChange`/`popClose` out; the\n                       resolved tier is forwarded to the footer's `tier`)\n  pop-field   ×2     → `category` (required select) and `description`\n                       (required text), one FieldSpec each\n  pop-actions-footer → Cancel/Submit + the `busy` spinner, driven by\n                       `popSubmit`/`popCancel` — NEVER a native form submit\n  pop-async-view     → loading/error while the submission is in flight\n\nThe only genuinely new UI is the trigger itself and the screenshot control\n(`getDisplayMedia()` tab capture — no existing composable does that).\n\nPage context (url, app, version, viewport, userAgent) is captured silently at\nsubmit time — zero user effort, per the submitter journey.\n\nInner events from the composed children are stopped at this boundary and only\n`popFeedbackSubmit` leaves the organism, so a host listening on the document\ncan't mistake the form's `popSubmit`/`popClose` for its own.\n\nPLACEMENT is the host's call (`position`): one of four fixed viewport corners\nor `inline` for a toolbar / panel header. See feedback-button.css and the\nreadme for the two `--pop-feedback-x` / `--pop-feedback-y` gutter overrides."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./feedback-button-logic"
+    }
+  ]
+}

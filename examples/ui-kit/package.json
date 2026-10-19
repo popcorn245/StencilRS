@@ -23,7 +23,8 @@
     "compare:spec-page": "node compare.mjs --spec-page",
     "build": "stencil build",
     "build:stencilrs": "vite build --config vite.lib.config.ts",
-    "test:browser": "vitest run --config vitest.browser.config.ts"
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:ssr": "node ssr/smoke.mjs"
   },
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",

@@ -1,0 +1,38 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/runtime/server";
+import { h, Mixin } from "@stencil/core/runtime/server";
+import { withCount, withLabel, withTheme } from './bases/mixins';
+export class CmpMixin extends Mixin(withCount, withLabel, withTheme) {
+    constructor(hostRef) {
+        super();
+        __stencil_registerInstance(this, hostRef);
+    }
+    suffix = '!';
+    render() {
+        return (h("span", { key: '0', class: this.theme },
+            this.label,
+            ": ",
+            this.count,
+            this.suffix));
+    }
+    static get watchers() { return {
+        "label": [{
+                "labelChanged": 0
+            }]
+    }; }
+    static get cmpMeta() { return {
+        "$flags$": 512,
+        "$tagName$": "cmp-mixin",
+        "$members$": {
+            "theme": [1],
+            "label": [1025],
+            "step": [2],
+            "suffix": [1],
+            "count": [32],
+            "increment": [64]
+        },
+        "$listeners$": undefined,
+        "$lazyBundleId$": "-",
+        "$attrsToReflect$": []
+    }; }
+}
+//# sourceMappingURL=cmp-mixin.js.map
