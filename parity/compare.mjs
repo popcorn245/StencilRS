@@ -1,6 +1,6 @@
 // Compare stencilrs against the Stencil v5 snapshots.
 //
-//   node compare.mjs [suite] [--mode customelement|module|lazy|ssr] [--verbose]
+//   node compare.mjs [suite] [--mode customelement|module|lazy] [--verbose]
 //
 // Metadata: Stencil's `data` is projected to the fields stencilrs produces today (FIELDS
 // below grows as the port does) and compared exactly. Diagnostics: compared as sorted
@@ -25,6 +25,7 @@ const fromStencil = (c) => ({
   componentClassName: c.componentClassName,
   encapsulation: c.encapsulation,
   styleUrls: (c.styles ?? []).flatMap((s) => (s.externalStyles ?? []).map((e) => e.originalComponentPath)),
+  globalStyles: c.globalStyles ?? [],
   properties: c.properties.map((p) => ({
     name: p.name,
     type: p.type,

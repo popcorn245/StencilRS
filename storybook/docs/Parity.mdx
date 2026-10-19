@@ -21,8 +21,8 @@ npm run compare    # stencilrs vs the snapshots (--verbose for every diff)
 
 | Compared | How | Result |
 |---|---|---|
-| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 211 / 211 |
-| Diagnostics | level + full message text, order-independent | 211 / 211 |
+| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 216 / 216 |
+| Diagnostics | level + full message text, order-independent | 216 / 216 |
 | Code | both reprinted by oxc's printer (comments dropped), exact | 187 / 187 that compile (module: same; lazy: 182 / 182, the other 5 fall back to Stencil) |
 | Source maps | valid, and scored: mapped identifiers that land on the same identifier | 97.7% (Stencil 94.3%) |
 

@@ -2,7 +2,7 @@
 //!
 //! `analyze` reads Stencil decorators into component metadata; `transpile` also generates
 //! the `customelement` module (what `transpileSync` emits for `@stencil/unplugin`), or with
-//! `component_export` the `module`, lazy-loading and `ssr` (hydrate) shapes.
+//! `component_export` the `module` and lazy-loading shapes.
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
@@ -25,7 +25,7 @@ use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
-pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, normalize};
+pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 
 #[derive(Debug, Serialize)]
