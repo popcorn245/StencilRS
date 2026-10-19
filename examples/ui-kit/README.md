@@ -76,6 +76,21 @@ and so gets an attribute). stencilrs has both:
   types, matching `stencil build`, as `check-build.mjs` shows.
 - `resolveImports: false`: exactly what `transpileSync` produces, as `../../parity` shows.
 
+## Server rendering
+
+```sh
+npm run test:ssr        # node ssr/smoke.mjs [--no-reference]
+```
+
+Builds the ui-kit's hydrate app from components stencilrs compiled with `componentExport: 'ssr'`
+(`ssr/build.mjs`, the same two Rolldown passes as Stencil's `ssr` output target), renders a page
+with `renderToString`, and checks the output equals Stencil v5's own hydrate app's. The client
+bundle then loads over that HTML in happy-dom and in Chromium (Playwright; found through
+`$STENCILRS_CHROMIUM` or `$PLAYWRIGHT_BROWSERS_PATH/chromium`, skipped when absent, which is how it
+runs in CI). `@stencil/core` 5.0.0-beta.25's client runtime throws `Cannot read properties of
+undefined (reading 'length')` while hydrating childless elements, with Stencil's own lazy build
+too; the test expects that error and fails on any other.
+
 ## Spec harness
 
 `harness/spec-page.ts` replaces the ui-kit's mock `newSpecPage`: it mounts the real compiled

@@ -1,0 +1,378 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-user-select",
+      "componentClassName": "PopUserSelect",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "resolve",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "UserResolver",
+            "resolved": "((query: string) => Promise<{}>) | undefined",
+            "references": {
+              "UserResolver": {
+                "location": "local",
+                "path": "ui-kit/molecules/user-select/user-select.tsx",
+                "id": "ui-kit/molecules/user-select/user-select.tsx::UserResolver"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Async source returning matches for a query. REQUIRED for search to work."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "value",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "UserOption[]",
+            "resolved": "UserOption[]",
+            "references": {
+              "UserOption": {
+                "location": "local",
+                "path": "ui-kit/molecules/user-select/user-select.tsx",
+                "id": "ui-kit/molecules/user-select/user-select.tsx::UserOption"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Selected people (controlled)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "allowFreeText",
+          "type": "boolean",
+          "attribute": "allow-free-text",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accept a typed email that matches no suggestion as a manual chip."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Search people…'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Placeholder shown when nothing is selected."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "attribute": "label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'People'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accessible label for the field + popover."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "attribute": "max",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Max selections (0 = unlimited)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "debounce",
+          "type": "number",
+          "attribute": "debounce",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "250",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Debounce (ms) before each resolve() call."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "minChars",
+          "type": "number",
+          "attribute": "min-chars",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "1",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Minimum characters before searching."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "draft"
+        },
+        {
+          "name": "results"
+        },
+        {
+          "name": "open"
+        },
+        {
+          "name": "busy"
+        },
+        {
+          "name": "active"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valueChanged",
+          "method": "valueChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted whenever the selection changes (add / remove)."
+          },
+          "complexType": {
+            "original": "UserOption[]",
+            "resolved": "UserOption[]",
+            "references": {
+              "UserOption": {
+                "location": "local",
+                "path": "ui-kit/molecules/user-select/user-select.tsx",
+                "id": "ui-kit/molecules/user-select/user-select.tsx::UserOption"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-USER-SELECT",
+          "styleStr": null,
+          "styleIdentifier": "PopUserSelectStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/user-select/user-select.css",
+              "relativePath": "user-select.css",
+              "originalComponentPath": "user-select.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "src",
+        "alt",
+        "loading",
+        "aria-hidden",
+        "key",
+        "onClick",
+        "type",
+        "aria-label",
+        "ref",
+        "role",
+        "aria-expanded",
+        "aria-autocomplete",
+        "placeholder",
+        "value",
+        "onInput",
+        "onKeyDown",
+        "onFocus",
+        "aria-selected",
+        "onMouseEnter"
+      ],
+      "htmlTagNames": [
+        "img",
+        "span",
+        "div",
+        "button",
+        "input"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "  <pop-user-select\n    value={attendees}\n    allow-free-text\n    placeholder=\"Invite…\"\n    // resolve is a property (function) — set it in JS, not as an attribute:\n    ref={(el) => (el.resolve = (q) => hubApi.searchContacts(q))}\n    onValueChanged={(e) => setAttendees(e.detail)} />"
+          }
+        ],
+        "text": "pop-user-select — a reusable, drop-anywhere people picker.\n\nA chip field + suggestion popover driven entirely by an injected async\n`resolve(query)` source, so it carries no knowledge of any backend. Selected\npeople render as removable chips; typing debounce-searches the source and\nshows avatar/name/email rows in a popover. With `allow-free-text`, a typed\nemail that matches nothing can be added as a manual chip."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

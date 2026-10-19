@@ -10,7 +10,8 @@ set -euo pipefail
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 
-# Vitest's browser mode needs Playwright's package, never its browser downloads, in CI.
+# Vitest's browser mode and the ui-kit's server-render smoke test need Playwright's package, never
+# its browser downloads, in CI: the smoke test's browser step skips itself when it finds no Chromium.
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 export CARGO_TERM_COLOR=always
 
@@ -42,6 +43,9 @@ step "Components: ui-kit (the spec suite on stencilrs, then the library build)"
 npm --prefix examples/ui-kit ci
 npm --prefix examples/ui-kit test
 npm --prefix examples/ui-kit run build:stencilrs
+
+step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
+npm --prefix examples/ui-kit run test:ssr
 
 step "Storybook"
 npm --prefix storybook ci

@@ -1,0 +1,534 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-note-properties",
+      "componentClassName": "PopNoteProperties",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "noteTitle",
+          "type": "string",
+          "attribute": "note-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Editable title — mirrors the note's derived/first-line title."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tags",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "string[]",
+            "resolved": "string[]",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Tags-as-properties."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "suggestions",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "TagSuggestion[]",
+            "resolved": "TagSuggestion[]",
+            "references": {
+              "TagSuggestion": {
+                "location": "local",
+                "path": "ui-kit/organisms/note-properties/note-properties.tsx",
+                "id": "ui-kit/organisms/note-properties/note-properties.tsx::TagSuggestion"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Autocomplete seed for the tag input (all tags across the brain)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "visibility",
+          "type": "string",
+          "attribute": "visibility",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'private'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Visibility — reuses the task enum."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "pinned",
+          "type": "boolean",
+          "attribute": "pinned",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pinned to the top of Home's Pinned split."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "created",
+          "type": "string",
+          "attribute": "created",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pre-formatted created timestamp (host formats; rail just displays)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "updated",
+          "type": "string",
+          "attribute": "updated",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pre-formatted updated timestamp."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "linkedTasks",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "LinkedTaskRef[]",
+            "resolved": "LinkedTaskRef[]",
+            "references": {
+              "LinkedTaskRef": {
+                "location": "local",
+                "path": "ui-kit/organisms/note-properties/note-properties.tsx",
+                "id": "ui-kit/organisms/note-properties/note-properties.tsx::LinkedTaskRef"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Tasks this note backs — deep-link out to tasks.popcorn245.com."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "linksOut",
+          "type": "number",
+          "attribute": "links-out",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Count of `[[ ]]` link-outs (Phase 3 populates note.links)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "syncState",
+          "type": "string",
+          "attribute": "sync-state",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'synced'",
+          "complexType": {
+            "original": "SyncState",
+            "resolved": "\"error\" | \"pending\" | \"saving\" | \"synced\"",
+            "references": {
+              "SyncState": {
+                "location": "local",
+                "path": "ui-kit/organisms/note-properties/note-properties.tsx",
+                "id": "ui-kit/organisms/note-properties/note-properties.tsx::SyncState"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Sync chip state."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "backlinksCount",
+          "type": "number",
+          "attribute": "backlinks-count",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Backlinks count for the collapsible section header (body is a slot)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "aiHint",
+          "type": "string",
+          "attribute": "ai-hint",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "AI-backfill hint surfaced subtly (e.g. \"Indexing…\" / \"Indexed\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "backlinksCollapsed"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "titleChange",
+          "method": "titleChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted on title commit (blur / Enter)."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "tagsChange",
+          "method": "tagsChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted whenever the tag set changes."
+          },
+          "complexType": {
+            "original": "string[]",
+            "resolved": "string[]",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "noteVisibilityChange",
+          "method": "noteVisibilityChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted on visibility select."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "pinnedChange",
+          "method": "pinnedChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted on pin toggle."
+          },
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "openTask",
+          "method": "openTask",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when a linked task is opened (deep-link to tasks app)."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-NOTE-PROPERTIES",
+          "styleStr": null,
+          "styleIdentifier": "PopNotePropertiesStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/note-properties/note-properties.css",
+              "relativePath": "note-properties.css",
+              "originalComponentPath": "note-properties.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "aria-label",
+        "htmlFor",
+        "id",
+        "type",
+        "value",
+        "placeholder",
+        "onChange",
+        "onKeyDown",
+        "suggestions",
+        "onValueChanged",
+        "options",
+        "ariaLabel",
+        "role",
+        "aria-checked",
+        "aria-labelledby",
+        "onClick",
+        "name",
+        "title",
+        "aria-hidden",
+        "aria-expanded",
+        "aria-live"
+      ],
+      "htmlTagNames": [
+        "aside",
+        "div",
+        "label",
+        "input",
+        "pop-chip-input",
+        "pop-radio-group",
+        "span",
+        "button",
+        "pop-brand-icon",
+        "dl",
+        "dt",
+        "dd",
+        "ul",
+        "li",
+        "section",
+        "slot",
+        "p"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "backlinks"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

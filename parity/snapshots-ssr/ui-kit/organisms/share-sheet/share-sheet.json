@@ -1,0 +1,423 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-share-sheet",
+      "componentClassName": "PopShareSheet",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "subject",
+          "type": "any",
+          "attribute": "subject",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "ShareSubject",
+            "resolved": "any",
+            "references": {
+              "ShareSubject": {
+                "location": "global",
+                "id": "global::ShareSubject"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "What is being shared. Free-form `kind` — this component stays domain-free."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "acl",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "AclEntry[]",
+            "resolved": "AclEntry[]",
+            "references": {
+              "AclEntry": {
+                "location": "global",
+                "id": "global::AclEntry"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The current access-control list."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "people",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "Member[]",
+            "resolved": "Member[]",
+            "references": {
+              "Member": {
+                "location": "global",
+                "id": "global::Member"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "People the host can resolve, for names and the add-person picker."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "groups",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "Group[]",
+            "resolved": "Group[]",
+            "references": {
+              "Group": {
+                "location": "global",
+                "id": "global::Group"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Groups the host can resolve. An acl group missing here renders as deleted."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "canEdit",
+          "type": "boolean",
+          "attribute": "can-edit",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "False ⇒ the whole sheet is read-only."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "linkEnabled",
+          "type": "boolean",
+          "attribute": "link-enabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Phase 2 — public link. Rendered disabled in V1."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "linkUrl",
+          "type": "string",
+          "attribute": "link-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Phase 2 — the public link URL."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "redaction",
+          "type": "any",
+          "attribute": "redaction",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "Record<string, unknown>",
+            "resolved": "any",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Host-owned redaction settings, passed through untouched."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "expanded"
+        },
+        {
+          "name": "pendingUid"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popAclChange",
+          "method": "popAclChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The FULL replacement acl. Never a patch."
+          },
+          "complexType": {
+            "original": "AclChangeDetail",
+            "resolved": "AclChangeDetail",
+            "references": {
+              "AclChangeDetail": {
+                "location": "global",
+                "id": "global::AclChangeDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popLinkToggle",
+          "method": "popLinkToggle",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Phase 2 — emitted when the public link switch flips."
+          },
+          "complexType": {
+            "original": "LinkToggleDetail",
+            "resolved": "LinkToggleDetail",
+            "references": {
+              "LinkToggleDetail": {
+                "location": "global",
+                "id": "global::LinkToggleDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popRedactionChange",
+          "method": "popRedactionChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the host-owned redaction settings change."
+          },
+          "complexType": {
+            "original": "RedactionChangeDetail",
+            "resolved": "RedactionChangeDetail",
+            "references": {
+              "RedactionChangeDetail": {
+                "location": "global",
+                "id": "global::RedactionChangeDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-SHARE-SHEET",
+          "styleStr": null,
+          "styleIdentifier": "PopShareSheetStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/share-sheet/share-sheet.css",
+              "relativePath": "share-sheet.css",
+              "originalComponentPath": "share-sheet.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "role",
+        "aria-label",
+        "key",
+        "type",
+        "disabled",
+        "aria-pressed",
+        "onClick",
+        "title",
+        "name",
+        "aria-hidden",
+        "onChange",
+        "value",
+        "aria-disabled",
+        "aria-expanded",
+        "checked",
+        "label"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "ion-icon",
+        "section",
+        "h3",
+        "p",
+        "span",
+        "select",
+        "option",
+        "ul",
+        "li",
+        "pop-switch",
+        "header"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-share-sheet — a GENERIC sharing surface.\n\nDeliberately domain-free: it shares a `subject` (`{ kind, id, title }`) with\npeople and groups. Nothing in here knows the word \"thread\" — the same\ncomponent is meant to serve projects, notes and tasks later.\n\nThe sheet is STATELESS with respect to the ACL: every mutation emits\n`popAclChange` with a **full replacement array**, never a patch, and waits for\nthe host to feed the new `acl` back down. That makes the host the single\nwriter and keeps optimistic-UI drift impossible.\n\nThe Link section is Phase 2. It renders DISABLED with a \"Coming soon\" badge in\nV1 on purpose, so the layout does not shift when it lands."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

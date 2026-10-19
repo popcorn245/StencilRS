@@ -1,0 +1,746 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-reminders-panel",
+      "componentClassName": "PopRemindersPanel",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "reminders",
+          "type": "string",
+          "attribute": "reminders",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ReminderRow[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ReminderRow": {
+                "location": "global",
+                "id": "global::ReminderRow"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The rows for the ACTIVE filter/search view (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "counts",
+          "type": "any",
+          "attribute": "counts",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ upcoming: 0, today: 0, overdue: 0, recurring: 0 }",
+          "complexType": {
+            "original": "ReminderFilterCounts | string",
+            "resolved": "any",
+            "references": {
+              "ReminderFilterCounts": {
+                "location": "global",
+                "id": "global::ReminderFilterCounts"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Inline segmented-filter counts (object OR JSON string). Optional."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "filter",
+          "type": "string",
+          "attribute": "filter",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'upcoming'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Active filter id."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "searchText",
+          "type": "string",
+          "attribute": "search-text",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Search text (controlled by the host)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "alarm",
+          "type": "any",
+          "attribute": "alarm",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "DEFAULT_ALARM_SETTINGS",
+          "complexType": {
+            "original": "AlarmSettingsView | string",
+            "resolved": "any",
+            "references": {
+              "AlarmSettingsView": {
+                "location": "global",
+                "id": "global::AlarmSettingsView"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Alarm settings for the drawer (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sounds",
+          "type": "string",
+          "attribute": "sounds",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "DEFAULT_ALARM_SOUNDS",
+          "complexType": {
+            "original": "AlarmSoundOption[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "AlarmSoundOption": {
+                "location": "global",
+                "id": "global::AlarmSoundOption"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Selectable alarm tones (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "ringing",
+          "type": "string",
+          "attribute": "ringing",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "{ id: string; title: string } | null | string",
+            "resolved": "null | string | { id: string; title: string; }",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The reminder currently RINGING (host's alarm engine is looping the tone),\nor null. Drives the ringing banner + the row pulse. (object OR JSON string)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "nextTitle",
+          "type": "string",
+          "attribute": "next-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The next reminder's title (hero \"Next reminder\" name)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "countdownDeadline",
+          "type": "number",
+          "attribute": "countdown-deadline",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Local-clock deadline (epoch ms) of the next reminder — the hero countdown\ntarget. Host derives it skew-safe (syncedAt + fireInMs). 0/undefined = idle."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "heroTotalMs",
+          "type": "number",
+          "attribute": "hero-total-ms",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The original set→fire window (ms) — the drain denominator. Optional."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "First-load (no data yet) → a subtle loader instead of the empty state."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "attribute": "error",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "An error line shown in place of the list (with a Retry → popRefresh)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showHeader",
+          "type": "boolean",
+          "attribute": "show-header",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Render the panel's own header (title + refresh + close). Hosts with their\nown chrome (the hub's PanelShell) set this false — only the ⚙ gear shows."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "settingsOpen"
+        },
+        {
+          "name": "snoozeMenuId"
+        },
+        {
+          "name": "editingId"
+        },
+        {
+          "name": "editTitle"
+        },
+        {
+          "name": "editTime"
+        },
+        {
+          "name": "createTitle"
+        },
+        {
+          "name": "createTime"
+        },
+        {
+          "name": "nowMs"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCreate",
+          "method": "popCreate",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ title: string; time: string }",
+            "resolved": "{ title: string; time: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popSnooze",
+          "method": "popSnooze",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string; minutes: number }",
+            "resolved": "{ id: string; minutes: number; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popDismiss",
+          "method": "popDismiss",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popEditReminder",
+          "method": "popEditReminder",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string; title: string; time: string }",
+            "resolved": "{ id: string; title: string; time: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popDelete",
+          "method": "popDelete",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popFilterChange",
+          "method": "popFilterChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ filter: string }",
+            "resolved": "{ filter: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popSearchChange",
+          "method": "popSearchChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ search: string }",
+            "resolved": "{ search: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popAlarmChange",
+          "method": "popAlarmChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ patch: Partial<AlarmSettingsView>; preview: boolean }",
+            "resolved": "{ patch: Partial<AlarmSettingsView>; preview: boolean; }",
+            "references": {
+              "Partial": {
+                "location": "global",
+                "id": "global::Partial"
+              },
+              "AlarmSettingsView": {
+                "location": "global",
+                "id": "global::AlarmSettingsView"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAlarmTest",
+          "method": "popAlarmTest",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popStopRing",
+          "method": "popStopRing",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCountdownDone",
+          "method": "popCountdownDone",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRefresh",
+          "method": "popRefresh",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popUnlock",
+          "method": "popUnlock",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "reminders",
+          "methodName": "onRemindersChange"
+        },
+        {
+          "propName": "countdownDeadline",
+          "methodName": "onDeadlineChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-REMINDERS-PANEL",
+          "styleStr": null,
+          "styleIdentifier": "PopRemindersPanelStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/reminders-panel/reminders-panel.css",
+              "relativePath": "reminders-panel.css",
+              "originalComponentPath": "reminders-panel.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "type",
+        "class",
+        "aria-label",
+        "aria-pressed",
+        "onClick",
+        "name",
+        "style",
+        "aria-hidden",
+        "role",
+        "min",
+        "max",
+        "value",
+        "onInput",
+        "onChange",
+        "label",
+        "checked",
+        "onPopChange",
+        "placeholder",
+        "onKeyDown",
+        "key",
+        "title",
+        "onPointerDown"
+      ],
+      "htmlTagNames": [
+        "button",
+        "pop-icon",
+        "div",
+        "span",
+        "input",
+        "pop-switch",
+        "li",
+        "section",
+        "ion-icon",
+        "ul"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-reminders-panel — the Reminders panel (organism), migrated from the hub's\n700-line hub-reminders monolith. PRESENTATION-ONLY: the host (Bucket Hub's\nhub-reminders wrapper) owns the network (PanelShell + PanelData), optimistic\nmutations, clock-skew-safe deadline math, and the alarm engine (Web-Audio +\nHTMLAudio tone, vibration, push pref). This component displays what it is\nhanded and emits `pop*` events for every action the host must perform.\n\nShared VISUAL LANGUAGE (matches the approved mockup): a red→amber→blue \"drain\"\ngradient that empties RIGHT→LEFT — the countdown hero bar here, the hub tile\nface, and the collapsed chip all reuse it. The last sliver standing is red\n(urgent). Themed via ui-kit tokens (--ink/--ink-muted/--line/--surface-card/\n--surface-raised/--brand-blue) with fallbacks; mobile-first (390px sheet).\n\nObject/array props accept a value (property binding) OR a JSON string\n(attribute — how Storybook / plain HTML pass them), parsed defensively.\n\nEvents (all composed + bubbling):\n  popCreate {title,time}       — quick-create submitted\n  popSnooze {id,minutes}       — per-row / banner snooze\n  popDismiss {id}              — per-row / banner dismiss (complete)\n  popEditReminder {id,title,time} — inline edit saved\n  popDelete {id}               — per-row delete\n  popFilterChange {filter}     — segmented filter changed\n  popSearchChange {search}     — search text changed (debounce is the host's)\n  popAlarmChange {patch,preview}— an alarm setting changed (host persists +\n                                  previews the tone when preview=true)\n  popAlarmTest                 — the Test button (host plays the tone)\n  popStopRing                  — silence a no-id ringing banner\n  popCountdownDone             — the hero countdown crossed zero\n  popRefresh / popClose        — header refresh / close (standalone mode)\n  popUnlock                    — a user gesture in the panel (host unlocks audio)"
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./reminders-panel.helpers"
+    }
+  ]
+}

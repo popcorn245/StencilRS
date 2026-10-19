@@ -1,0 +1,371 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-list-filter-sort",
+      "componentClassName": "PopListFilterSort",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "string",
+          "attribute": "value",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current search text (→ pop-search-filter `value`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Search…'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Search placeholder (→ pop-search-filter)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "filters",
+          "type": "string",
+          "attribute": "filters",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON filter group descriptors (→ pop-search-filter `filters`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "debounce",
+          "type": "number",
+          "attribute": "debounce",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "150",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Debounce (ms) for searchChange (→ pop-search-filter)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showClear",
+          "type": "boolean",
+          "attribute": "show-clear",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show \"Clear all\" in the filter popover (→ pop-search-filter)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "views",
+          "type": "string",
+          "attribute": "views",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[\"list\",\"card\"]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON view list (→ pop-view-switcher `views`). `[]` hides the switcher."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "view",
+          "type": "string",
+          "attribute": "view",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current view (→ pop-view-switcher `value`)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "searchChange",
+          "method": "searchChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted from pop-search-filter: debounced search text."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "filterChange",
+          "method": "filterChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted from pop-search-filter: a filter group changed."
+          },
+          "complexType": {
+            "original": "{ key: string; value: string }",
+            "resolved": "{ key: string; value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "clearFilters",
+          "method": "clearFilters",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted from pop-search-filter: \"Clear all\" pressed."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "viewChange",
+          "method": "viewChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted from pop-view-switcher: the view changed."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-LIST-FILTER-SORT",
+          "styleStr": null,
+          "styleIdentifier": "PopListFilterSortStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/list-filter-sort/list-filter-sort.css",
+              "relativePath": "list-filter-sort.css",
+              "originalComponentPath": "list-filter-sort.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "value",
+        "placeholder",
+        "filters",
+        "debounce",
+        "showClear",
+        "onSearchChange",
+        "onFilterChange",
+        "onClearFilters",
+        "name",
+        "views",
+        "onViewChange"
+      ],
+      "htmlTagNames": [
+        "div",
+        "pop-search-filter",
+        "slot",
+        "pop-view-switcher"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "input",
+        "actions"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "<pop-list-filter-sort\n  placeholder=\"Search name, tag, UPC…\"\n  filters='[{\"key\":\"show\",\"label\":\"Show\",\"kind\":\"tabs\",\"value\":\"\",\"options\":[{\"value\":\"\",\"label\":\"All\"}]}]'\n  views='[\"list\",\"card\"]'\n  view=\"list\">\n  <button slot=\"actions\" class=\"pop-iconbtn\" aria-label=\"Add\">…</button>\n</pop-list-filter-sort>"
+          }
+        ],
+        "text": "`pop-list-filter-sort` — the drop-in header row for list dialogs: ONE row\ncomposing `pop-search-filter` (flex:1) + `pop-view-switcher` (flex:0) + a\nnamed `actions` slot for dialog-specific extras (e.g. an Add button).\n\nMany hub dialogs (photos/images, tasks, inventory, calendar) each hand-roll\nthis same search + filter + view toolbar; this organism is the shared piece.\nExpected adopters: hub-inventory (done), hub-images/photos, hub-tasks.\n\nPass-through props: `value`, `placeholder`, `filters`, `debounce`,\n`showClear` → pop-search-filter; `views`, `view` → pop-view-switcher.\n`views` parsing to an EMPTY array (`views=\"[]\"`) omits the switcher element\nentirely (no stray flex-gap ghost). The `input` slot is passed through to\npop-search-filter: slot a host-owned search widget with `slot=\"input\"` and\nit replaces the built-in input (the host owns its value/events —\n`searchChange` only fires from the built-in input). The pass-through slot is\nalways rendered (scoped-slot rule), so late-upgrading hosts still project.\n\nThe child events are re-emitted from THIS host (the originals are stopped),\nso hosts listen in one place: `searchChange`, `filterChange`,\n`clearFilters`, `viewChange`."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

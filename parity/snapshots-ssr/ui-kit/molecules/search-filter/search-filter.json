@@ -1,0 +1,333 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-search-filter",
+      "componentClassName": "PopSearchFilter",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "string",
+          "attribute": "value",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current search text (mutable — reflects what's in the field)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Search…'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Placeholder for the search input."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "debounce",
+          "type": "number",
+          "attribute": "debounce",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "150",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Debounce (ms) for `searchChange`. 0 → emit synchronously."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "filters",
+          "type": "string",
+          "attribute": "filters",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of filter group descriptors (see SearchFilterGroup)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showClear",
+          "type": "boolean",
+          "attribute": "show-clear",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show a \"Clear all\" affordance in the popover when any filter is non-default."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "open"
+        },
+        {
+          "name": "groups"
+        },
+        {
+          "name": "slotTick"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "searchChange",
+          "method": "searchChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Debounced search text."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "filterChange",
+          "method": "filterChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A filter group's value changed."
+          },
+          "complexType": {
+            "original": "{ key: string; value: string }",
+            "resolved": "{ key: string; value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "clearFilters",
+          "method": "clearFilters",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The \"Clear all\" affordance was pressed."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "filters",
+          "methodName": "parseFilters"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-SEARCH-FILTER",
+          "styleStr": null,
+          "styleIdentifier": "PopSearchFilterStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/search-filter/search-filter.css",
+              "relativePath": "search-filter.css",
+              "originalComponentPath": "search-filter.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": true,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "aria-label",
+        "type",
+        "aria-pressed",
+        "onClick",
+        "onChange",
+        "value",
+        "selected",
+        "name",
+        "placeholder",
+        "onInput",
+        "aria-haspopup",
+        "aria-expanded",
+        "title",
+        "aria-hidden",
+        "role"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "button",
+        "label",
+        "select",
+        "option",
+        "pop-icon",
+        "slot",
+        "input"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "input"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "<pop-search-filter\n  placeholder=\"Search name, tag, UPC…\"\n  filters='[{\"key\":\"show\",\"label\":\"Show\",\"kind\":\"tabs\",\"value\":\"\",\"options\":[{\"value\":\"\",\"label\":\"All\"},{\"value\":\"low\",\"label\":\"Low stock\"}]}]'\n  show-clear>\n</pop-search-filter>"
+          }
+        ],
+        "text": "`pop-search-filter` — a search input with the funnel FILTER BUTTON baked into\nthe field's right edge (and a leading search glyph on the left), popover\nincluded.\n\nThe hub's dialogs (photos/images, tasks, inventory, calendar) each hand-roll\nthis exact search + funnel-filter idiom; this molecule is the shared piece.\nExpected adopters: hub-images (photos), hub-tasks, hub-inventory, and any\nfuture list dialog — usually via the `pop-list-filter-sort` organism.\n\nCONTROLLED for filters: the host passes `filters` (a JSON array of\n{key,label,kind,options,value} group descriptors) and reacts to\n`filterChange` / `clearFilters`. The search text is a mutable `value` prop;\n`searchChange` is debounced (`debounce` ms).\n\nThe funnel trigger shows an active-filter DOT when any group's value !==\nits `default` (`''` when omitted — the calendar/tasks idiom). Popover\ndismisses on backdrop click + Escape. `filters` parsing to an EMPTY array →\nthe funnel is not rendered at all (search-only mode).\n\nCUSTOM INPUT (`input` slot): slot a host-owned search widget (e.g. hub-tasks'\npop-mention-input) with `slot=\"input\"` and it takes the built-in input's\nplace while the funnel + popover + active dot + Clear all chrome is kept\n(the lead search glyph is dropped — the widget brings its own affordances,\nand the funnel rides the row as a static field-height sibling since it can't\nsafely inset into an arbitrary widget). In slot mode the HOST owns the\nwidget's value/events; `searchChange` fires only from the built-in input.\nThe slot element is ALWAYS rendered (scoped-slot rule: a conditionally added\nslot never picks up late-mounted content); detection is a light-DOM\n`[slot=\"input\"]` query re-checked after every render."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

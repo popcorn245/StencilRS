@@ -1,0 +1,14 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "To allow efficient bundling, modules using @Component() can only have a single export which is the component class itself.\n      Any other exports should be moved to a separate file.\n      For further information check out: https://stenciljs.com/docs/module-bundling"
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

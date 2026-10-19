@@ -1,6 +1,6 @@
 // Compare stencilrs against the Stencil v5 snapshots.
 //
-//   node compare.mjs [suite] [--mode customelement|module|lazy] [--verbose]
+//   node compare.mjs [suite] [--mode customelement|module|lazy|ssr] [--verbose]
 //
 // Metadata: Stencil's `data` is projected to the fields stencilrs produces today (FIELDS
 // below grows as the port does) and compared exactly. Diagnostics: compared as sorted
