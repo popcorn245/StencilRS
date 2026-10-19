@@ -137,10 +137,14 @@ looks like.
 
 ## Release
 
-Set `version` in `package.json` and push a matching tag (`git tag v0.1.0 && git push origin
-v0.1.0`). [`release.yml`](.github/workflows/release.yml) builds every platform, installs each from
-its packed tarball on its own OS, then publishes the five `@popcorn245/stencilrs-<platform>`
-packages and `@popcorn245/stencilrs` with provenance (needs the `NPM_TOKEN` secret).
+Releases are automatic. Pull requests are squash-merged and their titles are
+[conventional commits](https://www.conventionalcommits.org) (checked on every PR): on each merge to
+`main`, [semantic-release](https://semantic-release.gitbook.io) reads the commits since the last tag
+and picks the version (`fix:` patch, `feat:` minor, `BREAKING CHANGE:` major; `docs:`, `chore:`
+and the like release nothing). [`release.yml`](.github/workflows/release.yml) then builds every
+platform, installs each from its packed tarball on its own OS, publishes the five
+`@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs` with provenance, and
+writes the tag and the GitHub Release. It needs the `NPM_TOKEN` secret.
 
 ## License
 

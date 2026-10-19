@@ -1,11 +1,15 @@
 name: release
 
 # Builds the native binary for every platform, installs each one from packed tarballs on its own
-# OS (no Rust involved) and, on a version tag, publishes the platform packages and the root
-# package to npm. Pull requests that touch the binding run everything but the publish.
+# OS (no Rust involved) and publishes the platform packages and the root package to npm.
+#
+# Releases are semantic-release on main: the conventional commits merged since the last tag pick
+# the version (fix: patch, feat: minor, BREAKING CHANGE: major); no release-worthy commit, no
+# release. It publishes, then tags and writes the GitHub Release. Pull requests that touch the
+# binding run the build and install checks only.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   pull_request:
     paths:
       - 'crates/**'
@@ -14,6 +18,7 @@ on:
       - 'index.js'
       - 'npm/**'
       - 'scripts/release.mjs'
+      - 'scripts/publish.sh'
       - '.github/workflows/release.yml'
   workflow_dispatch:
 
@@ -25,8 +30,41 @@ permissions:
   contents: read
 
 jobs:
+  # What would semantic-release publish? A dry run on main; nothing on pull requests.
+  version:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # semantic-release checks it could push the tag, even in a dry run
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci --ignore-scripts
+
+      # Before the first release: a local v0.0.0 on the first commit, so the first version is
+      # 0.1.0 rather than semantic-release's default 1.0.0. Never pushed.
+      - name: Base tag
+        run: git tag --list 'v*' | grep -q . || git tag v0.0.0 "$(git rev-list --max-parents=0 HEAD)"
+
+      - id: next
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          npx semantic-release --dry-run
+          echo "version=$(cat .release-version 2>/dev/null)" >> "$GITHUB_OUTPUT"
+
   build:
     name: build ${{ matrix.target }}
+    needs: version
+    if: ${{ !cancelled() && (github.event_name == 'pull_request' || needs.version.outputs.version) }}
     runs-on: ${{ matrix.host }}
     strategy:
       fail-fast: false
@@ -75,6 +113,9 @@ jobs:
   test:
     name: install on ${{ matrix.platform }}${{ matrix.container && format(' ({0})', matrix.container) || '' }}
     needs: build
+    # build's own dependency (version) is skipped on pull requests, and GitHub carries a skip
+    # forward unless the condition says otherwise.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ${{ matrix.host }}
     container: ${{ matrix.container }}
     strategy:
@@ -125,14 +166,18 @@ jobs:
           "
 
   publish:
-    if: github.ref_type == 'tag'
-    needs: test
+    if: ${{ !cancelled() && needs.version.outputs.version && needs.test.result == 'success' }}
+    needs: [version, test]
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write
+      contents: write # the tag and the GitHub Release
+      issues: write # semantic-release opens an issue when a release fails
+      pull-requests: write
+      id-token: write # npm provenance
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -150,12 +195,14 @@ jobs:
       - name: Put each binary in its package
         run: npx napi artifacts --output-dir artifacts --npm-dir npm
 
-      - name: Versions and optionalDependencies
-        run: node scripts/release.mjs
+      - name: Base tag
+        run: git tag --list 'v*' | grep -q . || git tag v0.0.0 "$(git rev-list --max-parents=0 HEAD)"
 
-      - name: Publish
+      # Versions every package (scripts/release.mjs), publishes them (scripts/publish.sh), then
+      # tags and writes the GitHub Release. A run that fails can be re-run: published versions
+      # are skipped.
+      - name: semantic-release
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          for dir in npm/*/; do npm publish "$dir" --provenance --access public; done
-          npm publish --provenance --access public
+        run: npx semantic-release

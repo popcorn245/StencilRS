@@ -34,7 +34,9 @@ looks like a bug, match it anyway and note it in [`docs/quirks.md`](docs/quirks.
 bash scripts/ci.sh   # what CI runs: compiler, parity, both example projects, Storybook
 ```
 
-Keep a pull request to one change, say what it fixes and how you checked it. Touching the native
+Keep a pull request to one change, say what it fixes and how you checked it. Title it as a
+[conventional commit](https://www.conventionalcommits.org): it becomes the squashed commit, and
+releases are cut from those (`fix:` a patch, `feat:` a minor release, `docs:`/`chore:`/`test:` none). Touching the native
 binding also runs [`release.yml`](.github/workflows/release.yml), which builds and installs it on
 every supported platform.
 
