@@ -1,0 +1,257 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "method-returns",
+      "componentClassName": "MethodReturns",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [
+        {
+          "name": "asyncNoAnnotation",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => any",
+            "parameters": [],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "annotatedPromise",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "annotatedVoid",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {},
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "emptyBody",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {},
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "returnsNumber",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => number",
+            "parameters": [],
+            "references": {},
+            "return": "number"
+          },
+          "internal": false
+        },
+        {
+          "name": "annotatedBoolean",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => boolean",
+            "parameters": [],
+            "references": {},
+            "return": "boolean"
+          },
+          "internal": false
+        },
+        {
+          "name": "returnsPromiseResolve",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => any",
+            "parameters": [],
+            "references": {},
+            "return": "any"
+          },
+          "internal": false
+        },
+        {
+          "name": "nestedReturnOnly",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {},
+            "return": "Promise<void>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": false,
+      "hasAttribute": false,
+      "hasProp": false,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "div"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": false,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "External @Method() asyncNoAnnotation() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async asyncNoAnnotation()."
+    },
+    {
+      "level": "warn",
+      "messageText": "External @Method() annotatedVoid() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async annotatedVoid()."
+    },
+    {
+      "level": "warn",
+      "messageText": "External @Method() emptyBody() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async emptyBody()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() returnsNumber() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async returnsNumber()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() annotatedBoolean() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async annotatedBoolean()."
+    },
+    {
+      "level": "error",
+      "messageText": "External @Method() returnsPromiseResolve() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async returnsPromiseResolve()."
+    },
+    {
+      "level": "warn",
+      "messageText": "External @Method() nestedReturnOnly() must return a Promise.\n\n Consider prefixing the method with async, such as @Method() async nestedReturnOnly()."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}

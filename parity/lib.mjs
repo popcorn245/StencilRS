@@ -16,6 +16,13 @@ export const modes = {
   customelement: { componentExport: 'customelement', dir: 'snapshots' },
   module: { componentExport: 'module', dir: 'snapshots-module' },
   lazy: { componentExport: null, dir: 'snapshots-lazy' },
+  // @stencil/unplugin's `mode: 'spec-page'` (transform.ts): lazy output plus the compiler
+  // metadata as `static get COMPILER_META()`, the core from `@stencil/core/testing`, no styles.
+  specpage: {
+    componentExport: null,
+    dir: 'snapshots-specpage',
+    extra: { componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null },
+  },
 };
 /**
  * Fixtures a mode does not port yet: stencilrs reports a `stencilrs:` error for them (the cue to
@@ -23,14 +30,17 @@ export const modes = {
  * Lazy output keeps a decorated base class's static meta getters (`convertDecoratorsToStatic`),
  * which need the full `complexType` and docs metadata (#8).
  */
+const lazyFallbacks = [
+  'inheritance/bases/base-props.ts',
+  'inheritance/bases/chain-middle.ts',
+  'inheritance/bases/factories.ts',
+  'inheritance/bases/mixins.ts',
+  'inheritance/cmp-extends-same-file.tsx',
+];
 export const fallbacks = {
-  lazy: new Set([
-    'inheritance/bases/base-props.ts',
-    'inheritance/bases/chain-middle.ts',
-    'inheritance/bases/factories.ts',
-    'inheritance/bases/mixins.ts',
-    'inheritance/cmp-extends-same-file.tsx',
-  ]),
+  lazy: new Set(lazyFallbacks),
+  // Lazy output, so the same files.
+  specpage: new Set(lazyFallbacks),
 };
 
 export const snapshotsDirFor = (mode = 'customelement') => join(root, modes[mode].dir);
@@ -98,6 +108,7 @@ export const transpileOptions = (code, id, mode = 'customelement') => ({
   ...(IMPORTS_H_RE.test(code) ? { jsx: 2 } : { jsx: 4, jsxImportSource: '@stencil/core' }),
   file: inheritance(id) ? absolute(id) : id,
   componentExport: modes[mode].componentExport,
+  ...modes[mode].extra,
   styleImportData: 'queryparams',
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : inheritance(id) ? { resolveImport } : {}),
 });
@@ -107,6 +118,7 @@ export const stencilrsOptions = (code, id, mode = 'customelement') => ({
   file: inheritance(id) ? absolute(id) : id,
   jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
   componentExport: modes[mode].componentExport,
+  ...modes[mode].extra,
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : {}),
 });
 

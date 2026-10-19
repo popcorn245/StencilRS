@@ -1,6 +1,6 @@
 // Compare stencilrs against the Stencil v5 snapshots.
 //
-//   node compare.mjs [suite] [--mode customelement|module|lazy] [--verbose]
+//   node compare.mjs [suite] [--mode customelement|module|lazy|specpage] [--verbose]
 //
 // Metadata: Stencil's `data` is projected to the fields stencilrs produces today (FIELDS
 // below grows as the port does) and compared exactly. Diagnostics: compared as sorted
@@ -100,6 +100,48 @@ const codeDiff = (expected, actual) => {
   return out;
 };
 
+/**
+ * `specpage` output carries the compiler metadata as `static get COMPILER_META() { return {...}; }`.
+ * Code is compared with those getters cut out; each one is evaluated and compared as an object.
+ */
+const takeCompilerMeta = (code) => {
+  const metas = [];
+  let rest = code;
+  for (;;) {
+    const at = rest.indexOf('static get COMPILER_META()');
+    if (at < 0) return { code: rest, metas };
+    const open = rest.indexOf('{', at);
+    let depth = 0;
+    let i = open;
+    for (; i < rest.length; i++) {
+      const c = rest[i];
+      if (c === '"' || c === "'" || c === '`') {
+        for (i++; rest[i] !== c; i++) if (rest[i] === '\\') i++;
+      } else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) break;
+    }
+    metas.push(new Function(rest.slice(open + 1, i))());
+    rest = rest.slice(0, at) + rest.slice(i + 1);
+  }
+};
+
+/**
+ * What stencilrs does not write yet: JSDoc (`docs`) and resolved types (`complexType.resolved`,
+ * `references`, a method's whole `complexType`). They are the type checker's work (#8), so
+ * they are left out of the comparison on both sides; everything else in the metadata is compared.
+ * TODO(#8): drop this projection once the metadata carries them.
+ */
+const projectMeta = (meta) => {
+  const out = JSON.parse(JSON.stringify(meta, (k, v) => (v === undefined ? '«undefined»' : v)));
+  for (const m of [...out.properties, ...out.events, ...out.methods]) delete m.docs;
+  for (const m of [...out.properties, ...out.events]) {
+    delete m.complexType.resolved;
+    delete m.complexType.references;
+  }
+  for (const m of out.methods) delete m.complexType;
+  return out;
+};
+
 const results = [];
 for (const { id, file } of listFixtures(suite)) {
   const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
@@ -121,7 +163,15 @@ for (const { id, file } of listFixtures(suite)) {
     'diagnostics',
   );
   const compiles = !snap.diagnostics.some((d) => d.level === 'error');
-  const codeLines = compiles ? codeDiff(safeNormalize(readFileSync(`${base}.js`, 'utf8')), safeNormalize(ours.code)) : [];
+  let codeLines = [];
+  if (compiles && mode === 'specpage') {
+    const expected = takeCompilerMeta(safeNormalize(readFileSync(`${base}.js`, 'utf8')));
+    const actual = takeCompilerMeta(safeNormalize(ours.code));
+    codeLines = codeDiff(expected.code, actual.code);
+    codeLines.push(...diff(expected.metas.map(projectMeta), actual.metas.map(projectMeta), 'COMPILER_META'));
+  } else if (compiles) {
+    codeLines = codeDiff(safeNormalize(readFileSync(`${base}.js`, 'utf8')), safeNormalize(ours.code));
+  }
   results.push({ id, meta, diags, code: codeLines, compiles });
 }
 

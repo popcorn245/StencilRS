@@ -12,7 +12,15 @@ npm test                # specs on components compiled by stencilrs
 npm run compare         # tests that differ between the two
 node failures.mjs       # failing specs grouped by error
 node coverage.mjs       # which files stencilrs compiles vs hands to Stencil
+npm run test:spec-page  # the same specs on Stencil's own newSpecPage, components compiled in spec-page mode
+npm run test:spec-page:stencil && npm run compare:spec-page   # ... against @stencil/unplugin's spec-page mode
 ```
+
+`test:spec-page` aliases the specs' `test-utils/spec-page` to `@stencil/core/testing`'s
+`newSpecPage` (`harness/stencil-spec-page.ts`) and runs on Stencil's mock-doc instead of jsdom.
+The specs were written against jsdom, so 68 of 872 fail with either compiler (mock-doc lacks
+`getSelection`, `disabled` / property reflection on some native elements, `document` for Editor.js, …);
+`compare:spec-page` checks stencilrs fails none that Stencil passes.
 
 ## Result (2026-10-14)
 

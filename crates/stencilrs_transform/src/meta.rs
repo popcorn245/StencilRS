@@ -67,6 +67,9 @@ pub struct ComponentMeta {
     /// The other files the ancestors were read from (absolute, `/`-separated).
     #[serde(skip)]
     pub base_class_files: Vec<String>,
+    /// The names of the methods of the class and its ancestors (`classMethods`).
+    #[serde(skip)]
+    pub class_methods: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -101,6 +104,9 @@ pub struct EventMeta {
     pub bubbles: bool,
     pub cancelable: bool,
     pub composed: bool,
+    /// The `EventEmitter<T>` type argument as written, `any` without one.
+    #[serde(skip)]
+    pub complex_type_original: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
