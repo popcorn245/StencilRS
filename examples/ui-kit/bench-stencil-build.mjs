@@ -1,21 +1,26 @@
-// End-to-end benchmark: a full `stencil build` of the ui-kit's custom-elements (standalone)
-// output, with Stencil's own TypeScript transform passes vs with stencilrs swapped in.
+// End-to-end benchmark: a full `stencil build` of the ui-kit with Stencil's own TypeScript
+// transform passes vs with stencilrs swapped in.
 //
-//   node bench-stencil-build.mjs [runs=5] [--only stock|patched] [--keep]
+//   node bench-stencil-build.mjs [runs=5] [--config full|standalone] [--only stock|patched] [--keep] [--json]
+//
+//   --config full        stencil.bench-full.config.ts: the real stencil.config.ts (loader-bundle,
+//                        standalone, www, docs-json), outputs redirected per variant (default)
+//   --config standalone  stencil.standalone.config.ts: the standalone target only
+//   --json               also print the benchmarks.json entry (always written to
+//                        .bench/stencil-build-results.json)
 //
 // Stencil v5 compiles a component twice: pass A is the type-checked TypeScript emit that
 // turns decorators into static members and fills the module map; pass B is a per-bundle
 // `ts.transpileModule` inside the Rolldown TypeScript plugin that applies Stencil's
-// transformers (component class, proxyCustomElement, auto-define, style imports).
-// Pass A stays. For the `customElements` (standalone) bundle the patched build replaces pass B
-// with stencilrs' `transpile()` on the original source file, and falls back to pass B for a
-// file stencilrs reports as unported.
+// transformers (component class, proxyCustomElement, auto-define, lazy registerInstance, style
+// imports). Pass A stays. For the `customElements` (standalone) and `lazy` (loader-bundle, www)
+// bundles the patched build replaces pass B with stencilrs' `transpile()` on the original source
+// file, and falls back to pass B for a file stencilrs reports as unported.
 //
 // This patches a THROWAWAY COPY of @stencil/core (.bench/{stock,patched}/), by string
 // replacement in its bundled compiler-*.mjs; node_modules is never touched. Benchmark only:
-// nothing here ships. Both variants run from copies, with the same standalone-only config
-// (stencil.standalone.config.ts), alternating, so drift hits both equally. The lazy
-// (loader-bundle) build uses a different bundle and isn't swapped yet.
+// nothing here ships. Both variants run from copies, with the same config, alternating, so
+// drift hits both equally.
 //
 // Reports medians of wall time and of Stencil's own "build finished in …" time. Stencil's
 // cache (.stencil/) is shared and stays on, as in a real repeat build (it has no real warm
@@ -30,39 +35,48 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const args = process.argv.slice(2);
 const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null;
 const keep = args.includes('--keep');
-const runs = Number(args.find((a, i) => /^\d+$/.test(a) && args[i - 1] !== '--only') ?? 5);
+const json = args.includes('--json');
+const cfgName = args.includes('--config') ? args[args.indexOf('--config') + 1] : 'full';
+if (!['full', 'standalone'].includes(cfgName)) throw new Error(`--config must be full or standalone, got ${cfgName}`);
+const configFile = cfgName === 'full' ? 'stencil.bench-full.config.ts' : 'stencil.standalone.config.ts';
+const runs = Number(args.find((a, i) => /^\d+$/.test(a) && !['--only', '--config'].includes(args[i - 1])) ?? 5);
 const bench = join(root, '.bench');
 const stencilrsIndex = pathToFileURL(fileURLToPath(new URL('../../index.js', import.meta.url))).href;
 
-// Prepended to compiler-*.mjs. `__srsCustomElements` returns Stencil's transpileModule result
+// Prepended to compiler-*.mjs. `__srsTransform` returns Stencil's transpileModule result
 // shape, or null to leave the file to Stencil's own pass B.
 //
-// stencilrs' default output registers a component with `defineCustomElement(Class, meta)`,
-// the shape @stencil/unplugin wants. The standalone build wants Stencil's transformers' shape
-// instead, which this glue adds around stencilrs' output (text edits, appended at the end so
-// the source map stays valid; imports hoist):
-//   addDefineCustomElementFunctions  an exported `defineCustomElement(opts)` that defines the
-//                                    component and its dependencies in a registry, plus the
-//                                    `defineCustomElement()` call for auto-define-custom-elements
-//   proxyCustomElement               `defineCustomElement(Class, meta)` -> `proxyCustomElement(Class, meta)`
-//   the class stays a named export
+// Two bundles are swapped, each with the `componentExport` Stencil's own transformers use:
+//   customElements (standalone)  'module': the class stays an exported `const`, registered with
+//                                `proxyCustomElement(Class, meta)`, as Stencil's
+//                                nativeComponentTransform + proxyCustomElement produce. Glue adds
+//                                what Stencil's addDefineCustomElementFunctions adds: an exported
+//                                `defineCustomElement(opts)` that defines the component and its
+//                                dependencies in a registry, plus the `defineCustomElement()` call
+//                                for auto-define-custom-elements. It is appended at the end (text
+//                                only, so the source map stays valid; imports hoist).
+//   lazy (loader-bundle, www)    'lazy' with coreImportPath '@stencil/core' (Stencil's
+//                                lazyComponentTransform: registerInstance, no HTMLElement base).
+//                                No glue.
+// Not ported, left to Stencil: 'ssr' (the ui-kit config has no ssr/hydrate target, so that bundle
+// is never built), 'lazy-external' (externalRuntime only), and any file stencilrs reports an
+// error starting with "stencilrs:" for (lazy: decorated base classes and mixins).
 const HEADER = String.raw`import { transpile as __srsTranspile } from ${JSON.stringify(stencilrsIndex)};
 import { readFileSync as __srsRead, writeFileSync as __srsWrite } from "node:fs";
-const __srsStats = { stencilrs: 0, fallback: 0, ms: 0, fallbackFiles: [] };
+const __srsStats = { customElements: { stencilrs: 0, fallback: 0, ms: 0, fallbackFiles: [] }, lazy: { stencilrs: 0, fallback: 0, ms: 0, fallbackFiles: [] } };
 process.on("exit", () => { if (process.env.BENCH_STATS_FILE) __srsWrite(process.env.BENCH_STATS_FILE, JSON.stringify(__srsStats)); });
 const __srsCmpByTag = new WeakMap();
 function __srsGlue(code, mod, compilerCtx, config, outputTarget) {
 	const corePath = "@stencil/core/runtime/client/standalone";
 	const cmp = mod.cmps[0];
-	const proxied = code.replace(/__stencil_defineCustomElement\((\w+),\s*\[/, "__srs_proxyCustomElement($1, [");
-	if (proxied === code || !new RegExp("^__srs_proxyCustomElement\\(" + cmp.componentClassName + ",", "m").test(proxied)) return null;
+	const cls = cmp.componentClassName;
+	if (!new RegExp("^export const " + cls + " = ", "m").test(code) || !new RegExp("^__stencil_proxyCustomElement\\(" + cls + ",", "m").test(code)) return null;
 	let byTag = __srsCmpByTag.get(compilerCtx);
 	if (!byTag) {
 		byTag = new Map();
 		for (const m of compilerCtx.moduleMap.values()) for (const c of m.cmps ?? []) byTag.set(c.tagName, c);
 		__srsCmpByTag.set(compilerCtx, byTag);
 	}
-	const cls = cmp.componentClassName;
 	const pascal = (t) => t.split("-").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join("");
 	const deps = cmp.dependencies.map((t) => byTag.get(t));
 	const imports = deps.map((d) => "import { defineCustomElement as $" + pascal(d.tagName) + "DefineCustomElement } from " + JSON.stringify(d.sourceFilePath) + ";").join("\n");
@@ -70,37 +84,39 @@ function __srsGlue(code, mod, compilerCtx, config, outputTarget) {
 	const cases = ['case ' + JSON.stringify(cmp.tagName) + ': ' + define(cls + "._registry = _reg, _reg.define(__srs_transformTag(tagName), " + cls + ");") + ' break;']
 		.concat(deps.map((d) => "case " + JSON.stringify(d.tagName) + ": " + define("$" + pascal(d.tagName) + "DefineCustomElement(opts);") + " break;"));
 	const tags = [cmp.tagName, ...deps.map((d) => d.tagName)];
-	let out = proxied + "\nimport { proxyCustomElement as __srs_proxyCustomElement, getRegistry as __srs_getRegistry, transformTag as __srs_transformTag } from " + JSON.stringify(corePath) + ";\n" + imports + "\nexport function defineCustomElement(opts) {\n" +
+	let out = code + "\nimport { getRegistry as __srs_getRegistry, transformTag as __srs_transformTag } from " + JSON.stringify(corePath) + ";\n" + imports + "\nexport function defineCustomElement(opts) {\n" +
 		"const _storeReg = __srs_getRegistry();\nconst _reg = opts?.registry ?? _storeReg;\nif (typeof _reg === \"undefined\") return;\n" +
 		JSON.stringify(tags) + ".forEach((tagName) => { switch (tagName) { " + cases.join(" ") + " } });\n}\n";
 	if (outputTarget?.customElementsExportBehavior === "auto-define-custom-elements") out += "defineCustomElement();\n";
 	if (config.devMode) out += cls + ".__stencil_module__ = import.meta.url;\n";
-	if (!new RegExp("^export\\s+(const|\\{[^}]*\\b" + cls + "\\b)", "m").test(out)) out += "export { " + cls + " };\n";
 	return out;
 }
-function __srsCustomElements(mod, config, bundleOpts, compilerCtx) {
-	if (bundleOpts.id !== "customElements" || !mod.cmps.length) return null;
+function __srsTransform(mod, config, bundleOpts, compilerCtx) {
+	const id = bundleOpts.id;
+	if ((id !== "customElements" && id !== "lazy") || !mod.cmps.length) return null;
+	const st = __srsStats[id];
 	const t0 = performance.now();
 	const co = config.tsCompilerOptions ?? {};
 	const jsx = co.jsx === 4 || co.jsx === 5 ? { jsx: "automatic", jsxImportSource: co.jsxImportSource ?? "@stencil/core" } : { jsx: "classic" };
-	const r = __srsTranspile(__srsRead(mod.sourceFilePath, "utf8"), { file: mod.sourceFilePath, resolveImports: true, ...jsx });
+	const mode = id === "lazy" ? { componentExport: "lazy", coreImportPath: "@stencil/core" } : { componentExport: "module", coreImportPath: "@stencil/core/runtime/client/standalone" };
+	const r = __srsTranspile(__srsRead(mod.sourceFilePath, "utf8"), { file: mod.sourceFilePath, resolveImports: true, ...mode, ...jsx });
 	let code = null;
 	if (!r.diagnostics.some((d) => d.level === "error" || d.message.startsWith("stencilrs:")) && r.components.length === 1 && r.components[0].componentClassName === mod.cmps[0].componentClassName) {
-		code = __srsGlue(r.code, mod, compilerCtx, config, config.outputTargets.find((o) => o.type === "standalone"));
+		code = id === "lazy" ? r.code : __srsGlue(r.code, mod, compilerCtx, config, config.outputTargets.find((o) => o.type === "standalone"));
 	}
-	__srsStats.ms += performance.now() - t0;
+	st.ms += performance.now() - t0;
 	if (code === null) {
-		__srsStats.fallback++;
-		__srsStats.fallbackFiles.push(mod.sourceFilePath);
+		st.fallback++;
+		st.fallbackFiles.push(mod.sourceFilePath);
 		return null;
 	}
-	__srsStats.stencilrs++;
+	st.stencilrs++;
 	return { outputText: code, sourceMapText: r.map ?? undefined };
 }
 `;
 
 const ANCHOR = 'const tsResult = ts.transpileModule(mod.staticSourceFileText, {';
-const PATCHED = 'const tsResult = __srsCustomElements(mod, config, bundleOpts, compilerCtx) ?? ts.transpileModule(mod.staticSourceFileText, {';
+const PATCHED = 'const tsResult = __srsTransform(mod, config, bundleOpts, compilerCtx) ?? ts.transpileModule(mod.staticSourceFileText, {';
 
 function prepare(variant) {
   const dir = join(bench, variant);
@@ -127,7 +143,7 @@ function run(variant, bin) {
   const stats = join(bench, `${variant}-stats.json`);
   rmSync(stats, { force: true });
   const t0 = performance.now();
-  const r = spawnSync(process.execPath, [bin, 'build', '--config', 'stencil.standalone.config.ts'], {
+  const r = spawnSync(process.execPath, [bin, 'build', '--config', configFile], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, BENCH_OUT_DIR: out, BENCH_STATS_FILE: stats, FORCE_COLOR: '0', CI: '1' },
@@ -155,18 +171,39 @@ for (let i = 0; i < runs; i++) {
   }
 }
 
-console.log(`\nmedians of ${runs} runs (standalone only)`);
+const bundles = { customElements: 'standalone', lazy: 'lazy' };
+console.log(`\nmedians of ${runs} runs (${cfgName} config)`);
 for (const v of variants) {
   console.log(`${v.padEnd(8)} wall ${(median(res[v].wall) / 1000).toFixed(2)} s · build finished ${(median(res[v].built) / 1000).toFixed(2)} s`);
 }
-const s = res.patched?.stats;
-if (s) {
-  console.log(`\npatched: stencilrs compiled ${s.stencilrs} files in ${s.ms.toFixed(0)} ms, ${s.fallback} fell back to Stencil${s.fallbackFiles.length ? ': ' + s.fallbackFiles.join(', ') : ''}`);
+const stats = res.patched?.stats;
+if (stats) {
+  for (const [id, s] of Object.entries(stats)) {
+    if (!s.stencilrs && !s.fallback) continue;
+    console.log(`patched ${bundles[id]} bundle: stencilrs compiled ${s.stencilrs} files in ${s.ms.toFixed(0)} ms, ${s.fallback} fell back to Stencil${s.fallbackFiles.length ? ': ' + s.fallbackFiles.join(', ') : ''}`);
+  }
 }
-if (res.stock && res.patched) {
-  console.log(`speedup: wall ${(median(res.stock.wall) / median(res.patched.wall)).toFixed(2)}×, build finished ${(median(res.stock.built) / median(res.patched.built)).toFixed(2)}×`);
-}
+const speedup = (k) => (median(res.stock[k]) / median(res.patched[k])).toFixed(2);
+if (res.stock && res.patched) console.log(`speedup: wall ${speedup('wall')}×, build finished ${speedup('built')}×`);
+
+// The benchmarks.json entry (storybook/docs/data/benchmarks.json "stencilBuild" shape: `what`, `ms`
+// = stock's median "build finished", plus rows per compiler) for issue #10 to paste.
+const round = (x) => Math.round(x);
+const entry = {
+  what: cfgName === 'full'
+    ? `Full \`stencil build\` of the ui-kit (type-check, loader-bundle, standalone, www, docs-json), ${runs} runs, medians`
+    : `\`stencil build\` of the ui-kit's standalone target only, ${runs} runs, medians`,
+  ...(res.stock ? { ms: round(median(res.stock.built)) } : {}),
+  rows: variants.map((v) => ({
+    compiler: v === 'stock' ? 'Stencil v5' : 'Stencil v5 with stencilrs for the component transforms',
+    wallMedianMs: round(median(res[v].wall)),
+    buildFinishedMedianMs: round(median(res[v].built)),
+  })),
+  ...(res.stock && res.patched ? { speedup: `${speedup('built')}× build finished, ${speedup('wall')}× wall` } : {}),
+  ...(stats ? { stencilrsFiles: Object.fromEntries(Object.entries(stats).filter(([, s]) => s.stencilrs || s.fallback).map(([id, s]) => [bundles[id], { stencilrs: s.stencilrs, fallback: s.fallback }])) } : {}),
+};
 mkdirSync(bench, { recursive: true });
-writeFileSync(join(bench, 'stencil-build-results.json'), JSON.stringify({ runs, results: res }, null, 2) + '\n');
+writeFileSync(join(bench, 'stencil-build-results.json'), JSON.stringify({ runs, config: cfgName, entry, results: res }, null, 2) + '\n');
+if (json) console.log('\n' + JSON.stringify(entry, null, 2));
 if (!keep) for (const v of variants) rmSync(join(bench, v), { recursive: true, force: true });
 console.log(`\noutputs: ${join(bench, 'out')}/{stock,patched}  (check: node check-standalone.mjs)`);
