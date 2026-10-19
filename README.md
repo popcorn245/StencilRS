@@ -137,10 +137,11 @@ looks like.
 
 ## Release
 
-Set `version` in `package.json` and push a matching tag (`git tag v0.1.0 && git push origin
-v0.1.0`). [`release.yml`](.github/workflows/release.yml) builds every platform, installs each from
-its packed tarball on its own OS, then publishes the five `@popcorn245/stencilrs-<platform>`
-packages and `@popcorn245/stencilrs` with provenance (needs the `NPM_TOKEN` secret).
+Bump `version` in `package.json` and merge it to `main`. [`release.yml`](.github/workflows/release.yml)
+sees a version with no tag yet, builds every platform, installs each from its packed tarball on its
+own OS, publishes the five `@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs`
+with provenance, then creates the `v<version>` tag and GitHub Release. It needs the `NPM_TOKEN`
+secret. A run that fails partway can be re-run: what is already on npm is skipped.
 
 ## License
 
