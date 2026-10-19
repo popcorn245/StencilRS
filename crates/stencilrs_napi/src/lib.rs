@@ -56,3 +56,10 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
 pub fn normalize(code: String) -> napi::Result<String> {
     stencilrs_transform::normalize(&code).map_err(napi::Error::from_reason)
 }
+
+/// Stencil's `scopeCss`: CSS rewritten for a `scoped` component with scope id `scopeId`.
+#[napi]
+pub fn scope_css(css: String, scope_id: String, comment_original_selector: Option<bool>) -> napi::Result<String> {
+    stencilrs_transform::scope_css::scope_css(&css, &scope_id, comment_original_selector.unwrap_or(false))
+        .map_err(|e| napi::Error::from_reason(e.0))
+}

@@ -31,6 +31,7 @@ use crate::locals::{LocalType, Locals};
 use crate::meta::*;
 use crate::prop_type::{classify_annotation, classify_initializer};
 use crate::resolve::Resolver;
+use crate::scope_css::{scope_css, scope_id};
 
 const STENCIL_DECORATORS: [&str; 11] = [
     "Component", "Prop", "State", "Event", "Method", "Element", "Watch", "Listen",
@@ -279,7 +280,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     // Port of `componentDecoratorToStatic`: a component that fails validation produces no
     // metadata, but its members are still converted (and still report diagnostics).
     let component = component_options(ctx, cmp_call, &class_name, exports, locals);
-    report_unported(ctx, class, component.as_ref().map(|c| &c.3));
+    report_unported(ctx, class, component.as_ref().map(|c| (c.0.as_str(), &c.3)));
 
     let own = class_members(ctx, class, locals);
     let mut cmp = ComponentMeta {
@@ -634,14 +635,14 @@ fn jsdoc_before(source: &str, at: u32) -> String {
 
 /// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
-fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
-    let Some(o) = options else { return };
-    let checks: [(bool, &str); 4] = [
-        (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
+fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value)>) {
+    let Some((tag, o)) = component else { return };
+    let checks: [(bool, &str); 3] = [
         (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
         (
-            o.get("styles").is_some() && o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped"),
-            "inline `styles` on scoped components (needs Stencil's scopeCss)",
+            o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped")
+                && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
+            "inline `styles` that scopeCss rejects",
         ),
         (
             ["globalStyle", "globalStyleUrl"].iter().any(|k| o.get(*k).is_some_and(|v| !v.is_string())),
@@ -703,15 +704,40 @@ fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exp
         _ => Encapsulation::None,
     };
 
-    let mut style_urls = Vec::new();
-    if let Some(url) = opts.get("styleUrl").and_then(Value::as_str) {
-        style_urls.push(url.to_owned());
-    }
-    if let Some(Value::Array(urls)) = opts.get("styleUrls") {
-        style_urls.extend(urls.iter().filter_map(Value::as_str).map(str::to_owned));
-    }
+    let style_urls = style_url_modes(&opts).into_iter().flat_map(|(_, urls)| urls).collect();
 
     Some((tag.trim().to_owned(), encapsulation, style_urls, opts))
+}
+
+/// `styleToStatic`'s style URLs by mode, in order. An array (or `styleUrl`) is the default mode
+/// `$`, which comes last unless `styleUrls` is an object that already names it.
+pub(crate) fn style_url_modes(opts: &Value) -> Vec<(String, Vec<String>)> {
+    fn urls(v: &Value) -> Vec<String> {
+        match v {
+            Value::String(s) => vec![s.clone()],
+            Value::Array(a) => a.iter().filter_map(Value::as_str).map(str::to_owned).collect(),
+            _ => Vec::new(),
+        }
+    }
+    let mut modes: Vec<(String, Vec<String>)> = Vec::new();
+    let mut default = Vec::new();
+    match opts.get("styleUrls") {
+        Some(v @ Value::Array(_)) => default.extend(urls(v)),
+        Some(Value::Object(o)) => {
+            modes.extend(o.iter().map(|(k, v)| (k.clone(), urls(v))));
+            default.extend(o.get("$").map(urls).unwrap_or_default());
+        }
+        _ => {}
+    }
+    default.extend(opts.get("styleUrl").map(urls).unwrap_or_default());
+    if !default.is_empty() {
+        match modes.iter_mut().find(|(k, _)| k == "$") {
+            Some((_, u)) => *u = default,
+            None => modes.push(("$".into(), default)),
+        }
+    }
+    modes.retain(|(_, u)| !u.is_empty());
+    modes
 }
 
 /// Port of `validateComponentTag` (`src/utils/validation.ts:88-132`).
