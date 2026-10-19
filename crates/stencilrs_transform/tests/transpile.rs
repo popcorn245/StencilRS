@@ -78,3 +78,20 @@ fn plain_component_has_no_runtime_proxy() {
     assert!(code.contains(r#"static get is() {"#), "{code}");
     assert!(!code.contains("__registerHost"), "{code}");
 }
+
+#[test]
+fn global_styles_stay_as_static_getters() {
+    let code = run(
+        r#"
+        import { Component, h } from '@stencil/core';
+        @Component({ tag: 'cmp-a', globalStyleUrl: './g.css', globalStyle: '  a { color: red }  ' })
+        export class CmpA {
+            render() { return <div>x</div>; }
+        }
+        "#,
+        Jsx::Classic,
+    );
+    assert!(code.contains("static get originalGlobalStyleUrl()") && code.contains(r#""./g.css""#), "{code}");
+    assert!(code.contains("static get globalStyle()") && code.contains(r#""a { color: red }""#), "{code}");
+    assert!(!code.contains("static get style()"), "{code}");
+}
