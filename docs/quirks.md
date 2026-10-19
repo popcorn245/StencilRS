@@ -102,8 +102,8 @@ The scoped-CSS shim (`src/utils/shadow-css.ts`), reproduced by `scope_css.rs` an
   the first `:host`, because the regex consumes the character before each match.
 - Original selectors are put back with string `replace`, so `$'`, `` $` `` and `$&` in them
   are expanded: with the runtime's `commentOriginalSelector`, `a[href$='x']` splices the rest
-  of the stylesheet into the output. The compiler passes `false`, which only hits this
-  through `::slotted` selectors.
+  of the stylesheet into the output. The compiler passes `false`, and still hits this through
+  `@supports selector(...)` conditions and `::slotted` selectors.
 - A literal `__ph-N__` in a selector becomes `undefined`, as does a literal `%BLOCK%` in a
   rule's body (or Stencil throws, inside a scopable at-rule).
 
