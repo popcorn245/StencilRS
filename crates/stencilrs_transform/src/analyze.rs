@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 
 use oxc::ast::ast::{
-    Argument, ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
+    Argument, Comment, ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
     ExportDefaultDeclarationKind, Expression, Function, ImportDeclarationSpecifier,
     ImportOrExportKind, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectPropertyKind,
     Program, PropertyDefinition,
@@ -24,6 +24,7 @@ use serde_json::Value;
 
 use crate::default_value::initializer_text;
 use crate::inherit;
+use crate::jsdoc;
 use crate::eval::{Arg, eval_argument, property_key_name};
 use crate::locals::{LocalType, Locals};
 use crate::meta::*;
@@ -58,6 +59,7 @@ struct Ctx<'s> {
     source: &'s str,
     /// This module's path, for following imports (ancestors, build-accurate types).
     file: &'s str,
+    comments: &'s [Comment],
     resolver: Option<&'s Resolver>,
     /// Stencil decorator name → local name (`import { Prop as P }` maps `Prop` → `P`).
     aliases: HashMap<&'static str, String>,
@@ -71,6 +73,16 @@ impl Ctx<'_> {
 
     fn text(&self, span: Span) -> &str {
         span.source_text(self.source)
+    }
+
+    /// The JSDoc of a symbol, from where each of its declarations starts.
+    fn docs(&self, locals: &Locals, starts: &[u32]) -> Docs {
+        // A `{@link x}` prints differently when the checker finds `x`: a name in this file, or
+        // (with the imports followed) one it imports.
+        let resolves = |name: &str| {
+            locals.types.contains_key(name) || locals.values.contains_key(name) || (locals.resolving() && locals.imports.contains_key(name))
+        };
+        jsdoc::docs(&starts.iter().map(|&at| jsdoc::leading(self.source, self.comments, at, &resolves)).collect::<Vec<_>>())
     }
 
     fn push(&mut self, level: Level, message: impl Into<String>, span: Span) {
@@ -95,7 +107,7 @@ impl Ctx<'_> {
 
 /// `resolver` switches on build-accurate mode (see `resolve.rs`); `file` is this module's path.
 pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolver>, file: &str) -> Analysis {
-    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
+    let mut ctx = Ctx { source, file, comments: &program.comments, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
     let locals = Locals::collect(program).with_resolver(resolver, file);
     let exports = value_exports(program, &locals);
     let mut components = Vec::new();
@@ -116,7 +128,9 @@ pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolv
         };
         if let Some(class) = class {
             top_level.push(class.span);
-            if let Some(cmp) = analyze_class(&mut ctx, class, &locals, &exports, program) {
+            // TypeScript's node starts at its first decorator or modifier.
+            let doc_start = class.decorators.iter().map(|d| d.span.start).chain([class.span.start, stmt.span().start]).min().unwrap_or_default();
+            if let Some(cmp) = analyze_class(&mut ctx, class, doc_start, &locals, &exports, program) {
                 components.push(cmp);
             }
         }
@@ -245,7 +259,7 @@ fn opt_bool(v: &Option<Value>, key: &str) -> Option<bool> {
     v.as_ref()?.get(key)?.as_bool()
 }
 
-fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(String, Span)], program: &Program) -> Option<ComponentMeta> {
+fn analyze_class(ctx: &mut Ctx, class: &Class, doc_start: u32, locals: &Locals, exports: &[(String, Span)], program: &Program) -> Option<ComponentMeta> {
     let component_name = ctx.name("Component");
     let cmp_call = *decorator_calls(&class.decorators, &component_name).first()?;
     let class_name = class.id.as_ref().map(|id| id.name.to_string()).unwrap_or_default();
@@ -274,6 +288,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         serializers: own.serializers,
         deserializers: own.deserializers,
         options: Value::Null,
+        docs: ctx.docs(locals, &[doc_start]),
         does_extend: false,
         base_class_files: Vec::new(),
     };
@@ -330,7 +345,7 @@ pub(crate) struct Members {
 /// The members of a class in another module (or this one): an ancestor. Its diagnostics are
 /// dropped, as Stencil drops those of the throwaway program it reads an ancestor with.
 pub(crate) fn foreign_class_members(class: &Class, program: &Program, source: &str, file: &str, resolver: Option<&Resolver>) -> Members {
-    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
+    let mut ctx = Ctx { source, file, comments: &program.comments, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
     let locals = Locals::collect(program).with_resolver(resolver, file);
     class_members(&mut ctx, class, &locals)
 }
@@ -355,12 +370,12 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         ["Prop", "State", "Event", "Method", "Element", "Watch", "Listen"].map(|d| ctx.name(d));
 
     // Setters are needed to mark `@Prop() get x()` as having a setter.
-    let setters: Vec<String> = class
+    let setters: Vec<(String, u32)> = class
         .body
         .body
         .iter()
         .filter_map(|el| match el {
-            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Set => property_key_name(&m.key),
+            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Set => Some((property_key_name(&m.key)?, m.span.start)),
             _ => None,
         })
         .collect();
@@ -407,7 +422,8 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                     };
                     let default_value = p.value.as_ref().map(|v| initializer_text(v, locals, ctx.source));
                     let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
-                    let prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span(), translated);
+                    let mut prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span(), translated);
+                    prop.docs = ctx.docs(locals, &[p.span.start]);
                     cmp.properties.push(prop);
                 }
 
@@ -424,6 +440,8 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         bubbles: opt_bool(&opts, "bubbles").unwrap_or(true),
                         cancelable: opt_bool(&opts, "cancelable").unwrap_or(true),
                         composed: opt_bool(&opts, "composed").unwrap_or(true),
+                        docs: ctx.docs(locals, &[p.span.start]),
+                        complex_type: ComplexType::default(),
                     });
                 }
 
@@ -442,9 +460,14 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         check_private_prop(ctx, m.accessibility, m.span);
                         let opts = ctx.arg(call, 0);
                         let (prop_type, original, default_value) = getter_prop(ctx, m, &fields, locals);
-                        let has_setter = setters.contains(&name);
+                        let setter = setters.iter().find(|(n, _)| *n == name);
+                        let has_setter = setter.is_some();
                         let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
-                        let prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span(), translated);
+                        let mut prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span(), translated);
+                        let mut starts = vec![m.span.start];
+                        starts.extend(setter.map(|(_, at)| *at));
+                        starts.sort_unstable();
+                        prop.docs = ctx.docs(locals, &starts);
                         cmp.properties.push(prop);
                     }
                 }
@@ -452,7 +475,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                 if m.kind == MethodDefinitionKind::Method {
                     if !decorator_calls(&m.decorators, &method_n).is_empty() {
                         check_method(ctx, m, &name, locals.resolving());
-                        cmp.methods.push(MethodMeta { name: name.clone() });
+                        cmp.methods.push(MethodMeta { name: name.clone(), docs: ctx.docs(locals, &[m.span.start]), complex_type: MethodComplexType::default() });
                     }
                     for call in decorator_calls(&m.decorators, &watch_n) {
                         if let Some(Value::String(prop_name)) = ctx.arg(call, 0) {
@@ -733,7 +756,9 @@ fn build_prop(
         reflect,
         attribute,
         default_value,
+        complex_type: ComplexType { original: complex_type_original.clone(), ..ComplexType::default() },
         complex_type_original,
+        docs: Docs::default(),
     }
 }
 

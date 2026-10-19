@@ -17,6 +17,7 @@ const verbose = args.includes('--verbose');
 const suite = args.find((a) => !a.startsWith('--'));
 
 const nul = (v) => (v === undefined ? null : v);
+const docs = (d) => ({ text: d?.text ?? '', tags: (d?.tags ?? []).map((t) => ({ name: t.name, text: t.text })) });
 
 const fromStencil = (c) => ({
   tagName: c.tagName,
@@ -35,10 +36,11 @@ const fromStencil = (c) => ({
     attribute: nul(p.attribute),
     defaultValue: nul(p.defaultValue),
     complexTypeOriginal: p.complexType?.original,
+    docs: docs(p.docs),
   })),
   states: c.states.map((s) => ({ name: s.name })),
-  events: c.events.map((e) => ({ name: e.name, method: e.method, bubbles: e.bubbles, cancelable: e.cancelable, composed: e.composed })),
-  methods: c.methods.map((m) => ({ name: m.name })),
+  events: c.events.map((e) => ({ name: e.name, method: e.method, bubbles: e.bubbles, cancelable: e.cancelable, composed: e.composed, docs: docs(e.docs) })),
+  methods: c.methods.map((m) => ({ name: m.name, docs: docs(m.docs) })),
   listeners: c.listeners.map((l) => ({ name: l.name, method: l.method, target: nul(l.target), capture: l.capture, passive: l.passive })),
   watchers: c.watchers.map((w) => ({ propName: w.propName, methodName: w.methodName })),
   elementRef: nul(c.elementRef),
@@ -47,11 +49,15 @@ const fromStencil = (c) => ({
   formAssociated: !!c.formAssociated,
   serializers: (c.serializers ?? []).map((w) => ({ propName: w.propName, methodName: w.methodName })),
   deserializers: (c.deserializers ?? []).map((w) => ({ propName: w.propName, methodName: w.methodName })),
+  docs: docs(c.docs),
 });
 
+const noType = ({ complexType, ...rest }) => rest;
 const fromStencilrs = (c) => ({
   ...c,
-  properties: c.properties.map((p) => ({ ...p, attribute: nul(p.attribute), defaultValue: nul(p.defaultValue) })),
+  properties: c.properties.map((p) => ({ ...noType(p), attribute: nul(p.attribute), defaultValue: nul(p.defaultValue) })),
+  events: c.events.map(noType),
+  methods: c.methods.map(noType),
   listeners: c.listeners.map((l) => ({ ...l, target: nul(l.target) })),
   elementRef: nul(c.elementRef),
   attachInternalsMemberName: nul(c.attachInternalsMemberName),

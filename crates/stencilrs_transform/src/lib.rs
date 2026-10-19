@@ -10,6 +10,7 @@ mod default_value;
 mod edits;
 mod eval;
 mod inherit;
+mod jsdoc;
 mod locals;
 pub mod meta;
 mod prop_type;

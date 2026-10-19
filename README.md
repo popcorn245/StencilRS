@@ -64,7 +64,7 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 185 fixtures | **185/185**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 186 fixtures | **186/186**: metadata, diagnostics and code |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
 | Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |

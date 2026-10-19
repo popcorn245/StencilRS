@@ -24,5 +24,28 @@ test('analyze returns Stencil-shaped metadata through the native binding', () =>
     reflect: true,
     attribute: 'first-name',
     complexTypeOriginal: 'string',
+    complexType: { original: 'string', resolved: '', references: {} },
+    docs: { text: '', tags: [] },
+  });
+});
+
+test('analyze carries the JSDoc text and tags of the component and its members', () => {
+  const { components } = analyze(
+    `import { Component, Prop } from '@stencil/core';
+     /** A card. */
+     @Component({ tag: 'cmp-a' })
+     export class CmpA {
+       /**
+        * The name.
+        * @since 1.0
+        */
+       @Prop() name: string;
+     }`,
+    'cmp-a.tsx',
+  );
+  assert.deepEqual(components[0].docs, { text: 'A card.', tags: [] });
+  assert.deepEqual(components[0].properties[0].docs, {
+    text: 'The name.',
+    tags: [{ name: 'since', text: '1.0' }],
   });
 });
