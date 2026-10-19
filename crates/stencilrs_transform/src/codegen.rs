@@ -433,17 +433,21 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             }
         }
 
-        // `defineCustomElement`, `addModuleMetadataProxies`
-        if lazy {
-        } else if !customelement {
-            add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
-            define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
-        } else if plain {
-            define_calls.push(format!("customElements.define(__stencil_transformTag({}), {name});", json(&cmp.tag_name)));
-        } else {
-            add(&mut runtime_apis, "transformTag as __stencil_transformTag");
-            add(&mut runtime_apis, "defineCustomElement as __stencil_defineCustomElement");
-            define_calls.push(format!("__stencil_defineCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+        // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
+        match opts.component_export {
+            ComponentExport::Lazy => {}
+            ComponentExport::Module => {
+                add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
+                define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+            }
+            ComponentExport::CustomElement if plain => {
+                define_calls.push(format!("customElements.define(__stencil_transformTag({}), {name});", json(&cmp.tag_name)));
+            }
+            ComponentExport::CustomElement => {
+                add(&mut runtime_apis, "transformTag as __stencil_transformTag");
+                add(&mut runtime_apis, "defineCustomElement as __stencil_defineCustomElement");
+                define_calls.push(format!("__stencil_defineCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+            }
         }
     }
 
