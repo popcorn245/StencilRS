@@ -1,0 +1,335 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-location",
+      "componentClassName": "PopLocation",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "string",
+          "attribute": "value",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Initial location label (optional — the shared store wins if present)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "variant",
+          "type": "string",
+          "attribute": "variant",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'button'",
+          "complexType": {
+            "original": "'button' | 'inline'",
+            "resolved": "\"button\" | \"inline\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Trigger style:\n - 'button' (default): a filled button (pin + label + caret).\n - 'inline': plain inline text (label + subtle ▾ chevron), styled to sit\n   INSIDE another element (e.g. a card's location label). The popover still\n   anchors to + drops down from this trigger, but right-aligns so it never\n   overflows off the right edge on mobile."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "default",
+          "type": "string",
+          "attribute": "default",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Soft fallback location (label or ZIP) shown when NOTHING is in the shared\n`hub:location` store. It is display-only: it is NOT written to localStorage\nand does NOT emit `popLocationChange`, so the user can still actively set a\nreal location (which then wins + persists) and we never clobber a server zip.\nPrecedence for what's shown: stored `hub:location` → `default` → \"Set Location\"."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "photonUrl",
+          "type": "string",
+          "attribute": "photon-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'https://photon.komoot.io/api/'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Photon autocomplete endpoint (overridable; OSM-data, keyless, CORS-ok)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "nominatimUrl",
+          "type": "string",
+          "attribute": "nominatim-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'https://nominatim.openstreetmap.org/reverse'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Nominatim reverse-geocode endpoint (for GPS coords → place)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "ipUrl",
+          "type": "string",
+          "attribute": "ip-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'https://ipapi.co/json/'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "IP-geolocation fallback endpoint."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "current"
+        },
+        {
+          "name": "open"
+        },
+        {
+          "name": "query"
+        },
+        {
+          "name": "suggestions"
+        },
+        {
+          "name": "resolving"
+        },
+        {
+          "name": "searching"
+        },
+        {
+          "name": "error"
+        },
+        {
+          "name": "highlight"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popLocationChange",
+          "method": "popLocationChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired on every set with the resolved place; consumers may persist server-side."
+          },
+          "complexType": {
+            "original": "ResolvedLocation",
+            "resolved": "ResolvedLocation",
+            "references": {
+              "ResolvedLocation": {
+                "location": "global",
+                "id": "global::ResolvedLocation"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-LOCATION",
+          "styleStr": null,
+          "styleIdentifier": "PopLocationStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/location/location.css",
+              "relativePath": "location.css",
+              "originalComponentPath": "location.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "type",
+        "aria-expanded",
+        "aria-label",
+        "onClick",
+        "name",
+        "aria-hidden",
+        "role",
+        "ref",
+        "inputMode",
+        "placeholder",
+        "autocomplete",
+        "aria-activedescendant",
+        "value",
+        "onInput",
+        "onKeyDown",
+        "title",
+        "disabled",
+        "id",
+        "aria-selected",
+        "onMouseEnter"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "span",
+        "ion-icon",
+        "input",
+        "ul",
+        "li"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-location — a self-contained, reusable location picker.\n\nCollapsed: ONE button showing the current place (pin + label) or \"Set\nLocation\". Tap → a popover with a single \"ZIP or town\" input that has a\nfind-my-location icon on its right edge, OpenStreetMap (Photon) autocomplete\nsuggestions under it, and a GPS→reverse-geocode (Nominatim) / IP (ipapi)\nfallback on the icon. Selecting a suggestion or geolocating resolves\n{ label, zip, lat, lng }, persists it to the SHARED `hub:location`\nlocalStorage key (so every instance stays in sync), and emits\n`popLocationChange`."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "./location-store"
+    }
+  ]
+}

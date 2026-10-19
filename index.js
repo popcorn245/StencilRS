@@ -45,12 +45,19 @@ export const buildId = (() => {
 export const analyze = (source, fileName, options = {}) => native.analyze(source, fileName, options.resolveImports ?? false);
 
 /**
- * Generate the customelement module (what Stencil's transpileSync emits for @stencil/unplugin).
+ * Generate a component module, what Stencil's transpileSync emits.
+ *
+ * `componentExport` picks the output, as in Stencil: `'customelement'` (default, what
+ * @stencil/unplugin uses), `'module'` (the class stays exported and is registered with
+ * `proxyCustomElement`) or `'lazy'` (the lazy-loading `loader-bundle` shape; Stencil spells it
+ * `null`, which is accepted too). Decorated base classes and mixins are not ported for `'lazy'`:
+ * those files report an error starting with `stencilrs:`, the signal to compile with Stencil.
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean }} options
- * @returns {{ code: string, components: object[], diagnostics: object[] }}
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
-export const transpile = (source, options) => native.transpile(source, options);
+export const transpile = (source, options) =>
+  native.transpile(source, options.componentExport === null ? { ...options, componentExport: 'lazy' } : options);
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
 export const normalize = (code) => native.normalize(code);

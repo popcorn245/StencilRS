@@ -1,6 +1,6 @@
 // Compare stencilrs against the Stencil v5 snapshots.
 //
-//   node compare.mjs [suite] [--verbose]
+//   node compare.mjs [suite] [--mode customelement|module|lazy] [--verbose]
 //
 // Metadata: Stencil's `data` is projected to the fields stencilrs produces today (FIELDS
 // below grows as the port does) and compared exactly. Diagnostics: compared as sorted
@@ -10,11 +10,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { normalize, transpile } from '../index.js';
-import { listFixtures, snapshotsDir, stencilrsOptions } from './lib.mjs';
+import { fallbacks, listFixtures, modeArg, snapshotsDirFor, stencilrsOptions } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const verbose = args.includes('--verbose');
-const suite = args.find((a) => !a.startsWith('--'));
+const mode = modeArg(args);
+const snapshotsDir = snapshotsDirFor(mode);
+const suite = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--mode');
 
 const nul = (v) => (v === undefined ? null : v);
 
@@ -101,9 +103,16 @@ for (const { id, file } of listFixtures(suite)) {
   const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
   const snap = JSON.parse(readFileSync(`${base}.json`, 'utf8'));
   const code = readFileSync(file, 'utf8');
-  const ours = transpile(code, stencilrsOptions(code, id));
+  const ours = transpile(code, stencilrsOptions(code, id, mode));
 
   const meta = diff(snap.data.map(fromStencil), ours.components.map(fromStencilrs), 'components');
+  if (fallbacks[mode]?.has(id)) {
+    // Not ported in this mode: stencilrs must say so (an error starting `stencilrs:`) and emit nothing.
+    const said = ours.diagnostics.some((d) => d.level === 'error' && d.message.startsWith('stencilrs:'));
+    const diags = said && ours.code === '' ? [] : ['expected a `stencilrs:` fallback error and no code'];
+    results.push({ id, meta, diags, code: [], compiles: false, fallback: true });
+    continue;
+  }
   const diags = diff(
     diagList(snap.diagnostics, (d) => d.messageText),
     diagList(ours.diagnostics, (d) => d.message),
@@ -126,9 +135,11 @@ const n = results.length;
 const metaOk = results.filter((r) => !r.meta.length).length;
 const diagOk = results.filter((r) => !r.diags.length).length;
 const compiling = results.filter((r) => r.compiles);
+const fellBack = results.filter((r) => r.fallback && !r.meta.length && !r.diags.length).length;
 const codeOk = compiling.filter((r) => !r.code.length).length;
 console.log(
   `\n${n - failing.length}/${n} fixtures identical · metadata ${metaOk}/${n} · diagnostics ${diagOk}/${n}` +
-    ` · code ${codeOk}/${compiling.length} (fixtures that compile)`,
+    ` · code ${codeOk}/${compiling.length} (fixtures that compile)` +
+    (fellBack ? ` · ${fellBack} fall back to Stencil (listed in lib.mjs)` : ''),
 );
 process.exitCode = failing.length ? 1 : 0;

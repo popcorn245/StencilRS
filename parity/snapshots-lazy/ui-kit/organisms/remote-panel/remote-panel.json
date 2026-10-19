@@ -1,0 +1,747 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-remote-panel",
+      "componentClassName": "PopRemotePanel",
+      "elementRef": "hostEl",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "activities",
+          "type": "string",
+          "attribute": "activities",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "RemoteActivity[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "RemoteActivity": {
+                "location": "global",
+                "id": "global::RemoteActivity"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Harmony activities (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "current",
+          "type": "any",
+          "attribute": "current",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ level: 0, known: false }",
+          "complexType": {
+            "original": "RemoteCurrent | string",
+            "resolved": "any",
+            "references": {
+              "RemoteCurrent": {
+                "location": "global",
+                "id": "global::RemoteCurrent"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Current AV snapshot: active activity + tracked receiver level (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rooms",
+          "type": "string",
+          "attribute": "rooms",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "RemoteRoom[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "RemoteRoom": {
+                "location": "global",
+                "id": "global::RemoteRoom"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The /av rooms for the switcher (object OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedArea",
+          "type": "string",
+          "attribute": "selected-area",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | null",
+            "resolved": "null | string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The selected room's area, or null → default to the primary (Harmony) room."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "nowPlaying",
+          "type": "string",
+          "attribute": "now-playing",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The active primary-room \"what's playing\" app name (e.g. \"Netflix\"), or ''."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "harmonyEnabled",
+          "type": "boolean",
+          "attribute": "harmony-enabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the Harmony sections (activities · volume · switcher · status) show."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "transportEnabled",
+          "type": "boolean",
+          "attribute": "transport-enabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the Shield transport sections (playback · apps) show."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "muted",
+          "type": "boolean",
+          "attribute": "muted",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Mute state — optimistic local toggle owned by the host (no server truth)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "playState",
+          "type": "any",
+          "attribute": "play-state",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'unknown'",
+          "complexType": {
+            "original": "PlayState",
+            "resolved": "PlayState",
+            "references": {
+              "PlayState": {
+                "location": "global",
+                "id": "global::PlayState"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Derived transport state driving the emphasized play/pause button."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Loading (initial Harmony fetch) — a subtle inline spinner."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "attribute": "error",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A blocking error message (e.g. \"Could not reach the Remote.\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "degraded",
+          "type": "boolean",
+          "attribute": "degraded",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Harmony degraded (hub unreachable, default controls shown)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "statusNote",
+          "type": "string",
+          "attribute": "status-note",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "A transient status note (\"Starting Watch TV…\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "pendingActivityId",
+          "type": "string",
+          "attribute": "pending-activity-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The activity id the host optimistically marked pending (spinner). '' = none."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "calibrateMin",
+          "type": "any",
+          "attribute": "calibrate-min",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "REMOTE_CALIBRATE_MIN",
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Receiver volume bounds — mirror the host's REMOTE_CALIBRATE_*."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "calibrateMax",
+          "type": "any",
+          "attribute": "calibrate-max",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "REMOTE_CALIBRATE_MAX",
+          "complexType": {
+            "original": "any",
+            "resolved": "any",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "appAssetBase",
+          "type": "string",
+          "attribute": "app-asset-base",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'/assets/apps'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Base path the app-logo SVGs are served from (host copies them into www/)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "roomMenuOpen"
+        },
+        {
+          "name": "calibrateOpen"
+        },
+        {
+          "name": "calibrateValue"
+        },
+        {
+          "name": "dragLevel"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popActivityStart",
+          "method": "popActivityStart",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when an activity card is tapped (activity id)."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popPowerOff",
+          "method": "popPowerOff",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when the red power button is tapped."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popVolumeStep",
+          "method": "popVolumeStep",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires for EACH IR volume step (slider crossing a unit, or a ± press/hold)."
+          },
+          "complexType": {
+            "original": "{ dir: 'up' | 'down' }",
+            "resolved": "{ dir: \"up\" | \"down\"; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popMuteToggle",
+          "method": "popMuteToggle",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when the mute button is tapped (host toggles optimistic `muted`)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCalibrate",
+          "method": "popCalibrate",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires with the clamped level when the calibrate form is submitted."
+          },
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popTransport",
+          "method": "popTransport",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when a transport button is tapped (the action; center = 'toggle')."
+          },
+          "complexType": {
+            "original": "TransportAction",
+            "resolved": "TransportAction",
+            "references": {
+              "TransportAction": {
+                "location": "global",
+                "id": "global::TransportAction"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAppLaunch",
+          "method": "popAppLaunch",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when a streaming-app tile is tapped (app key)."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRoomChange",
+          "method": "popRoomChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when a different room is picked (area)."
+          },
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRetry",
+          "method": "popRetry",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when the error-banner Retry is tapped."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fires when the panel requests to close (host chrome usually owns ×; provided\nfor standalone use)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-REMOTE-PANEL",
+          "styleStr": null,
+          "styleIdentifier": "PopRemotePanelStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/remote-panel/remote-panel.css",
+              "relativePath": "remote-panel.css",
+              "originalComponentPath": "remote-panel.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "onKeyDown",
+        "type",
+        "aria-haspopup",
+        "aria-expanded",
+        "aria-label",
+        "title",
+        "ref",
+        "onClick",
+        "name",
+        "role",
+        "key",
+        "aria-checked",
+        "aria-hidden",
+        "aria-pressed",
+        "style",
+        "aria-valuemin",
+        "aria-valuemax",
+        "aria-valuenow",
+        "onPointerDown",
+        "onPointerMove",
+        "onPointerUp",
+        "onPointerCancel",
+        "onPointerLeave",
+        "spec",
+        "value",
+        "onValueChange",
+        "disabled",
+        "aria-disabled"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "span",
+        "pop-icon",
+        "small",
+        "pop-field",
+        "ul",
+        "li",
+        "section"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-remote-panel — the unified AV control surface (organism).\n\nPresentation-only sibling of the Bucket Hub's `hub-remote`: it renders the\nroom switcher, the Harmony status line + activities + volume, and the Shield\ntransport row + app launcher, and emits `pop*` events. The HOST owns the\nnetwork (hubApi), optimistic mutations and the PanelShell chrome — this\ncomponent just displays the data it is handed.\n\nTwo capability sets, each SECTION gated by its own flag:\n  • Harmony (`harmonyEnabled`) — activities · volume · room switcher · status.\n  • Shield transport (`transportEnabled`) — playback row · app launcher.\n\nObject props (`activities`, `current`, `rooms`) accept an object (property\nbinding) OR a JSON string (attribute — how Storybook / plain HTML pass them),\nparsed defensively.\n\n── Three approved UX behaviors (honest to the IR-relative hardware) ──────────\n  1. Volume SLIDER + hold-to-repeat. The Harmony receiver is IR-RELATIVE (step\n     up/down only — no absolute-set API), so the slider is a visual level that\n     emits `popVolumeStep` as it crosses each unit; the ± buttons press-and-hold\n     to repeat (~90ms after a 300ms delay). `current.level` drives the readout.\n  2. Mute reflects the `muted` prop (amber treatment + dimmed level). There is\n     NO server truth for mute (the toggle returns no state) — the host owns\n     `muted` as an optimistic local toggle.\n  3. Play/pause reflects `playState` (derived by the host from the primary\n     room's device state); the center transport button is emphasized + shows\n     ▶ vs ⏸. 'unknown' → the host keeps the toggle optimistic."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "./remote-panel.helpers"
+    }
+  ]
+}

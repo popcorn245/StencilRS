@@ -16,7 +16,7 @@ npm test               # cargo test, then node --test
 ## The rule: same output as Stencil v5
 
 stencilrs is judged against real Stencil v5, not against itself. [`parity/`](parity/README.md)
-holds golden output from Stencil v5 for 185 fixtures; a change is right when they still match:
+holds golden output from Stencil v5 for 188 fixtures; a change is right when they still match:
 
 ```sh
 npm --prefix parity ci

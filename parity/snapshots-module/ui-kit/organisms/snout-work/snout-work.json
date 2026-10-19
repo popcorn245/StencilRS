@@ -1,0 +1,721 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-snout-work",
+      "componentClassName": "PopSnoutWork",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "tasks",
+          "type": "string",
+          "attribute": "tasks",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "SnoutTask[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "SnoutTask": {
+                "location": "global",
+                "id": "global::SnoutTask"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whole-team synced tasks (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "projects",
+          "type": "string",
+          "attribute": "projects",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "SnoutProject[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "SnoutProject": {
+                "location": "global",
+                "id": "global::SnoutProject"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Projects for group headers + Open ↗ links (object array OR JSON string)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "commands",
+          "type": "string",
+          "attribute": "commands",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "SnoutCommand[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "SnoutCommand": {
+                "location": "global",
+                "id": "global::SnoutCommand"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Recent/active bridgeCommands, for live milestones (object array OR JSON)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "counts",
+          "type": "any",
+          "attribute": "counts",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ action: 0, me: 0, team: 0 }",
+          "complexType": {
+            "original": "SnoutCounts | string",
+            "resolved": "any",
+            "references": {
+              "SnoutCounts": {
+                "location": "global",
+                "id": "global::SnoutCounts"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Server-computed tab counts (object OR JSON string). Used as a fallback; the\nlive bubbles recompute per-tab MATCH counts from the loaded tasks."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tab",
+          "type": "any",
+          "attribute": "tab",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'action'",
+          "complexType": {
+            "original": "SnoutTab",
+            "resolved": "SnoutTab",
+            "references": {
+              "SnoutTab": {
+                "location": "global",
+                "id": "global::SnoutTab"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Active tab. Mutable so it also switches standalone (Storybook); the host\nstill binds + persists it and listens to popTabChange."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "teamName",
+          "type": "string",
+          "attribute": "team-name",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Sonic'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The Linear team name (third tab label — \"Sonic\" for the Snout/ENG team)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "autoAccept",
+          "type": "boolean",
+          "attribute": "auto-accept",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Global Auto-accept toggle state."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "First-load (no data) → a subtle loader instead of empty."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "error",
+          "type": "string",
+          "attribute": "error",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "An error line shown in place of the tree (with a Retry → popRefresh)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showHeader",
+          "type": "boolean",
+          "attribute": "show-header",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Render the panel's own header (logo + title + sync + Auto-accept). Hosts\nwith their own chrome (the hub's PanelShell) set this false — only the\ntabs + search + list show."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "syncedAt",
+          "type": "number",
+          "attribute": "synced-at",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "number",
+            "resolved": "number | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Last successful sync time (epoch ms) for the header's pop-sync-status."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "collapsed"
+        },
+        {
+          "name": "expanded"
+        },
+        {
+          "name": "cmdExpanded"
+        },
+        {
+          "name": "statusMenuFor"
+        },
+        {
+          "name": "query"
+        },
+        {
+          "name": "filters"
+        },
+        {
+          "name": "inboxInputs"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popTabChange",
+          "method": "popTabChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ tab: SnoutTab }",
+            "resolved": "{ tab: SnoutTab; }",
+            "references": {
+              "SnoutTab": {
+                "location": "global",
+                "id": "global::SnoutTab"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popAutoAccept",
+          "method": "popAutoAccept",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ value: boolean }",
+            "resolved": "{ value: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popRefresh",
+          "method": "popRefresh",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popOpenIssue",
+          "method": "popOpenIssue",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ url: string }",
+            "resolved": "{ url: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popOpenProject",
+          "method": "popOpenProject",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ url: string }",
+            "resolved": "{ url: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popVerb",
+          "method": "popVerb",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ taskId: string; issueId?: string; type: string; setStatus?: string }",
+            "resolved": "{ taskId: string; issueId?: string | undefined; type: string; setStatus?: string | undefined; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popStatusChange",
+          "method": "popStatusChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ taskId: string; status: string }",
+            "resolved": "{ taskId: string; status: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popMergePr",
+          "method": "popMergePr",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ taskId: string; prNumber: number; url: string }",
+            "resolved": "{ taskId: string; prNumber: number; url: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popPostUpdate",
+          "method": "popPostUpdate",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ projectId: string }",
+            "resolved": "{ projectId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCommandAnswerPrompt",
+          "method": "popCommandAnswerPrompt",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ commandId: string; promptId: string; decision: 'allow' | 'deny'; updatedInput?: Record<string, unknown>; message?: string }",
+            "resolved": "{ commandId: string; promptId: string; decision: \"allow\" | \"deny\"; updatedInput?: any; message?: string | undefined; }",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popCommandSendInbox",
+          "method": "popCommandSendInbox",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ commandId: string; text: string }",
+            "resolved": "{ commandId: string; text: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popCommandStop",
+          "method": "popCommandStop",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ commandId: string }",
+            "resolved": "{ commandId: string; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "tasks",
+          "methodName": "onTasksChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-SNOUT-WORK",
+          "styleStr": null,
+          "styleIdentifier": "PopSnoutWorkStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/snout-work/snout-work.css",
+              "relativePath": "snout-work.css",
+              "originalComponentPath": "snout-work.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "title",
+        "label",
+        "checked",
+        "onPopChange",
+        "innerHTML",
+        "bare",
+        "syncedAt",
+        "loading",
+        "onPopRefresh",
+        "compact",
+        "tabs",
+        "activeTab",
+        "onPopTabChange",
+        "value",
+        "placeholder",
+        "filters",
+        "views",
+        "show-clear",
+        "onSearchChange",
+        "onFilterChange",
+        "onClearFilters",
+        "slot",
+        "type",
+        "aria-pressed",
+        "onClick",
+        "name",
+        "aria-hidden",
+        "key",
+        "aria-expanded",
+        "aria-label",
+        "circle",
+        "h",
+        "w",
+        "radius",
+        "aria-haspopup",
+        "role",
+        "aria-selected",
+        "href",
+        "target",
+        "rel",
+        "disabled",
+        "onInput",
+        "onKeyDown",
+        "state",
+        "errorLabel",
+        "retryLabel",
+        "onPopRetry",
+        "aria-busy"
+      ],
+      "htmlTagNames": [
+        "label",
+        "span",
+        "pop-switch",
+        "div",
+        "pop-sync-status",
+        "pop-tab-bar",
+        "pop-list-filter-sort",
+        "button",
+        "pop-icon",
+        "pop-skeleton",
+        "a",
+        "pre",
+        "input",
+        "ul",
+        "li",
+        "p",
+        "section",
+        "pop-async-view"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-snout-work — the **Snout Tasks** team command center (organism), rebuilt\nto mirror the hub INVENTORY panel: the shared design-system primitives\n(`pop-tab-bar`, `pop-list-filter-sort`, `pop-async-view`, `pop-sync-status`)\nover a fat pure-logic split (`snout-work.helpers` + `snout-search`), NOT a\nbespoke reinterpretation. Every surface — the compact tab bar with live\nper-tab count bubbles, the working search box + funnel filters, the\nProject-grouped collapsible sections of dense issue rows, the interactive\nstatus chip, the empty/loading/error states — match the other hub tiles. The\nONLY deviation is the accent: the panel root scopes `--accent` to\n`--color-snout-orange`, so the primary/verb buttons + active-tab underline +\nfocus rings read Snout-orange while everything else inherits the standard look.\n\nPRESENTATION-ONLY over the Bucket Bridge's synced Linear work: the host\n(`hub-snout`) owns all IO (fetch `/api/hub/snout`, SWR cache, every write) and\nthis component renders what it is handed + emits `pop*` events. Search + the\nfunnel filters are LOCAL client-side state over the loaded snapshot (like\ninventory's query) so they function with no round-trip; `tab` is a mutable\nprop (host persists it, but it also switches standalone in Storybook).\n\nObject/array props accept a value (property binding) OR a JSON string\n(attribute — how Storybook / plain HTML pass them), parsed defensively.\n\nEvents (all composed + bubbling):\n  popTabChange {tab}                       — Action / Me / Team tab\n  popAutoAccept {value}                    — global Auto-accept toggle\n  popRefresh / popClose                    — header refresh / close\n  popOpenIssue {url} / popOpenProject {url}— open in Linear\n  popVerb {taskId,issueId,type,setStatus?} — a contextual verb button tapped\n  popStatusChange {taskId,status}          — status change\n  popMergePr {taskId,prNumber,url}         — inline PR Merge\n  popPostUpdate {projectId}                — per-project Post Update\n\nThe expanded row detail is READ-ONLY (the Linear summary) — the breadcrumb\neditor (objectives/notes/tdd/summary + comment write-back) was dropped."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "./snout-work.helpers"
+    },
+    {
+      "path": "./snout-search"
+    }
+  ]
+}

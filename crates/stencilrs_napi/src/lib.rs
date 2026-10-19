@@ -1,7 +1,7 @@
 //! Node binding for stencilrs.
 
 use napi_derive::napi;
-use stencilrs_transform::{DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
+use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
 
 fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
     serde_json::to_value(value).map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -31,16 +31,31 @@ pub struct JsTranspileOptions {
     /// Compile the file as base classes for components to extend (Stencil's
     /// `transformAsBaseClass`). Default false.
     pub transform_as_base_class: Option<bool>,
+    /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
+    /// `"module"` or `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil).
+    pub component_export: Option<String>,
 }
 
-/// Generate the `customelement` module: `{ code, map, components, diagnostics, baseClasses }`.
+/// Generate a component module, `customelement` unless `componentExport` says otherwise:
+/// `{ code, map, components, diagnostics, baseClasses }`.
 #[napi]
 pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<serde_json::Value> {
     let jsx = match options.jsx.as_deref() {
         Some("classic") => Jsx::Classic,
         _ => Jsx::Automatic { import_source: options.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
     };
+    let component_export = match options.component_export.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        None | Some("customelement") => ComponentExport::CustomElement,
+        Some("module") => ComponentExport::Module,
+        Some("lazy") => ComponentExport::Lazy,
+        Some(other) => {
+            return Err(napi::Error::from_reason(format!(
+                "unknown componentExport {other:?}: expected \"customelement\", \"module\" or \"lazy\""
+            )));
+        }
+    };
     let opts = TranspileOptions {
+        component_export,
         file: options.file,
         core_import_path: options.core_import_path.unwrap_or_else(|| DEFAULT_CORE_IMPORT_PATH.into()),
         jsx,

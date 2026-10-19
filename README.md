@@ -64,7 +64,7 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 185 fixtures | **185/185**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 188 fixtures, in each of three outputs | **188/188**: metadata, diagnostics and code |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
 | Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
@@ -82,10 +82,11 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
 - constants as decorator arguments and computed member names
   ([#4](https://github.com/popcorn245/StencilRS/issues/4)); these are errors today, not fallbacks
-- the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
-  [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
+- the SSR output ([#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
-  output Vite, Vitest and Storybook use
+  output Vite, Vitest and Storybook use, plus the `module` and lazy-loading (`loader-bundle`)
+  shapes with `componentExport`. Lazy output of decorated base classes and mixins falls back to
+  Stencil
 - JSDoc text and full `complexType` for docs output
   ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 
