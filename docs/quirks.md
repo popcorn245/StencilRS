@@ -91,6 +91,58 @@ stencilrs keeps them, as the full build does, own and inherited. This is the one
 departs from `transpileSync`-with-`resolveImport`, on purpose: the features suite compiles
 without the callback, where Stencil keeps them too.
 
+## 11. A numeric `@Watch()` argument watches `"[object Object]"`
+
+`getDecoratorParameter` takes an identifier's value from its literal type, numbers included:
+`@Watch(SEVEN)` with `const SEVEN = 7` gives the number `7` as the prop name. The watchers
+static getter then builds its key with `convertValueToLiteral`, which turns the number into a
+`NumericLiteral` node, and the node lands in the object as a key: `"[object Object]"`. Every
+numeric watch shares that key and none of them fires. A negative number fails earlier, in
+TypeScript's `createNumericLiteral` assertion ("Negative numbers should be created in
+combination with createPrefixUnaryExpression"), and `@Listen(NUM)` throws
+`listenText.split is not a function`; either way the whole file fails to compile. Fixtures:
+`parity/fixtures/features/watch-const-number.tsx`, `diag-watch-negative.tsx`,
+`diag-listen-number.tsx`.
+
+## 12. An unresolvable computed `@Prop()` name is used as written
+
+`tsPropDeclName` takes a computed name's value from its literal type; when there isn't one
+(`let KEY = 'value'`, an import in single-file mode), it falls back to `getText()` of the name,
+brackets included. `@Prop() [KEY]: string` becomes a prop named `[KEY]` with the attribute
+`[-k-e-y]`. Fixture: `parity/fixtures/features/computed-names-raw.tsx`.
+
+## 13. Computed names on other members are never resolved
+
+Only `@Prop`, `@State`, `@AttachInternals` and the serializers resolve a computed name.
+`@Method`, `@Watch` and `@Listen` handlers keep the text (`@Method() async [NAME]()` registers a
+method called `[NAME]`, and fails the single-file return check of quirk 1). `@Event() [EV]`
+and `@Element() [EL]` produce invalid JavaScript: `this.[EV] = __stencil_createEvent(...)` in
+the constructor. stencilrs keeps the names as Stencil does but doesn't copy that output.
+Fixture: `parity/fixtures/features/diag-computed-method.tsx`.
+
+## 14. A thrown error replaces every other diagnostic
+
+When a decorator argument can't be read (`invalid decorator argument: X`, the `resolveVar()`
+errors), Stencil throws instead of reporting. `transpileSync` catches it and returns the
+source unchanged, no components, and that one message with its stack trace: every diagnostic
+gathered before it is lost.
+
+## 15. `scopeCss` quirks
+
+The scoped-CSS shim (`src/utils/shadow-css.ts`), reproduced by `scope_css.rs` and checked by
+`parity/scope-css.mjs`:
+
+- The `@supports selector(...)` guard in `createSupportsRuleRe` never fires (the selector must
+  follow the `@` directly, so the lookahead never sees `supports`); the placeholders in
+  `insertPolyfillHostInCssText` are what protect those conditions. `:host:host` scopes only
+  the first `:host`, because the regex consumes the character before each match.
+- Original selectors are put back with string `replace`, so `$'`, `` $` `` and `$&` in them
+  are expanded: with the runtime's `commentOriginalSelector`, `a[href$='x']` splices the rest
+  of the stylesheet into the output. The compiler passes `false`, and still hits this through
+  `@supports selector(...)` conditions and `::slotted` selectors.
+- A literal `__ph-N__` in a selector becomes `undefined`, as does a literal `%BLOCK%` in a
+  rule's body (or Stencil throws, inside a scopable at-rule).
+
 ## Single-file type inference
 
 Not bugs, but worth knowing when reading parity results: in single-file mode every imported

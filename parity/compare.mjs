@@ -42,7 +42,8 @@ const fromStencil = (c) => ({
   events: c.events.map((e) => ({ name: e.name, method: e.method, bubbles: e.bubbles, cancelable: e.cancelable, composed: e.composed, docs: docs(e.docs) })),
   methods: c.methods.map((m) => ({ name: m.name, docs: docs(m.docs) })),
   listeners: c.listeners.map((l) => ({ name: l.name, method: l.method, target: nul(l.target), capture: l.capture, passive: l.passive })),
-  watchers: c.watchers.map((w) => ({ propName: w.propName, methodName: w.methodName })),
+  // A numeric @Watch() argument stays a TypeScript AST node: Stencil prints it as "[object Object]".
+  watchers: c.watchers.map((w) => ({ propName: String(w.propName), methodName: w.methodName })),
   elementRef: nul(c.elementRef),
   attachInternalsMemberName: nul(c.attachInternalsMemberName),
   attachInternalsCustomStates: (c.attachInternalsCustomStates ?? []).map((s) => ({ name: s.name, initialValue: s.initialValue, docs: s.docs })),

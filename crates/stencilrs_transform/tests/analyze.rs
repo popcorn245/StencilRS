@@ -3,7 +3,7 @@
 //! and from the single-file `transpileSync` behaviour for unresolved types.
 
 use stencilrs_transform::meta::{Encapsulation, Level, PropType};
-use stencilrs_transform::{analyze, to_dash_case};
+use stencilrs_transform::{analyze, analyze_with, to_dash_case};
 
 fn prop_type(decl: &str, prelude: &str) -> PropType {
     let src = format!(
@@ -185,4 +185,51 @@ fn dash_case_matches_stencil() {
     assert_eq!(to_dash_case("val2"), "val-2");
     assert_eq!(to_dash_case("URL"), "u-r-l");
     assert_eq!(to_dash_case("value"), "value");
+}
+
+/// A full `stencil build` resolves constants imported from other modules (single-file
+/// `transpileSync` can't, see `parity/fixtures/features/diag-const-imported.tsx`).
+#[test]
+fn imported_constants_resolve_in_build_accurate_mode() {
+    let dir = std::env::temp_dir().join(format!("stencilrs-consts-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("keys.ts"),
+        "export const VALUE = 'value';\n\
+         export const KEYS = { open: 'open' } as const;\n\
+         export enum Events { Focus = 'focusin' }\n\
+         export class Names { static readonly Label = 'label'; }\n\
+         const LOOSE = { size: 'size' };\n\
+         export { LOOSE };\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("index.ts"), "export * from './keys';\n").unwrap();
+    let src = "import { Component, Listen, Prop, Watch, resolveVar } from '@stencil/core';\n\
+               import { VALUE, KEYS, Events, Names, LOOSE } from './index';\n\
+               @Component({ tag: 'cmp-a' })\n\
+               export class CmpA {\n\
+                 @Prop() value: string; @Prop() open: boolean; @Prop() label: string;\n\
+                 @Prop() [VALUE + 'X']: string;\n\
+                 @Watch(VALUE) @Watch(KEYS.open) @Watch(Names.Label) a() {}\n\
+                 @Watch(resolveVar(KEYS.open)) b() {}\n\
+                 @Listen(Events.Focus) c() {}\n\
+               }";
+    let file = dir.join("cmp-a.tsx").to_string_lossy().replace('\\', "/");
+
+    let built = analyze_with(src, &file, true);
+    assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
+    let c = &built.components[0];
+    let watched: Vec<_> = c.watchers.iter().map(|w| w.prop_name.as_str()).collect();
+    assert_eq!(watched, ["value", "open", "label", "open"]);
+    assert_eq!(c.listeners[0].name, "focusin");
+
+    // A widened member is still invalid, as in the full build.
+    let widened = analyze_with(&src.replace("@Watch(Names.Label)", "@Watch(LOOSE.size)"), &file, true);
+    assert_eq!(widened.diagnostics[0].message, "Error: invalid decorator argument: LOOSE.size");
+    assert!(widened.components.is_empty());
+
+    // Single-file mode can't see the import.
+    let single = analyze(src, &file);
+    assert_eq!(single.diagnostics[0].message, "Error: invalid decorator argument: VALUE");
+    std::fs::remove_dir_all(&dir).ok();
 }

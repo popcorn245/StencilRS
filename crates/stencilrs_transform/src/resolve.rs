@@ -13,6 +13,7 @@ use oxc::ast::ast::{Declaration, Expression, ObjectPropertyKind, Program, Statem
 use oxc::parser::Parser;
 use oxc::span::{GetSpan, SourceType};
 
+use crate::consts::{Lit, literal, name_literal, static_member_literals};
 use crate::default_value::initializer_text;
 use crate::eval::property_key_name;
 use crate::locals::{LocalValue, Locals};
@@ -37,6 +38,8 @@ pub struct ValueSummary {
     pub members: HashMap<String, ValueSummary>,
     /// Return type of a function: (classification, written type).
     pub returns: Option<(PropType, String)>,
+    /// The value of its literal type, if it has one: decorator arguments read it.
+    pub literal: Option<Lit>,
 }
 
 #[derive(Default, Debug)]
@@ -124,6 +127,8 @@ pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueS
             if as_const && is_literal(&p.value) {
                 member.original = p.value.span().source_text(source).to_owned();
             }
+            // In a mutable object a member widens, unless it says `as const` itself.
+            member.literal = if as_const || matches!(&p.value, Expression::TSAsExpression(_)) { literal(&p.value, locals) } else { None };
             members.insert(key, member);
         }
     }
@@ -133,6 +138,7 @@ pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueS
         default_text: Some(initializer_text(init, locals, source)),
         members,
         returns: None,
+        literal: None,
     }
 }
 
@@ -161,7 +167,12 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, source: &str, ou
         out.types.insert(exported.to_owned(), t);
     }
     match locals.values.get(name) {
-        Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+        Some(LocalValue::Const(init)) => {
+            let mut summary = value_summary(init, locals, source);
+            summary.literal = name_literal(name, locals);
+            out.values.insert(exported.to_owned(), summary);
+        }
+        Some(LocalValue::Let(Some(init))) => {
             out.values.insert(exported.to_owned(), value_summary(init, locals, source));
         }
         Some(LocalValue::Function(returns)) => {
@@ -169,7 +180,12 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, source: &str, ou
             out.values.insert(exported.to_owned(), ValueSummary { returns, ..ValueSummary::default() });
         }
         Some(_) => {
-            out.values.insert(exported.to_owned(), ValueSummary { prop_type: Some(PropType::Unknown), ..ValueSummary::default() });
+            // Enums and classes: their members' literal values (enum members, `static readonly` fields).
+            let members = static_member_literals(name, locals)
+                .into_iter()
+                .map(|(k, literal)| (k, ValueSummary { literal, ..ValueSummary::default() }))
+                .collect();
+            out.values.insert(exported.to_owned(), ValueSummary { prop_type: Some(PropType::Unknown), members, ..ValueSummary::default() });
         }
         None => {
             if let Some(v) = locals.imported_value(name) {
