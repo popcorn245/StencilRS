@@ -1,0 +1,342 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-form-dialog",
+      "componentClassName": "FormDialog",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": true,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "dialogTitle",
+          "type": "string",
+          "attribute": "dialog-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "attribute": "description",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "submitLabel",
+          "type": "string",
+          "attribute": "submit-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Save'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "cancelLabel",
+          "type": "string",
+          "attribute": "cancel-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Cancel'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "hideFooter",
+          "type": "boolean",
+          "attribute": "hide-footer",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Hide the footer (Cancel/Submit) entirely — for dialogs that are dismissed by\nthe × / backdrop and have no explicit confirm action (e.g. the Weather panel)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "headerBar",
+          "type": "boolean",
+          "attribute": "header-bar",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Opt into a slotted HEADER BAR: a single flex row laid out as\n  `[ slot=\"header\" …flex-grows… ] [ slot=\"header-actions\" ] [ × close ]`\nso the consumer supplies its OWN title + right-side control (a list-select, a\nroom switcher, …) INLINE with the close/action buttons — nothing overlaps the\n×, and the consumer's control can't be clipped in the top-right corner.\n\nWhen false (the default) the dialog keeps its legacy chrome: the absolutely\npositioned round × plus an optional `dialogTitle` heading. Existing consumers\nthat pass `dialogTitle` are unaffected — this is purely additive."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [
+        {
+          "name": "keydown",
+          "method": "handleKeydown",
+          "capture": false,
+          "passive": false,
+          "target": "window"
+        }
+      ],
+      "events": [
+        {
+          "name": "popSubmit",
+          "method": "popSubmit",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "popClose",
+          "method": "popClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "open",
+          "methodName": "handleOpenChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FORM-DIALOG",
+          "styleStr": null,
+          "styleIdentifier": "PopFormDialogStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/form-dialog/form-dialog.css",
+              "relativePath": "form-dialog.css",
+              "originalComponentPath": "form-dialog.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": true,
+      "hasListenerTarget": true,
+      "hasListenerTargetWindow": true,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "onClick",
+        "style",
+        "name",
+        "type",
+        "aria-label",
+        "onSubmit"
+      ],
+      "htmlTagNames": [
+        "div",
+        "slot",
+        "button",
+        "h2",
+        "p",
+        "form"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "header",
+        "header-actions",
+        "",
+        "footer"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

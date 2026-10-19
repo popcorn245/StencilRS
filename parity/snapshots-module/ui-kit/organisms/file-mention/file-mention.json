@@ -1,0 +1,318 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-file-mention",
+      "componentClassName": "PopFileMention",
+      "elementRef": "el",
+      "encapsulation": "shadow",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": "open",
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "files",
+          "type": "string",
+          "attribute": "files",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string | string[]",
+            "resolved": "string | {}",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON-encoded string array OR raw string array of file paths"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "value",
+          "type": "string",
+          "attribute": "value",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Type @ to mention a file…'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "attribute": "disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "dropdownOpen"
+        },
+        {
+          "name": "query"
+        },
+        {
+          "name": "filteredPaths"
+        },
+        {
+          "name": "focusedIndex"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "mentionChange",
+          "method": "mentionChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "FileMentionChangeDetail",
+            "resolved": "FileMentionChangeDetail",
+            "references": {
+              "FileMentionChangeDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/file-mention/file-mention.tsx",
+                "id": "ui-kit/organisms/file-mention/file-mention.tsx::FileMentionChangeDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "mentionSubmit",
+          "method": "mentionSubmit",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "FileMentionSubmitDetail",
+            "resolved": "FileMentionSubmitDetail",
+            "references": {
+              "FileMentionSubmitDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/file-mention/file-mention.tsx",
+                "id": "ui-kit/organisms/file-mention/file-mention.tsx::FileMentionSubmitDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "filesReferenced",
+          "method": "filesReferenced",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [
+              {
+                "name": "",
+                "text": "-mentioned files in the current value changes"
+              }
+            ],
+            "text": "Fires whenever the set of"
+          },
+          "complexType": {
+            "original": "string[]",
+            "resolved": "string[]",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "files",
+          "methodName": "filesChanged"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FILE-MENTION",
+          "styleStr": null,
+          "styleIdentifier": "PopFileMentionStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/file-mention/file-mention.css",
+              "relativePath": "file-mention.css",
+              "originalComponentPath": "file-mention.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "part",
+        "value",
+        "placeholder",
+        "disabled",
+        "onInput",
+        "onKeyDown",
+        "ref",
+        "rows",
+        "role",
+        "aria-selected",
+        "title",
+        "onMouseDown",
+        "onMouseEnter"
+      ],
+      "htmlTagNames": [
+        "div",
+        "textarea",
+        "span"
+      ],
+      "htmlParts": [
+        "textarea"
+      ],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

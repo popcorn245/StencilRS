@@ -1,0 +1,334 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-note-list",
+      "componentClassName": "PopNoteList",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "notes",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "NoteCardData[]",
+            "resolved": "NoteCardData[]",
+            "references": {
+              "NoteCardData": {
+                "location": "global",
+                "id": "global::NoteCardData"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The notes to render (set as a property)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "snippets",
+          "type": "any",
+          "attribute": "snippets",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{}",
+          "complexType": {
+            "original": "Record<string, string>",
+            "resolved": "string",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "noteId → snippet/excerpt text (set as a property)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "view",
+          "type": "string",
+          "attribute": "view",
+          "reflect": true,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'list'",
+          "complexType": {
+            "original": "'list' | 'grid'",
+            "resolved": "\"grid\" | \"list\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "List (rows) or grid (gallery tiles)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sectioned",
+          "type": "boolean",
+          "attribute": "sectioned",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Split into Pinned + Recent sections (Home default) vs one flat list."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show the loading skeleton instead of content."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedId",
+          "type": "string",
+          "attribute": "selected-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "id of the currently-selected note (highlights its card)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "_notes"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "noteSelect",
+          "method": "noteSelect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted from the cards so the page can open / pin a note."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "notePin",
+          "method": "notePin",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ id: string; pinned: boolean }",
+            "resolved": "{ id: string; pinned: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "notes",
+          "methodName": "notesChanged"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-NOTE-LIST",
+          "styleStr": null,
+          "styleIdentifier": "PopNoteListStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/note-list/note-list.css",
+              "relativePath": "note-list.css",
+              "originalComponentPath": "note-list.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "note",
+        "snippet",
+        "layout",
+        "selected",
+        "class",
+        "variant",
+        "grid",
+        "count",
+        "label",
+        "name",
+        "iconName",
+        "heading",
+        "message",
+        "size",
+        "role"
+      ],
+      "htmlTagNames": [
+        "pop-note-card",
+        "section",
+        "h2",
+        "span",
+        "div",
+        "pop-loading-state",
+        "slot",
+        "pop-empty-state"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "empty"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-note-list — renders a collection of pop-note-card.\n\nTwo view modes (both ship in v1): a single-column **list** and a gallery\n**grid**. The default Home layout splits notes into a **Pinned** section and a\n**Recent** section (`sectioned`); other surfaces (Trash, a filtered facet)\nrender one flat section by setting `sectioned={false}`.\n\n`notes` is set as a DOM **property**. Snippets are supplied via a `snippets`\nmap (noteId → excerpt) because note bodies live in separate `/blocks` docs.\n\nStates: `loading` (skeleton), empty (slotted `empty` content or a default\npop-empty-state), and populated.\n\nSee planned/notes-app-digital-brain/components.mdx §pop-note-list."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

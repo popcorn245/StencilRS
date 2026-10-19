@@ -1,0 +1,240 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-card-showtimes",
+      "componentClassName": "PopThreadCardShowtimes",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "payload",
+          "type": "any",
+          "attribute": "payload",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "CardPayload",
+            "resolved": "CardPayload",
+            "references": {
+              "CardPayload": {
+                "location": "global",
+                "id": "global::CardPayload"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The validated card payload object (set as a PROPERTY, not an attribute)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "liveness",
+          "type": "any",
+          "attribute": "liveness",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'live'",
+          "complexType": {
+            "original": "CardLiveness",
+            "resolved": "CardLiveness",
+            "references": {
+              "CardLiveness": {
+                "location": "global",
+                "id": "global::CardLiveness"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "`frozen` = historical snapshot (a past date): muted chrome."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Viewer / public render — no action buttons at all."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardAction",
+          "method": "popCardAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user taps one of the card's actions."
+          },
+          "complexType": {
+            "original": "CardActionDetail",
+            "resolved": "CardActionDetail",
+            "references": {
+              "CardActionDetail": {
+                "location": "global",
+                "id": "global::CardActionDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-CARD-SHOWTIMES",
+          "styleStr": null,
+          "styleIdentifier": "PopThreadCardShowtimesStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/thread-card-showtimes/thread-card-showtimes.css",
+              "relativePath": "thread-card-showtimes.css",
+              "originalComponentPath": "thread-card-showtimes.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "type",
+        "title",
+        "aria-label",
+        "onClick",
+        "name",
+        "aria-hidden"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "ion-icon",
+        "span",
+        "p",
+        "ul",
+        "li",
+        "h4"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-card-showtimes — the Thread Model v2 renderer for a movie\nshowtimes card.\n\nTHEATER-FIRST by design: the theater name is the heading of each group and\nthe showtimes hang under it as chips. This card NEVER renders ticket links.\n\nBoth actions (\"Open theater\", \"Add to calendar\") are navigational, so they\nsurvive a freeze; `readonly` still removes them.\n\n  payload.data = { date: string; movie: string;\n                   theaters: { name, times[], address? }[]; timezone?: string }"
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "../thread-card/thread-card-types"
+    }
+  ]
+}

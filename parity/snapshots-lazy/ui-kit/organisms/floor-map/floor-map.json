@@ -1,0 +1,468 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-floor-map",
+      "componentClassName": "PopFloorMap",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "plan",
+          "type": "string",
+          "attribute": "plan",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'null'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON-stringified FloorPlan (single source of truth, owned by the host)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activeFloorId",
+          "type": "string",
+          "attribute": "active-floor-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Active floor id. Uncontrolled after first render (internal state mirrors)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "attribute": "mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'tasks'",
+          "complexType": {
+            "original": "MapMode",
+            "resolved": "\"devices\" | \"edit\" | \"tasks\"",
+            "references": {
+              "MapMode": {
+                "location": "global",
+                "id": "global::MapMode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Interaction mode."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "taskCounts",
+          "type": "string",
+          "attribute": "task-counts",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Per-room task counts as JSON `{ [roomId]: number }` — Tasks-mode shading."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "roomEmojis",
+          "type": "string",
+          "attribute": "room-emojis",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'{}'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Per-room emoji hints as JSON `{ [roomId]: string[] }`. Up to 3 are rendered\nin each read-only room zone (sourced from the spaces that resolve there)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "editable",
+          "type": "boolean",
+          "attribute": "editable",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Editable surface. When false (the default — the task view), the map is\nREAD-ONLY: floor switcher + shaded room zones with counts + emojis only.\nThe mode toggle, device pins, edges, edit tooling and HA import are all\nhidden. When true (Settings), the full editor (Tasks/Devices/Edit) renders."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selectedRoomId",
+          "type": "string",
+          "attribute": "selected-room-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Highlighted room id (the active room filter), for Tasks mode."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "dropTargetRoomId",
+          "type": "string",
+          "attribute": "drop-target-room-id",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Room id currently hovered as a drag drop-target (set imperatively by\npop-task-list while a task is dragged over the map). Drives a distinct\nhighlight so the user sees where the drop will land. Tasks mode only."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "floorId"
+        },
+        {
+          "name": "localMode"
+        },
+        {
+          "name": "draggingPinId"
+        },
+        {
+          "name": "editPinId"
+        },
+        {
+          "name": "linkFromId"
+        },
+        {
+          "name": "draggingRoomId"
+        },
+        {
+          "name": "roomBoxes"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "roomSelect",
+          "method": "roomSelect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A room hit-zone was clicked."
+          },
+          "complexType": {
+            "original": "{ roomId: string }",
+            "resolved": "{ roomId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "deviceSelect",
+          "method": "deviceSelect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A device pin was clicked (Devices mode)."
+          },
+          "complexType": {
+            "original": "{ deviceId: string }",
+            "resolved": "{ deviceId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "planChange",
+          "method": "planChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The plan was edited (Edit mode) — host persists. Detail = the new plan."
+          },
+          "complexType": {
+            "original": "FloorPlan",
+            "resolved": "FloorPlan",
+            "references": {
+              "FloorPlan": {
+                "location": "global",
+                "id": "global::FloorPlan"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "haImportRequested",
+          "method": "haImportRequested",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Host should fetch Home Assistant entities to add as pins (Edit mode)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "mode",
+          "methodName": "onModeProp"
+        },
+        {
+          "propName": "editable",
+          "methodName": "onEditableProp"
+        },
+        {
+          "propName": "plan",
+          "methodName": "onPlanProp"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-FLOOR-MAP",
+          "styleStr": null,
+          "styleIdentifier": "PopFloorMapStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/floor-map/floor-map.css",
+              "relativePath": "floor-map.css",
+              "originalComponentPath": "floor-map.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": true,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": false,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "onClick",
+        "onPointerDown",
+        "x",
+        "y",
+        "width",
+        "height",
+        "rx",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "data-room-drop",
+        "text-anchor",
+        "dominant-baseline",
+        "transform",
+        "r",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "type",
+        "value",
+        "onInput",
+        "onChange",
+        "selected",
+        "placeholder",
+        "aria-label",
+        "onKeyDown",
+        "innerHTML",
+        "viewBox",
+        "preserveAspectRatio",
+        "ref",
+        "onPointerMove",
+        "onPointerUp",
+        "onDblClick"
+      ],
+      "htmlTagNames": [
+        "g",
+        "rect",
+        "text",
+        "circle",
+        "style",
+        "line",
+        "div",
+        "strong",
+        "button",
+        "label",
+        "span",
+        "input",
+        "select",
+        "option",
+        "svg"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "popcorn245",
+            "text": "/floorplan-core). It\nrenders the active floor's SVG with:\n- a floor switcher (one chip per floor),\n- a mode toggle (Tasks / Devices / Edit),\n- clickable room hit-zones (matched to each Room.svgGroupId), OR — when a\nroom carries `geometry` (House Layout) — a room card DRAWN directly by\nthe overlay (label + dimension caption, no base SVG needed) that is\ndraggable in Edit mode (planChange carries the moved geometry),\n- device pins + connectivity edges (Devices/Edit modes),\n- drag-to-position + pin CRUD + uplink/edge editing (Edit mode).\n\nThe component never talks to Firestore itself — the host passes the plan in\nvia `plan` (JSON) and listens to `planChange` to persist edits. Room clicks\nemit `roomSelect`; pin clicks emit `deviceSelect`."
+          }
+        ],
+        "text": "pop-floor-map — the interactive, multi-floor SVG house map.\n\nPresentational shell over a FloorPlan (from"
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "@popcorn245/floorplan-core"
+    }
+  ]
+}

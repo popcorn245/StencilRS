@@ -21,12 +21,12 @@ npm run compare    # stencilrs vs the snapshots (--verbose for every diff)
 
 | Compared | How | Result |
 |---|---|---|
-| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 207 / 207 |
-| Diagnostics | level + full message text, order-independent | 207 / 207 |
-| Code | both reprinted by oxc's printer (comments dropped), exact | 183 / 183 that compile |
+| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 216 / 216 |
+| Diagnostics | level + full message text, order-independent | 216 / 216 |
+| Code | both reprinted by oxc's printer (comments dropped), exact | 187 / 187 that compile (module: same; lazy: 182 / 182, the other 5 fall back to Stencil) |
 | Source maps | valid, and scored: mapped identifiers that land on the same identifier | 97.7% (Stencil 94.3%) |
 
-The corpus is 56 feature fixtures (one Stencil feature each, including error cases), 15
+The corpus is 59 feature fixtures (one Stencil feature each, including error cases), 15
 inheritance and mixin fixtures, and the 136 ui-kit components. The inheritance fixtures compile
 the way `@stencil/unplugin` runs them: components with a `resolveImport` callback, and the
 files under `inheritance/bases/` with `transformAsBaseClass`.

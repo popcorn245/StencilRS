@@ -1,0 +1,354 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-search",
+      "componentClassName": "PopThreadSearch",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "results",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "SearchResult[]",
+            "resolved": "SearchResult[]",
+            "references": {
+              "SearchResult": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::SearchResult"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Hits, in the order the host wants them shown. Never re-sorted here."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "facets",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ cardType: {}, sourcePanel: {} }",
+          "complexType": {
+            "original": "SearchFacets",
+            "resolved": "SearchFacets",
+            "references": {
+              "SearchFacets": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::SearchFacets"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Counts per facet value."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activeFacets",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{ cardType: [], sourcePanel: [] }",
+          "complexType": {
+            "original": "ActiveFacets",
+            "resolved": "ActiveFacets",
+            "references": {
+              "ActiveFacets": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::ActiveFacets"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Facet values currently applied."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "available",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "AvailableFacets",
+            "resolved": "AvailableFacets | undefined",
+            "references": {
+              "AvailableFacets": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::AvailableFacets"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional full facet vocabulary + labels, so zero-count values still render."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "query",
+          "type": "string",
+          "attribute": "query",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The query the host last ran."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "loading",
+          "type": "boolean",
+          "attribute": "loading",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "draft"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popSearch",
+          "method": "popSearch",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted on submit and on every facet toggle."
+          },
+          "complexType": {
+            "original": "SearchDetail",
+            "resolved": "SearchDetail",
+            "references": {
+              "SearchDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::SearchDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popResultOpen",
+          "method": "popResultOpen",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when a hit is opened — deep-link to `itemId` inside `threadId`."
+          },
+          "complexType": {
+            "original": "ResultOpenDetail",
+            "resolved": "ResultOpenDetail",
+            "references": {
+              "ResultOpenDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/thread-search/thread-search.tsx",
+                "id": "ui-kit/organisms/thread-search/thread-search.tsx::ResultOpenDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "query",
+          "methodName": "onQueryChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-SEARCH",
+          "styleStr": null,
+          "styleIdentifier": "PopThreadSearchStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/thread-search/thread-search.css",
+              "relativePath": "thread-search.css",
+              "originalComponentPath": "thread-search.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "type",
+        "aria-pressed",
+        "onClick",
+        "onSubmit",
+        "placeholder",
+        "aria-label",
+        "value",
+        "onInput",
+        "title",
+        "name",
+        "aria-hidden",
+        "role",
+        "aria-live"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "button",
+        "form",
+        "input",
+        "ion-icon",
+        "p",
+        "section",
+        "h3"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-search — search across threads with card-type / source-panel facets.\n\nProps in, events out: the component never queries anything. It owns exactly\none piece of state — the text currently in the input — and everything else\n(results, counts, which facets are on) is fed down by the host. Toggling a\nfacet emits `popSearch` immediately with the NEW facet set; the host decides\nwhat that means."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: resolveVar() expects exactly one argument."
+    }
+  ],
+  "imports": []
+}

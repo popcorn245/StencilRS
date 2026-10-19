@@ -22,6 +22,7 @@ use oxc::span::{GetSpan, Span};
 use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
+use crate::codegen::normalize_path;
 use crate::default_value::initializer_text;
 use crate::inherit;
 use crate::consts::{Lit, computed_key_text, literal, order_like_object_keys};
@@ -287,6 +288,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         component_class_name: class_name,
         encapsulation: Encapsulation::None,
         style_urls: Vec::new(),
+        global_styles: Vec::new(),
         properties: own.properties,
         states: own.states,
         events: own.events,
@@ -308,6 +310,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         cmp.tag_name = tag.clone();
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
+        cmp.global_styles = global_styles(options, ctx.file);
     }
 
     // `mergeExtendedClassMetaWithResolveImport`: inherited members, parents first; the class's
@@ -634,21 +637,40 @@ fn jsdoc_before(source: &str, at: u32) -> String {
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
 fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value)>) {
     let Some((tag, o)) = component else { return };
-    let checks: [(bool, &str); 4] = [
-        (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
+    let checks: [(bool, &str); 3] = [
         (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
         (
             o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped")
                 && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
             "inline `styles` that scopeCss rejects",
         ),
-        (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
+        (
+            ["globalStyle", "globalStyleUrl"].iter().any(|k| o.get(*k).is_some_and(|v| !v.is_string())),
+            "non-string `globalStyle` / `globalStyleUrl`",
+        ),
     ];
     for (hit, what) in checks {
         if hit {
             ctx.push(Level::Error, format!("stencilrs: {what} are not ported yet."), class.span);
         }
     }
+}
+
+/// Port of `parseGlobalStyles` (static-to-meta/styles.ts): trimmed inline CSS, then the
+/// stylesheet path resolved against the component's directory.
+fn global_styles(options: &Value, file: &str) -> Vec<GlobalStyle> {
+    let mut styles = Vec::new();
+    if let Some(css) = options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        styles.push(GlobalStyle { absolute_path: None, style_str: Some(css.to_owned()) });
+    }
+    if let Some(url) = options.get("globalStyleUrl").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        let file = file.replace('\\', "/");
+        let absolute = url.starts_with('/') || url.as_bytes().get(1) == Some(&b':');
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let path = if absolute || dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") };
+        styles.push(GlobalStyle { absolute_path: Some(normalize_path(&path)), style_str: None });
+    }
+    styles
 }
 
 /// `@Component` options, or `None` when Stencil would reject the component.
@@ -682,15 +704,40 @@ fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exp
         _ => Encapsulation::None,
     };
 
-    let mut style_urls = Vec::new();
-    if let Some(url) = opts.get("styleUrl").and_then(Value::as_str) {
-        style_urls.push(url.to_owned());
-    }
-    if let Some(Value::Array(urls)) = opts.get("styleUrls") {
-        style_urls.extend(urls.iter().filter_map(Value::as_str).map(str::to_owned));
-    }
+    let style_urls = style_url_modes(&opts).into_iter().flat_map(|(_, urls)| urls).collect();
 
     Some((tag.trim().to_owned(), encapsulation, style_urls, opts))
+}
+
+/// `styleToStatic`'s style URLs by mode, in order. An array (or `styleUrl`) is the default mode
+/// `$`, which comes last unless `styleUrls` is an object that already names it.
+pub(crate) fn style_url_modes(opts: &Value) -> Vec<(String, Vec<String>)> {
+    fn urls(v: &Value) -> Vec<String> {
+        match v {
+            Value::String(s) => vec![s.clone()],
+            Value::Array(a) => a.iter().filter_map(Value::as_str).map(str::to_owned).collect(),
+            _ => Vec::new(),
+        }
+    }
+    let mut modes: Vec<(String, Vec<String>)> = Vec::new();
+    let mut default = Vec::new();
+    match opts.get("styleUrls") {
+        Some(v @ Value::Array(_)) => default.extend(urls(v)),
+        Some(Value::Object(o)) => {
+            modes.extend(o.iter().map(|(k, v)| (k.clone(), urls(v))));
+            default.extend(o.get("$").map(urls).unwrap_or_default());
+        }
+        _ => {}
+    }
+    default.extend(opts.get("styleUrl").map(urls).unwrap_or_default());
+    if !default.is_empty() {
+        match modes.iter_mut().find(|(k, _)| k == "$") {
+            Some((_, u)) => *u = default,
+            None => modes.push(("$".into(), default)),
+        }
+    }
+    modes.retain(|(_, u)| !u.is_empty());
+    modes
 }
 
 /// Port of `validateComponentTag` (`src/utils/validation.ts:88-132`).

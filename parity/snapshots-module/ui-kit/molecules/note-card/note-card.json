@@ -1,0 +1,374 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-note-card",
+      "componentClassName": "PopNoteCard",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "note",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "NoteCardData",
+            "resolved": "NoteCardData",
+            "references": {
+              "NoteCardData": {
+                "location": "local",
+                "path": "ui-kit/molecules/note-card/note-card.tsx",
+                "id": "ui-kit/molecules/note-card/note-card.tsx::NoteCardData"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The note to preview (set as a property)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "snippet",
+          "type": "string",
+          "attribute": "snippet",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Snippet/excerpt text. The page supplies it from the note's first blocks."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "layout",
+          "type": "string",
+          "attribute": "layout",
+          "reflect": true,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'list'",
+          "complexType": {
+            "original": "'list' | 'grid' | 'compact'",
+            "resolved": "\"compact\" | \"grid\" | \"list\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Layout: a full-width list row, a gallery grid tile, or compact result chip."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "selected",
+          "type": "boolean",
+          "attribute": "selected",
+          "reflect": true,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Highlighted when this is the selected note in the split-pane."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "actions",
+          "type": "string",
+          "attribute": "actions",
+          "reflect": true,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'none'",
+          "complexType": {
+            "original": "'none' | 'inbox' | 'trash'",
+            "resolved": "\"inbox\" | \"none\" | \"trash\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Inline action affordance rendered beneath the card.\n - `'none'`  (default): no actions (Home/search/grid).\n - `'inbox'`: triage variant → source badge + [🔗 link] [✎ open] [✓ keep] [🗑].\n - `'trash'`: Trash variant → [↩ Restore] [✕ Delete forever]."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "noteSelect",
+          "method": "noteSelect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when the card is activated (click / Enter / Space)."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "notePin",
+          "method": "notePin",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired when the pin toggle is pressed."
+          },
+          "complexType": {
+            "original": "{ id: string; pinned: boolean }",
+            "resolved": "{ id: string; pinned: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "noteTriage",
+          "method": "noteTriage",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Inbox triage: \"keep\" → the page sets triagedAt so it leaves the queue."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "noteLink",
+          "method": "noteLink",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Inbox: link this note to another (the page opens its link picker)."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "noteTrash",
+          "method": "noteTrash",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Soft-delete → Trash (Inbox 🗑)."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "noteRestore",
+          "method": "noteRestore",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Trash: restore (clears deletedAt)."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "notePurge",
+          "method": "notePurge",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Trash: delete forever (permanent purge; the page confirms first)."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-NOTE-CARD",
+          "styleStr": null,
+          "styleIdentifier": "PopNoteCardStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/note-card/note-card.css",
+              "relativePath": "note-card.css",
+              "originalComponentPath": "note-card.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": false,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "role",
+        "aria-label",
+        "type",
+        "onClick",
+        "name",
+        "tabindex",
+        "aria-pressed",
+        "onKeyDown",
+        "title"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "pop-brand-icon",
+        "span",
+        "article",
+        "h3",
+        "p"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

@@ -64,7 +64,7 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 208 fixtures | **208/208**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 216 fixtures, in each of three outputs | **216/216**: metadata, diagnostics and code |
 | Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
@@ -73,19 +73,18 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
 `@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
-JSX, `styleUrl(s)` and inline `styles` (scoped ones scoped at compile time, as Stencil does), shadow and scoped encapsulation, inheritance and mixins,
+JSX, `styleUrl(s)` (per-mode ones too) and inline `styles` (scoped ones scoped at compile time, as Stencil does), component `globalStyle` and `globalStyleUrl`, shadow and scoped encapsulation, inheritance and mixins,
 form-associated components, constants as decorator arguments and computed member names
 (`@Watch(KEYS.open)`, enums, `resolveVar()`, `@Prop() [NAME]`), and source maps back to the
 original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
-- per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
-  `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
-- the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
-  [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
+- the SSR output ([#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
   ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
-  output Vite, Vitest and Storybook use
+  output Vite, Vitest and Storybook use, plus the `module` and lazy-loading (`loader-bundle`)
+  shapes with `componentExport`. Lazy output of decorated base classes and mixins falls back to
+  Stencil
 - JSDoc text and full `complexType` for docs output
   ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 

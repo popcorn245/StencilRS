@@ -11,8 +11,10 @@ import { Meta } from '@storybook/addon-docs/blocks';
 
 ## Missing output
 
-- **The lazy-loading and SSR outputs** (Stencil's `loader-bundle` and `ssr` targets). stencilrs
-  produces the customelement / `standalone` shape, which is what Vite, Vitest and Storybook use.
+- **The SSR output** (Stencil's `ssr` target). stencilrs produces the customelement / `standalone`
+  shape, which is what Vite, Vitest and Storybook use, and with `componentExport: 'lazy'` the
+  lazy-loading shape (`loader-bundle`). Lazy output of decorated base classes and mixins falls
+  back to Stencil (it needs the full `complexType`, below).
 - **`newSpecPage` mode** (`@stencil/unplugin`'s `spec-page`).
 - **Docs metadata**: JSDoc text and full `complexType` (resolved types and references) for
   `docs-json` and `components.d.ts`.

@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression"
+    }
+  ],
+  "imports": []
+}
