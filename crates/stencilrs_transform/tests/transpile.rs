@@ -1,10 +1,14 @@
-//! Code generation for the customelement output. Exact parity against Stencil v5 is checked by
+//! Code generation for the customelement, module and lazy outputs. Exact parity against Stencil v5 is checked by
 //! `parity/` (all fixtures); these cover the shape of the output.
 
-use stencilrs_transform::{DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile};
+use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile};
 
 fn run(src: &str, jsx: Jsx) -> String {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, complex_types: false, source_map: false, transform_as_base_class: false };
+    run_as(src, jsx, ComponentExport::CustomElement)
+}
+
+fn run_as(src: &str, jsx: Jsx, component_export: ComponentExport) -> String {
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, complex_types: false, source_map: false, transform_as_base_class: false, component_export, component_metadata: Default::default(), emit_styles: true };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     normalize(&out.code).expect("valid JS")
@@ -79,6 +83,85 @@ fn plain_component_has_no_runtime_proxy() {
     assert!(!code.contains("__registerHost"), "{code}");
 }
 
+const LAZY_SOURCE: &str = r#"
+    import { Component, Prop, Event, EventEmitter, Element, h } from '@stencil/core';
+    @Component({ tag: 'cmp-a', styleUrl: 'cmp-a.css' })
+    export class CmpA {
+        @Element() el: HTMLElement;
+        @Prop() name: string;
+        @Event() changed: EventEmitter<string>;
+        render() { return <div>{this.name}</div>; }
+    }
+"#;
+
+#[test]
+fn module_output_keeps_the_export_and_proxies_the_class() {
+    let code = run_as(LAZY_SOURCE, Jsx::Classic, ComponentExport::Module);
+    for expected in [
+        r#"import { createEvent as __stencil_createEvent, proxyCustomElement as __stencil_proxyCustomElement, HTMLElement } from "@stencil/core/runtime/client/standalone";"#,
+        "export const CmpA = class extends HTMLElement {",
+        "__stencil_proxyCustomElement(CmpA, [",
+    ] {
+        assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
+    }
+    assert!(!code.contains("defineCustomElement"), "defined, not just proxied:\n{code}");
+}
+
+#[test]
+fn lazy_output_registers_the_instance_with_its_host() {
+    let code = run_as(LAZY_SOURCE, Jsx::Classic, ComponentExport::Lazy);
+    for expected in [
+        r#"import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent, getElement as __stencil_getElement } from "@stencil/core/runtime/client/standalone";"#,
+        "export const CmpA = class {",
+        "constructor(hostRef) {",
+        "__stencil_registerInstance(this, hostRef);",
+        r#"this.changed = __stencil_createEvent(this, "changed", 7);"#,
+        "get el() {\n\t\treturn __stencil_getElement(this);",
+        "CmpA.style = CmpAStyle0();",
+    ] {
+        assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
+    }
+    for unexpected in ["HTMLElement", "defineCustomElement", "proxyCustomElement", "static get style"] {
+        assert!(!code.contains(unexpected), "`{unexpected}` in lazy output:\n{code}");
+    }
+}
+
+#[test]
+fn lazy_output_leaves_decorated_base_classes_to_stencil() {
+    let opts = TranspileOptions {
+        file: "cmp/base.ts".into(),
+        core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
+        jsx: Jsx::Classic,
+        resolve_imports: false,
+        complex_types: false,
+        source_map: false,
+        transform_as_base_class: false,
+        component_export: ComponentExport::Lazy,
+        component_metadata: Default::default(),
+        emit_styles: true,
+    };
+    let out = transpile("import { Prop } from '@stencil/core';\nexport class Base { @Prop() a = 1; }", &opts);
+    assert!(out.code.is_empty());
+    assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
+}
+
+#[test]
+fn global_styles_stay_as_static_getters() {
+    let code = run(
+        r#"
+        import { Component, h } from '@stencil/core';
+        @Component({ tag: 'cmp-a', globalStyleUrl: './g.css', globalStyle: '  a { color: red }  ' })
+        export class CmpA {
+            render() { return <div>x</div>; }
+        }
+        "#,
+        Jsx::Classic,
+    );
+    assert!(code.contains("static get originalGlobalStyleUrl()") && code.contains(r#""./g.css""#), "{code}");
+    assert!(code.contains("static get globalStyle()") && code.contains(r#""a { color: red }""#), "{code}");
+    assert!(!code.contains("static get style()"), "{code}");
+}
+
 #[test]
 fn per_mode_style_urls() {
     let code = run(
@@ -102,7 +185,7 @@ fn per_mode_style_urls() {
 
 /// The source text a map sends the first occurrence of `needle` in the output to.
 fn mapped_source<'a>(src: &'a str, needle: &str) -> &'a str {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, complex_types: false, source_map: true, transform_as_base_class: false };
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, complex_types: false, source_map: true, transform_as_base_class: false, component_export: Default::default(), component_metadata: Default::default(), emit_styles: true };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let json = out.map.as_deref().expect("a source map");

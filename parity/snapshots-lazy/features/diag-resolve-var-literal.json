@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: resolveVar() can only be used with const variables or object properties. \"'value'\" is not supported."
+    }
+  ],
+  "imports": []
+}

@@ -41,6 +41,11 @@ npm --prefix examples/starter run build:lib
 step "Components: ui-kit (the spec suite on stencilrs, then the library build)"
 npm --prefix examples/ui-kit ci
 npm --prefix examples/ui-kit test
+# Stencil's own newSpecPage (mock-doc, not jsdom): some specs fail with either compiler, so the
+# check is that stencilrs fails none that Stencil passes.
+npm --prefix examples/ui-kit run test:spec-page:stencil || true
+npm --prefix examples/ui-kit run test:spec-page || true
+npm --prefix examples/ui-kit run compare:spec-page
 npm --prefix examples/ui-kit run build:stencilrs
 
 step "Storybook"

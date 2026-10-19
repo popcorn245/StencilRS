@@ -1,0 +1,428 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-mention-input",
+      "componentClassName": "PopMentionInput",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "placeholder",
+          "type": "string",
+          "attribute": "placeholder",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "sources",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "MentionSource[]",
+            "resolved": "MentionSource[]",
+            "references": {
+              "MentionSource": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionSource"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Mention sources. Passed as a property; do not stringify."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "submitDisabled",
+          "type": "boolean",
+          "attribute": "submit-disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "If true, the [➕] submit button is disabled regardless of internal state."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "submitButtonLabel",
+          "type": "string",
+          "attribute": "submit-button-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'➕'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Label for the submit button. Default is the ➕ emoji."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "initialValue",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "MentionValue",
+            "resolved": "MentionValue | undefined",
+            "references": {
+              "MentionValue": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionValue"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional controlled initial value."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "dropdownItems"
+        },
+        {
+          "name": "activeIndex"
+        },
+        {
+          "name": "dropdownOpen"
+        },
+        {
+          "name": "hasText"
+        }
+      ],
+      "methods": [
+        {
+          "name": "clear",
+          "docs": {
+            "text": "Imperatively clear the input (used after submit).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getValue",
+          "docs": {
+            "text": "Imperatively read current value.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<MentionValue>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "MentionValue": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionValue"
+              }
+            },
+            "return": "Promise<MentionValue>"
+          },
+          "internal": false
+        },
+        {
+          "name": "focusInput",
+          "docs": {
+            "text": "Imperatively focus the input.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valueChanged",
+          "method": "valueChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted whenever text or mentions change."
+          },
+          "complexType": {
+            "original": "MentionValue",
+            "resolved": "MentionValue",
+            "references": {
+              "MentionValue": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionValue"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "submitted",
+          "method": "submitted",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when user submits (Enter or click on ➕)."
+          },
+          "complexType": {
+            "original": "MentionValue",
+            "resolved": "MentionValue",
+            "references": {
+              "MentionValue": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionValue"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "mentionAdded",
+          "method": "mentionAdded",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when a mention is accepted from the popover."
+          },
+          "complexType": {
+            "original": "{ source: string; item: MentionItem }",
+            "resolved": "{ source: string; item: MentionItem; }",
+            "references": {
+              "MentionItem": {
+                "location": "local",
+                "path": "ui-kit/organisms/mention-input/mention-input.tsx",
+                "id": "ui-kit/organisms/mention-input/mention-input.tsx::MentionItem"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "initialValue",
+          "methodName": "onInitialValueChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-MENTION-INPUT",
+          "styleStr": null,
+          "styleIdentifier": "PopMentionInputStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/mention-input/mention-input.css",
+              "relativePath": "mention-input.css",
+              "originalComponentPath": "mention-input.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "contentEditable",
+        "role",
+        "aria-multiline",
+        "data-placeholder",
+        "ref",
+        "onInput",
+        "onKeyDown",
+        "onPaste",
+        "onBlur",
+        "type",
+        "disabled",
+        "aria-label",
+        "onClick",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "aria-hidden",
+        "d",
+        "aria-selected",
+        "onMouseDown",
+        "onMouseEnter",
+        "src",
+        "alt"
+      ],
+      "htmlTagNames": [
+        "span",
+        "div",
+        "button",
+        "svg",
+        "path",
+        "img"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

@@ -24,6 +24,7 @@ use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
 use crate::complex_type::{FileInfo, RefNames, Site, TypeEnv, member_type, method_type};
+use crate::codegen::normalize_path;
 use crate::default_value::initializer_text;
 use crate::inherit;
 use crate::jsdoc;
@@ -342,6 +343,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, doc_start: u32, locals: &Locals, 
         component_class_name: class_name,
         encapsulation: Encapsulation::None,
         style_urls: Vec::new(),
+        global_styles: Vec::new(),
         properties: own.properties,
         states: own.states,
         events: own.events,
@@ -358,12 +360,14 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, doc_start: u32, locals: &Locals, 
         docs: ctx.docs(locals, &[doc_start]),
         does_extend: false,
         base_class_files: Vec::new(),
+        class_methods: own.class_methods,
     };
     if let Some((tag, encapsulation, style_urls, options)) = &component {
         cmp.options = options.clone();
         cmp.tag_name = tag.clone();
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
+        cmp.global_styles = global_styles(options, ctx.file);
     }
 
     // `mergeExtendedClassMetaWithResolveImport`: inherited members, parents first; the class's
@@ -390,6 +394,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, doc_start: u32, locals: &Locals, 
             // callback Stencil drops them all, the component's own too: docs/quirks.md 10.
             cmp.serializers = inherit::prepend(parent.serializers, std::mem::take(&mut cmp.serializers), |w| w.method_name.clone());
             cmp.deserializers = inherit::prepend(parent.deserializers, std::mem::take(&mut cmp.deserializers), |w| w.method_name.clone());
+            cmp.class_methods.extend(parent.class_methods);
         }
         cmp.base_class_files = found.files;
     }
@@ -416,6 +421,9 @@ pub(crate) struct Members {
     pub deserializers: Vec<WatcherMeta>,
     /// Types in this class `complexType` cannot be computed for (as `stencilrs:` diagnostics).
     pub unported: Vec<Diagnostic>,
+    /// The names of the class's methods (`classMethods`), which `hasRenderFn` and the lifecycle
+    /// flags of the compiler metadata read.
+    pub class_methods: Vec<String>,
 }
 
 /// The members of a class in another module (or this one): an ancestor. Its diagnostics are
@@ -444,6 +452,19 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         serializers: Vec::new(),
         deserializers: Vec::new(),
         unported: Vec::new(),
+        class_methods: class
+            .body
+            .body
+            .iter()
+            .filter_map(|el| match el {
+                // `ts.isMethodDeclaration` with an identifier name.
+                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method && !m.computed => match &m.key {
+                    PropertyKey::StaticIdentifier(id) => Some(id.name.to_string()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect(),
     };
     let reg = ctx.reg.clone();
     let env = TypeEnv::new(locals, &reg, ctx.strict, ctx.file);
@@ -544,6 +565,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         composed: opt_bool(&opts, "composed").unwrap_or(true),
                         docs: ctx.docs(locals, &[p.span.start]),
                         complex_type,
+                        complex_type_original: event_type_original(p, ctx.source),
                     });
                 }
 
@@ -754,13 +776,33 @@ fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value
                 && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
             "inline `styles` that scopeCss rejects",
         ),
-        (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
+        (
+            ["globalStyle", "globalStyleUrl"].iter().any(|k| o.get(*k).is_some_and(|v| !v.is_string())),
+            "non-string `globalStyle` / `globalStyleUrl`",
+        ),
     ];
     for (hit, what) in checks {
         if hit {
             ctx.push(Level::Error, format!("stencilrs: {what} are not ported yet."), class.span);
         }
     }
+}
+
+/// Port of `parseGlobalStyles` (static-to-meta/styles.ts): trimmed inline CSS, then the
+/// stylesheet path resolved against the component's directory.
+fn global_styles(options: &Value, file: &str) -> Vec<GlobalStyle> {
+    let mut styles = Vec::new();
+    if let Some(css) = options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        styles.push(GlobalStyle { absolute_path: None, style_str: Some(css.to_owned()) });
+    }
+    if let Some(url) = options.get("globalStyleUrl").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        let file = file.replace('\\', "/");
+        let absolute = url.starts_with('/') || url.as_bytes().get(1) == Some(&b':');
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let path = if absolute || dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") };
+        styles.push(GlobalStyle { absolute_path: Some(normalize_path(&path)), style_str: None });
+    }
+    styles
 }
 
 /// `@Component` options, or `None` when Stencil would reject the component.
@@ -869,6 +911,16 @@ fn validate_component_tag(tag: Option<&Value>) -> Option<String> {
     None
 }
 
+/// The type argument of `EventEmitter<T>` as written (the event's `complexType.original`), `any`
+/// without one.
+fn event_type_original(p: &PropertyDefinition, source: &str) -> String {
+    let arg = p.type_annotation.as_ref().and_then(|t| match &t.type_annotation {
+        TSType::TSTypeReference(r) => r.type_arguments.as_ref()?.params.first(),
+        _ => None,
+    });
+    arg.map_or_else(|| "any".to_owned(), |t| t.span().source_text(source).to_owned())
+}
+
 #[allow(clippy::too_many_arguments)]
 fn build_prop(
     ctx: &mut Ctx,
@@ -917,6 +969,9 @@ fn build_prop(
         docs: Docs::default(),
     }
 }
+
+/// What TypeScript's `createNumericLiteral` throws for a negative number.
+pub(crate) const NEGATIVE_NUMBER_ERROR: &str = "Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression";
 
 /// The `@Method` return check (`method-decorator.ts:82-97`), as the single-file program sees
 /// it: without the lib, `Promise` is unresolved, so only a written `Promise<...>` annotation
@@ -983,7 +1038,7 @@ fn watch_key(ctx: &mut Ctx, arg: Option<Value>) -> Option<String> {
     match arg? {
         Value::String(s) => Some(s),
         Value::Number(n) if n.as_f64().is_some_and(|n| n < 0.0) => {
-            ctx.throw("Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression");
+            ctx.throw(NEGATIVE_NUMBER_ERROR);
             None
         }
         Value::Number(_) => Some("[object Object]".into()),

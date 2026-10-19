@@ -1,0 +1,369 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-card-detail",
+      "componentClassName": "PopCardDetail",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the sheet is open (host-controlled)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "card",
+          "type": "any",
+          "attribute": "card",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | CardDetailModel | null",
+            "resolved": "any",
+            "references": {
+              "CardDetailModel": {
+                "location": "global",
+                "id": "global::CardDetailModel"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The card view-model — JSON attr or object property (see CardDetailModel)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "containers",
+          "type": "string",
+          "attribute": "containers",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string | CardContainerOption[]",
+            "resolved": "string | {}",
+            "references": {
+              "CardContainerOption": {
+                "location": "global",
+                "id": "global::CardContainerOption"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Binder/container options for Move — JSON attr or array property."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "conditions",
+          "type": "string",
+          "attribute": "conditions",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "JSON.stringify(CARD_CONDITIONS)",
+          "complexType": {
+            "original": "string | string[]",
+            "resolved": "string | {}",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Condition grades offered by the condition + split pickers (JSON array)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "busy",
+          "type": "boolean",
+          "attribute": "busy",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Host is mid-request → mutation controls disable (optional)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "printingsOpen",
+          "type": "boolean",
+          "attribute": "printings-open",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The printing picker area is expanded (host may also drive this, e.g. the\nneeds-review deep-link). Toggled by the printing row / review CTA."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "showPhoto"
+        },
+        {
+          "name": "moveOpen"
+        },
+        {
+          "name": "splitOpen"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardAction",
+          "method": "popCardAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "ONE event per user intent; the host owns the API call + revalidate."
+          },
+          "complexType": {
+            "original": "{ action: string; payload?: Record<string, unknown> }",
+            "resolved": "{ action: string; payload?: any; }",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "popCardClose",
+          "method": "popCardClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Re-emitted when the sheet closes (backdrop / swipe / Esc / host)."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "open",
+          "methodName": "onOpenChange"
+        },
+        {
+          "propName": "card",
+          "methodName": "onCardChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-CARD-DETAIL",
+          "styleStr": null,
+          "styleIdentifier": "PopCardDetailStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/card-detail/card-detail.css",
+              "relativePath": "card-detail.css",
+              "originalComponentPath": "card-detail.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "src",
+        "alt",
+        "loading",
+        "aria-hidden",
+        "type",
+        "aria-pressed",
+        "aria-label",
+        "title",
+        "onClick",
+        "role",
+        "disabled",
+        "onChange",
+        "value",
+        "selected",
+        "name",
+        "aria-live",
+        "aria-expanded",
+        "key",
+        "open",
+        "sheetTitle",
+        "onPopClose",
+        "ref",
+        "confirmTitle",
+        "message",
+        "confirmLabel",
+        "danger"
+      ],
+      "htmlTagNames": [
+        "div",
+        "img",
+        "button",
+        "h3",
+        "span",
+        "label",
+        "select",
+        "option",
+        "pop-icon",
+        "slot",
+        "pop-bottom-sheet",
+        "pop-confirm-dialog"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "printing-picker",
+        "actions"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "`pop-card-detail` — the tap-a-card bottom sheet: the ONE place for\neverything about a collection card. Composed on `pop-bottom-sheet`, fully\nPRESENTATIONAL: the host passes a plain `card` view-model (JSON attr or\nproperty) and owns every API call — the sheet only emits ONE\n`popCardAction` CustomEvent per user intent (`{ action, payload }`), the\nsame host-owns-IO seam as `pop-list-filter-sort` / `pop-user-select`.\n\nLayout (phone-first, one column): large art (with a thumbnail toggle to the\nuser's own photo) → identity block (name · set code · rarity · edition ·\ncondition, needs-review badge) → quantity stepper → price row + refresh →\nprinting row (chevron → the `printing-picker` slot the HOST fills with its\nprintings list) → action list (Move to binder · Split stack when quantity\n≥ 2 · Delete with confirm).\n\nStates: `card.scanState === 'scanning'` renders the READ-ONLY resolving\nstate (art + name + \"resolving printing & price…\" + Delete only) — the\nworker may merge-and-delete the placeholder at any moment. A needs-review\ncard leads with the badge + reason and a \"Pick the printing\" CTA\n(`hasPasscode: false` swaps it for Rescan).\n\nActions emitted (host route mapping lives in the host):\n  `qty` {delta} · `refresh-price` · `open-printings` · `set-condition`\n  {condition} · `move` {containerId} · `split` {condition} · `delete` ·\n  `rescan`\n\nSlots:\n  • printing-picker — the host's printings list UI (shown while\n    `printingsOpen`; the host lazy-fetches on `open-printings`).\n  • actions — host-specific extras appended to the action list."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "./card-detail-logic"
+    }
+  ]
+}

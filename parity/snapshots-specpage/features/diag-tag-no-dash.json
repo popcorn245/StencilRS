@@ -1,0 +1,14 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "\"nodash\" tag must contain a dash (-) to work as a valid web component. Please refer to https://html.spec.whatwg.org/multipage/custom-elements.html#valid-custom-element-name for more info."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}

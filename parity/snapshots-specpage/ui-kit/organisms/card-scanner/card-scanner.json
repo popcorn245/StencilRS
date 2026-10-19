@@ -1,0 +1,911 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-card-scanner",
+      "componentClassName": "PopCardScanner",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "draw2Url",
+          "type": "string",
+          "attribute": "draw-2-url",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Mac draw2 service URL. '' → streaming disabled (barcode/QR + Phase-1 only).\nMay be the tailnet draw2 host directly (hub) OR the bucket-bot draw2 PROXY\nbase (`.../api/hub/cards/draw2`) when `authToken` is set (off-tailnet)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "draw2UrlFallback",
+          "type": "string",
+          "attribute": "draw-2-url-fallback",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional SECONDARY draw2 proxy origin. When set, the scanner probes both\n`draw2Url` and `draw2UrlFallback` in parallel and uses whichever's `/health`\nis reachable — for YGO 245's complementary on/off-tailnet origins (the public\nTailscale Funnel works only OFF the tailnet, `bot.popcorn245.com` only ON it),\nre-selecting live if connectivity flips. Hub omits it → unchanged\nsingle-origin (`draw2Url`) behavior."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "authToken",
+          "type": "string",
+          "attribute": "auth-token",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Bearer token for the bot-PROXY draw2 mode (off-tailnet): when set, every\ndraw2 health/detect call rides `Authorization: Bearer …` and the\nLocal-Network-Access warm is skipped (the proxy is a normal PUBLIC origin,\nnot a tailnet IP). Omitted (hub / direct-tailnet) → today's behavior."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "attribute": "mode",
+          "reflect": true,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'scan'",
+          "complexType": {
+            "original": "CardScannerMode",
+            "resolved": "\"capture\" | \"scan\"",
+            "references": {
+              "CardScannerMode": {
+                "location": "local",
+                "path": "ui-kit/organisms/card-scanner/card-scanner.tsx",
+                "id": "ui-kit/organisms/card-scanner/card-scanner.tsx::CardScannerMode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Controlled mode — switching never restarts the camera or blanks the video."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "autoCapture",
+          "type": "boolean",
+          "attribute": "auto-capture",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Capture mode: auto-ingest a steady, NEW (identity-changed) card."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "busy",
+          "type": "boolean",
+          "attribute": "busy",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Consumer is mid round-trip (classify / recognize) — pause detect + capture."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "streamingEnabled",
+          "type": "boolean",
+          "attribute": "streaming-enabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Allow streaming + passive detect at all (hub's barcode-only form → false)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "scanMinConfidence",
+          "type": "number",
+          "attribute": "scan-min-confidence",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0.6",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Anti-hallucination floor (0–1) for the PASSIVE Scan-mode card detector."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "detectMaxEdge",
+          "type": "number",
+          "attribute": "detect-max-edge",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "640",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Longest edge (px) of the frame POSTed to draw2 /detect (~1–2s vs ~6s)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "cropMaxEdge",
+          "type": "number",
+          "attribute": "crop-max-edge",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "1000",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Longest edge (px) cap on the uploaded crop — keeps the ingest body 413-safe."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "idealWidth",
+          "type": "number",
+          "attribute": "ideal-width",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "2560",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "idealHeight",
+          "type": "number",
+          "attribute": "ideal-height",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "1440",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "facingMode",
+          "type": "string",
+          "attribute": "facing-mode",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'environment'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "streaming"
+        },
+        {
+          "name": "cameraErrorText"
+        },
+        {
+          "name": "videoAspect"
+        }
+      ],
+      "methods": [
+        {
+          "name": "grabFrame",
+          "docs": {
+            "text": "Grab the current full-res frame → canvas (or null).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<HTMLCanvasElement | null>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "decodeFrame",
+          "docs": {
+            "text": "Run the barcode/QR decoder on a canvas (default: the current video frame).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(canvas?: HTMLCanvasElement) => Promise<string | null>",
+            "parameters": [
+              {
+                "name": "canvas",
+                "type": "any",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              },
+              "HTMLVideoElement": {
+                "location": "global",
+                "id": "global::HTMLVideoElement"
+              }
+            },
+            "return": "Promise<string | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "detectFrame",
+          "docs": {
+            "text": "One draw2 detect on `source` → best pick above `minConfidence` (or null).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(source: HTMLCanvasElement, minConfidence?: number) => Promise<Draw2Detection | null>",
+            "parameters": [
+              {
+                "name": "source",
+                "type": "HTMLCanvasElement",
+                "docs": ""
+              },
+              {
+                "name": "minConfidence",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              },
+              "Draw2Detection": {
+                "location": "global",
+                "id": "global::Draw2Detection"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "detectAndCrop",
+          "docs": {
+            "text": "One draw2 detect on `source` PLUS the bbox crop mapped back to source pixels\n— the tap-to-add path (a confirmed still → identity + upload-ready crop).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(source: HTMLCanvasElement, minConfidence?: number) => Promise<{ detection: Draw2Detection | null; crop: string | null; }>",
+            "parameters": [
+              {
+                "name": "source",
+                "type": "HTMLCanvasElement",
+                "docs": ""
+              },
+              {
+                "name": "minConfidence",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Draw2Detection": {
+                "location": "global",
+                "id": "global::Draw2Detection"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              }
+            },
+            "return": "Promise<{ detection: any; crop: string | null; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "cropFromBbox",
+          "docs": {
+            "text": "Crop a SOURCE-space bbox `[x,y,w,h]` out of `source` → a JPEG data URL.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(source: HTMLCanvasElement, bbox: number[]) => Promise<string | null>",
+            "parameters": [
+              {
+                "name": "source",
+                "type": "HTMLCanvasElement",
+                "docs": ""
+              },
+              {
+                "name": "bbox",
+                "type": "{}",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              }
+            },
+            "return": "Promise<string | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "frameJpeg",
+          "docs": {
+            "text": "Downscale `source` to `maxEdge` → a JPEG data URL (or null).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(source: HTMLCanvasElement, maxEdge: number, quality: number) => Promise<string | null>",
+            "parameters": [
+              {
+                "name": "source",
+                "type": "HTMLCanvasElement",
+                "docs": ""
+              },
+              {
+                "name": "maxEdge",
+                "type": "number",
+                "docs": ""
+              },
+              {
+                "name": "quality",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "HTMLCanvasElement": {
+                "location": "global",
+                "id": "global::HTMLCanvasElement"
+              }
+            },
+            "return": "Promise<string | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "scaleBboxToSource",
+          "docs": {
+            "text": "Map a detect-space bbox up to source pixels (source/detect scale).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(bbox: number[], scale: number) => Promise<number[]>",
+            "parameters": [
+              {
+                "name": "bbox",
+                "type": "{}",
+                "docs": ""
+              },
+              {
+                "name": "scale",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<{}>"
+          },
+          "internal": false
+        },
+        {
+          "name": "captureNow",
+          "docs": {
+            "text": "Force a capture NOW, bypassing the steadiness/interval/identity gates — the\nmanual \"add another copy\" / shutter override.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "recordIngest",
+          "docs": {
+            "text": "Latch the identity gate after a manual/tap ingest so the auto loop won't\nimmediately re-add the card the consumer just added.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(identity: string) => Promise<void>",
+            "parameters": [
+              {
+                "name": "identity",
+                "type": "string",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "resetGate",
+          "docs": {
+            "text": "Forget the identity latch (destination changed / consumer reset).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<void>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "getAttachCount",
+          "docs": {
+            "text": "Test/diagnostic hook: how many times the ref reattached the stream.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<number>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<number>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "streamingChange",
+          "method": "streamingChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "modeChange",
+          "method": "modeChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "CardScannerMode",
+            "resolved": "\"capture\" | \"scan\"",
+            "references": {
+              "CardScannerMode": {
+                "location": "local",
+                "path": "ui-kit/organisms/card-scanner/card-scanner.tsx",
+                "id": "ui-kit/organisms/card-scanner/card-scanner.tsx::CardScannerMode"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "cardDetect",
+          "method": "cardDetect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "CardDetectDetail",
+            "resolved": "CardDetectDetail",
+            "references": {
+              "CardDetectDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/card-scanner/card-scanner.tsx",
+                "id": "ui-kit/organisms/card-scanner/card-scanner.tsx::CardDetectDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "barcodeDecode",
+          "method": "barcodeDecode",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ value: string }",
+            "resolved": "{ value: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "capture",
+          "method": "capture",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "CardCaptureDetail",
+            "resolved": "CardCaptureDetail",
+            "references": {
+              "CardCaptureDetail": {
+                "location": "local",
+                "path": "ui-kit/organisms/card-scanner/card-scanner.tsx",
+                "id": "ui-kit/organisms/card-scanner/card-scanner.tsx::CardCaptureDetail"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "cameraError",
+          "method": "cameraError",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ message: string }",
+            "resolved": "{ message: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "scannerClose",
+          "method": "scannerClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "mode",
+          "methodName": "onModeChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-CARD-SCANNER",
+          "styleStr": null,
+          "styleIdentifier": null,
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/card-scanner/card-scanner.css",
+              "relativePath": "card-scanner.css",
+              "originalComponentPath": "card-scanner.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "name",
+        "style",
+        "ref",
+        "onLoadedMetaData",
+        "muted",
+        "playsInline",
+        "autoplay"
+      ],
+      "htmlTagNames": [
+        "canvas",
+        "div",
+        "slot",
+        "video"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "extras",
+        "overlay",
+        "caption",
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    },
+    {
+      "path": "@popcorn245/cards-core"
+    },
+    {
+      "path": "../../helpers/draw2"
+    },
+    {
+      "path": "../../helpers/frame-decode"
+    }
+  ]
+}

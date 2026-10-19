@@ -23,6 +23,14 @@ pub enum Encapsulation {
     Shadow,
 }
 
+/// A component global style (`parseGlobalStyles`): inline CSS, or the path of a stylesheet.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalStyle {
+    pub absolute_path: Option<String>,
+    pub style_str: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ComponentMeta {
@@ -30,6 +38,8 @@ pub struct ComponentMeta {
     pub component_class_name: String,
     pub encapsulation: Encapsulation,
     pub style_urls: Vec<String>,
+    /// `@Component({ globalStyle, globalStyleUrl })`, in Stencil's order (inline, then URL).
+    pub global_styles: Vec<GlobalStyle>,
     pub properties: Vec<PropMeta>,
     pub states: Vec<StateMeta>,
     pub events: Vec<EventMeta>,
@@ -59,6 +69,9 @@ pub struct ComponentMeta {
     /// The other files the ancestors were read from (absolute, `/`-separated).
     #[serde(skip)]
     pub base_class_files: Vec<String>,
+    /// The names of the methods of the class and its ancestors (`classMethods`).
+    #[serde(skip)]
+    pub class_methods: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -166,6 +179,9 @@ pub struct EventMeta {
     pub composed: bool,
     pub docs: Docs,
     pub complex_type: ComplexType,
+    /// The `EventEmitter<T>` type argument as written, `any` without one.
+    #[serde(skip)]
+    pub complex_type_original: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

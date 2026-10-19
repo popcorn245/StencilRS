@@ -1,0 +1,252 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-async-view",
+      "componentClassName": "PopAsyncView",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "state",
+          "type": "string",
+          "attribute": "state",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'loading'",
+          "complexType": {
+            "original": "'loading' | 'empty' | 'error' | 'content'",
+            "resolved": "\"content\" | \"empty\" | \"error\" | \"loading\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Which region shows."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "emptyLabel",
+          "type": "string",
+          "attribute": "empty-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Nothing here yet'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default empty-state message (default empty slot)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "errorLabel",
+          "type": "string",
+          "attribute": "error-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Something went wrong'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default error-state message (default error slot)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "retryLabel",
+          "type": "string",
+          "attribute": "retry-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Retry'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Default retry button label (default error slot)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popRetry",
+          "method": "popRetry",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The default error state's retry button was tapped."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-ASYNC-VIEW",
+          "styleStr": null,
+          "styleIdentifier": "PopAsyncViewStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/async-view/async-view.css",
+              "relativePath": "async-view.css",
+              "originalComponentPath": "async-view.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "role",
+        "aria-hidden",
+        "name",
+        "variant",
+        "label",
+        "message",
+        "size",
+        "heading",
+        "retryable",
+        "retryLabel",
+        "onPopRetry"
+      ],
+      "htmlTagNames": [
+        "div",
+        "slot",
+        "pop-loading-state",
+        "pop-empty-state",
+        "pop-error-state"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "loading",
+        "empty",
+        "error",
+        ""
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-async-view — declarative loading / empty / error / content states for any\ndata-backed region (molecule).\n\nPairs with `pop-sync-status`: sync-status shows FRESHNESS (last synced /\nrevalidating / stale), this shows LIFECYCLE (is there anything to render at\nall). Composes the existing state primitives (`pop-loading-state`,\n`pop-empty-state`, `pop-error-state`) for its defaults; each state slot can\nbe overridden.\n\n  <pop-async-view state={view} onPopRetry={() => data.refresh()}>\n    …content…\n    <div slot=\"loading\">custom skeleton</div>   <!-- optional -->\n  </pop-async-view>\n\nConsumer rule (the hub cache philosophy): content stays MOUNTED during\nrevalidation — `state=\"loading\"` is for the COLD hydrate only. All four\nregions stay in the DOM (visibility toggled by CSS) so slotted content is\nnever torn down by a state flip.\n\nAsyncData mapping: status 'loading' with no data → \"loading\"; error with no\ndata → \"error\" (retry → refresh()); data present → \"content\"; empty result →\n\"empty\" (the consumer decides emptiness)."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

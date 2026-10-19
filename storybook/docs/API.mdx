@@ -12,7 +12,7 @@ import { analyze, buildId, normalize, transpile } from '@popcorn245/stencilrs';
 
 ### `transpile(source, options)`
 
-Compile one component module to its **customelement** module: what Stencil's `transpileSync` emits
+Compile one component module to its **customelement** module by default: what Stencil's `transpileSync` emits
 with `componentExport: 'customelement'`, the shape `@stencil/unplugin` and Stencil's `standalone`
 output use.
 
@@ -25,8 +25,16 @@ const { code, map, components, diagnostics, baseClasses } = transpile(source, {
   resolveImports: true,              // build-accurate metadata (default false here; true in the Vite plugin)
   sourceMap: true,                   // return `map` (default true, as transpileSync does)
   transformAsBaseClass: false,       // compile the file as base classes (see below)
+  componentExport: 'customelement',  // or 'module' or 'lazy' (see below)
 });
 ```
+
+`componentExport` picks the output, as in `transpileSync`. `'customelement'` (the default) defines
+the element. `'module'` keeps the class exported and registers it with `proxyCustomElement`
+instead. `'lazy'` (Stencil spells it `null`, which is accepted too) is the lazy-loading
+`loader-bundle` shape: a class with no base that takes over a bootstrapped host through
+`registerInstance(this, hostRef)`. Decorated base classes and mixins are not ported for `'lazy'`;
+those files report an error starting with `stencilrs:`, the cue to compile them with Stencil.
 
 A component that extends a class or `Mixin(...)` gets its ancestors' members merged in. They're
 read from the same file or through relative imports of `file` (so `file` must be the real path).
@@ -90,13 +98,16 @@ interface Diagnostic {
 ## Rust (`stencilrs_transform`)
 
 ```rust
-use stencilrs_transform::{analyze_with, normalize, transpile, Jsx, TranspileOptions, DEFAULT_CORE_IMPORT_PATH};
+use stencilrs_transform::{analyze_with, normalize, transpile, ComponentExport, Jsx, TranspileOptions, DEFAULT_CORE_IMPORT_PATH};
 
 let out = transpile(source, &TranspileOptions {
     file: "src/my-counter.tsx".into(),
     core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
     jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
     resolve_imports: true,
+    source_map: true,
+    transform_as_base_class: false,
+    component_export: ComponentExport::CustomElement, // or Module, Lazy
 });
 // out.code, out.components, out.diagnostics (serde-serialisable)
 

@@ -1,0 +1,240 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-card-list",
+      "componentClassName": "PopThreadCardList",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "payload",
+          "type": "any",
+          "attribute": "payload",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "CardPayload",
+            "resolved": "CardPayload",
+            "references": {
+              "CardPayload": {
+                "location": "global",
+                "id": "global::CardPayload"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The validated card payload object (set as a PROPERTY, not an attribute)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "liveness",
+          "type": "any",
+          "attribute": "liveness",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'live'",
+          "complexType": {
+            "original": "CardLiveness",
+            "resolved": "CardLiveness",
+            "references": {
+              "CardLiveness": {
+                "location": "global",
+                "id": "global::CardLiveness"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "`frozen` = historical snapshot: muted chrome, read-only lines."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Viewer / public render — no action buttons, no line taps."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardAction",
+          "method": "popCardAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when the user taps a line or one of the card's actions."
+          },
+          "complexType": {
+            "original": "CardActionDetail",
+            "resolved": "CardActionDetail",
+            "references": {
+              "CardActionDetail": {
+                "location": "global",
+                "id": "global::CardActionDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-CARD-LIST",
+          "styleStr": null,
+          "styleIdentifier": "PopThreadCardListStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/thread-card-list/thread-card-list.css",
+              "relativePath": "thread-card-list.css",
+              "originalComponentPath": "thread-card-list.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "type",
+        "title",
+        "aria-label",
+        "onClick",
+        "name",
+        "aria-hidden",
+        "aria-pressed"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "ion-icon",
+        "span",
+        "p",
+        "ul",
+        "li"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-card-list — the Thread Model v2 renderer for a grocery / inventory\nlist card.\n\nRenders a checkbox list with an \"N left\" count. Tapping a line emits\n`popCardAction` with `{ actionId: 'check', params: { lineId, checked } }` —\nthe per-line tap IS the check action, so there is no footer check button.\nFrozen cards render the lines read-only and struck through.\n\n  payload.data = { lines: { id, label, checked, qty? }[];\n                   postedAt: number; listId?: string }"
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "../thread-card/thread-card-types"
+    }
+  ]
+}

@@ -1,10 +1,16 @@
-//! Code generation for Stencil's `customelement` output: what `transpileSync` emits with
-//! `componentExport: 'customelement'`, the path `@stencil/unplugin` uses and the shape of the
-//! `standalone` output target.
+//! Code generation for Stencil's component outputs, selected by `componentExport`:
 //!
-//! Ports `nativeComponentTransform` and friends (`transformers/component-native/*`,
-//! `define-custom-element.ts`, `update-stencil-core-import.ts`, `style-imports.ts`,
-//! `automatic-key-insertion/`, `utils/format-component-runtime-meta.ts`).
+//! - `customelement`: what `transpileSync` emits by default, the path `@stencil/unplugin` uses and
+//!   the shape of the `standalone` output target.
+//! - `module`: the same classes, kept exported and registered with `proxyCustomElement` instead
+//!   of defined (`addModuleMetadataProxies`).
+//! - `lazy`: the lazy-loading (`loader-bundle`) shape, a class that takes over a bootstrapped host
+//!   (`registerInstance`) instead of being the element.
+//!
+//! Ports `nativeComponentTransform` and `lazyComponentTransform` and their friends
+//! (`transformers/component-native/*`, `component-lazy/*`, `define-custom-element.ts`,
+//! `update-stencil-core-import.ts`, `style-imports.ts`, `automatic-key-insertion/`,
+//! `utils/format-component-runtime-meta.ts`).
 //!
 //! The Stencil-specific rewrites are applied as text edits on the original TypeScript, then
 //! oxc strips the types and compiles the JSX, the way TypeScript's own emit does in Stencil.
@@ -30,6 +36,7 @@ use oxc::transformer::{JsxOptions, JsxRuntime, TransformOptions, Transformer, Ty
 use serde_json::Value;
 
 use crate::analyze::{import_aliases, style_url_modes};
+use crate::compiler_meta::{self, MetaInput, VdomMeta, scan_vdom};
 use crate::edits::Edits;
 use crate::consts::{Lit, enum_values, order_like_object_keys};
 use crate::locals::Locals;
@@ -47,9 +54,38 @@ pub enum Jsx {
     Automatic { import_source: String },
 }
 
+/// Which output a component compiles to: Stencil's `componentExport`. `transpileSync` reaches
+/// `Lazy` with `componentExport: null`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ComponentExport {
+    /// `const X = class extends HTMLElement`, defined with `defineCustomElement`.
+    #[default]
+    CustomElement,
+    /// `export const X = class extends HTMLElement`, registered with `proxyCustomElement`.
+    Module,
+    /// `export const X = class` taking over a host: `registerInstance(this, hostRef)`.
+    Lazy,
+}
+
+/// Stencil's `componentMetadata`: what the compiler's metadata is added to the class as.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ComponentMetadata {
+    #[default]
+    None,
+    /// `static get COMPILER_META()`: the metadata `newSpecPage` registers components with.
+    CompilerStatic,
+}
+
 #[derive(Debug, Clone)]
 pub struct CodegenOptions2 {
     pub file: String,
+    /// Add the compiler's metadata to each component class. Default `None`.
+    pub component_metadata: ComponentMetadata,
+    /// Import and attach the component's styles. Stencil's `style: 'static'` (default); `null`
+    /// (`false` here) leaves the styles out, as `@stencil/unplugin`'s spec-page mode does.
+    pub emit_styles: bool,
+    /// The output to generate. Default `CustomElement`.
+    pub component_export: ComponentExport,
     /// Build-accurate metadata: follow relative imports and know lib types, as a full
     /// `stencil build` does. Off: exactly what single-file `transpileSync` produces.
     pub resolve_imports: bool,
@@ -99,7 +135,23 @@ const LIFECYCLE_METHODS: [&str; 9] = [
 /// Generate the customelement module for an already analysed program. `components` are the
 /// valid components `analyze_program` found, in source order.
 pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<Generated, String> {
+    if opts.component_metadata == ComponentMetadata::None {
+        return generate_pass(program, source, components, opts, None);
+    }
+    // The metadata holds facts about the vdom calls, which Stencil reads off the `h()` calls its
+    // JSX transform wrote. So: generate once, read those calls from the output, then again with
+    // the metadata in the class.
+    let first = generate_pass(program, source, components, &CodegenOptions2 { source_map: false, ..opts.clone() }, None)?;
+    let vdom: HashMap<String, VdomMeta> =
+        components.iter().map(|c| (c.component_class_name.clone(), scan_vdom(&first.code, &c.component_class_name))).collect();
+    generate_pass(program, source, components, opts, Some(&vdom))
+}
+
+/// One run of the generator; `vdom` is the facts for `COMPILER_META` when it is added.
+fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&HashMap<String, VdomMeta>>) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
+    let lazy = opts.component_export == ComponentExport::Lazy;
+    let customelement = opts.component_export == ComponentExport::CustomElement;
     let text = |s: Span| s.source_text(source);
     let aliases = import_aliases(program);
     let remove_decorators: Vec<String> = MEMBER_DECORATORS_TO_REMOVE
@@ -164,6 +216,8 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         }
     };
     let mut style_imports = Vec::new();
+    // What follows the module's statements: `defineCustomElement` / `proxyCustomElement` calls,
+    // or the lazy classes' `X.style = ...` assignments.
     let mut define_calls = Vec::new();
 
     // Every other class: base classes and mixins.
@@ -174,10 +228,17 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         component: &component_decorator,
         remove: &remove_decorators,
         meta: &meta_decorators,
-        as_base: opts.transform_as_base_class,
+        as_base: opts.transform_as_base_class && !lazy,
+        lazy,
         html_element: false,
+        stencil_decorated: false,
     };
     bases.visit_program(program);
+    if bases.stencil_decorated {
+        // Lazy output leaves these classes' static meta getters in place (`convertDecoratorsToStatic`),
+        // which need the full `complexType` and docs metadata.
+        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy output.".into());
+    }
     if bases.html_element {
         add(&mut target_apis, "HTMLElement");
     }
@@ -198,7 +259,8 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         let Some(cmp) = components.iter().find(|c| c.component_class_name == name) else { continue };
 
         let info = ClassInfo::collect(class, cmp);
-        let plain = info.is_plain(cmp);
+        // Lazy classes aren't elements, so nothing is plain (`isPlain` only drives native output).
+        let plain = !lazy && info.is_plain(cmp);
 
         // Class → `const X = class extends HTMLElement { ... };`
         let header_start = class.decorators.iter().map(|d| d.span.start).min().unwrap_or(stmt_span.start).min(stmt_span.start);
@@ -207,12 +269,15 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
                 let end = h.type_arguments.as_ref().map_or(h.expression.span().end, |t| t.span.end);
                 format!(" extends {}", &source[h.expression.span().start as usize..end as usize])
             }
+            None if lazy => String::new(),
             None => {
                 add(&mut target_apis, "HTMLElement");
                 " extends HTMLElement".to_owned()
             }
         };
-        ed.replace(header_start, class.body.span.start, format!("const {name} = class{extends} "));
+        // `createConstClass` keeps the `export` unless the output is `customelement`.
+        let export = if !customelement && matches!(stmt, Statement::ExportDeclaration(_)) { "export " } else { "" };
+        ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
         ed.insert(class.body.span.end, ";");
 
         let mut element_replaced = false;
@@ -234,7 +299,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             }
             match el {
                 ClassElement::PropertyDefinition(p) if !p.r#static && key_name.is_some() && key_name == cmp.element_ref => {
-                    ed.replace(p.span.start, p.span.end, format!("get {}() {{ return this; }}", key_name.as_deref().unwrap_or_default()));
+                    ed.replace(p.span.start, p.span.end, element_getter(key_name.as_deref().unwrap_or_default(), lazy));
                     element_replaced = true;
                 }
                 ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Constructor && m.value.body.is_some() => ctor = Some(m),
@@ -245,16 +310,58 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             }
         }
 
+        // `updateLazyComponentConstructor`
+        if lazy {
+            add(&mut runtime_apis, "registerInstance as __stencil_registerInstance");
+            let mut stmts = vec!["__stencil_registerInstance(this, hostRef);".to_owned()];
+            for ev in &cmp.events {
+                add(&mut runtime_apis, "createEvent as __stencil_createEvent");
+                stmts.push(event_creation(ev));
+            }
+            // `createLazyAttachInternalsBinding`
+            if let Some(member) = &cmp.attach_internals_member_name {
+                stmts.push(format!(
+                    "if (hostRef.$hostElement$[\"s-ei\"]) {{ this.{member} = hostRef.$hostElement$[\"s-ei\"]; }} \
+                     else {{ this.{member} = hostRef.$hostElement$.attachInternals(); hostRef.$hostElement$[\"s-ei\"] = this.{member}; }}"
+                ));
+                for state in cmp.attach_internals_custom_states.iter().filter(|s| s.initial_value) {
+                    stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
+                }
+            }
+            // `updateConstructor`: the `hostRef` parameter first, `super()` only where the class extends.
+            match ctor {
+                Some(c) => {
+                    let params = &c.value.params;
+                    let open = params.span.start + if source.as_bytes()[params.span.start as usize] == b'(' { 1 } else { 0 };
+                    let empty = params.items.is_empty() && params.rest.is_none();
+                    ed.insert(open, if empty { "hostRef" } else { "hostRef, " });
+                    let body = c.value.body.as_ref().expect("constructor body");
+                    let first = match body.statements.iter().find(|s| is_super_call(s)) {
+                        Some(s) => {
+                            ed.remove(s.span().start, s.span().end);
+                            text(s.span()).to_owned()
+                        }
+                        None if class.heritage.is_some() => "super();".to_owned(),
+                        None => String::new(),
+                    };
+                    ed.insert(body.span.start + 1, format!(" {first} {} ", stmts.join(" ")));
+                }
+                None => {
+                    let super_call = if class.heritage.is_some() { "super();" } else { "" };
+                    ed.insert(class.body.span.start + 1, format!(" constructor(hostRef) {{ {super_call} {} }} ", stmts.join(" ")));
+                }
+            }
+        }
+
         // `updateNativeConstructor`
-        if !plain {
+        if !lazy && !plain {
             let mut stmts = vec!["if (registerHost !== false) { this.__registerHost(); }".to_owned()];
             if cmp.encapsulation == Encapsulation::Shadow {
                 stmts.push("this.__attachShadow();".into());
             }
             for ev in &cmp.events {
                 add(&mut runtime_apis, "createEvent as __stencil_createEvent");
-                let flags = (if ev.bubbles { 4 } else { 0 }) | (if ev.composed { 2 } else { 0 }) | (if ev.cancelable { 1 } else { 0 });
-                stmts.push(format!("this.{} = __stencil_createEvent(this, {}, {flags});", ev.method, json(&ev.name)));
+                stmts.push(event_creation(ev));
             }
             // `createNativeAttachInternalsBinding`
             if let Some(member) = &cmp.attach_internals_member_name {
@@ -289,12 +396,26 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         // Members appended at the end of the class, in Stencil's order.
         let mut tail: Vec<String> = Vec::new();
         tail.extend(surviving_static_getters(cmp));
+        // `styleToStatic`: the global style getters survive; they sit ahead of the rest.
+        if let Some(url) = cmp.options.get("globalStyleUrl").and_then(Value::as_str).filter(|u| !u.is_empty()) {
+            tail.push(format!("static get originalGlobalStyleUrl() {{ return {}; }}", json(url)));
+        }
+        if let Some(css) = cmp.options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+            tail.push(format!("static get globalStyle() {{ return {}; }}", json(css)));
+        }
         // Left behind by `attachInternalsDecoratorsToStatic`, after the component's own getters.
         if !cmp.attach_internals_custom_states.is_empty() {
             tail.push(format!("static get attachInternalsCustomStates() {{ return {}; }}", js_value(&custom_states_value(cmp))));
         }
         if cmp.form_associated {
             tail.push("static get formAssociated() { return true; }".into());
+        }
+        // `addComponentMetaStatic` appends the metadata to the static getters of
+        // `convertDecoratorsToStatic`; the lazy and native transforms then remove some of those
+        // and write them again (below), after it.
+        if let Some(vdom) = vdom.and_then(|v| v.get(name)) {
+            let input = MetaInput { cmp, vdom, file: &opts.file, has_modern_property_decls: info.has_modern_property_decls, has_heritage: info.has_heritage };
+            tail.push(compiler_meta::getter(&input));
         }
         if plain && info.has_render_fn {
             match connected {
@@ -306,8 +427,11 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
                 None => tail.push("connectedCallback() { this.textContent = this.render(); }".into()),
             }
         }
+        if lazy && cmp.element_ref.is_some() {
+            add(&mut runtime_apis, "getElement as __stencil_getElement");
+        }
         if let (Some(el), false) = (&cmp.element_ref, element_replaced) {
-            tail.push(format!("get {el}() {{ return this; }}"));
+            tail.push(element_getter(el, lazy));
         }
         if !cmp.watchers.is_empty() {
             tail.push(format!("static get watchers() {{ return {}; }}", js_value(&handlers_value(&cmp.watchers))));
@@ -321,9 +445,14 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         if plain {
             tail.push(format!("static get is() {{ return {}; }}", json(&cmp.tag_name)));
         }
-        let styles = styles_of(cmp);
-        if let Some(getter) = style_getter(cmp, &styles) {
-            tail.push(getter);
+        let styles = if opts.emit_styles { styles_of(cmp) } else { Vec::new() };
+        if let Some(expr) = style_expression(cmp, &styles) {
+            if lazy {
+                // `addStaticStylePropertyToClass`: an assignment after the class.
+                define_calls.push(format!("{name}.style = {expr};"));
+            } else {
+                tail.push(format!("static get style() {{ return {expr}; }}"));
+            }
         }
         for style in &styles {
             for (i, url) in style.urls.iter().enumerate() {
@@ -350,13 +479,21 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
             }
         }
 
-        // `defineCustomElement`
-        if plain {
-            define_calls.push(format!("customElements.define(__stencil_transformTag({}), {name});", json(&cmp.tag_name)));
-        } else {
-            add(&mut runtime_apis, "transformTag as __stencil_transformTag");
-            add(&mut runtime_apis, "defineCustomElement as __stencil_defineCustomElement");
-            define_calls.push(format!("__stencil_defineCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+        // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
+        match opts.component_export {
+            ComponentExport::Lazy => {}
+            ComponentExport::Module => {
+                add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
+                define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+            }
+            ComponentExport::CustomElement if plain => {
+                define_calls.push(format!("customElements.define(__stencil_transformTag({}), {name});", json(&cmp.tag_name)));
+            }
+            ComponentExport::CustomElement => {
+                add(&mut runtime_apis, "transformTag as __stencil_transformTag");
+                add(&mut runtime_apis, "defineCustomElement as __stencil_defineCustomElement");
+                define_calls.push(format!("__stencil_defineCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+            }
         }
     }
 
@@ -411,7 +548,11 @@ struct BaseClasses<'e, 's, 'n> {
     remove: &'n [String],
     meta: &'n [String],
     as_base: bool,
+    /// Lazy output (`lazyComponentTransform`) leaves other classes alone, and the decorated ones
+    /// are not ported (`stencil_decorated`).
+    lazy: bool,
     html_element: bool,
+    stencil_decorated: bool,
 }
 
 impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
@@ -421,6 +562,7 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
         }
         let mut decorated = false;
         let mut meta = false;
+        let mut has_stencil_decorator = false;
         let mut ctor = None;
         for el in &class.body.body {
             let decorators = match el {
@@ -439,11 +581,16 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
                 let Some(name) = decorator_name(d) else { continue };
                 meta |= self.meta.iter().any(|m| m == name);
                 if self.remove.iter().any(|r| r == name) {
+                    has_stencil_decorator = true;
                     self.ed.remove(d.span.start, d.span.end);
                 }
             }
         }
-        if class.is_declaration() {
+        if self.lazy {
+            // Lazy output leaves every other class alone, except that classes with Stencil
+            // decorators keep the static meta getters `convertDecoratorsToStatic` wrote.
+            self.stencil_decorated |= has_stencil_decorator;
+        } else if class.is_declaration() {
             let base = self.as_base || meta;
             let mut extends = class.heritage.is_some();
             // `implements` doesn't count: TypeScript has erased it by the time Stencil looks.
@@ -733,7 +880,9 @@ fn has_style(cmp: &ComponentMeta) -> bool {
     !styles_of(cmp).is_empty()
 }
 
-fn style_getter(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
+/// The component's `style`: its imported stylesheets called and joined, or the inline CSS; per
+/// mode, an object keyed by mode (`addMultipleModeStyleGetter`).
+fn style_expression(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
     let expr_of = |style: &StyleMode| -> Option<String> {
         if !style.urls.is_empty() {
             Some((0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + "))
@@ -750,16 +899,29 @@ fn style_getter(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
             Some(format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${")))
         }
     };
-    let expr = match styles {
-        [] => return None,
-        [style] if style.mode == DEFAULT_STYLE_MODE => expr_of(style)?,
-        // `addMultipleModeStyleGetter`: an object keyed by mode.
+    match styles {
+        [] => None,
+        [style] if style.mode == DEFAULT_STYLE_MODE => expr_of(style),
         _ => {
             let props: Vec<String> = styles.iter().map(|s| Some(format!("        {}: {}", s.mode, expr_of(s)?))).collect::<Option<_>>()?;
-            format!("{{\n{}\n    }}", props.join(",\n"))
+            Some(format!("{{\n{}\n    }}", props.join(",\n")))
         }
-    };
-    Some(format!("static get style() {{ return {expr}; }}"))
+    }
+}
+
+/// `@Element()`'s getter: the element itself natively, the host looked up through `getElement` lazily.
+fn element_getter(name: &str, lazy: bool) -> String {
+    if lazy {
+        format!("get {name}() {{ return __stencil_getElement(this); }}")
+    } else {
+        format!("get {name}() {{ return this; }}")
+    }
+}
+
+/// `addCreateEvents`: `this.<method> = createEvent(this, "<name>", <flags>);`
+fn event_creation(ev: &crate::meta::EventMeta) -> String {
+    let flags = (if ev.bubbles { 4 } else { 0 }) | (if ev.composed { 2 } else { 0 }) | (if ev.cancelable { 1 } else { 0 });
+    format!("this.{} = __stencil_createEvent(this, {}, {flags});", ev.method, json(&ev.name))
 }
 
 /// `normalizePath(join(dirname(file), url))` then `serializeImportPath` with query params.
@@ -804,7 +966,7 @@ fn relative_url(url: &str) -> String {
     parts.join("/")
 }
 
-fn normalize_path(path: &str) -> String {
+pub(crate) fn normalize_path(path: &str) -> String {
     let path = path.replace('\\', "/");
     let mut parts: Vec<&str> = Vec::new();
     for part in path.split('/') {
