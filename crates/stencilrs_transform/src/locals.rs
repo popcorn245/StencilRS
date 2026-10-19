@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
-    Declaration, Expression, ImportDeclarationSpecifier, Program, Statement, TSEnumDeclaration,
-    TSSignature, TSType, VariableDeclarationKind,
+    ClassElement, Declaration, Expression, ImportDeclarationSpecifier, Program, Statement,
+    TSEnumDeclaration, TSSignature, TSType, VariableDeclarationKind,
 };
 
 use crate::eval::property_key_name;
@@ -37,10 +37,22 @@ pub struct Import<'a> {
     pub imported: String,
 }
 
+/// A class's `static` field, for `Class.field` in decorator arguments.
+pub struct StaticField<'a, 'b> {
+    pub name: String,
+    pub readonly: bool,
+    pub annotation: Option<&'b TSType<'a>>,
+    pub init: Option<&'b Expression<'a>>,
+}
+
 #[derive(Default)]
 pub struct Locals<'a, 'b> {
     pub types: HashMap<&'a str, LocalType<'a, 'b>>,
     pub values: HashMap<&'a str, LocalValue<'a, 'b>>,
+    /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
+    pub const_annotations: HashMap<&'a str, &'b TSType<'a>>,
+    /// The static fields of each class declaration.
+    pub statics: HashMap<&'a str, Vec<StaticField<'a, 'b>>>,
     pub imports: HashMap<&'a str, Import<'a>>,
     /// Build-accurate mode: follow relative imports, and treat lib types as known objects.
     pub resolver: Option<&'b Resolver>,
@@ -88,6 +100,21 @@ impl<'a, 'b> Locals<'a, 'b> {
                             .collect();
                         locals.types.insert(id.name.as_str(), LocalType::Class(members));
                         locals.values.insert(id.name.as_str(), LocalValue::Object);
+                        let statics = c
+                            .body
+                            .body
+                            .iter()
+                            .filter_map(|el| match el {
+                                ClassElement::PropertyDefinition(p) if p.r#static && !p.computed => Some(StaticField {
+                                    name: property_key_name(&p.key)?,
+                                    readonly: p.readonly,
+                                    annotation: p.type_annotation.as_ref().map(|t| &t.type_annotation),
+                                    init: p.value.as_ref(),
+                                }),
+                                _ => None,
+                            })
+                            .collect();
+                        locals.statics.insert(id.name.as_str(), statics);
                     }
                 }
                 Some(Declaration::FunctionDeclaration(f)) => {
@@ -99,6 +126,9 @@ impl<'a, 'b> Locals<'a, 'b> {
                 Some(Declaration::VariableDeclaration(v)) => {
                     for d in &v.declarations {
                         let Some(name) = d.id.get_identifier_name() else { continue };
+                        if let (VariableDeclarationKind::Const, Some(t)) = (v.kind, &d.type_annotation) {
+                            locals.const_annotations.insert(name.as_str(), &t.type_annotation);
+                        }
                         let value = match (v.kind, &d.init) {
                             (VariableDeclarationKind::Const, Some(init)) => LocalValue::Const(init),
                             (_, init) => LocalValue::Let(init.as_ref()),
