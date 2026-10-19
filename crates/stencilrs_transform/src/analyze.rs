@@ -30,6 +30,7 @@ use crate::locals::{LocalType, Locals};
 use crate::meta::*;
 use crate::prop_type::{classify_annotation, classify_initializer};
 use crate::resolve::Resolver;
+use crate::scope_css::{scope_css, scope_id};
 
 const STENCIL_DECORATORS: [&str; 11] = [
     "Component", "Prop", "State", "Event", "Method", "Element", "Watch", "Listen",
@@ -278,7 +279,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     // Port of `componentDecoratorToStatic`: a component that fails validation produces no
     // metadata, but its members are still converted (and still report diagnostics).
     let component = component_options(ctx, cmp_call, &class_name, exports, locals);
-    report_unported(ctx, class, component.as_ref().map(|c| &c.3));
+    report_unported(ctx, class, component.as_ref().map(|c| (c.0.as_str(), &c.3)));
 
     let own = class_members(ctx, class, locals);
     let mut cmp = ComponentMeta {
@@ -631,14 +632,15 @@ fn jsdoc_before(source: &str, at: u32) -> String {
 
 /// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
-fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
-    let Some(o) = options else { return };
+fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value)>) {
+    let Some((tag, o)) = component else { return };
     let checks: [(bool, &str); 4] = [
         (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
         (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
         (
-            o.get("styles").is_some() && o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped"),
-            "inline `styles` on scoped components (needs Stencil's scopeCss)",
+            o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped")
+                && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
+            "inline `styles` that scopeCss rejects",
         ),
         (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
     ];
