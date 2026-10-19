@@ -1,0 +1,26 @@
+{
+  "name": "@popcorn245/stencilrs-darwin-x64",
+  "version": "0.1.0",
+  "cpu": [
+    "x64"
+  ],
+  "main": "stencilrs.darwin-x64.node",
+  "files": [
+    "stencilrs.darwin-x64.node"
+  ],
+  "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "os": [
+    "darwin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/popcorn245/StencilRS.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

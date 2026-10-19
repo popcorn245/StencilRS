@@ -1,16 +1,30 @@
 {
   "name": "@popcorn245/stencilrs",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "license": "MIT",
   "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
+  "keywords": [
+    "stencil",
+    "web-components",
+    "compiler",
+    "oxc",
+    "rust",
+    "vite",
+    "napi"
+  ],
+  "homepage": "https://github.com/popcorn245/StencilRS#readme",
+  "bugs": "https://github.com/popcorn245/StencilRS/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/popcorn245/StencilRS.git"
+  },
   "type": "module",
   "main": "index.js",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "build:native": "cargo build --release -p stencilrs_napi && node scripts/copy-native.js",
+    "build:native": "napi build --platform --release --package stencilrs_napi --manifest-path crates/stencilrs_napi/Cargo.toml --output-dir . --no-js --dts target/napi.d.ts",
     "test": "cargo test && node --test \"test/**/*.test.js\"",
     "parity:snapshot": "npm --prefix parity run snapshot",
     "parity": "npm --prefix parity run compare",
@@ -25,14 +39,29 @@
   "files": [
     "index.js",
     "vite.js",
-    "stencilrs.node"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "napi": {
+    "binaryName": "stencilrs",
+    "targets": [
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc"
+    ]
+  },
   "peerDependencies": {
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
     "vite": ">=8"
   },
   "devDependencies": {
+    "@napi-rs/cli": "3.10.8",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
     "vite": "8.3.4"

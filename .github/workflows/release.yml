@@ -1,0 +1,161 @@
+name: release
+
+# Builds the native binary for every platform, installs each one from packed tarballs on its own
+# OS (no Rust involved) and, on a version tag, publishes the platform packages and the root
+# package to npm. Pull requests that touch the binding run everything but the publish.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'crates/**'
+      - 'Cargo.*'
+      - 'package*.json'
+      - 'index.js'
+      - 'npm/**'
+      - 'scripts/release.mjs'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # napi's cross toolchain links Linux against glibc 2.17, so old distros load it too.
+          - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, flags: --use-napi-cross }
+          - { host: ubuntu-latest, target: aarch64-unknown-linux-gnu, flags: --use-napi-cross }
+          - { host: macos-latest, target: x86_64-apple-darwin }
+          - { host: macos-latest, target: aarch64-apple-darwin }
+          - { host: windows-latest, target: x86_64-pc-windows-msvc }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: release-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: release-${{ matrix.target }}-
+
+      - run: npm ci --ignore-scripts
+
+      - name: Build
+        shell: bash
+        run: npm run build:native -- --target ${{ matrix.target }} ${{ matrix.flags }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: stencilrs.*.node
+          if-no-files-found: error
+
+  # Install the packed packages into an empty project, the way a user would, and load the binary.
+  test:
+    name: install on ${{ matrix.platform }}${{ matrix.container && format(' ({0})', matrix.container) || '' }}
+    needs: build
+    runs-on: ${{ matrix.host }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, platform: linux-x64-gnu }
+          - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, platform: linux-x64-gnu, container: 'node:22-bullseye' }
+          - { host: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, platform: linux-arm64-gnu }
+          - { host: macos-15-intel, target: x86_64-apple-darwin, platform: darwin-x64 }
+          - { host: macos-latest, target: aarch64-apple-darwin, platform: darwin-arm64 }
+          - { host: windows-latest, target: x86_64-pc-windows-msvc, platform: win32-x64-msvc }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        if: ${{ !matrix.container }}
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: npm/${{ matrix.platform }}
+
+      - name: Pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/pkgs" "$RUNNER_TEMP/app"
+          npm pack ./npm/${{ matrix.platform }} --pack-destination "$RUNNER_TEMP/pkgs"
+          npm pack --pack-destination "$RUNNER_TEMP/pkgs"
+
+      - name: Install and load
+        working-directory: ${{ runner.temp }}/app
+        run: |
+          npm init -y >/dev/null
+          npm install --legacy-peer-deps --no-audit --no-fund "$RUNNER_TEMP"/pkgs/*.tgz
+          node --input-type=module -e "
+            import { analyze } from '@popcorn245/stencilrs';
+            const { components } = analyze(
+              \"import { Component } from '@stencil/core'; @Component({ tag: 'cmp-a' }) export class A {}\",
+              'a.tsx',
+            );
+            if (components[0]?.tagName !== 'cmp-a') throw new Error(JSON.stringify(components));
+            console.log('loaded on', process.platform, process.arch);
+          "
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bindings-*
+          path: artifacts
+          merge-multiple: true
+
+      - run: npm ci --ignore-scripts
+
+      - name: Put each binary in its package
+        run: npx napi artifacts --output-dir artifacts --npm-dir npm
+
+      - name: Versions and optionalDependencies
+        run: node scripts/release.mjs
+
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in npm/*/; do npm publish "$dir" --provenance --access public; done
+          npm publish --provenance --access public

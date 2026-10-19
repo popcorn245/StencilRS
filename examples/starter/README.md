@@ -9,7 +9,7 @@ Stencil way (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`, `@Watch`, `@L
 ```sh
 cd ../..
 npm install
-npm run build:native    # needs Rust (cargo); builds stencilrs.node
+npm run build:native    # needs Rust (cargo); builds stencilrs.<platform>.node
 cd examples/starter
 npm install
 ```
