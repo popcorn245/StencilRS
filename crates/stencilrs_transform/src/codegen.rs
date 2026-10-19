@@ -9,12 +9,13 @@
 //! The Stencil-specific rewrites are applied as text edits on the original TypeScript, then
 //! oxc strips the types and compiles the JSX, the way TypeScript's own emit does in Stencil.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use oxc::allocator::{Allocator, TakeIn};
 use oxc::ast::builder::AstBuilder;
 use oxc::ast::ast::{
-    Argument, ObjectExpression, ObjectPropertyKind,
+    AccessorProperty, Argument, ObjectExpression, ObjectPropertyKind, PropertyDefinition,
     CallExpression, Class, ClassElement, ConditionalExpression, Declaration, Decorator, Expression,
     ImportDeclarationSpecifier, JSXAttributeItem, JSXAttributeName, JSXElementName, JSXFragment,
     JSXOpeningElement, MethodDefinition, MethodDefinitionKind, Program, ReturnStatement, Statement,
@@ -364,7 +365,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     }
 
     let (edited, offsets) = ed.apply_mapped();
-    let (js, printed_map) = strip_types_and_jsx(&edited, opts)?;
+    let (js, printed_map, anchors) = strip_types_and_jsx(&edited, opts)?;
 
     let apis: Vec<&str> = runtime_apis.iter().chain(target_apis.iter()).copied().collect();
     let (code, prefix_lines) = if apis.is_empty() {
@@ -372,7 +373,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     } else {
         (format!("import {{ {} }} from {};\n{js}", apis.join(", "), json(&opts.core_import_path)), 1)
     };
-    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, source, &opts.file, prefix_lines));
+    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, &anchors, source, &opts.file, prefix_lines));
     Ok(Generated { code, map })
 }
 
@@ -998,8 +999,9 @@ fn fmt_num(v: f64) -> String {
 }
 
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
-/// With `opts.source_map`, also oxc's map from the output back to `edited`.
-fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>), String> {
+/// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
+/// class member positions should point instead (`MemberAnchors`).
+fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>, HashMap<u32, u32>), String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
@@ -1008,6 +1010,10 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
         return Err(format!("stencilrs produced unparsable code: {}\n---\n{edited}", msgs.join("; ")));
     }
     let mut program = parsed.program;
+    let mut anchors = MemberAnchors { text: edited, map: HashMap::new() };
+    if opts.source_map {
+        anchors.visit_program(&program);
+    }
     let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
     let mut lone_spreads = LoneSpreads(Vec::new());
     if matches!(opts.jsx, Jsx::Classic) {
@@ -1054,7 +1060,60 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
     }
     let options = CodegenOptions { source_map_path: opts.source_map.then(|| PathBuf::from(&opts.file)), ..CodegenOptions::default() };
     let printed = Codegen::new().with_options(options).build(&program);
-    Ok((printed.code, printed.map.map(|m| m.into_owned())))
+    Ok((printed.code, printed.map.map(|m| m.into_owned()), anchors.map))
+}
+
+/// oxc's printer maps a class member to its span start. TypeScript modifiers don't survive
+/// into the output, so for `private foo() {}` that is the `private` the output never prints.
+/// This collects, per member start, the offset of what the output does start with: the first
+/// token after the modifiers (`static`, `async`, `get`, `*`, or the key).
+struct MemberAnchors<'t> {
+    text: &'t str,
+    map: HashMap<u32, u32>,
+}
+
+impl MemberAnchors<'_> {
+    fn add(&mut self, span: Span, decorators: &[Decorator]) {
+        let from = decorators.last().map_or(span.start, |d| d.span.end);
+        let at = skip_ts_modifiers(self.text, from, span.end);
+        if at != span.start {
+            self.map.insert(span.start, at);
+        }
+    }
+}
+
+impl<'a> Visit<'a> for MemberAnchors<'_> {
+    fn visit_method_definition(&mut self, it: &MethodDefinition<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_method_definition(self, it);
+    }
+    fn visit_property_definition(&mut self, it: &PropertyDefinition<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_property_definition(self, it);
+    }
+    fn visit_accessor_property(&mut self, it: &AccessorProperty<'a>) {
+        self.add(it.span, &it.decorators);
+        walk::walk_accessor_property(self, it);
+    }
+}
+
+/// The offset of the first token at or after `from` that isn't a TypeScript-only modifier. A
+/// modifier word followed by `(`, `=`, `:`, `;`, `?`, `!`, `<` or `}` is the member's name.
+fn skip_ts_modifiers(text: &str, from: u32, end: u32) -> u32 {
+    let end = (end as usize).min(text.len());
+    let mut at = from as usize;
+    loop {
+        let start = at + (text[at..end].len() - text[at..end].trim_start().len());
+        let word_len = text[start..end].find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$')).unwrap_or(end - start);
+        let word = &text[start..start + word_len];
+        let rest = text[start + word_len..end].trim_start();
+        let is_name = rest.is_empty() || rest.starts_with(['(', '=', ':', ';', '?', '!', '<', '}']);
+        if matches!(word, "public" | "private" | "protected" | "readonly" | "override" | "declare" | "abstract") && !is_name {
+            at = start + word_len;
+        } else {
+            return start as u32;
+        }
+    }
 }
 
 /// Spans of the argument of JSX elements whose only attribute is a spread (`<svg {...p}>`).

@@ -6,6 +6,7 @@
 //! source, so the map points at what the author wrote.
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use oxc_sourcemap::{SourceMap, Token};
 
@@ -86,8 +87,9 @@ impl<'a> LineIndex<'a> {
 
 /// Compose oxc's map (output → `edited`) with the edits (`edited` → `source`) into a map from
 /// the output to the original source, as source map v3 JSON. `prefix_lines`: lines put in
-/// front of oxc's output afterwards.
-pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, source: &str, file: &str, prefix_lines: u32) -> String {
+/// front of oxc's output afterwards. `anchors` moves a mapped position in `edited` to another
+/// one first (class members, from their modifier to the first token that is printed).
+pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &HashMap<u32, u32>, source: &str, file: &str, prefix_lines: u32) -> String {
     let edited_lines = LineIndex::new(edited);
     let source_lines = LineIndex::new(source);
     let tokens: Vec<Token> = printed
@@ -95,6 +97,7 @@ pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, source: &st
         .filter(|t| t.get_source_id().is_some())
         .filter_map(|t| {
             let at = edited_lines.offset(t.get_src_line(), t.get_src_col())?;
+            let at = anchors.get(&at).copied().unwrap_or(at);
             let (line, col) = source_lines.position(edits.to_original(at)?);
             Some(Token::new(t.get_dst_line() + prefix_lines, t.get_dst_col(), line, col, Some(0), t.get_name_id()))
         })
