@@ -23,6 +23,7 @@ const fromStencil = (c) => ({
   componentClassName: c.componentClassName,
   encapsulation: c.encapsulation,
   styleUrls: (c.styles ?? []).flatMap((s) => (s.externalStyles ?? []).map((e) => e.originalComponentPath)),
+  globalStyles: c.globalStyles ?? [],
   properties: c.properties.map((p) => ({
     name: p.name,
     type: p.type,

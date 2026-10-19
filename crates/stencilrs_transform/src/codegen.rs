@@ -286,6 +286,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         // Members appended at the end of the class, in Stencil's order.
         let mut tail: Vec<String> = Vec::new();
         tail.extend(surviving_static_getters(cmp));
+        // `styleToStatic`: the global style getters survive; they sit ahead of the rest.
+        if let Some(url) = cmp.options.get("globalStyleUrl").and_then(Value::as_str).filter(|u| !u.is_empty()) {
+            tail.push(format!("static get originalGlobalStyleUrl() {{ return {}; }}", json(url)));
+        }
+        if let Some(css) = cmp.options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+            tail.push(format!("static get globalStyle() {{ return {}; }}", json(css)));
+        }
         // Left behind by `attachInternalsDecoratorsToStatic`, after the component's own getters.
         if !cmp.attach_internals_custom_states.is_empty() {
             tail.push(format!("static get attachInternalsCustomStates() {{ return {}; }}", js_value(&custom_states_value(cmp))));
@@ -801,7 +808,7 @@ fn relative_url(url: &str) -> String {
     parts.join("/")
 }
 
-fn normalize_path(path: &str) -> String {
+pub(crate) fn normalize_path(path: &str) -> String {
     let path = path.replace('\\', "/");
     let mut parts: Vec<&str> = Vec::new();
     for part in path.split('/') {
