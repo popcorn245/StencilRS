@@ -58,7 +58,7 @@ stencilrs answers the same question without a type checker:
 | Matches | Stencil's `transpileSync` / `@stencil/unplugin` | a full `stencil build` |
 | Imports | unresolved → `any` | relative imports followed (types, enums, consts, function return types, re-exports), each module summarised once and cached |
 | Lib types (`Date`, `Record<…>`) | unresolved → `any` | object types |
-| Verified by | `parity/` (211 / 211) | `examples/ui-kit/check-build.mjs` (136 / 136) |
+| Verified by | `parity/` (212 / 212) | `examples/ui-kit/check-build.mjs` (136 / 136) |
 
 The two differ for real components: in the ui-kit, single-file compilation types 21 components'
 props differently from the full build (an imported `CardPayload` becomes `any` and gets an

@@ -142,6 +142,27 @@ fn lazy_output_leaves_decorated_base_classes_to_stencil() {
     assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
 }
 
+#[test]
+fn per_mode_style_urls() {
+    let code = run(
+        r#"
+        import { Component } from '@stencil/core';
+        @Component({ tag: 'cmp-a', styleUrls: { ios: ['a.ios.css', 'b.ios.css'], md: 'a.md.css' } })
+        export class CmpA {}
+        "#,
+        Jsx::Classic,
+    );
+    for expected in [
+        r#"import CmpAIosStyle0 from "./cmp/a.ios.css?tag=cmp-a&mode=ios";"#,
+        r#"import CmpAIosStyle1 from "./cmp/b.ios.css?tag=cmp-a&mode=ios";"#,
+        r#"import CmpAMdStyle0 from "./cmp/a.md.css?tag=cmp-a&mode=md";"#,
+        "ios: CmpAIosStyle0() + CmpAIosStyle1(),",
+        "md: CmpAMdStyle0()",
+    ] {
+        assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
+    }
+}
+
 /// The source text a map sends the first occurrence of `needle` in the output to.
 fn mapped_source<'a>(src: &'a str, needle: &str) -> &'a str {
     let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, source_map: true, transform_as_base_class: false, component_export: Default::default() };
