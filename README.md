@@ -64,7 +64,7 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 222 fixtures, in each of four outputs | **222/222**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 222 fixtures, in each of five outputs | **222/222**: metadata, diagnostics and code |
 | Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |

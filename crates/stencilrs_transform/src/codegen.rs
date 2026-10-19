@@ -6,9 +6,12 @@
 //!   of defined (`addModuleMetadataProxies`).
 //! - `lazy`: the lazy-loading (`loader-bundle`) shape, a class that takes over a bootstrapped host
 //!   (`registerInstance`) instead of being the element.
+//! - `ssr`: the same takeover for Stencil's hydrate (server-side rendering) runtime: the class
+//!   stays a class, with its style and runtime metadata as static getters (`cmpMeta`).
 //!
-//! Ports `nativeComponentTransform` and `lazyComponentTransform` and their friends
-//! (`transformers/component-native/*`, `component-lazy/*`, `define-custom-element.ts`,
+//! Ports `nativeComponentTransform`, `lazyComponentTransform` and `ssrComponentTransform` and
+//! their friends (`transformers/component-native/*`, `component-lazy/*`, `component-ssr/*`,
+//! `define-custom-element.ts`,
 //! `update-stencil-core-import.ts`, `style-imports.ts`, `automatic-key-insertion/`,
 //! `utils/format-component-runtime-meta.ts`).
 //!
@@ -45,6 +48,8 @@ use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
 use crate::scope_css::{scope_css, scope_id};
 
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
+/// What `ComponentExport::Ssr` imports the runtime from (`STENCIL_INTERNAL_SSR_PLATFORM_ID`).
+pub const SSR_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/server";
 
 #[derive(Debug, Clone)]
 pub enum Jsx {
@@ -55,7 +60,8 @@ pub enum Jsx {
 }
 
 /// Which output a component compiles to: Stencil's `componentExport`. `transpileSync` reaches
-/// `Lazy` with `componentExport: null`.
+/// `Lazy` with `componentExport: null`; `Ssr` only exists in Stencil's hydrate build, which runs
+/// the same `componentExport: null` with the server runtime as the core import.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ComponentExport {
     /// `const X = class extends HTMLElement`, defined with `defineCustomElement`.
@@ -65,6 +71,8 @@ pub enum ComponentExport {
     Module,
     /// `export const X = class` taking over a host: `registerInstance(this, hostRef)`.
     Lazy,
+    /// `export class X` taking over a host like `Lazy`, with `static get cmpMeta()` and `style`.
+    Ssr,
 }
 
 /// Stencil's `componentMetadata`: what the compiler's metadata is added to the class as.
@@ -150,7 +158,9 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
 /// One run of the generator; `vdom` is the facts for `COMPILER_META` when it is added.
 fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&HashMap<String, VdomMeta>>) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
-    let lazy = opts.component_export == ComponentExport::Lazy;
+    let ssr = opts.component_export == ComponentExport::Ssr;
+    // Both take over a host (`registerInstance`) instead of being the element.
+    let lazy = ssr || opts.component_export == ComponentExport::Lazy;
     let customelement = opts.component_export == ComponentExport::CustomElement;
     let text = |s: Span| s.source_text(source);
     let aliases = import_aliases(program);
@@ -237,7 +247,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
     if bases.stencil_decorated {
         // Lazy output leaves these classes' static meta getters in place (`convertDecoratorsToStatic`),
         // which need the full `complexType` and docs metadata.
-        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy output.".into());
+        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy and ssr output.".into());
     }
     if bases.html_element {
         add(&mut target_apis, "HTMLElement");
@@ -262,7 +272,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         // Lazy classes aren't elements, so nothing is plain (`isPlain` only drives native output).
         let plain = !lazy && info.is_plain(cmp);
 
-        // Class → `const X = class extends HTMLElement { ... };`
+        // Class → `const X = class extends HTMLElement { ... };`; `ssr` keeps the class as it is.
         let header_start = class.decorators.iter().map(|d| d.span.start).min().unwrap_or(stmt_span.start).min(stmt_span.start);
         let extends = match &class.heritage {
             Some(h) => {
@@ -277,8 +287,14 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         };
         // `createConstClass` keeps the `export` unless the output is `customelement`.
         let export = if !customelement && matches!(stmt, Statement::ExportDeclaration(_)) { "export " } else { "" };
-        ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
-        ed.insert(class.body.span.end, ";");
+        if ssr {
+            for d in &class.decorators {
+                ed.remove(d.span.start, d.span.end);
+            }
+        } else {
+            ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
+            ed.insert(class.body.span.end, ";");
+        }
 
         let mut element_replaced = false;
         let mut ctor: Option<&MethodDefinition> = None;
@@ -447,12 +463,16 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         }
         let styles = if opts.emit_styles { styles_of(cmp) } else { Vec::new() };
         if let Some(expr) = style_expression(cmp, &styles) {
-            if lazy {
+            if lazy && !ssr {
                 // `addStaticStylePropertyToClass`: an assignment after the class.
                 define_calls.push(format!("{name}.style = {expr};"));
             } else {
                 tail.push(format!("static get style() {{ return {expr}; }}"));
             }
+        }
+        if ssr {
+            // `addHydrateRuntimeCmpMeta`
+            tail.push(ssr_cmp_meta(cmp, &info, &styles));
         }
         for style in &styles {
             for (i, url) in style.urls.iter().enumerate() {
@@ -481,7 +501,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
 
         // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
         match opts.component_export {
-            ComponentExport::Lazy => {}
+            ComponentExport::Lazy | ComponentExport::Ssr => {}
             ComponentExport::Module => {
                 add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
                 define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
@@ -1011,6 +1031,33 @@ fn dash_to_pascal_case(s: &str) -> String {
 
 /// `formatComponentRuntimeMeta(cmp, true)`, printed the way `convertValueToLiteral` does.
 fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> String {
+    format!("[{}]", runtime_meta_items(cmp, info, styles).into_iter().map(|i| i.unwrap_or_else(|| "undefined".into())).collect::<Vec<_>>().join(", "))
+}
+
+/// `addHydrateRuntimeCmpMeta`: the hydrate runtime reads the same compact metadata from a static
+/// `cmpMeta` getter, with no bundle to load (`$lazyBundleId$` is `"-"`).
+fn ssr_cmp_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> String {
+    let items = runtime_meta_items(cmp, info, styles);
+    let item = |i: usize| items.get(i).cloned().flatten().unwrap_or_else(|| "undefined".into());
+    let reflected: Vec<String> = cmp
+        .properties
+        .iter()
+        .filter(|p| p.reflect)
+        .map(|p| format!("[{}, {}]", json(&p.name), p.attribute.as_deref().map_or_else(|| "undefined".to_owned(), json)))
+        .collect();
+    format!(
+        "static get cmpMeta() {{ return {{ \"$flags$\": {}, \"$tagName$\": {}, \"$members$\": {}, \"$listeners$\": {}, \"$lazyBundleId$\": \"-\", \"$attrsToReflect$\": [{}] }}; }}",
+        item(0),
+        item(1),
+        item(2),
+        item(3),
+        reflected.join(", ")
+    )
+}
+
+/// The array `formatComponentRuntimeMeta` returns, one printed item per slot (`None` where it
+/// holds `undefined`), trailing gaps trimmed.
+fn runtime_meta_items(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> Vec<Option<String>> {
     let o = &cmp.options;
     let enc = o.get("encapsulation");
     let mut flags = 0u32;
@@ -1141,7 +1188,7 @@ fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
     while matches!(items.last(), Some(None)) {
         items.pop();
     }
-    format!("[{}]", items.into_iter().map(|i| i.unwrap_or_else(|| "undefined".into())).collect::<Vec<_>>().join(", "))
+    items
 }
 
 /// A JSON value as a JS literal with quoted keys (`convertValueToLiteral`).

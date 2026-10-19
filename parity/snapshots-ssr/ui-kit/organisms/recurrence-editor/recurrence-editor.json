@@ -1,0 +1,213 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-recurrence-editor",
+      "componentClassName": "PopRecurrenceEditor",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "value",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "Recurrence | null",
+            "resolved": "Recurrence | null",
+            "references": {
+              "Recurrence": {
+                "location": "local",
+                "path": "ui-kit/organisms/recurrence-editor/recurrence-editor.tsx",
+                "id": "ui-kit/organisms/recurrence-editor/recurrence-editor.tsx::Recurrence"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Controlled value. `null` means \"not recurring\"."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "enabled"
+        },
+        {
+          "name": "frequency"
+        },
+        {
+          "name": "days"
+        },
+        {
+          "name": "endDate"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "valueChange",
+          "method": "valueChange",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired whenever the user changes the value."
+          },
+          "complexType": {
+            "original": "Recurrence | null",
+            "resolved": "Recurrence | null",
+            "references": {
+              "Recurrence": {
+                "location": "local",
+                "path": "ui-kit/organisms/recurrence-editor/recurrence-editor.tsx",
+                "id": "ui-kit/organisms/recurrence-editor/recurrence-editor.tsx::Recurrence"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "value",
+          "methodName": "onValueChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-RECURRENCE-EDITOR",
+          "styleStr": null,
+          "styleIdentifier": "PopRecurrenceEditorStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/recurrence-editor/recurrence-editor.css",
+              "relativePath": "recurrence-editor.css",
+              "originalComponentPath": "recurrence-editor.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": false,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "type",
+        "checked",
+        "onChange",
+        "value",
+        "selected",
+        "role",
+        "aria-label",
+        "aria-pressed",
+        "onClick",
+        "min",
+        "max",
+        "onInput"
+      ],
+      "htmlTagNames": [
+        "div",
+        "label",
+        "input",
+        "span",
+        "select",
+        "option",
+        "button"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

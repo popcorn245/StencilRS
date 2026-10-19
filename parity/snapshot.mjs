@@ -1,6 +1,6 @@
 // Golden output: compile every fixture with real Stencil v5 and write snapshots/.
 //
-//   node snapshot.mjs [suite] [--mode customelement|module|lazy]
+//   node snapshot.mjs [suite] [--mode customelement|module|lazy|ssr]
 //
 // For each fixture `fixtures/<suite>/<path>.tsx`:
 //   snapshots/<suite>/<path>.js    the code transpileSync emits
@@ -8,9 +8,10 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { transpileSync, versions } from '@stencil/core/compiler';
+import { versions } from '@stencil/core/compiler';
 
 import { listFixtures, modeArg, plain, portable, snapshotsDirFor, transpileOptions } from './lib.mjs';
+import { stencilTranspile } from './stencil.mjs';
 
 /** An error Stencil threw carries its stack, with this machine's paths: keep the message. */
 const withoutStack = (text) => text.split('\n    at ')[0];
@@ -25,7 +26,7 @@ else rmSync(snapshotsDir, { recursive: true, force: true });
 let errors = 0;
 for (const { id, file } of fixtures) {
   const code = readFileSync(file, 'utf8');
-  const result = transpileSync(code, transpileOptions(code, id, mode));
+  const result = stencilTranspile(code, transpileOptions(code, id, mode));
   const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
   mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.js`, portable(result.code));

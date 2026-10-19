@@ -1,0 +1,333 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-thread-card",
+      "componentClassName": "PopThreadCard",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "cardType",
+          "type": "string",
+          "attribute": "card-type",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The card's type key (`timer`, `task`, …). Shown as the chrome's type label."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "payload",
+          "type": "any",
+          "attribute": "payload",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "CardPayload",
+            "resolved": "any",
+            "references": {
+              "CardPayload": {
+                "location": "global",
+                "id": "global::CardPayload"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "The validated card payload object (set as a PROPERTY, not an attribute).\nOptional on purpose: a missing or broken payload is a supported state that\nrenders the fallback face, so hosts never have to pre-validate."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "liveness",
+          "type": "any",
+          "attribute": "liveness",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'live'",
+          "complexType": {
+            "original": "CardLiveness",
+            "resolved": "CardLiveness",
+            "references": {
+              "CardLiveness": {
+                "location": "global",
+                "id": "global::CardLiveness"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "`frozen` = historical snapshot: muted chrome, mutating actions dropped."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "actions",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "CardAction[]",
+            "resolved": "CardAction[]",
+            "references": {
+              "CardAction": {
+                "location": "global",
+                "id": "global::CardAction"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Wrapper-level actions, before liveness/readonly filtering."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "assignees",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "CardAssignee[]",
+            "resolved": "CardAssignee[]",
+            "references": {
+              "CardAssignee": {
+                "location": "global",
+                "id": "global::CardAssignee"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "People the card is assigned to; falls back to `payload.assignees`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Viewer / public render — no action buttons at all."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "renderer",
+          "type": "string",
+          "attribute": "renderer",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The `pop-*` tag to mount inside. Unknown/missing ⇒ fallback face."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popCardAction",
+          "method": "popCardAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Emitted when one of the WRAPPER's actions is tapped.\n\nThe inner renderer emits its own `popCardAction` with\n`{ composed: true, bubbles: true }`, so renderer actions reach the same\nlistener by natural propagation — the wrapper deliberately does not\nintercept and re-dispatch them, which would double-fire every action."
+          },
+          "complexType": {
+            "original": "CardActionDetail",
+            "resolved": "CardActionDetail",
+            "references": {
+              "CardActionDetail": {
+                "location": "global",
+                "id": "global::CardActionDetail"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-THREAD-CARD",
+          "styleStr": null,
+          "styleIdentifier": "PopThreadCardStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/thread-card/thread-card.css",
+              "relativePath": "thread-card.css",
+              "originalComponentPath": "thread-card.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": true,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "key",
+        "type",
+        "title",
+        "aria-label",
+        "onClick",
+        "name",
+        "aria-hidden",
+        "ref"
+      ],
+      "htmlTagNames": [
+        "div",
+        "span",
+        "button",
+        "ion-icon",
+        "p"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-thread-card — the Thread Model v2 card WRAPPER.\n\nEvery card renderer (`pop-thread-card-timer|task|list|showtimes`, and anything\nadded later) sits INSIDE this component. The wrapper owns the shared chrome:\nthe header, the assignee chips, the action row and the frozen treatment; the\nrenderer owns only the card's own face.\n\nThe renderer is INJECTED as a tag name (`renderer=\"pop-thread-card-timer\"`) so\nui-kit never needs a registry of card types — the host maps cardType → tag and\na MISS in that map simply yields no `renderer`. A missing tag, a tag outside\nthe `pop-*` namespace, or a payload too broken to read all degrade to the\nfallback face (title + subtitle + \"couldn't render this card\"). The wrapper\nmust NEVER render blank.\n\nProps in, `popCardAction` out. No Firebase, no fetch, no Astro."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    },
+    {
+      "path": "./thread-card-types"
+    }
+  ]
+}

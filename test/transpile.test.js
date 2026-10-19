@@ -19,6 +19,12 @@ test('componentExport: null is the lazy output, as in Stencil', () => {
   assert.equal(transpile(source, { ...options, componentExport: null }).code, transpile(source, { ...options, componentExport: 'lazy' }).code);
 });
 
+test('componentExport: ssr keeps the class, adds cmpMeta, and imports the server runtime', () => {
+  const ssr = transpile(source, { ...options, componentExport: 'ssr' }).code;
+  assert.match(ssr, /^import \{ registerInstance as __stencil_registerInstance \} from "@stencil\/core\/runtime\/server";/);
+  assert.match(ssr, /export class CmpA \{[\s\S]*static get cmpMeta\(\)[\s\S]*"\$tagName\$": "cmp-a"/);
+});
+
 test('an unknown componentExport throws', () => {
   assert.throws(() => transpile(source, { ...options, componentExport: 'nope' }), /unknown componentExport/);
 });

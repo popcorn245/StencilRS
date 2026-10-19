@@ -1,0 +1,13 @@
+{
+  "stencil": "5.0.0-beta.25",
+  "typescript": "6.0.3",
+  "options": {
+    "jsx": 4,
+    "jsxImportSource": "@stencil/core",
+    "file": "<file>",
+    "componentExport": null,
+    "coreImportPath": "@stencil/core/runtime/server",
+    "styleImportData": "queryparams"
+  },
+  "fixtures": 222
+}
