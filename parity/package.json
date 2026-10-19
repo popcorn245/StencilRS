@@ -6,8 +6,8 @@
   "description": "Golden output from real Stencil v5, compared against stencilrs",
   "scripts": {
     "snapshot": "node snapshot.mjs",
-    "compare": "node compare.mjs && node compare.mjs --mode module && node compare.mjs --mode lazy",
-    "sourcemaps": "node sourcemaps.mjs && node sourcemaps.mjs --mode module && node sourcemaps.mjs --mode lazy",
+    "compare": "node compare.mjs && node compare.mjs --mode module && node compare.mjs --mode lazy && node compare.mjs --mode ssr",
+    "sourcemaps": "node sourcemaps.mjs && node sourcemaps.mjs --mode module && node sourcemaps.mjs --mode lazy && node sourcemaps.mjs --mode ssr",
     "scope-css": "node scope-css.mjs",
     "bench": "node bench.mjs"
   },

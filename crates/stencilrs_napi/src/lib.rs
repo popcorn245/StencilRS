@@ -1,7 +1,7 @@
 //! Node binding for stencilrs.
 
 use napi_derive::napi;
-use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
+use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
 
 fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
     serde_json::to_value(value).map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -33,7 +33,8 @@ pub struct JsTranspileOptions {
     /// `transformAsBaseClass`). Default false.
     pub transform_as_base_class: Option<bool>,
     /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
-    /// `"module"` or `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil).
+    /// `"module"`, `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil) or `"ssr"`
+    /// (the hydrate / server-side rendering shape).
     pub component_export: Option<String>,
 }
 
@@ -49,9 +50,10 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
         None | Some("customelement") => ComponentExport::CustomElement,
         Some("module") => ComponentExport::Module,
         Some("lazy") => ComponentExport::Lazy,
+        Some("ssr") => ComponentExport::Ssr,
         Some(other) => {
             return Err(napi::Error::from_reason(format!(
-                "unknown componentExport {other:?}: expected \"customelement\", \"module\" or \"lazy\""
+                "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\" or \"ssr\""
             )));
         }
     };

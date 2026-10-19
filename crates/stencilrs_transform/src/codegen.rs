@@ -6,9 +6,12 @@
 //!   of defined (`addModuleMetadataProxies`).
 //! - `lazy`: the lazy-loading (`loader-bundle`) shape, a class that takes over a bootstrapped host
 //!   (`registerInstance`) instead of being the element.
+//! - `ssr`: the same takeover for Stencil's hydrate (server-side rendering) runtime: the class
+//!   stays a class, with its style and runtime metadata as static getters (`cmpMeta`).
 //!
-//! Ports `nativeComponentTransform` and `lazyComponentTransform` and their friends
-//! (`transformers/component-native/*`, `component-lazy/*`, `define-custom-element.ts`,
+//! Ports `nativeComponentTransform`, `lazyComponentTransform` and `ssrComponentTransform` and
+//! their friends (`transformers/component-native/*`, `component-lazy/*`, `component-ssr/*`,
+//! `define-custom-element.ts`,
 //! `update-stencil-core-import.ts`, `style-imports.ts`, `automatic-key-insertion/`,
 //! `utils/format-component-runtime-meta.ts`).
 //!
@@ -56,7 +59,8 @@ pub enum Jsx {
 }
 
 /// Which output a component compiles to: Stencil's `componentExport`. `transpileSync` reaches
-/// `Lazy` with `componentExport: null`.
+/// `Lazy` with `componentExport: null`; `Ssr` only exists in Stencil's hydrate build, which runs
+/// the same `componentExport: null` with the server runtime as the core import.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ComponentExport {
     /// `const X = class extends HTMLElement`, defined with `defineCustomElement`.
@@ -66,6 +70,8 @@ pub enum ComponentExport {
     Module,
     /// `export const X = class` taking over a host: `registerInstance(this, hostRef)`.
     Lazy,
+    /// `export class X` taking over a host like `Lazy`, with `static get cmpMeta()` and `style`.
+    Ssr,
 }
 
 #[derive(Debug, Clone)]
@@ -120,7 +126,9 @@ const LIFECYCLE_METHODS: [&str; 9] = [
 /// valid components `analyze_program` found, in source order.
 pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
-    let lazy = opts.component_export == ComponentExport::Lazy;
+    let ssr = opts.component_export == ComponentExport::Ssr;
+    // Both take over a host (`registerInstance`) instead of being the element.
+    let lazy = ssr || opts.component_export == ComponentExport::Lazy;
     let customelement = opts.component_export == ComponentExport::CustomElement;
     let text = |s: Span| s.source_text(source);
     let aliases = import_aliases(program);
@@ -207,7 +215,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     if bases.stencil_decorated {
         // Lazy output leaves these classes' static meta getters in place (`convertDecoratorsToStatic`),
         // which need the full `complexType` and docs metadata.
-        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy output.".into());
+        return Err("stencilrs: decorated base classes and mixins are not ported yet for lazy and ssr output.".into());
     }
     if bases.html_element {
         add(&mut target_apis, "HTMLElement");
@@ -247,8 +255,14 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         };
         // `createConstClass` keeps the `export` unless the output is `customelement`.
         let export = if !customelement && matches!(stmt, Statement::ExportDeclaration(_)) { "export " } else { "" };
-        ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
-        ed.insert(class.body.span.end, ";");
+        if ssr {
+            for d in &class.decorators {
+                ed.remove(d.span.start, d.span.end);
+            }
+        } else {
+            ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
+            ed.insert(class.body.span.end, ";");
+        }
 
         let mut element_replaced = false;
         let mut ctor: Option<&MethodDefinition> = None;
@@ -410,12 +424,16 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
         }
         let styles = styles_of(cmp);
         if let Some(expr) = style_expression(cmp, &styles) {
-            if lazy {
+            if lazy && !ssr {
                 // `addStaticStylePropertyToClass`: an assignment after the class.
                 define_calls.push(format!("{name}.style = {expr};"));
             } else {
                 tail.push(format!("static get style() {{ return {expr}; }}"));
             }
+        }
+        if ssr {
+            // `addHydrateRuntimeCmpMeta`
+            tail.push(ssr_cmp_meta(cmp, &info, &styles));
         }
         for style in &styles {
             for (i, url) in style.urls.iter().enumerate() {
@@ -444,7 +462,7 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
 
         // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
         match opts.component_export {
-            ComponentExport::Lazy => {}
+            ComponentExport::Lazy | ComponentExport::Ssr => {}
             ComponentExport::Module => {
                 add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
                 define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
