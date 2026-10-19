@@ -26,6 +26,28 @@ node coverage.mjs       # which files stencilrs compiles vs hands to Stencil
 | Spec suite in headless Chrome (`npm run test:browser`) | 863 / 874 (the 11 mock browser APIs only jsdom lets a test replace) |
 | Files stencilrs compiles itself | 136 / 136 (no fallback to Stencil) |
 
+## Benchmark: `stencil build` with stencilrs swapped in (custom elements)
+
+```sh
+node bench-stencil-build.mjs 5 --keep   # 5 runs each, stock vs patched; --only stock|patched
+node check-standalone.mjs               # the two standalone outputs behave alike (~2 min, jsdom)
+```
+
+Stencil compiles every component twice: a type-checked TypeScript pass that fills its module map
+(kept), then a per-bundle `ts.transpileModule` inside Rolldown (pass B). The script copies
+`@stencil/core` and `@stencil/cli` into `.bench/` (the installed ones are never touched), patches
+pass B in the copy's `compiler-*.mjs` for the `customElements` bundle to call stencilrs'
+`transpile()` on the source file (failing loudly if Stencil's code no longer matches the anchor),
+and builds `stencil.standalone.config.ts` (the `standalone` target only; `tsconfig.bench.json`
+leaves out the stories, whose Storybook imports aren't installed here) with each, alternating.
+It prints medians of wall time and of Stencil's own "build finished" time. This is a benchmark
+patch, never shipped. The lazy (`loader-bundle`) build isn't swapped yet.
+
+stencilrs' output is adapted to what Stencil's standalone transformers emit: `proxyCustomElement`
+instead of `defineCustomElement(Class, meta)`, an exported `defineCustomElement(opts)` that also
+defines the component's dependencies, and the auto-define call. The class is then a statement,
+not a `/*@__PURE__*/` initializer, so a bundler can't tree-shake an unused component as well.
+
 ## Making the specs green
 
 The specs were written for the ui-kit's mock renderer (decorators stubbed out, vnodes drawn by
