@@ -1,5 +1,8 @@
 # @popcorn245/stencilrs
 
+[![CI](https://github.com/popcorn245/StencilRS/actions/workflows/ci.yml/badge.svg)](https://github.com/popcorn245/StencilRS/actions/workflows/ci.yml)
+[Storybook on GitHub Pages](https://popcorn245.github.io/StencilRS/)
+
 Stencil's component authoring, compiled by Rust.
 
 stencilrs keeps the parts of [Stencil v5](https://github.com/stenciljs/core/tree/v5) that are already
@@ -52,7 +55,7 @@ migrating to v5, how the compiler works and was built, parity, benchmarks, quirk
 cd storybook && npm install && npm run storybook   # http://localhost:6007
 ```
 
-The built Storybook is live, on the tailnet only, at **https://stencilrs.popcorn245.com**. Every
+The built Storybook is live on GitHub Pages at **https://popcorn245.github.io/StencilRS/**, and on the tailnet only, at **https://stencilrs.popcorn245.com**. Every
 push to `main` runs [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml):
 [`scripts/ci.sh`](scripts/ci.sh) builds and tests the compiler, then the components (starter and
 ui-kit: tests, then a stencilrs library build), then the Storybook, and the workflow publishes
