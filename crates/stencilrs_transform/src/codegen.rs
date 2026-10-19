@@ -97,6 +97,9 @@ pub struct CodegenOptions2 {
     /// Build-accurate metadata: follow relative imports and know lib types, as a full
     /// `stencil build` does. Off: exactly what single-file `transpileSync` produces.
     pub resolve_imports: bool,
+    /// Report a prop, event or method whose `complexType` cannot be computed as not ported
+    /// (an error starting with `stencilrs:`), so Stencil's compiler handles the file.
+    pub complex_types: bool,
     pub core_import_path: String,
     pub jsx: Jsx,
     /// Also return a source map from the generated module to the original source.

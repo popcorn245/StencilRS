@@ -6,9 +6,8 @@
 //! metadata: the build conditionals (`setComponentBuildConditionals`), the vdom facts
 //! (`gatherVdomMeta`), the styles (`parseStaticStyles`) and the key order of the object.
 //!
-//! Not ported here, and written as placeholders: the JSDoc (`docs`) and the resolved types of
-//! members (`complexType.resolved`, `references`, a method's whole `complexType`). They need the
-//! type checker; see issue #8. `internal` follows from `docs`, so it is `false`.
+//! The JSDoc (`docs`) and `complexType` of members are the analysis's own (`stencilrs:` errors
+//! mark the types it leaves to Stencil's compiler); `internal` follows from the `@internal` tag.
 
 use oxc::ast::ast::{Argument, CallExpression, Class, Expression, ObjectPropertyKind, PropertyKey, StringLiteral, VariableDeclarator};
 use oxc::ast_visit::{Visit, walk};
@@ -18,7 +17,7 @@ use serde_json::Value;
 
 use crate::analyze::style_url_modes;
 use crate::codegen::normalize_path;
-use crate::meta::{ComponentMeta, Encapsulation, PropType};
+use crate::meta::{ComplexType, ComponentMeta, Docs, Encapsulation, MethodComplexType, PropType, References};
 
 /// A JavaScript value, printed the way `convertValueToLiteral` does (`undefined` included).
 pub enum J {
@@ -28,6 +27,8 @@ pub enum J {
     Str(String),
     Arr(Vec<J>),
     Obj(Vec<(&'static str, J)>),
+    /// An object whose keys are data (the type references by name).
+    Map(Vec<(String, J)>),
 }
 
 impl J {
@@ -59,20 +60,23 @@ impl J {
                 }
                 out.push(']');
             }
-            J::Obj(fields) => {
-                out.push_str("{ ");
-                for (i, (k, v)) in fields.iter().enumerate() {
-                    if i > 0 {
-                        out.push_str(", ");
-                    }
-                    out.push_str(&serde_json::to_string(k).expect("string"));
-                    out.push_str(": ");
-                    v.print(out);
-                }
-                out.push_str(" }");
-            }
+            J::Obj(fields) => print_fields(fields.iter().map(|(k, v)| (*k, v)), out),
+            J::Map(fields) => print_fields(fields.iter().map(|(k, v)| (k.as_str(), v)), out),
         }
     }
+}
+
+fn print_fields<'a>(fields: impl Iterator<Item = (&'a str, &'a J)>, out: &mut String) {
+    out.push_str("{ ");
+    for (i, (k, v)) in fields.enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&serde_json::to_string(k).expect("string"));
+        out.push_str(": ");
+        v.print(out);
+    }
+    out.push_str(" }");
 }
 
 /// What `gatherVdomMeta` and `parseCallExpression` found in a component's class.
@@ -343,18 +347,64 @@ fn prop_type(t: PropType) -> &'static str {
     }
 }
 
-fn docs(tags_first: bool) -> J {
+/// JSDoc as the compiler keeps it: props and events list the tags first, methods the text.
+fn docs(docs: &Docs, tags_first: bool) -> J {
+    let tags = J::Arr(
+        docs.tags
+            .iter()
+            .map(|t| J::Obj(vec![("name", J::str(&t.name)), ("text", J::opt_str(t.text.as_deref()))]))
+            .collect(),
+    );
+    let text = J::str(&docs.text);
     if tags_first {
-        J::Obj(vec![("tags", J::Arr(vec![])), ("text", J::str(""))])
+        J::Obj(vec![("tags", tags), ("text", text)])
     } else {
-        J::Obj(vec![("text", J::str("")), ("tags", J::Arr(vec![]))])
+        J::Obj(vec![("text", text), ("tags", tags)])
     }
 }
 
-/// `{ original, resolved, references }`. `resolved` is the type as written: the resolved type
-/// needs the type checker (#8).
-fn complex_type(original: &str) -> J {
-    J::Obj(vec![("original", J::str(original)), ("resolved", J::str(original)), ("references", J::Obj(vec![]))])
+/// A member with an `@internal` tag is internal.
+fn internal(docs: &Docs) -> J {
+    J::Bool(docs.tags.iter().any(|t| t.name == "internal"))
+}
+
+fn references(refs: &References) -> J {
+    J::Map(
+        refs.0
+            .iter()
+            .map(|(name, r)| {
+                let mut fields = vec![("location", J::str(r.location))];
+                if let Some(path) = &r.path {
+                    fields.push(("path", J::str(path)));
+                }
+                fields.push(("id", J::str(&r.id)));
+                if r.is_default {
+                    fields.push(("isDefault", J::Bool(true)));
+                }
+                if let Some(at) = &r.reference_location {
+                    fields.push(("referenceLocation", J::str(at)));
+                }
+                (name.clone(), J::Obj(fields))
+            })
+            .collect(),
+    )
+}
+
+/// `{ original, resolved, references }`.
+fn complex_type(t: &ComplexType) -> J {
+    J::Obj(vec![("original", J::str(&t.original)), ("resolved", J::str(&t.resolved)), ("references", references(&t.references))])
+}
+
+fn method_complex_type(t: &MethodComplexType) -> J {
+    J::Obj(vec![
+        ("signature", J::str(&t.signature)),
+        (
+            "parameters",
+            J::Arr(t.parameters.iter().map(|p| J::Obj(vec![("name", J::str(&p.name)), ("type", J::str(&p.type_text)), ("docs", J::str(&p.docs))])).collect()),
+        ),
+        ("references", references(&t.references)),
+        ("return", J::str(&t.return_type)),
+    ])
 }
 
 /// `parseStaticStyles`: the component's style modes, inline `$` first, then the stylesheets by
@@ -458,9 +508,9 @@ pub fn getter(input: &MetaInput) -> String {
                     ("required", J::Bool(p.required)),
                     ("optional", J::Bool(p.optional)),
                     ("defaultValue", J::opt_str(p.default_value.as_deref())),
-                    ("complexType", complex_type(&p.complex_type_original)),
-                    ("docs", docs(true)),
-                    ("internal", J::Bool(false)),
+                    ("complexType", complex_type(&p.complex_type)),
+                    ("docs", docs(&p.docs, true)),
+                    ("internal", internal(&p.docs)),
                     ("getter", J::Bool(p.getter)),
                     ("setter", J::Bool(p.setter)),
                 ])
@@ -474,12 +524,9 @@ pub fn getter(input: &MetaInput) -> String {
             .map(|m| {
                 J::Obj(vec![
                     ("name", J::str(&m.name)),
-                    ("docs", docs(false)),
-                    (
-                        "complexType",
-                        J::Obj(vec![("signature", J::str("")), ("parameters", J::Arr(vec![])), ("references", J::Obj(vec![])), ("return", J::str(""))]),
-                    ),
-                    ("internal", J::Bool(false)),
+                    ("docs", docs(&m.docs, false)),
+                    ("complexType", method_complex_type(&m.complex_type)),
+                    ("internal", internal(&m.docs)),
                 ])
             })
             .collect(),
@@ -508,9 +555,9 @@ pub fn getter(input: &MetaInput) -> String {
                     ("bubbles", J::Bool(e.bubbles)),
                     ("cancelable", J::Bool(e.cancelable)),
                     ("composed", J::Bool(e.composed)),
-                    ("docs", docs(true)),
-                    ("complexType", complex_type(&e.complex_type_original)),
-                    ("internal", J::Bool(false)),
+                    ("docs", docs(&e.docs, true)),
+                    ("complexType", complex_type(&e.complex_type)),
+                    ("internal", internal(&e.docs)),
                 ])
             })
             .collect(),

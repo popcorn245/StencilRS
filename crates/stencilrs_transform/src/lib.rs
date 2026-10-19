@@ -6,6 +6,7 @@
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
+mod complex_type;
 mod consts;
 pub mod codegen;
 mod compiler_meta;
@@ -13,6 +14,8 @@ mod default_value;
 mod edits;
 mod eval;
 mod inherit;
+mod jsdoc;
+mod types;
 mod locals;
 pub mod meta;
 mod prop_type;
@@ -69,16 +72,16 @@ fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (Par
 /// Parse one component module and return the metadata of every `@Component` class in it,
 /// as Stencil's single-file `transpileSync` sees it.
 pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
-    analyze_with(source, file_name, false)
+    analyze_with(source, file_name, false, false)
 }
 
 /// `analyze`, optionally build-accurate: relative imports followed, lib types known, as a full
 /// `stencil build` sees the component.
-pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool) -> AnalyzeResult {
+pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool, complex_types: bool) -> AnalyzeResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, file_name);
-    let resolver = resolve_imports.then(resolve::Resolver::new);
-    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name);
+    let resolver = resolve_imports.then(|| resolve::Resolver::new(file_name));
+    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name, complex_types);
     diagnostics.extend(analysis.diagnostics);
     AnalyzeResult { components: analysis.components, diagnostics }
 }
@@ -87,8 +90,8 @@ pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool) -> Ana
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
-    let resolver = opts.resolve_imports.then(resolve::Resolver::new);
-    let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
+    let resolver = opts.resolve_imports.then(|| resolve::Resolver::new(&opts.file));
+    let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file, opts.complex_types);
     // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
     // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.
     if opts.component_metadata == ComponentMetadata::CompilerStatic

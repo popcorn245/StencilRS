@@ -10,8 +10,9 @@ fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
 /// Analyse one component module: `{ components: ComponentMeta[], diagnostics: Diagnostic[] }`.
 /// `resolve_imports`: build-accurate metadata (relative imports followed, lib types known).
 #[napi]
-pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>) -> napi::Result<serde_json::Value> {
-    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false)))
+/// `complex_types`: a type `complexType` cannot be computed for is reported as not ported.
+pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>, complex_types: Option<bool>) -> napi::Result<serde_json::Value> {
+    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false), complex_types.unwrap_or(false)))
 }
 
 #[napi(object)]
@@ -27,6 +28,9 @@ pub struct JsTranspileOptions {
     /// Build-accurate metadata, as a full `stencil build` computes it: follow relative imports and
     /// know lib types. Default false: exactly what single-file `transpileSync` produces.
     pub resolve_imports: Option<bool>,
+    /// Report a prop, event or method whose `complexType` cannot be computed as not ported
+    /// (`stencilrs:` error). Default false.
+    pub complex_types: Option<bool>,
     /// Return a source map (v3 JSON string) in `map`. Default true, as in `transpileSync`.
     pub source_map: Option<bool>,
     /// Compile the file as base classes for components to extend (Stencil's
@@ -79,6 +83,7 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
         }),
         jsx,
         resolve_imports: options.resolve_imports.unwrap_or(false),
+        complex_types: options.complex_types.unwrap_or(false),
         source_map: options.source_map.unwrap_or(true),
         transform_as_base_class: options.transform_as_base_class.unwrap_or(false),
     };

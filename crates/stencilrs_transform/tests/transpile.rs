@@ -8,7 +8,7 @@ fn run(src: &str, jsx: Jsx) -> String {
 }
 
 fn run_as(src: &str, jsx: Jsx, component_export: ComponentExport) -> String {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, source_map: false, transform_as_base_class: false, component_export, component_metadata: Default::default(), emit_styles: true };
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, complex_types: false, source_map: false, transform_as_base_class: false, component_export, component_metadata: Default::default(), emit_styles: true };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     normalize(&out.code).expect("valid JS")
@@ -133,6 +133,7 @@ fn lazy_output_leaves_decorated_base_classes_to_stencil() {
         core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
         jsx: Jsx::Classic,
         resolve_imports: false,
+        complex_types: false,
         source_map: false,
         transform_as_base_class: false,
         component_export: ComponentExport::Lazy,
@@ -184,7 +185,7 @@ fn per_mode_style_urls() {
 
 /// The source text a map sends the first occurrence of `needle` in the output to.
 fn mapped_source<'a>(src: &'a str, needle: &str) -> &'a str {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, source_map: true, transform_as_base_class: false, component_export: Default::default(), component_metadata: Default::default(), emit_styles: true };
+    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, complex_types: false, source_map: true, transform_as_base_class: false, component_export: Default::default(), component_metadata: Default::default(), emit_styles: true };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let json = out.map.as_deref().expect("a source map");

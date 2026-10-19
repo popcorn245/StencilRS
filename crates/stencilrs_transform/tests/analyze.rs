@@ -216,7 +216,7 @@ fn imported_constants_resolve_in_build_accurate_mode() {
                }";
     let file = dir.join("cmp-a.tsx").to_string_lossy().replace('\\', "/");
 
-    let built = analyze_with(src, &file, true);
+    let built = analyze_with(src, &file, true, false);
     assert!(built.diagnostics.is_empty(), "{:?}", built.diagnostics);
     let c = &built.components[0];
     let watched: Vec<_> = c.watchers.iter().map(|w| w.prop_name.as_str()).collect();
@@ -224,7 +224,7 @@ fn imported_constants_resolve_in_build_accurate_mode() {
     assert_eq!(c.listeners[0].name, "focusin");
 
     // A widened member is still invalid, as in the full build.
-    let widened = analyze_with(&src.replace("@Watch(Names.Label)", "@Watch(LOOSE.size)"), &file, true);
+    let widened = analyze_with(&src.replace("@Watch(Names.Label)", "@Watch(LOOSE.size)"), &file, true, false);
     assert_eq!(widened.diagnostics[0].message, "Error: invalid decorator argument: LOOSE.size");
     assert!(widened.components.is_empty());
 

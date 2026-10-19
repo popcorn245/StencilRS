@@ -127,6 +127,7 @@ export const transpileOptions = (code, id, mode = 'customelement') => ({
 export const stencilrsOptions = (code, id, mode = 'customelement') => ({
   file: inheritance(id) ? absolute(id) : id,
   jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
+  complexTypes: true,
   componentExport: modes[mode].ssrExport ?? modes[mode].componentExport,
   ...modes[mode].extra,
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : {}),

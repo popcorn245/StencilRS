@@ -9,5 +9,5 @@
     "coreImportPath": "@stencil/core/runtime/server",
     "styleImportData": "queryparams"
   },
-  "fixtures": 216
+  "fixtures": 222
 }

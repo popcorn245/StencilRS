@@ -39,10 +39,14 @@ export const buildId = (() => {
  * Read the Stencil components in one module.
  * @param {string} source module source (TS/TSX)
  * @param {string} fileName used to pick the parser (`.ts`, `.tsx`) and resolve relative imports
- * @param {{ resolveImports?: boolean }} [options] build-accurate: follow imports like `stencil build`
+ * @param {{ resolveImports?: boolean, complexTypes?: boolean }} [options] resolveImports: build-accurate,
+ *   follow imports like `stencil build`. complexTypes: report a prop, event or method whose
+ *   `complexType` (`resolved`, `references`) cannot be computed as not ported (an error starting
+ *   with `stencilrs:`); that member's `resolved` and `references` are then empty.
  * @returns {{ components: object[], diagnostics: object[] }}
  */
-export const analyze = (source, fileName, options = {}) => native.analyze(source, fileName, options.resolveImports ?? false);
+export const analyze = (source, fileName, options = {}) =>
+  native.analyze(source, fileName, options.resolveImports ?? false, options.complexTypes ?? false);
 
 /**
  * Generate a component module, what Stencil's transpileSync emits.
@@ -58,11 +62,12 @@ export const analyze = (source, fileName, options = {}) => native.analyze(source
  * `componentMetadata: 'compilerstatic'` adds the compiler's metadata to each class as
  * `static get COMPILER_META()`, which `newSpecPage` registers components from. With
  * `componentExport: null`, `coreImportPath: '@stencil/core/testing'` and `style: null` it is
- * what @stencil/unplugin's `spec-page` mode compiles. Not yet in the metadata: JSDoc and the
- * resolved types of members (`docs` is empty, `complexType.resolved` is the type as written).
+ * what @stencil/unplugin's `spec-page` mode compiles. The metadata carries the JSDoc and the
+ * `complexType` of members; with `complexTypes` (on by default here) a type stencilrs cannot
+ * resolve without the type checker is an error starting `stencilrs:`, the cue to use Stencil.
  * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
 export const transpile = (source, options) => {
@@ -70,7 +75,7 @@ export const transpile = (source, options) => {
   return native.transpile(source, {
     ...rest,
     ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
-    ...(componentMetadata ? { componentMetadata } : {}),
+    ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
     ...(style === null ? { emitStyles: false } : {}),
   });
 };

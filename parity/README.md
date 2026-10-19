@@ -49,11 +49,10 @@ compile with Stencil), and they are counted apart. Today that is lazy and ssr ou
 classes and mixins, which keep their static meta getters and so need the full `complexType`.
 `specpage` falls back on the same files.
 
-`specpage` compares `COMPILER_META` as an evaluated object, apart from the code around it. Not
-compared yet, on either side: `docs`, `complexType.resolved` / `references` and a method's whole
-`complexType` (`projectMeta` in `compare.mjs`). They need the type checker and are issue #8's;
-until then stencilrs writes empty docs and the type as written. Everything else in the
-metadata (build flags, vdom facts, styles, member lists) is compared exactly.
+`specpage` compares `COMPILER_META` as an evaluated object, apart from the code around it:
+build flags, vdom facts, styles, member lists, JSDoc and `complexType`. A member whose type
+stencilrs leaves to Stencil (an error starting `stencilrs:`) is left out of that comparison on both
+sides and listed at the end of the run, as in the other modes.
 
 Each fixture gets `snapshots/<suite>/<name>.js` (emitted code) and `.json` (component
 metadata, diagnostics, imports).

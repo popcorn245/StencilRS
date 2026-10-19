@@ -10,6 +10,7 @@ use oxc::ast::ast::{
     TSEnumDeclaration, TSSignature, TSType, VariableDeclarationKind,
 };
 
+use crate::complex_type::ExportedType;
 use crate::eval::property_key_name;
 use crate::resolve::{ModuleSummary, Resolver, TypeSummary, ValueSummary};
 
@@ -48,6 +49,8 @@ pub struct StaticField<'a, 'b> {
 #[derive(Default)]
 pub struct Locals<'a, 'b> {
     pub types: HashMap<&'a str, LocalType<'a, 'b>>,
+    /// The type parameters of each generic type alias.
+    pub alias_params: HashMap<&'a str, Vec<&'a str>>,
     pub values: HashMap<&'a str, LocalValue<'a, 'b>>,
     /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
     pub const_annotations: HashMap<&'a str, &'b TSType<'a>>,
@@ -82,6 +85,9 @@ impl<'a, 'b> Locals<'a, 'b> {
             match decl {
                 Some(Declaration::TSTypeAliasDeclaration(t)) => {
                     locals.types.insert(t.id.name.as_str(), LocalType::Alias(&t.type_annotation));
+                    if let Some(params) = &t.type_parameters {
+                        locals.alias_params.insert(t.id.name.as_str(), params.params.iter().map(|p| p.name.name.as_str()).collect());
+                    }
                 }
                 Some(Declaration::TSEnumDeclaration(e)) => {
                     locals.types.insert(e.id.name.as_str(), LocalType::Enum(e));
@@ -170,6 +176,12 @@ impl<'a, 'b> Locals<'a, 'b> {
     pub fn imported_type(&self, name: &str) -> Option<TypeSummary> {
         let (module, import) = self.imported_module(name)?;
         module.types.get(&import.imported).copied()
+    }
+
+    /// The declaration of an imported type, when the import resolves.
+    pub fn imported_def(&self, name: &str) -> Option<ExportedType> {
+        let (module, import) = self.imported_module(name)?;
+        module.defs.get(&import.imported).cloned()
     }
 
     /// The summary of an imported value, when the import resolves.
