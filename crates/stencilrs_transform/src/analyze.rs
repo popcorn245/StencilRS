@@ -22,6 +22,7 @@ use oxc::span::{GetSpan, Span};
 use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
+use crate::codegen::normalize_path;
 use crate::default_value::initializer_text;
 use crate::inherit;
 use crate::consts::{Lit, computed_key_text, literal, order_like_object_keys};
@@ -287,6 +288,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         component_class_name: class_name,
         encapsulation: Encapsulation::None,
         style_urls: Vec::new(),
+        global_styles: Vec::new(),
         properties: own.properties,
         states: own.states,
         events: own.events,
@@ -308,6 +310,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         cmp.tag_name = tag.clone();
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
+        cmp.global_styles = global_styles(options, ctx.file);
     }
 
     // `mergeExtendedClassMetaWithResolveImport`: inherited members, parents first; the class's
@@ -641,13 +644,33 @@ fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value
                 && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
             "inline `styles` that scopeCss rejects",
         ),
-        (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
+        (
+            ["globalStyle", "globalStyleUrl"].iter().any(|k| o.get(*k).is_some_and(|v| !v.is_string())),
+            "non-string `globalStyle` / `globalStyleUrl`",
+        ),
     ];
     for (hit, what) in checks {
         if hit {
             ctx.push(Level::Error, format!("stencilrs: {what} are not ported yet."), class.span);
         }
     }
+}
+
+/// Port of `parseGlobalStyles` (static-to-meta/styles.ts): trimmed inline CSS, then the
+/// stylesheet path resolved against the component's directory.
+fn global_styles(options: &Value, file: &str) -> Vec<GlobalStyle> {
+    let mut styles = Vec::new();
+    if let Some(css) = options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        styles.push(GlobalStyle { absolute_path: None, style_str: Some(css.to_owned()) });
+    }
+    if let Some(url) = options.get("globalStyleUrl").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        let file = file.replace('\\', "/");
+        let absolute = url.starts_with('/') || url.as_bytes().get(1) == Some(&b':');
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let path = if absolute || dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") };
+        styles.push(GlobalStyle { absolute_path: Some(normalize_path(&path)), style_str: None });
+    }
+    styles
 }
 
 /// `@Component` options, or `None` when Stencil would reject the component.

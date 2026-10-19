@@ -143,6 +143,23 @@ fn lazy_output_leaves_decorated_base_classes_to_stencil() {
 }
 
 #[test]
+fn global_styles_stay_as_static_getters() {
+    let code = run(
+        r#"
+        import { Component, h } from '@stencil/core';
+        @Component({ tag: 'cmp-a', globalStyleUrl: './g.css', globalStyle: '  a { color: red }  ' })
+        export class CmpA {
+            render() { return <div>x</div>; }
+        }
+        "#,
+        Jsx::Classic,
+    );
+    assert!(code.contains("static get originalGlobalStyleUrl()") && code.contains(r#""./g.css""#), "{code}");
+    assert!(code.contains("static get globalStyle()") && code.contains(r#""a { color: red }""#), "{code}");
+    assert!(!code.contains("static get style()"), "{code}");
+}
+
+#[test]
 fn per_mode_style_urls() {
     let code = run(
         r#"
