@@ -53,6 +53,7 @@ export class PopCounter {
 | `@Prop` | `reflect`, `mutable`, `attribute`; getters / setters; `!` (required) and `?` (optional); type classification and attribute names exactly as Stencil computes them |
 | `@State`, `@Element`, `@Method`, `@Event` (`eventName`, `bubbles`, `cancelable`, `composed`) | |
 | `@Watch`, `@Listen` (`target`, `capture`, `passive`) | Several per method |
+| Constants | `@Watch(KEYS.open)`, `@Listen(Events.Focus)`, `resolveVar(NAME)`, `@Prop() [NAME]`: any `const`, `as const` object property, enum member or `static readonly` field, in the same module or (through the Vite plugin) imported |
 | `@AttachInternals` (`formAssociated`, `states`) | Form-associated components and custom states; see below |
 | `@PropSerialize`, `@AttrDeserialize` | Custom prop ↔ attribute translation; see below |
 | `extends`, `Mixin(...)` | Inheritance and mixins; see below |

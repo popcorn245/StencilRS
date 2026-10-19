@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: resolveVar() cannot resolve the value of \"NAMES.value\" at compile time. Only const variables and object properties with string literal values are supported."
+    }
+  ],
+  "imports": []
+}

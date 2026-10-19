@@ -84,11 +84,17 @@ const score = (map, code, source) => {
 
 const totals = { stencil: { idents: 0, hits: 0 }, stencilrs: { idents: 0, hits: 0 } };
 let invalid = 0;
+let skipped = 0;
 const fixtures = listFixtures();
 for (const { id, file } of fixtures) {
   const source = readFileSync(file, 'utf8');
   const st = transpileSync(source, transpileOptions(source, id));
   const rs = transpile(source, stencilrsOptions(source, id));
+  // When Stencil throws, transpileSync hands back the source with no map, and so does stencilrs.
+  if (!st.map && !rs.map) {
+    skipped++;
+    continue;
+  }
   if (!rs.map) {
     invalid++;
     console.log(`✗ ${id}: stencilrs returned no map`);
@@ -120,7 +126,7 @@ if (tally) {
 }
 
 const rate = (t) => t.hits / t.idents;
-console.log(`\n${fixtures.length} files, ${invalid} invalid stencilrs maps`);
+console.log(`\n${fixtures.length} files (${skipped} that neither compiler compiles), ${invalid} invalid stencilrs maps`);
 console.log('identifiers mapped onto the same identifier in the source:');
 for (const [k, t] of Object.entries(totals)) {
   console.log(`  ${k.padEnd(10)} ${`${(rate(t) * 100).toFixed(1)}%`.padStart(6)} of ${t.idents}`);
