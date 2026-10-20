@@ -34,8 +34,12 @@ fn main() {
                     core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
                     jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
                     resolve_imports: false,
+                    complex_types: false,
                     source_map,
                     transform_as_base_class: false,
+                    component_export: Default::default(),
+                    component_metadata: Default::default(),
+                    emit_styles: true,
                 };
                 bytes += transpile(src, &opts).map.map_or(0, |m| m.len());
             }

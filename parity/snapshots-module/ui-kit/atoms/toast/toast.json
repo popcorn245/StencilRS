@@ -1,0 +1,252 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-toast",
+      "componentClassName": "Toast",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "position",
+          "type": "string",
+          "attribute": "position",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'bottom-center'",
+          "complexType": {
+            "original": "'bottom-center' | 'bottom-right'",
+            "resolved": "\"bottom-center\" | \"bottom-right\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "duration",
+          "type": "number",
+          "attribute": "duration",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "5000",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "toasts"
+        }
+      ],
+      "methods": [
+        {
+          "name": "show",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(message: string, type?: \"default\" | \"error\" | \"success\", action?: ToastAction, options?: ToastOptions) => Promise<any>",
+            "parameters": [
+              {
+                "name": "message",
+                "type": "string",
+                "docs": ""
+              },
+              {
+                "name": "type",
+                "type": "\"default\" | \"error\" | \"success\"",
+                "docs": ""
+              },
+              {
+                "name": "action",
+                "type": "ToastAction | undefined",
+                "docs": ""
+              },
+              {
+                "name": "options",
+                "type": "ToastOptions | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "ToastAction": {
+                "location": "local",
+                "path": "ui-kit/atoms/toast/toast.tsx",
+                "id": "ui-kit/atoms/toast/toast.tsx::ToastAction"
+              },
+              "ToastOptions": {
+                "location": "local",
+                "path": "ui-kit/atoms/toast/toast.tsx",
+                "id": "ui-kit/atoms/toast/toast.tsx::ToastOptions"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "hide",
+          "docs": {
+            "text": "Dismiss all currently-shown toasts, cancelling any pending auto-dismiss\ntimers. The single programmatic way to clear a sticky (persistent) toast.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-TOAST",
+          "styleStr": null,
+          "styleIdentifier": "PopToastStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/atoms/toast/toast.css",
+              "relativePath": "toast.css",
+              "originalComponentPath": "toast.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "aria-live",
+        "aria-atomic",
+        "data-toast-id",
+        "type",
+        "onClick",
+        "href"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "a"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

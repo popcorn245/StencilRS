@@ -1,7 +1,7 @@
 // Source map check: stencilrs' maps, scored the same way as Stencil v5's own (transpileSync), on
 // the parity corpus.
 //
-//   node sourcemaps.mjs [--verbose] [--misses]
+//   node sourcemaps.mjs [--mode customelement|module|lazy|ssr] [--verbose] [--misses]
 //
 // --verbose lists the first identifier misses per file; --misses tallies every stencilrs miss
 // as `generated identifier => source text it points at`, most frequent first.
@@ -14,11 +14,11 @@
 // Exit code 1 if any stencilrs map is invalid, or its accuracy falls below Stencil's.
 import { readFileSync } from 'node:fs';
 
-import { transpileSync } from '@stencil/core/compiler';
-
 import { transpile } from '../index.js';
-import { listFixtures, stencilrsOptions, transpileOptions } from './lib.mjs';
+import { fallbacks, listFixtures, modeArg, stencilrsOptions, transpileOptions } from './lib.mjs';
+import { stencilTranspile } from './stencil.mjs';
 
+const mode = modeArg(process.argv);
 const verbose = process.argv.includes('--verbose');
 const tally = process.argv.includes('--misses') ? new Map() : null;
 // Line terminators, as in the ECMAScript spec and oxc: CRLF, CR, LF, LS (U+2028), PS (U+2029).
@@ -84,11 +84,18 @@ const score = (map, code, source) => {
 
 const totals = { stencil: { idents: 0, hits: 0 }, stencilrs: { idents: 0, hits: 0 } };
 let invalid = 0;
+let skipped = 0;
 const fixtures = listFixtures();
 for (const { id, file } of fixtures) {
+  if (fallbacks[mode]?.has(id)) continue; // stencilrs emits no code for these
   const source = readFileSync(file, 'utf8');
-  const st = transpileSync(source, transpileOptions(source, id));
-  const rs = transpile(source, stencilrsOptions(source, id));
+  const st = stencilTranspile(source, transpileOptions(source, id, mode));
+  const rs = transpile(source, stencilrsOptions(source, id, mode));
+  // When Stencil throws, transpileSync hands back the source with no map, and so does stencilrs.
+  if (!st.map && !rs.map) {
+    skipped++;
+    continue;
+  }
   if (!rs.map) {
     invalid++;
     console.log(`✗ ${id}: stencilrs returned no map`);
@@ -120,7 +127,7 @@ if (tally) {
 }
 
 const rate = (t) => t.hits / t.idents;
-console.log(`\n${fixtures.length} files, ${invalid} invalid stencilrs maps`);
+console.log(`\n${fixtures.length} files (${skipped} that neither compiler compiles), ${invalid} invalid stencilrs maps`);
 console.log('identifiers mapped onto the same identifier in the source:');
 for (const [k, t] of Object.entries(totals)) {
   console.log(`  ${k.padEnd(10)} ${`${(rate(t) * 100).toFixed(1)}%`.padStart(6)} of ${t.idents}`);

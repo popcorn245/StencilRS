@@ -1,0 +1,619 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-task-item",
+      "componentClassName": "PopTaskItem",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "taskId",
+          "type": "string",
+          "attribute": "task-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Firestore task document ID"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "taskTitle",
+          "type": "string",
+          "attribute": "task-title",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Task title text"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "status",
+          "type": "string",
+          "attribute": "status",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'open'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Task status"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "priority",
+          "type": "string",
+          "attribute": "priority",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'medium'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Priority: urgent, high, medium, low"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "dueDate",
+          "type": "string",
+          "attribute": "due-date",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | null",
+            "resolved": "null | string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "ISO date string (YYYY-MM-DD)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "reminderAt",
+          "type": "string",
+          "attribute": "reminder-at",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | null",
+            "resolved": "null | string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "ISO timestamp — fire time of a reminder/timer. Shown as a time pill (⏰)\nwhen the task has no due date (a one-off transient nudge)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "assignedTo",
+          "type": "string",
+          "attribute": "assigned-to",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of user UIDs"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "checked",
+          "type": "boolean",
+          "attribute": "checked",
+          "reflect": false,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the task is checked (derived from status === 'done')"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "readonly",
+          "type": "boolean",
+          "attribute": "readonly",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "If true, disables title editing (contenteditable / long-press / dblclick).\nDoes NOT disable the completion checkbox — see `checkable`."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "checkable",
+          "type": "boolean",
+          "attribute": "checkable",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether the completion checkbox can be toggled. Defaults to true so a\nlist row stays `readonly` (title locked) yet still lets you tap to\ncomplete. Set false for a fully static render (e.g. read-only editor)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "users",
+          "type": "string",
+          "attribute": "users",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of { id, displayName, photoURL } for avatar rendering"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "currentUserId",
+          "type": "string",
+          "attribute": "current-user-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "The logged-in user's id. Their own avatar is hidden (you don't need to see\nyourself on every task) — the assignee avatar only shows OTHER people."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "hideAssignee",
+          "type": "boolean",
+          "attribute": "hide-assignee",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Suppress the assignee avatar+name chip. Useful when the surrounding list is\nalready grouped by person (e.g. the tasks-app Family view), where a per-row\nassignee chip would be redundant."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "questLabel",
+          "type": "string",
+          "attribute": "quest-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional quest title — rendered as a small chip so you can see which\nquest a task belongs to (empty = no chip)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tags",
+          "type": "string",
+          "attribute": "tags",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON stringified array of tag strings — rendered as `#tag` chips in the\nmeta row (empty array = no chips)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "threadLabel",
+          "type": "string",
+          "attribute": "thread-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Presentational thread label — a teal chip shown when a task is linked to a\nBucket-Bot hub thread. Empty (default) hides it. Phase-1 hook only: the\nShare-to-Thread phase will populate this from the linked-thread field."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "dragHandle",
+          "type": "boolean",
+          "attribute": "drag-handle",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "true",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Whether to render the right-edge drag handle. The parent list gates this\nso handles only appear when a drag actually does something — i.e. when a\ngrouping is active (drag-to-regroup) or the sort is Manual (drag-to-reorder).\nDefaults to true so standalone/legacy consumers keep the handle."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "isEditing"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "taskChanged",
+          "method": "taskChanged",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "A task property was changed"
+          },
+          "complexType": {
+            "original": "{ taskId: string; field: string; value: any }",
+            "resolved": "{ taskId: string; field: string; value: any; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskChecked",
+          "method": "taskChecked",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Checkbox was toggled"
+          },
+          "complexType": {
+            "original": "{ taskId: string; checked: boolean }",
+            "resolved": "{ taskId: string; checked: boolean; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskDeleted",
+          "method": "taskDeleted",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Task was deleted"
+          },
+          "complexType": {
+            "original": "{ taskId: string }",
+            "resolved": "{ taskId: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "taskDragHandleDown",
+          "method": "taskDragHandleDown",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The drag handle was pressed — the parent list starts a pointer drag. The\npointer info lets the list build a ghost + track the move without the row\nitself owning any drag geometry."
+          },
+          "complexType": {
+            "original": "{\n    taskId: string;\n    pointerId: number;\n    clientX: number;\n    clientY: number;\n  }",
+            "resolved": "{ taskId: string; pointerId: number; clientX: number; clientY: number; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-TASK-ITEM",
+          "styleStr": null,
+          "styleIdentifier": "PopTaskItemStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/task-item/task-item.css",
+              "relativePath": "task-item.css",
+              "originalComponentPath": "task-item.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "type",
+        "onClick",
+        "disabled",
+        "aria-label",
+        "width",
+        "height",
+        "viewBox",
+        "fill",
+        "d",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "aria-hidden",
+        "title",
+        "contentEditable",
+        "ref",
+        "onBlur",
+        "onKeyDown",
+        "onPointerDown",
+        "onPointerUp",
+        "onPointerCancel",
+        "onPointerLeave",
+        "onDblClick",
+        "cx",
+        "cy",
+        "r",
+        "points",
+        "src",
+        "alt",
+        "name",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "htmlTagNames": [
+        "div",
+        "button",
+        "svg",
+        "path",
+        "span",
+        "circle",
+        "polyline",
+        "img",
+        "slot",
+        "line"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "actions"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    }
+  ]
+}

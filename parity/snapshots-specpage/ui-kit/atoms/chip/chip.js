@@ -1,0 +1,245 @@
+import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const Chip = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+        this.popChipSelect = __stencil_createEvent(this, "popChipSelect", 7);
+        this.popChipRemove = __stencil_createEvent(this, "popChipRemove", 7);
+    }
+    value;
+    color;
+    selected = false;
+    removable = false;
+    popChipSelect;
+    popChipRemove;
+    handleClick() {
+        this.popChipSelect.emit({ value: this.value });
+    }
+    handleRemove(e) {
+        e.stopPropagation();
+        this.popChipRemove.emit({ value: this.value });
+    }
+    render() {
+        return (h("span", { key: '0', class: { chip: true, 'chip--selected': this.selected }, style: { '--chip-color': this.color }, onClick: () => this.handleClick() },
+            h("slot", { key: '1' }),
+            this.removable && (h("button", { key: '2', class: "chip-remove", onClick: (e) => this.handleRemove(e) }, "\u00D7"))));
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "pop-chip",
+        "componentClassName": "Chip",
+        "elementRef": null,
+        "encapsulation": "scoped",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "value",
+                "type": "string",
+                "attribute": "value",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "color",
+                "type": "string",
+                "attribute": "color",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "selected",
+                "type": "boolean",
+                "attribute": "selected",
+                "reflect": true,
+                "mutable": true,
+                "required": false,
+                "optional": false,
+                "defaultValue": "false",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "removable",
+                "type": "boolean",
+                "attribute": "removable",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "false",
+                "complexType": {
+                    "original": "boolean",
+                    "resolved": "boolean",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [{
+                "name": "popChipSelect",
+                "method": "popChipSelect",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "{ value: string }",
+                    "resolved": "{ value: string; }",
+                    "references": {}
+                },
+                "internal": false
+            }, {
+                "name": "popChipRemove",
+                "method": "popChipRemove",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "{ value: string }",
+                    "resolved": "{ value: string; }",
+                    "references": {}
+                },
+                "internal": false
+            }],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [{
+                "modeName": "$",
+                "styleId": "POP-CHIP",
+                "styleStr": null,
+                "styleIdentifier": null,
+                "externalStyles": [{
+                        "absolutePath": "./ui-kit/atoms/chip/chip.css",
+                        "relativePath": "chip.css",
+                        "originalComponentPath": "chip.css"
+                    }]
+            }],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": true,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": true,
+        "hasPropString": true,
+        "hasPropMutable": true,
+        "hasReflect": true,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": true,
+        "hasState": false,
+        "hasStyle": true,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": true,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": true,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": true,
+        "hasVdomText": true,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key", "class", "style", "onClick"],
+        "htmlTagNames": ["span", "slot", "button"],
+        "htmlParts": [],
+        "htmlSlots": [""],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=chip.js.map

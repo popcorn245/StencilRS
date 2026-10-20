@@ -1,0 +1,10 @@
+{
+  "data": [],
+  "diagnostics": [
+    {
+      "level": "error",
+      "messageText": "Error: invalid decorator argument: KEYS['value']"
+    }
+  ],
+  "imports": []
+}

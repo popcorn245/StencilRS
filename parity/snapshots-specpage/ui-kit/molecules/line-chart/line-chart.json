@@ -1,0 +1,472 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-line-chart",
+      "componentClassName": "PopLineChart",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "series",
+          "type": "string",
+          "attribute": "series",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChartSeries[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ChartSeries": {
+                "location": "global",
+                "id": "global::ChartSeries"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Series to plot. Area series (kind:'area') render filled-from-baseline."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "xLabels",
+          "type": "string",
+          "attribute": "x-labels",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "string[] | string",
+            "resolved": "string | {}",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "X-axis tick labels (subset shown to avoid crowding)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "markers",
+          "type": "string",
+          "attribute": "markers",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChartMarker[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ChartMarker": {
+                "location": "local",
+                "path": "ui-kit/molecules/line-chart/line-chart.tsx",
+                "id": "ui-kit/molecules/line-chart/line-chart.tsx::ChartMarker"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Vertical markers (sunrise/sunset) at data indices."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "bands",
+          "type": "string",
+          "attribute": "bands",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChartBand[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ChartBand": {
+                "location": "local",
+                "path": "ui-kit/molecules/line-chart/line-chart.tsx",
+                "id": "ui-kit/molecules/line-chart/line-chart.tsx::ChartBand"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Shaded x-ranges (night) as index bounds."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "refLines",
+          "type": "string",
+          "attribute": "ref-lines",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChartRefLine[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ChartRefLine": {
+                "location": "local",
+                "path": "ui-kit/molecules/line-chart/line-chart.tsx",
+                "id": "ui-kit/molecules/line-chart/line-chart.tsx::ChartRefLine"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Horizontal reference lines at y-values (goal lines). Horizontal mode only."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rangeBands",
+          "type": "string",
+          "attribute": "range-bands",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "ChartRangeBand[] | string",
+            "resolved": "string | {}",
+            "references": {
+              "ChartRangeBand": {
+                "location": "local",
+                "path": "ui-kit/molecules/line-chart/line-chart.tsx",
+                "id": "ui-kit/molecules/line-chart/line-chart.tsx::ChartRangeBand"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Shaded y-VALUE ranges (e.g. a glucose normal band). Horizontal mode only."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "leftUnit",
+          "type": "string",
+          "attribute": "left-unit",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Unit suffix for the left axis (e.g. \"°\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rightUnit",
+          "type": "string",
+          "attribute": "right-unit",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Unit suffix for the right axis (e.g. \"%\")."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "chartTitle",
+          "type": "string",
+          "attribute": "chart-title",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'Chart'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accessible title."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "orientation",
+          "type": "string",
+          "attribute": "orientation",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'horizontal'",
+          "complexType": {
+            "original": "'horizontal' | 'vertical'",
+            "resolved": "\"horizontal\" | \"vertical\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Layout orientation:\n - 'horizontal' (default): index axis runs left→right, value axis bottom→top.\n - 'vertical': index axis runs top→bottom (one cell per data point, fixed\n   `rowHeight`), value axis left→right. Built to sit beside an external list\n   of the SAME row height so row i lines up with point i. The SVG's height is\n   count*rowHeight; place it in a non-scaling, slim column and let the parent\n   scroll it in lockstep with the list."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "rowHeight",
+          "type": "number",
+          "attribute": "row-height",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "44",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Vertical mode: per-row height in px (match the list's row pitch)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "vbWidth",
+          "type": "number",
+          "attribute": "vb-width",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "80",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Vertical mode: the viewBox WIDTH in px. Because the vertical chart uses\n`preserveAspectRatio=\"none\"`, the host should render the SVG at THIS same CSS\nwidth (e.g. `flex: 0 0 150px`) so the x-axis is 1:1 and value-label text is\ncrisp (not horizontally stretched). Default 80 keeps the pre-existing slim\nstrip behaviour for callers that don't opt into labels."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "showValueLabels",
+          "type": "boolean",
+          "attribute": "show-value-labels",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Vertical mode: render per-point VALUE LABELS + point dots so the temp /\nhumidity readings are legible on their own (not just a line smear). The first\nLINE series on the LEFT axis is labelled in the left gutter (°), the first on\nthe RIGHT axis in the right gutter (%). Additive — off by default."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-LINE-CHART",
+          "styleStr": null,
+          "styleIdentifier": null,
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/line-chart/line-chart.css",
+              "relativePath": "line-chart.css",
+              "originalComponentPath": "line-chart.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": false,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "viewBox",
+        "role",
+        "aria-label",
+        "preserveAspectRatio",
+        "x",
+        "y",
+        "width",
+        "height",
+        "fill",
+        "rx",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "d",
+        "stroke",
+        "text-anchor",
+        "style",
+        "aria-hidden",
+        "cx",
+        "cy",
+        "r"
+      ],
+      "htmlTagNames": [
+        "div",
+        "svg",
+        "rect",
+        "line",
+        "path",
+        "text",
+        "span",
+        "circle"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-line-chart — a self-contained, dependency-free inline-SVG chart for small\nmulti-series data (temp / humidity / precipitation), with an optional second\ny-axis (e.g. % vs °F), shaded bands (night), x-axis markers (sunrise/sunset),\nand a compact legend. Responsive via viewBox; theme via the series colors you\npass. Reusable across panels — pass different series/scope.\n\nProps accept either real arrays/objects (Stencil prop binding) OR JSON strings\n(so it works from plain HTML / Storybook templates too)."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    },
+    {
+      "path": "./chart-scale"
+    }
+  ]
+}

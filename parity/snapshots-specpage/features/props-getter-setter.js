@@ -1,0 +1,155 @@
+import { registerInstance as __stencil_registerInstance } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const PropsGetterSetter = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+    }
+    _value = 'initial';
+    _count = 0;
+    get value() {
+        return this._value;
+    }
+    set value(v) {
+        this._value = v;
+    }
+    get readonlyCount() {
+        return this._count;
+    }
+    render() {
+        return h("div", { key: '0' }, this.value);
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "props-getter-setter",
+        "componentClassName": "PropsGetterSetter",
+        "elementRef": null,
+        "encapsulation": "none",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "value",
+                "type": "string",
+                "attribute": "value",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "'initial'",
+                "complexType": {
+                    "original": "string",
+                    "resolved": "string",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": true,
+                "setter": true
+            }, {
+                "name": "readonlyCount",
+                "type": "number",
+                "attribute": "readonly-count",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": false,
+                "defaultValue": "0",
+                "complexType": {
+                    "original": "number",
+                    "resolved": "number",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": true,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": false,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": false,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": true,
+        "hasPropBoolean": false,
+        "hasPropString": true,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": false,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": false,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": true,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key"],
+        "htmlTagNames": ["div"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=props-getter-setter.js.map

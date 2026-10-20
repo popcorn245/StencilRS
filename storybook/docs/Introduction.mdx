@@ -9,7 +9,7 @@ import { Meta } from '@storybook/addon-docs/blocks';
 stencilrs is a re-implementation of the part of the [Stencil](https://stenciljs.com) compiler that
 turns a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is
 written in Rust on top of [oxc](https://oxc.rs), runs inside Vite 8 (Rolldown), and produces the
-**same output as Stencil v5**, roughly **40× faster per file** and **~5× faster end to end**.
+**same output as Stencil v5**, roughly **20× faster per file** and **~3× faster end to end**.
 
 You write components exactly as you would for Stencil v5. stencilrs compiles them; Stencil's own
 runtime (`@stencil/core`) runs them in the browser.
@@ -29,11 +29,11 @@ Vite plugin. The controls tables come from stencilrs' own component metadata.
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler (`transpileSync`), 185 fixtures | **185 / 185** metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler (`transpileSync`), 216 fixtures | **216 / 216** metadata, diagnostics and code |
 | Same metadata as a full `stencil build`, 136 ui-kit components | **136 / 136** |
 | ui-kit spec suite (874 tests), Stencil v5 vs stencilrs | **874 / 874** both, no test differs |
-| Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
-| Production `vite build`, all 136 ui-kit components | **0.82 s** vs 3.9 s (4.7×) |
+| Per-file compile, 222 files, source maps on | **108 ms** vs 2.4 s (22×) |
+| Production `vite build`, all 136 ui-kit components | **1.0 s** vs 3.0 s (2.9×) |
 
 ## Start here
 

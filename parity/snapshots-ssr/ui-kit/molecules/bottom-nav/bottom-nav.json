@@ -1,0 +1,348 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-bottom-nav",
+      "componentClassName": "BottomNav",
+      "elementRef": null,
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "items",
+          "type": "string",
+          "attribute": "items",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of the tab destinations ({id,label,icon,href?,badge?}).\nThe first half renders left of the center button, the rest right (2+2\nwith four tabs)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "activeId",
+          "type": "string",
+          "attribute": "active-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Which tab is current (drives the active style)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "centerAction",
+          "type": "string",
+          "attribute": "center-action",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'scan'",
+          "complexType": {
+            "original": "'scan' | 'add'",
+            "resolved": "\"add\" | \"scan\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "What the center button does — the PARENT decides ('scan' or 'add')."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "centerIcon",
+          "type": "string",
+          "attribute": "center-icon",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Ionicon for the center button; defaults per `centerAction`\n(scan → camera, add → add)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "centerLabel",
+          "type": "string",
+          "attribute": "center-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string",
+            "resolved": "string | undefined",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Tiny label under the center button; defaults per `centerAction`.\nPass '' to hide."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "attribute": "disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Disable the whole bar (e.g. offline)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "attribute": "compact",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Collapse tab labels when the BAR (container, not viewport) is under\n400px — the pop-tab-bar compact pattern."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "position",
+          "type": "string",
+          "attribute": "position",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'fixed'",
+          "complexType": {
+            "original": "'fixed' | 'static'",
+            "resolved": "\"fixed\" | \"static\"",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Detached-fixed (default) floats above the viewport bottom + safe area;\n`static` renders in place (Storybook frames / in-page use)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "centerpress",
+          "method": "centerpress",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Center button pressed — parent opens the scanner / add sheet."
+          },
+          "complexType": {
+            "original": "{ action: 'scan' | 'add' }",
+            "resolved": "{ action: \"scan\" | \"add\"; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "tabselect",
+          "method": "tabselect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Tab pressed — parent routes."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-BOTTOM-NAV",
+          "styleStr": null,
+          "styleIdentifier": "PopBottomNavStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/bottom-nav/bottom-nav.css",
+              "relativePath": "bottom-nav.css",
+              "originalComponentPath": "bottom-nav.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "type",
+        "class",
+        "disabled",
+        "aria-label",
+        "aria-current",
+        "onClick",
+        "name",
+        "key",
+        "aria-hidden"
+      ],
+      "htmlTagNames": [
+        "button",
+        "span",
+        "pop-icon",
+        "div",
+        "nav",
+        "slot"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "center"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "`pop-bottom-nav` — a DETACHED, rounded bottom navigation bar with a large\ncenter action button in `--grad-brand` (docs planned/yugioh-app/\nui-and-pop-bottom-nav). Two tab destinations flank each side of the center\nbutton (the 2+2 layout); the bar floats above the bottom safe-area\n(`env(safe-area-inset-bottom)` lift, borrowed from pop-nav-bar's bottom\nvariant) with `--radius-lg` + `--shadow-pop`.\n\nThe component is PRESENTATION ONLY — it decides nothing:\n - `tabselect {id}` fires on a tab press; the parent routes.\n - `centerpress {action}` fires on the center button; the parent opens the\n   scanner or the add sheet. `centerAction` is parent-driven (an allowlisted\n   non-scan user gets `\"add\"`; a scan-capable user gets `\"scan\"`) — the\n   center button ALWAYS renders.\n - The `center` slot fully overrides the center button's content when the\n   default icon+label pair isn't enough.\n\n`compact` mirrors pop-tab-bar's CONTAINER-query pattern: under 400px of bar\nwidth, tab labels visually collapse (kept in the DOM for a11y).\n\nNOTE: \"fab\" in this repo means the Fabulous theme — this component is\ndeliberately NOT named pop-fab, and there are no `--fab-*` tokens."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

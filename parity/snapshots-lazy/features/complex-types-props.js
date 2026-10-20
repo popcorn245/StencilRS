@@ -1,0 +1,35 @@
+import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent } from "@stencil/core/runtime/client/standalone";
+import { h } from "@stencil/core/runtime/client/standalone";
+export const TOne = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+        this.ev1 = __stencil_createEvent(this, "ev1", 7);
+        this.ev2 = __stencil_createEvent(this, "ev2", 7);
+        this.ev3 = __stencil_createEvent(this, "ev3", 7);
+        this.ev4 = __stencil_createEvent(this, "ev4", 7);
+    }
+    f1;
+    f2;
+    f3;
+    f4;
+    f5;
+    f6;
+    f7;
+    f8;
+    f9;
+    f10;
+    f11;
+    f12;
+    f13;
+    f14;
+    f15;
+    f16;
+    f18;
+    f19;
+    ev1;
+    ev2;
+    ev3;
+    ev4;
+    render() { return h("div", { key: '0' }); }
+};
+//# sourceMappingURL=complex-types-props.js.map

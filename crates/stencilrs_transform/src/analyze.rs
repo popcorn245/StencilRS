@@ -9,9 +9,10 @@
 //! which is what `@stencil/unplugin` runs. Where that differs from a full build it is noted.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use oxc::ast::ast::{
-    Argument, ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
+    Argument, Comment, ArrowFunctionExpression, CallExpression, Class, ClassElement, Declaration, Decorator,
     ExportDefaultDeclarationKind, Expression, Function, ImportDeclarationSpecifier,
     ImportOrExportKind, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectPropertyKind,
     Program, PropertyDefinition,
@@ -22,13 +23,19 @@ use oxc::span::{GetSpan, Span};
 use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
+use crate::complex_type::{FileInfo, RefNames, Site, TypeEnv, member_type, method_type};
+use crate::codegen::normalize_path;
 use crate::default_value::initializer_text;
 use crate::inherit;
+use crate::jsdoc;
+use crate::consts::{Lit, computed_key_text, literal, order_like_object_keys};
 use crate::eval::{Arg, eval_argument, property_key_name};
 use crate::locals::{LocalType, Locals};
 use crate::meta::*;
 use crate::prop_type::{classify_annotation, classify_initializer};
 use crate::resolve::Resolver;
+use crate::scope_css::{scope_css, scope_id};
+use crate::types::{Registry, Unsupported};
 
 const STENCIL_DECORATORS: [&str; 11] = [
     "Component", "Prop", "State", "Event", "Method", "Element", "Watch", "Listen",
@@ -52,16 +59,48 @@ const SINGLE_EXPORT_MESSAGE: &str = "To allow efficient bundling, modules using 
 pub struct Analysis {
     pub components: Vec<ComponentMeta>,
     pub diagnostics: Vec<Diagnostic>,
+    /// Stencil threw: `transpileSync` hands the source back unchanged.
+    pub failed: bool,
 }
 
 struct Ctx<'s> {
     source: &'s str,
     /// This module's path, for following imports (ancestors, build-accurate types).
     file: &'s str,
+    comments: &'s [Comment],
     resolver: Option<&'s Resolver>,
     /// Stencil decorator name → local name (`import { Prop as P }` maps `Prop` → `P`).
     aliases: HashMap<&'static str, String>,
     diagnostics: Vec<Diagnostic>,
+    /// What Stencil threw, if it did: the transform fails with only this (first) message.
+    thrown: Option<String>,
+    /// Report a type `complexType` cannot be computed for as not ported (`stencilrs:`).
+    complex_types: bool,
+    /// The type ids of the whole program (see `types.rs`).
+    reg: Rc<Registry>,
+    /// `strictNullChecks`.
+    strict: bool,
+    /// Where the module's import and export statements put the names it uses as types.
+    info: FileInfo,
+}
+
+impl<'s> Ctx<'s> {
+    fn new(program: &'s Program<'_>, source: &'s str, resolver: Option<&'s Resolver>, file: &'s str, complex_types: bool) -> Self {
+        Ctx {
+            source,
+            file,
+            comments: &program.comments,
+            resolver,
+            aliases: import_aliases(program),
+            diagnostics: Vec::new(),
+            thrown: None,
+            complex_types,
+            reg: resolver.map(|r| r.registry.clone()).unwrap_or_default(),
+            // The single-file program Stencil's `transpileSync` builds is strict.
+            strict: resolver.is_none_or(|r| r.strict),
+            info: FileInfo::collect(program),
+        }
+    }
 }
 
 impl Ctx<'_> {
@@ -73,29 +112,66 @@ impl Ctx<'_> {
         span.source_text(self.source)
     }
 
+    /// The JSDoc of a symbol, from where each of its declarations starts.
+    fn docs(&self, locals: &Locals, starts: &[u32]) -> Docs {
+        jsdoc::docs(&self.jsdocs(locals, starts))
+    }
+
+    fn jsdocs(&self, locals: &Locals, starts: &[u32]) -> Vec<Vec<jsdoc::JsDoc>> {
+        // A `{@link x}` prints differently when the checker finds `x`: a name in this file, or
+        // (with the imports followed) one it imports.
+        let resolves = |name: &str| {
+            locals.types.contains_key(name) || locals.values.contains_key(name) || (locals.resolving() && locals.imports.contains_key(name))
+        };
+        starts.iter().map(|&at| jsdoc::leading(self.source, self.comments, at, &resolves)).collect()
+    }
+
+    /// A member whose `complexType` the model cannot compute: Stencil's compiler has to.
+    fn unported(&mut self, what: String, why: Unsupported, span: Span) {
+        if self.complex_types {
+            self.push(Level::Error, format!("stencilrs: the type of {what} ({}) is not ported yet.", why.0), span);
+        }
+    }
+
     fn push(&mut self, level: Level, message: impl Into<String>, span: Span) {
         self.diagnostics.push(Diagnostic { level, message: message.into(), start: span.start, end: span.end });
     }
 
-    /// Evaluate argument `i`; `None` when absent or not a value we can read.
-    fn arg(&mut self, call: &CallExpression, i: usize) -> Option<Value> {
-        match eval_argument(call.arguments.get(i)?, self.source) {
+    /// Evaluate argument `i`; `None` when absent or when Stencil throws on it.
+    fn arg(&mut self, call: &CallExpression, i: usize, locals: &Locals) -> Option<Value> {
+        match eval_argument(call.arguments.get(i)?, self.source, locals) {
             Arg::Value(v) => Some(v),
-            Arg::NeedsConstEval => {
-                self.push(Level::Error, "stencilrs: identifier decorator arguments need const evaluation, which is not ported yet.", call.span);
+            Arg::Lit(Lit::Str(s)) => Some(Value::String(s)),
+            Arg::Lit(Lit::Num(n)) => Some(Value::from(n)),
+            Arg::Throw(message) => {
+                self.throw(message);
                 None
             }
-            Arg::Invalid => {
-                self.push(Level::Error, "invalid decorator argument", call.span);
-                None
-            }
+        }
+    }
+
+    /// Stencil throws: an exception, not a diagnostic. The first one wins.
+    fn throw(&mut self, message: impl Into<String>) {
+        self.thrown.get_or_insert_with(|| message.into());
+    }
+
+    /// A member's name: `[KEY]` as written, or (`resolve`, as `tsPropDeclName` does for
+    /// `@Prop`, `@State`, `@AttachInternals`) the value of its literal type.
+    fn member_name(&self, key: &PropertyKey, computed: bool, resolve: bool, locals: &Locals) -> Option<String> {
+        if !computed {
+            return property_key_name(key);
+        }
+        let expr = key.as_expression()?;
+        match resolve.then(|| literal(expr, locals)).flatten() {
+            Some(lit) => Some(lit.to_js_string()),
+            None => Some(computed_key_text(key, self.source)),
         }
     }
 }
 
 /// `resolver` switches on build-accurate mode (see `resolve.rs`); `file` is this module's path.
-pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolver>, file: &str) -> Analysis {
-    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
+pub fn analyze_program<'s>(program: &'s Program<'_>, source: &'s str, resolver: Option<&'s Resolver>, file: &'s str, complex_types: bool) -> Analysis {
+    let mut ctx = Ctx::new(program, source, resolver, file, complex_types);
     let locals = Locals::collect(program).with_resolver(resolver, file);
     let exports = value_exports(program, &locals);
     let mut components = Vec::new();
@@ -116,7 +192,9 @@ pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolv
         };
         if let Some(class) = class {
             top_level.push(class.span);
-            if let Some(cmp) = analyze_class(&mut ctx, class, &locals, &exports, program) {
+            // TypeScript's node starts at its first decorator or modifier.
+            let doc_start = class.decorators.iter().map(|d| d.span.start).chain([class.span.start, stmt.span().start]).min().unwrap_or_default();
+            if let Some(cmp) = analyze_class(&mut ctx, class, doc_start, &locals, &exports, program) {
                 components.push(cmp);
             }
         }
@@ -127,7 +205,11 @@ pub fn analyze_program(program: &Program, source: &str, resolver: Option<&Resolv
     let mut others = OtherDecoratedClasses { ctx: &mut ctx, locals: &locals, skip: top_level };
     others.visit_program(program);
 
-    Analysis { components, diagnostics: ctx.diagnostics }
+    // A thrown error fails the whole transform: no components, only that message.
+    if let Some(message) = ctx.thrown {
+        return Analysis { components: Vec::new(), diagnostics: vec![Diagnostic { level: Level::Error, message, start: 0, end: 0 }], failed: true };
+    }
+    Analysis { components, diagnostics: ctx.diagnostics, failed: false }
 }
 
 /// Reads the members of every class declaration (not expression) that has a decorated member,
@@ -245,15 +327,15 @@ fn opt_bool(v: &Option<Value>, key: &str) -> Option<bool> {
     v.as_ref()?.get(key)?.as_bool()
 }
 
-fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(String, Span)], program: &Program) -> Option<ComponentMeta> {
+fn analyze_class(ctx: &mut Ctx, class: &Class, doc_start: u32, locals: &Locals, exports: &[(String, Span)], program: &Program) -> Option<ComponentMeta> {
     let component_name = ctx.name("Component");
     let cmp_call = *decorator_calls(&class.decorators, &component_name).first()?;
     let class_name = class.id.as_ref().map(|id| id.name.to_string()).unwrap_or_default();
 
     // Port of `componentDecoratorToStatic`: a component that fails validation produces no
     // metadata, but its members are still converted (and still report diagnostics).
-    let component = component_options(ctx, cmp_call, &class_name, exports);
-    report_unported(ctx, class, component.as_ref().map(|c| &c.3));
+    let component = component_options(ctx, cmp_call, &class_name, exports, locals);
+    report_unported(ctx, class, component.as_ref().map(|c| (c.0.as_str(), &c.3)));
 
     let own = class_members(ctx, class, locals);
     let mut cmp = ComponentMeta {
@@ -261,6 +343,7 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         component_class_name: class_name,
         encapsulation: Encapsulation::None,
         style_urls: Vec::new(),
+        global_styles: Vec::new(),
         properties: own.properties,
         states: own.states,
         events: own.events,
@@ -274,14 +357,17 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
         serializers: own.serializers,
         deserializers: own.deserializers,
         options: Value::Null,
+        docs: ctx.docs(locals, &[doc_start]),
         does_extend: false,
         base_class_files: Vec::new(),
+        class_methods: own.class_methods,
     };
     if let Some((tag, encapsulation, style_urls, options)) = &component {
         cmp.options = options.clone();
         cmp.tag_name = tag.clone();
         cmp.encapsulation = *encapsulation;
         cmp.style_urls = style_urls.clone();
+        cmp.global_styles = global_styles(options, ctx.file);
     }
 
     // `mergeExtendedClassMetaWithResolveImport`: inherited members, parents first; the class's
@@ -289,6 +375,11 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
     if class.heritage.is_some() {
         let found = inherit::ancestors(class, inherit::Module { program, source: ctx.source, file: ctx.file }, ctx.resolver);
         ctx.diagnostics.extend(found.warnings);
+        if ctx.complex_types {
+            for parent in &found.members {
+                ctx.diagnostics.extend(parent.unported.iter().cloned().map(|d| Diagnostic { start: class.span.start, end: class.span.end, ..d }));
+            }
+        }
         for parent in found.members {
             cmp.does_extend = true;
             let props: Vec<PropMeta> = parent.properties.into_iter().filter(|p| !cmp.states.iter().any(|s| s.name == p.name)).collect();
@@ -303,10 +394,13 @@ fn analyze_class(ctx: &mut Ctx, class: &Class, locals: &Locals, exports: &[(Stri
             // callback Stencil drops them all, the component's own too: docs/quirks.md 10.
             cmp.serializers = inherit::prepend(parent.serializers, std::mem::take(&mut cmp.serializers), |w| w.method_name.clone());
             cmp.deserializers = inherit::prepend(parent.deserializers, std::mem::take(&mut cmp.deserializers), |w| w.method_name.clone());
+            cmp.class_methods.extend(parent.class_methods);
         }
         cmp.base_class_files = found.files;
     }
 
+    order_like_object_keys(&mut cmp.properties, |p| p.name.as_str());
+    order_like_object_keys(&mut cmp.states, |s| s.name.as_str());
     component.map(|_| cmp)
 }
 
@@ -325,14 +419,22 @@ pub(crate) struct Members {
     pub form_associated: bool,
     pub serializers: Vec<WatcherMeta>,
     pub deserializers: Vec<WatcherMeta>,
+    /// Types in this class `complexType` cannot be computed for (as `stencilrs:` diagnostics).
+    pub unported: Vec<Diagnostic>,
+    /// The names of the class's methods (`classMethods`), which `hasRenderFn` and the lifecycle
+    /// flags of the compiler metadata read.
+    pub class_methods: Vec<String>,
 }
 
 /// The members of a class in another module (or this one): an ancestor. Its diagnostics are
 /// dropped, as Stencil drops those of the throwaway program it reads an ancestor with.
-pub(crate) fn foreign_class_members(class: &Class, program: &Program, source: &str, file: &str, resolver: Option<&Resolver>) -> Members {
-    let mut ctx = Ctx { source, file, resolver, aliases: import_aliases(program), diagnostics: Vec::new() };
+pub(crate) fn foreign_class_members<'s>(class: &Class, program: &'s Program<'_>, source: &'s str, file: &'s str, resolver: Option<&'s Resolver>) -> Members {
+    let mut ctx = Ctx::new(program, source, resolver, file, true);
     let locals = Locals::collect(program).with_resolver(resolver, file);
-    class_members(&mut ctx, class, &locals)
+    let mut members = class_members(&mut ctx, class, &locals);
+    // The ancestor's types it could not compute are the descendant's too.
+    members.unported = ctx.diagnostics.into_iter().filter(|d| d.message.starts_with("stencilrs:")).collect();
+    members
 }
 
 fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
@@ -349,18 +451,34 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         form_associated: false,
         serializers: Vec::new(),
         deserializers: Vec::new(),
+        unported: Vec::new(),
+        class_methods: class
+            .body
+            .body
+            .iter()
+            .filter_map(|el| match el {
+                // `ts.isMethodDeclaration` with an identifier name.
+                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method && !m.computed => match &m.key {
+                    PropertyKey::StaticIdentifier(id) => Some(id.name.to_string()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect(),
     };
+    let reg = ctx.reg.clone();
+    let env = TypeEnv::new(locals, &reg, ctx.strict, ctx.file);
 
     let [prop_n, state_n, event_n, method_n, element_n, watch_n, listen_n] =
         ["Prop", "State", "Event", "Method", "Element", "Watch", "Listen"].map(|d| ctx.name(d));
 
     // Setters are needed to mark `@Prop() get x()` as having a setter.
-    let setters: Vec<String> = class
+    let setters: Vec<(String, u32)> = class
         .body
         .body
         .iter()
         .filter_map(|el| match el {
-            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Set => property_key_name(&m.key),
+            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Set => Some((property_key_name(&m.key)?, m.span.start)),
             _ => None,
         })
         .collect();
@@ -382,48 +500,72 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         .body
         .iter()
         .filter_map(|el| match el {
-            ClassElement::PropertyDefinition(p) if !decorator_calls(&p.decorators, &prop_n).is_empty() => property_key_name(&p.key),
+            ClassElement::PropertyDefinition(p) if !decorator_calls(&p.decorators, &prop_n).is_empty() => ctx.member_name(&p.key, p.computed, true, locals),
             ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Get && !decorator_calls(&m.decorators, &prop_n).is_empty() => {
-                property_key_name(&m.key)
+                ctx.member_name(&m.key, m.computed, true, locals)
             }
             _ => None,
         })
         .collect();
-    cmp.serializers = translators(ctx, class, "PropSerialize", &prop_names);
-    cmp.deserializers = translators(ctx, class, "AttrDeserialize", &prop_names);
+    cmp.serializers = translators(ctx, class, "PropSerialize", &prop_names, locals);
+    cmp.deserializers = translators(ctx, class, "AttrDeserialize", &prop_names, locals);
     let has = |list: &[WatcherMeta], name: &str| list.iter().any(|t| t.prop_name == name);
 
     for el in &class.body.body {
         match el {
             ClassElement::PropertyDefinition(p) => {
-                let Some(name) = member_name(ctx, &p.key) else { continue };
+                // `@Prop` and `@State` read a computed name's value; `@Event` and `@Element` keep its text.
+                let Some(name) = ctx.member_name(&p.key, p.computed, false, locals) else { continue };
+                let resolved = ctx.member_name(&p.key, p.computed, true, locals).unwrap_or_else(|| name.clone());
 
                 if let Some(call) = decorator_calls(&p.decorators, &prop_n).first() {
+                    let name = resolved.clone();
                     check_private_prop(ctx, p.accessibility, p.span);
-                    let opts = ctx.arg(call, 0);
+                    let opts = ctx.arg(call, 0, locals);
                     let (prop_type, original) = match &p.type_annotation {
                         Some(t) => (classify_annotation(&t.type_annotation, locals), ctx.text(t.type_annotation.span()).to_owned()),
                         None => classify_initializer(p.value.as_ref(), locals, ctx.source),
                     };
                     let default_value = p.value.as_ref().map(|v| initializer_text(v, locals, ctx.source));
                     let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
-                    let prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span(), translated);
+                    let mut prop = build_prop(ctx, name.clone(), prop_type, &opts, p.definite, p.optional, false, false, default_value, original, p.key.span(), translated);
+                    prop.docs = ctx.docs(locals, &[p.span.start]);
+                    let annotation = p.type_annotation.as_ref().map(|t| &t.type_annotation);
+                    prop_complex_type(ctx, &env, &mut prop, annotation, p.optional, |names| names.visit_property_definition(p), p.key.span());
                     cmp.properties.push(prop);
                 }
 
                 if !decorator_calls(&p.decorators, &state_n).is_empty() {
-                    cmp.states.push(StateMeta { name: name.clone() });
+                    cmp.states.push(StateMeta { name: resolved.clone() });
                 }
 
                 if let Some(call) = decorator_calls(&p.decorators, &event_n).first() {
-                    let opts = ctx.arg(call, 0);
+                    let opts = ctx.arg(call, 0, locals);
                     let event_name = opt_str(&opts, "eventName").map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()).unwrap_or_else(|| name.clone());
+                    let emitted = p.type_annotation.as_ref().and_then(|t| event_type_argument(&t.type_annotation));
+                    let original = emitted.map_or("any", |t| ctx.text(t.span())).to_owned();
+                    let mut complex_type = ComplexType { original, ..ComplexType::default() };
+                    let site = Site { file: ctx.file, info: &ctx.info, resolver: ctx.resolver };
+                    match member_type(&env, &site, emitted, false, &complex_type.original, |names| {
+                        if let Some(t) = emitted {
+                            names.visit_ts_type(t);
+                        }
+                    }) {
+                        Ok((resolved, references)) => {
+                            complex_type.resolved = resolved;
+                            complex_type.references = references;
+                        }
+                        Err(why) => ctx.unported(format!("event `{name}`"), why, p.key.span()),
+                    }
                     cmp.events.push(EventMeta {
                         name: event_name,
                         method: name.clone(),
                         bubbles: opt_bool(&opts, "bubbles").unwrap_or(true),
                         cancelable: opt_bool(&opts, "cancelable").unwrap_or(true),
                         composed: opt_bool(&opts, "composed").unwrap_or(true),
+                        docs: ctx.docs(locals, &[p.span.start]),
+                        complex_type,
+                        complex_type_original: event_type_original(p, ctx.source),
                     });
                 }
 
@@ -435,16 +577,32 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                 }
             }
             ClassElement::MethodDefinition(m) => {
-                let Some(name) = member_name(ctx, &m.key) else { continue };
+                let Some(name) = ctx.member_name(&m.key, m.computed, false, locals) else { continue };
 
                 if m.kind == MethodDefinitionKind::Get {
                     if let Some(call) = decorator_calls(&m.decorators, &prop_n).first() {
+                        let name = ctx.member_name(&m.key, m.computed, true, locals).unwrap_or_else(|| name.clone());
                         check_private_prop(ctx, m.accessibility, m.span);
-                        let opts = ctx.arg(call, 0);
-                        let (prop_type, original, default_value) = getter_prop(ctx, m, &fields, locals);
-                        let has_setter = setters.contains(&name);
+                        let opts = ctx.arg(call, 0, locals);
+                        let (prop_type, original, default_value, typed_by) = getter_prop(ctx, m, &fields, locals);
+                        let setter = setters.iter().find(|(n, _)| *n == name);
+                        let has_setter = setter.is_some();
                         let translated = (has(&cmp.serializers, &name), has(&cmp.deserializers, &name));
-                        let prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span(), translated);
+                        let mut prop = build_prop(ctx, name.clone(), prop_type, &opts, false, m.optional, true, has_setter, default_value, original, m.key.span(), translated);
+                        let mut starts = vec![m.span.start];
+                        starts.extend(setter.map(|(_, at)| *at));
+                        starts.sort_unstable();
+                        prop.docs = ctx.docs(locals, &starts);
+                        match typed_by {
+                            Some(field) => {
+                                let annotation = field.type_annotation.as_ref().map(|t| &t.type_annotation);
+                                prop_complex_type(ctx, &env, &mut prop, annotation, m.optional, |names| names.visit_property_definition(field), m.key.span());
+                            }
+                            None => {
+                                let annotation = m.value.return_type.as_ref().map(|t| &t.type_annotation);
+                                prop_complex_type(ctx, &env, &mut prop, annotation, m.optional, |names| names.visit_method_definition(m), m.key.span());
+                            }
+                        }
                         cmp.properties.push(prop);
                     }
                 }
@@ -452,20 +610,37 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                 if m.kind == MethodDefinitionKind::Method {
                     if !decorator_calls(&m.decorators, &method_n).is_empty() {
                         check_method(ctx, m, &name, locals.resolving());
-                        cmp.methods.push(MethodMeta { name: name.clone() });
+                        let jsdocs = ctx.jsdocs(locals, &[m.span.start]);
+                        let site = Site { file: ctx.file, info: &ctx.info, resolver: ctx.resolver };
+                        let complex_type = match method_type(&env, &site, m, &jsdocs) {
+                            Ok(complex_type) => complex_type,
+                            Err(why) => {
+                                ctx.unported(format!("method `{name}`"), why, m.key.span());
+                                MethodComplexType::default()
+                            }
+                        };
+                        cmp.methods.push(MethodMeta { name: name.clone(), docs: jsdoc::docs(&jsdocs), complex_type });
                     }
                     for call in decorator_calls(&m.decorators, &watch_n) {
-                        if let Some(Value::String(prop_name)) = ctx.arg(call, 0) {
+                        let arg = ctx.arg(call, 0, locals);
+                        if let Some(prop_name) = watch_key(ctx, arg) {
                             cmp.watchers.push(WatcherMeta { prop_name, method_name: name.clone() });
                         }
                     }
                     for call in decorator_calls(&m.decorators, &listen_n) {
-                        let Some(Value::String(event)) = ctx.arg(call, 0) else { continue };
+                        let event = match ctx.arg(call, 0, locals) {
+                            Some(Value::String(event)) => event,
+                            Some(Value::Number(_)) => {
+                                ctx.throw("TypeError: listenText.split is not a function");
+                                continue;
+                            }
+                            _ => continue,
+                        };
                         if event.split(',').count() > 1 {
                             ctx.push(Level::Error, "Please use multiple @Listen() decorators instead of comma-separated names.", call.span);
                         }
                         let event = event.split(',').next().unwrap_or_default().trim().to_owned();
-                        let opts = ctx.arg(call, 1);
+                        let opts = ctx.arg(call, 1, locals);
                         let target = opt_str(&opts, "target");
                         if target.as_deref() == Some("parent") {
                             ctx.push(Level::Error, "The \"parent\" target is no longer available as of Stencil 2. Please use \"window\", \"document\" or \"body\" instead.", call.span);
@@ -498,7 +673,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
     match internals.as_slice() {
         [] => {}
         [(p, call)] => {
-            cmp.attach_internals_member_name = property_key_name(&p.key);
+            cmp.attach_internals_member_name = ctx.member_name(&p.key, p.computed, true, locals);
             let options = match call.arguments.first() {
                 Some(Argument::ObjectExpression(o)) => Some(&**o),
                 _ => None,
@@ -516,7 +691,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
 
 /// `@PropSerialize(prop)` / `@AttrDeserialize(prop)` methods whose prop is one of `props`, in
 /// class order (`parseSerializeDecorator`).
-fn translators(ctx: &mut Ctx, class: &Class, decorator: &'static str, props: &[String]) -> Vec<WatcherMeta> {
+fn translators(ctx: &mut Ctx, class: &Class, decorator: &'static str, props: &[String], locals: &Locals) -> Vec<WatcherMeta> {
     let local = ctx.name(decorator);
     let mut out = Vec::new();
     for el in &class.body.body {
@@ -524,9 +699,10 @@ fn translators(ctx: &mut Ctx, class: &Class, decorator: &'static str, props: &[S
         if m.kind != MethodDefinitionKind::Method {
             continue;
         }
-        let Some(method_name) = property_key_name(&m.key) else { continue };
+        let Some(method_name) = ctx.member_name(&m.key, m.computed, false, locals) else { continue };
         for call in decorator_calls(&m.decorators, &local) {
-            if let Some(Value::String(prop_name)) = ctx.arg(call, 0) {
+            let arg = ctx.arg(call, 0, locals);
+            if let Some(prop_name) = watch_key(ctx, arg) {
                 if props.contains(&prop_name) {
                     out.push(WatcherMeta { prop_name, method_name: method_name.clone() });
                 }
@@ -591,16 +767,19 @@ fn jsdoc_before(source: &str, at: u32) -> String {
 
 /// Features stencilrs does not compile yet. Each reports an error starting with `stencilrs:`,
 /// which callers (the Vite plugin) treat as "use Stencil's compiler for this file".
-fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
-    let Some(o) = options else { return };
-    let checks: [(bool, &str); 4] = [
-        (matches!(o.get("styleUrls"), Some(Value::Object(_))), "per-mode styleUrls"),
+fn report_unported(ctx: &mut Ctx, class: &Class, component: Option<(&str, &Value)>) {
+    let Some((tag, o)) = component else { return };
+    let checks: [(bool, &str); 3] = [
         (o.get("styles").is_some_and(|s| !s.is_string()), "non-string `styles`"),
         (
-            o.get("styles").is_some() && o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped"),
-            "inline `styles` on scoped components (needs Stencil's scopeCss)",
+            o.pointer("/encapsulation/type").and_then(Value::as_str) == Some("scoped")
+                && o.get("styles").and_then(Value::as_str).is_some_and(|css| scope_css(css, &scope_id(tag, None), false).is_err()),
+            "inline `styles` that scopeCss rejects",
         ),
-        (o.get("globalStyle").is_some() || o.get("globalStyleUrl").is_some(), "component global styles"),
+        (
+            ["globalStyle", "globalStyleUrl"].iter().any(|k| o.get(*k).is_some_and(|v| !v.is_string())),
+            "non-string `globalStyle` / `globalStyleUrl`",
+        ),
     ];
     for (hit, what) in checks {
         if hit {
@@ -609,9 +788,26 @@ fn report_unported(ctx: &mut Ctx, class: &Class, options: Option<&Value>) {
     }
 }
 
+/// Port of `parseGlobalStyles` (static-to-meta/styles.ts): trimmed inline CSS, then the
+/// stylesheet path resolved against the component's directory.
+fn global_styles(options: &Value, file: &str) -> Vec<GlobalStyle> {
+    let mut styles = Vec::new();
+    if let Some(css) = options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        styles.push(GlobalStyle { absolute_path: None, style_str: Some(css.to_owned()) });
+    }
+    if let Some(url) = options.get("globalStyleUrl").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
+        let file = file.replace('\\', "/");
+        let absolute = url.starts_with('/') || url.as_bytes().get(1) == Some(&b':');
+        let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
+        let path = if absolute || dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") };
+        styles.push(GlobalStyle { absolute_path: Some(normalize_path(&path)), style_str: None });
+    }
+    styles
+}
+
 /// `@Component` options, or `None` when Stencil would reject the component.
-fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exports: &[(String, Span)]) -> Option<(String, Encapsulation, Vec<String>, Value)> {
-    let opts = ctx.arg(call, 0)?;
+fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exports: &[(String, Span)], locals: &Locals) -> Option<(String, Encapsulation, Vec<String>, Value)> {
+    let opts = ctx.arg(call, 0, locals)?;
 
     // `checkForDeprecatedApi`. Stencil reports this once per process
     // (`hasShownDeprecatedApiError`); here it is once per file.
@@ -640,15 +836,40 @@ fn component_options(ctx: &mut Ctx, call: &CallExpression, class_name: &str, exp
         _ => Encapsulation::None,
     };
 
-    let mut style_urls = Vec::new();
-    if let Some(url) = opts.get("styleUrl").and_then(Value::as_str) {
-        style_urls.push(url.to_owned());
-    }
-    if let Some(Value::Array(urls)) = opts.get("styleUrls") {
-        style_urls.extend(urls.iter().filter_map(Value::as_str).map(str::to_owned));
-    }
+    let style_urls = style_url_modes(&opts).into_iter().flat_map(|(_, urls)| urls).collect();
 
     Some((tag.trim().to_owned(), encapsulation, style_urls, opts))
+}
+
+/// `styleToStatic`'s style URLs by mode, in order. An array (or `styleUrl`) is the default mode
+/// `$`, which comes last unless `styleUrls` is an object that already names it.
+pub(crate) fn style_url_modes(opts: &Value) -> Vec<(String, Vec<String>)> {
+    fn urls(v: &Value) -> Vec<String> {
+        match v {
+            Value::String(s) => vec![s.clone()],
+            Value::Array(a) => a.iter().filter_map(Value::as_str).map(str::to_owned).collect(),
+            _ => Vec::new(),
+        }
+    }
+    let mut modes: Vec<(String, Vec<String>)> = Vec::new();
+    let mut default = Vec::new();
+    match opts.get("styleUrls") {
+        Some(v @ Value::Array(_)) => default.extend(urls(v)),
+        Some(Value::Object(o)) => {
+            modes.extend(o.iter().map(|(k, v)| (k.clone(), urls(v))));
+            default.extend(o.get("$").map(urls).unwrap_or_default());
+        }
+        _ => {}
+    }
+    default.extend(opts.get("styleUrl").map(urls).unwrap_or_default());
+    if !default.is_empty() {
+        match modes.iter_mut().find(|(k, _)| k == "$") {
+            Some((_, u)) => *u = default,
+            None => modes.push(("$".into(), default)),
+        }
+    }
+    modes.retain(|(_, u)| !u.is_empty());
+    modes
 }
 
 /// Port of `validateComponentTag` (`src/utils/validation.ts:88-132`).
@@ -688,6 +909,16 @@ fn validate_component_tag(tag: Option<&Value>) -> Option<String> {
         return Some(format!("\"{tag}\" tag cannot end with a dash (-)"));
     }
     None
+}
+
+/// The type argument of `EventEmitter<T>` as written (the event's `complexType.original`), `any`
+/// without one.
+fn event_type_original(p: &PropertyDefinition, source: &str) -> String {
+    let arg = p.type_annotation.as_ref().and_then(|t| match &t.type_annotation {
+        TSType::TSTypeReference(r) => r.type_arguments.as_ref()?.params.first(),
+        _ => None,
+    });
+    arg.map_or_else(|| "any".to_owned(), |t| t.span().source_text(source).to_owned())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -733,9 +964,14 @@ fn build_prop(
         reflect,
         attribute,
         default_value,
+        complex_type: ComplexType { original: complex_type_original.clone(), ..ComplexType::default() },
         complex_type_original,
+        docs: Docs::default(),
     }
 }
+
+/// What TypeScript's `createNumericLiteral` throws for a negative number.
+pub(crate) const NEGATIVE_NUMBER_ERROR: &str = "Error: Debug Failure. False expression: Negative numbers should be created in combination with createPrefixUnaryExpression";
 
 /// The `@Method` return check (`method-decorator.ts:82-97`), as the single-file program sees
 /// it: without the lib, `Promise` is unresolved, so only a written `Promise<...>` annotation
@@ -778,7 +1014,7 @@ enum MethodReturn {
 }
 
 /// Whether the function has a `return <expr>` of its own (not in a nested function).
-fn returns_value(func: &Function) -> bool {
+pub(crate) fn returns_value(func: &Function) -> bool {
     struct Finder(bool);
     impl<'a> Visit<'a> for Finder {
         fn visit_return_statement(&mut self, it: &ReturnStatement<'a>) {
@@ -795,12 +1031,19 @@ fn returns_value(func: &Function) -> bool {
     finder.0
 }
 
-fn member_name(ctx: &mut Ctx, key: &PropertyKey) -> Option<String> {
-    let name = property_key_name(key);
-    if name.is_none() && key.is_expression() {
-        ctx.push(Level::Error, "stencilrs: computed member names are not supported yet.", key.span());
+/// The key a `@Watch()` (or serializer) argument becomes. A number goes through as a numeric
+/// literal node, which the generated object turns into `"[object Object]"`; a negative one
+/// fails TypeScript's `createNumericLiteral` assertion.
+fn watch_key(ctx: &mut Ctx, arg: Option<Value>) -> Option<String> {
+    match arg? {
+        Value::String(s) => Some(s),
+        Value::Number(n) if n.as_f64().is_some_and(|n| n < 0.0) => {
+            ctx.throw(NEGATIVE_NUMBER_ERROR);
+            None
+        }
+        Value::Number(_) => Some("[object Object]".into()),
+        _ => None,
     }
-    name
 }
 
 fn check_private_prop(ctx: &mut Ctx, accessibility: Option<TSAccessibility>, span: Span) {
@@ -813,7 +1056,7 @@ fn check_private_prop(ctx: &mut Ctx, accessibility: Option<TSAccessibility>, spa
 /// (`parsePropDecorator`, `prop-decorator.ts:121-215`). The checker types a getter by its
 /// return type, inferred from the body when unannotated; the default comes from the first
 /// top-level `return`: a literal, or `x.name` where `name` is a class field with an initializer.
-fn getter_prop(ctx: &Ctx, m: &MethodDefinition, fields: &HashMap<String, &PropertyDefinition>, locals: &Locals) -> (PropType, String, Option<String>) {
+fn getter_prop<'x, 'a>(ctx: &Ctx, m: &MethodDefinition, fields: &HashMap<String, &'x PropertyDefinition<'a>>, locals: &Locals) -> (PropType, String, Option<String>, Option<&'x PropertyDefinition<'a>>) {
     let first_return = m.value.body.as_ref().and_then(|b| {
         b.statements.iter().find_map(|s| match s {
             Statement::ReturnStatement(r) => Some(r.argument.as_ref()),
@@ -846,11 +1089,36 @@ fn getter_prop(ctx: &Ctx, m: &MethodDefinition, fields: &HashMap<String, &Proper
         _ => None,
     };
     // Stencil re-types an `unknown` getter from the field it returns.
-    let (prop_type, original) = match (prop_type, field) {
-        (PropType::Unknown, Some(f)) if f.value.is_some() => field_type(f),
-        other => (other.0, original),
+    let (prop_type, original, typed_by) = match (prop_type, field) {
+        (PropType::Unknown, Some(f)) if f.value.is_some() => {
+            let (prop_type, original) = field_type(f);
+            (prop_type, original, Some(f))
+        }
+        other => (other.0, original, None),
     };
-    (prop_type, original, default_value)
+    (prop_type, original, default_value, typed_by)
+}
+
+/// The type `EventEmitter<T>` carries (`getEventType`).
+fn event_type_argument<'x, 'a>(annotation: &'x TSType<'a>) -> Option<&'x TSType<'a>> {
+    let TSType::TSTypeReference(r) = annotation else { return None };
+    let TSTypeName::IdentifierReference(id) = &r.type_name else { return None };
+    if id.name != "EventEmitter" {
+        return None;
+    }
+    r.type_arguments.as_ref()?.params.first()
+}
+
+/// A prop's `complexType.resolved` and `references`.
+fn prop_complex_type(ctx: &mut Ctx, env: &TypeEnv, prop: &mut PropMeta, annotation: Option<&TSType>, optional: bool, visit: impl FnOnce(&mut RefNames), span: Span) {
+    let site = Site { file: ctx.file, info: &ctx.info, resolver: ctx.resolver };
+    match member_type(env, &site, annotation, optional, &prop.complex_type.original, visit) {
+        Ok((resolved, references)) => {
+            prop.complex_type.resolved = resolved;
+            prop.complex_type.references = references;
+        }
+        Err(why) => ctx.unported(format!("prop `{}`", prop.name), why, span),
+    }
 }
 
 /// `ts.isLiteralExpression`: string, numeric, bigint, regex and no-substitution template literals.

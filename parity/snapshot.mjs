@@ -1,6 +1,6 @@
 // Golden output: compile every fixture with real Stencil v5 and write snapshots/.
 //
-//   node snapshot.mjs [suite]
+//   node snapshot.mjs [suite] [--mode customelement|module|lazy|ssr]
 //
 // For each fixture `fixtures/<suite>/<path>.tsx`:
 //   snapshots/<suite>/<path>.js    the code transpileSync emits
@@ -8,11 +8,17 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { transpileSync, versions } from '@stencil/core/compiler';
+import { versions } from '@stencil/core/compiler';
 
-import { listFixtures, plain, portable, snapshotsDir, transpileOptions } from './lib.mjs';
+import { listFixtures, modeArg, plain, portable, snapshotsDirFor, transpileOptions } from './lib.mjs';
+import { stencilTranspile } from './stencil.mjs';
 
-const suite = process.argv[2];
+/** An error Stencil threw carries its stack, with this machine's paths: keep the message. */
+const withoutStack = (text) => text.split('\n    at ')[0];
+
+const mode = modeArg(process.argv);
+const snapshotsDir = snapshotsDirFor(mode);
+const suite = process.argv.slice(2).find((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--mode');
 const fixtures = listFixtures(suite);
 if (suite) rmSync(join(snapshotsDir, suite), { recursive: true, force: true });
 else rmSync(snapshotsDir, { recursive: true, force: true });
@@ -20,7 +26,7 @@ else rmSync(snapshotsDir, { recursive: true, force: true });
 let errors = 0;
 for (const { id, file } of fixtures) {
   const code = readFileSync(file, 'utf8');
-  const result = transpileSync(code, transpileOptions(code, id));
+  const result = stencilTranspile(code, transpileOptions(code, id, mode));
   const base = join(snapshotsDir, id.replace(/\.tsx?$/, ''));
   mkdirSync(dirname(base), { recursive: true });
   writeFileSync(`${base}.js`, portable(result.code));
@@ -30,7 +36,7 @@ for (const { id, file } of fixtures) {
       JSON.stringify(
         {
           data: plain(result.data ?? []),
-          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: d.messageText })),
+          diagnostics: result.diagnostics.map((d) => ({ level: d.level, messageText: withoutStack(d.messageText) })),
           imports: result.imports ?? [],
         },
         null,
@@ -47,7 +53,7 @@ writeFileSync(
     {
       stencil: versions.stencil,
       typescript: versions.typescript,
-      options: transpileOptions('', '<file>'),
+      options: transpileOptions('', '<file>', mode),
       fixtures: listFixtures().length,
     },
     null,

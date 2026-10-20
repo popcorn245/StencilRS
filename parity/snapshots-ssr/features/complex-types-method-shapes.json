@@ -1,0 +1,464 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "m-two",
+      "componentClassName": "MTwo",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [
+        {
+          "name": "b1",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: Unknown, y?: HTMLElement, z?: Imp) => Promise<Unknown>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "Unknown",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "any",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "Imp",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Unknown": {
+                "location": "global",
+                "id": "global::Unknown"
+              },
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              },
+              "Imp": {
+                "location": "global",
+                "id": "global::Imp"
+              }
+            },
+            "return": "Promise<Unknown>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b2",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: Unknown[], y: Unknown | string, z: Box<Unknown>, w: { a: Unknown; }, f: (a: Unknown) => Unknown) => Promise<Unknown[]>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "{}",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "any",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "Box<Unknown>",
+                "docs": ""
+              },
+              {
+                "name": "w",
+                "type": "{ a: Unknown; }",
+                "docs": ""
+              },
+              {
+                "name": "f",
+                "type": "(a: Unknown) => Unknown",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Unknown": {
+                "location": "global",
+                "id": "global::Unknown"
+              },
+              "Box": {
+                "location": "local",
+                "path": "features/complex-types-method-shapes.tsx",
+                "id": "features/complex-types-method-shapes.tsx::Box"
+              }
+            },
+            "return": "Promise<{}>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b3",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: 1.5, y: 16, z: 1000, w: -5, v: 10n, u: true) => Promise<void>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "1.5",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "16",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "1000",
+                "docs": ""
+              },
+              {
+                "name": "w",
+                "type": "-5",
+                "docs": ""
+              },
+              {
+                "name": "v",
+                "type": "10n",
+                "docs": ""
+              },
+              {
+                "name": "u",
+                "type": "true",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b4",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(a: (string), b: (string | number)[], c: ((x: number) => void)[], d: Array<string | number>) => Promise<void>",
+            "parameters": [
+              {
+                "name": "a",
+                "type": "string",
+                "docs": ""
+              },
+              {
+                "name": "b",
+                "type": "{}",
+                "docs": ""
+              },
+              {
+                "name": "c",
+                "type": "{}",
+                "docs": ""
+              },
+              {
+                "name": "d",
+                "type": "Array<string | number>",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b5",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(a: { \"a-b\": string; 1: number; [k: string]: any; readonly c: string; m(): void; n?(x: number): string; (y: number): void; }) => Promise<void>",
+            "parameters": [
+              {
+                "name": "a",
+                "type": "{ (y: number): void; [k: string]: any; 'a-b': string; 1: number; readonly c: string; m(): void; n?(x: number): string; }",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b6",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(a: [x: string, y?: number], b: [string, ...number[]], c: string[][]) => Promise<void>",
+            "parameters": [
+              {
+                "name": "a",
+                "type": "[x: string, y?: number | undefined]",
+                "docs": ""
+              },
+              {
+                "name": "b",
+                "type": "[string, ...number[]]",
+                "docs": ""
+              },
+              {
+                "name": "c",
+                "type": "{}",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b7",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(a: typeof Box, b: keyof Box<any>, c: Box<string>[\"v\"], d: string & number) => Promise<void>",
+            "parameters": [
+              {
+                "name": "a",
+                "type": "any",
+                "docs": ""
+              },
+              {
+                "name": "b",
+                "type": "\"v\"",
+                "docs": ""
+              },
+              {
+                "name": "c",
+                "type": "string",
+                "docs": ""
+              },
+              {
+                "name": "d",
+                "type": "never",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Box": {
+                "location": "local",
+                "path": "features/complex-types-method-shapes.tsx",
+                "id": "features/complex-types-method-shapes.tsx::Box"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b8",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "({ a, b }: { a: string; b: number; }, [c]: string[]) => Promise<void>",
+            "parameters": [
+              {
+                "name": "__0",
+                "type": "{ a: string; b: number; }",
+                "docs": ""
+              },
+              {
+                "name": "__1",
+                "type": "{}",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "b9",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<Imp>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Imp": {
+                "location": "global",
+                "id": "global::Imp"
+              }
+            },
+            "return": "Promise<Imp>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": false,
+      "hasAttribute": false,
+      "hasProp": false,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "div"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": false,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

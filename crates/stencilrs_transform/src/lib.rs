@@ -1,19 +1,26 @@
 //! stencilrs: Stencil v5's component transforms on oxc.
 //!
 //! `analyze` reads Stencil decorators into component metadata; `transpile` also generates
-//! the `customelement` module (what `transpileSync` emits for `@stencil/unplugin`).
+//! the `customelement` module (what `transpileSync` emits for `@stencil/unplugin`), or with
+//! `component_export` the `module`, lazy-loading and `ssr` (hydrate) shapes.
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
+mod complex_type;
+mod consts;
 pub mod codegen;
+mod compiler_meta;
 mod default_value;
 mod edits;
 mod eval;
 mod inherit;
+mod jsdoc;
+mod types;
 mod locals;
 pub mod meta;
 mod prop_type;
 mod resolve;
+pub mod scope_css;
 mod sourcemap;
 
 use oxc::allocator::Allocator;
@@ -22,7 +29,7 @@ use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
-pub use codegen::{CodegenOptions2 as TranspileOptions, DEFAULT_CORE_IMPORT_PATH, Jsx, normalize};
+pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 
 #[derive(Debug, Serialize)]
@@ -65,28 +72,42 @@ fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (Par
 /// Parse one component module and return the metadata of every `@Component` class in it,
 /// as Stencil's single-file `transpileSync` sees it.
 pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
-    analyze_with(source, file_name, false)
+    analyze_with(source, file_name, false, false)
 }
 
 /// `analyze`, optionally build-accurate: relative imports followed, lib types known, as a full
 /// `stencil build` sees the component.
-pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool) -> AnalyzeResult {
+pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool, complex_types: bool) -> AnalyzeResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, file_name);
-    let resolver = resolve_imports.then(resolve::Resolver::new);
-    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name);
+    let resolver = resolve_imports.then(|| resolve::Resolver::new(file_name));
+    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name, complex_types);
     diagnostics.extend(analysis.diagnostics);
     AnalyzeResult { components: analysis.components, diagnostics }
 }
 
-/// Analyse one component module and generate its `customelement` code.
+/// Analyse one component module and generate its code: `customelement` by default.
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
-    let resolver = opts.resolve_imports.then(resolve::Resolver::new);
-    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file);
+    let resolver = opts.resolve_imports.then(|| resolve::Resolver::new(&opts.file));
+    let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file, opts.complex_types);
+    // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
+    // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.
+    if opts.component_metadata == ComponentMetadata::CompilerStatic
+        && !analysis.failed
+        && analysis.components.iter().any(|c| c.watchers.iter().any(|w| w.prop_name == "[object Object]"))
+    {
+        analysis = analyze::Analysis {
+            components: Vec::new(),
+            diagnostics: vec![Diagnostic { level: Level::Error, message: analyze::NEGATIVE_NUMBER_ERROR.into(), start: 0, end: 0 }],
+            failed: true,
+        };
+    }
     diagnostics.extend(analysis.diagnostics);
-    let (code, map) = match codegen::generate(&parsed.program, source, &analysis.components, opts) {
+    // When Stencil throws, `transpileSync` returns the source as it came in.
+    let generated = if analysis.failed { Ok(codegen::Generated { code: source.to_owned(), map: None }) } else { codegen::generate(&parsed.program, source, &analysis.components, opts) };
+    let (code, map) = match generated {
         Ok(generated) => (generated.code, generated.map),
         Err(message) => {
             diagnostics.push(Diagnostic { level: Level::Error, message, start: 0, end: 0 });

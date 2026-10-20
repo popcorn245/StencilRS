@@ -1,0 +1,125 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "cmp-extends-missing",
+      "componentClassName": "CmpExtendsMissing",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": false,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": false,
+      "hasAttribute": false,
+      "hasProp": false,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "hr"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": false,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "Two parents Stencil can't read: a name the module doesn't declare, and a factory returning a class by reference."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "level": "warn",
+      "messageText": "Unable to find \"NotExported\" in the imported module \"./bases/plain-base\".\n                        Please import class / mixin-factory declarations directly and not via barrel files."
+    },
+    {
+      "level": "warn",
+      "messageText": "Found \"byReference\", but couldn't find a class inside it. If it's meant to be a mixin factory, make sure it returns a class literal directly, e.g. `(Base) => class extends Base {}` or `(Base) => { class byReferenceClass extends Base {} return byReferenceClass; }` - returning an existing class by reference (`(Base) => SomeExistingClass`) isn't recognized, and any `@Prop`/`@State`/etc. it declares won't be applied."
+    }
+  ],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    },
+    {
+      "path": "./bases/plain-base"
+    },
+    {
+      "path": "./bases/factories"
+    }
+  ]
+}

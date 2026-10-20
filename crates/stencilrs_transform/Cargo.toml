@@ -5,6 +5,7 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
+fancy-regex = "0.19"
 oxc = { version = "0.154.0", features = ["ast_visit", "semantic", "codegen", "transformer"] }
 oxc_sourcemap = "9.0.0"
 serde = { version = "1.0.229", features = ["derive"] }

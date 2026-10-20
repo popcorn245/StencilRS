@@ -1,7 +1,7 @@
 //! Node binding for stencilrs.
 
 use napi_derive::napi;
-use stencilrs_transform::{DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions};
+use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
 
 fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
     serde_json::to_value(value).map_err(|e| napi::Error::from_reason(e.to_string()))
@@ -10,14 +10,16 @@ fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
 /// Analyse one component module: `{ components: ComponentMeta[], diagnostics: Diagnostic[] }`.
 /// `resolve_imports`: build-accurate metadata (relative imports followed, lib types known).
 #[napi]
-pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>) -> napi::Result<serde_json::Value> {
-    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false)))
+/// `complex_types`: a type `complexType` cannot be computed for is reported as not ported.
+pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>, complex_types: Option<bool>) -> napi::Result<serde_json::Value> {
+    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false), complex_types.unwrap_or(false)))
 }
 
 #[napi(object)]
 pub struct JsTranspileOptions {
     pub file: String,
-    /// Defaults to `@stencil/core/runtime/client/standalone`.
+    /// Defaults to `@stencil/core/runtime/client/standalone`, or `@stencil/core/runtime/server`
+    /// for `componentExport: "ssr"`.
     pub core_import_path: Option<String>,
     /// `"classic"` (h) or `"automatic"` (jsx-runtime). Defaults to automatic.
     pub jsx: Option<String>,
@@ -26,25 +28,62 @@ pub struct JsTranspileOptions {
     /// Build-accurate metadata, as a full `stencil build` computes it: follow relative imports and
     /// know lib types. Default false: exactly what single-file `transpileSync` produces.
     pub resolve_imports: Option<bool>,
+    /// Report a prop, event or method whose `complexType` cannot be computed as not ported
+    /// (`stencilrs:` error). Default false.
+    pub complex_types: Option<bool>,
     /// Return a source map (v3 JSON string) in `map`. Default true, as in `transpileSync`.
     pub source_map: Option<bool>,
     /// Compile the file as base classes for components to extend (Stencil's
     /// `transformAsBaseClass`). Default false.
     pub transform_as_base_class: Option<bool>,
+    /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
+    /// `"module"`, `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil) or `"ssr"`
+    /// (the hydrate / server-side rendering shape).
+    pub component_export: Option<String>,
+    /// `"compilerstatic"`: add `static get COMPILER_META()` to each component, as Stencil's
+    /// `componentMetadata`. Default none.
+    pub component_metadata: Option<String>,
+    /// Import and attach the component's styles. Default true; false is Stencil's `style: null`.
+    pub emit_styles: Option<bool>,
 }
 
-/// Generate the `customelement` module: `{ code, map, components, diagnostics, baseClasses }`.
+/// Generate a component module, `customelement` unless `componentExport` says otherwise:
+/// `{ code, map, components, diagnostics, baseClasses }`.
 #[napi]
 pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<serde_json::Value> {
     let jsx = match options.jsx.as_deref() {
         Some("classic") => Jsx::Classic,
         _ => Jsx::Automatic { import_source: options.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
     };
+    let component_export = match options.component_export.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        None | Some("customelement") => ComponentExport::CustomElement,
+        Some("module") => ComponentExport::Module,
+        Some("lazy") => ComponentExport::Lazy,
+        Some("ssr") => ComponentExport::Ssr,
+        Some(other) => {
+            return Err(napi::Error::from_reason(format!(
+                "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\" or \"ssr\""
+            )));
+        }
+    };
+    let component_metadata = match options.component_metadata.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        None | Some("") => ComponentMetadata::None,
+        Some("compilerstatic") => ComponentMetadata::CompilerStatic,
+        Some(other) => {
+            return Err(napi::Error::from_reason(format!("unknown componentMetadata {other:?}: expected \"compilerstatic\"")));
+        }
+    };
     let opts = TranspileOptions {
+        component_export,
+        component_metadata,
+        emit_styles: options.emit_styles.unwrap_or(true),
         file: options.file,
-        core_import_path: options.core_import_path.unwrap_or_else(|| DEFAULT_CORE_IMPORT_PATH.into()),
+        core_import_path: options.core_import_path.unwrap_or_else(|| {
+            if component_export == ComponentExport::Ssr { SSR_CORE_IMPORT_PATH } else { DEFAULT_CORE_IMPORT_PATH }.into()
+        }),
         jsx,
         resolve_imports: options.resolve_imports.unwrap_or(false),
+        complex_types: options.complex_types.unwrap_or(false),
         source_map: options.source_map.unwrap_or(true),
         transform_as_base_class: options.transform_as_base_class.unwrap_or(false),
     };
@@ -55,4 +94,11 @@ pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<se
 #[napi]
 pub fn normalize(code: String) -> napi::Result<String> {
     stencilrs_transform::normalize(&code).map_err(napi::Error::from_reason)
+}
+
+/// Stencil's `scopeCss`: CSS rewritten for a `scoped` component with scope id `scopeId`.
+#[napi]
+pub fn scope_css(css: String, scope_id: String, comment_original_selector: Option<bool>) -> napi::Result<String> {
+    stencilrs_transform::scope_css::scope_css(&css, &scope_id, comment_original_selector.unwrap_or(false))
+        .map_err(|e| napi::Error::from_reason(e.0))
 }

@@ -9,7 +9,7 @@
 stencilrs replaces the slow part of the Stencil compiler: the TypeScript transform layer that turns
 a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is a
 Rust port on [oxc](https://oxc.rs), runs as a Vite 8 plugin, and produces **the same output as
-Stencil v5**: about **40× faster per file** and **4.7× faster** for a production Vite build.
+Stencil v5**: about **22× faster per file** and **2.9× faster** for a production Vite build.
 
 You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
 own runtime (`@stencil/core`) runs them in the browser.
@@ -64,30 +64,28 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 
 | Check | Result |
 |---|---|
-| Same output as Stencil v5's per-file compiler, 185 fixtures | **185/185**: metadata, diagnostics and code |
+| Same output as Stencil v5's per-file compiler, 222 fixtures, in each of five outputs | **222/222**: metadata, diagnostics and code |
+| Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
-| Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
-| Production `vite build` of the library | **0.82 s** vs 3.9 s (4.7×) |
+| Per-file compile, 222 files, source maps on | **108 ms** vs 2.4 s (22×) |
+| Production `vite build` of the library | **1.0 s** vs 3.0 s (2.9×) |
 
 Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
 `@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
-JSX, `styleUrl(s)` and inline `styles`, shadow and scoped encapsulation, inheritance and mixins,
-form-associated components, and source maps back to the original TypeScript.
+JSX, `styleUrl(s)` (per-mode ones too) and inline `styles` (scoped ones scoped at compile time, as Stencil does), component `globalStyle` and `globalStyleUrl`, shadow and scoped encapsulation, inheritance and mixins,
+form-associated components, constants as decorator arguments and computed member names
+(`@Watch(KEYS.open)`, enums, `resolveVar()`, `@Prop() [NAME]`), and source maps back to the
+original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
-- inline `styles` on scoped components ([#1](https://github.com/popcorn245/StencilRS/issues/1)),
-  per-mode `styleUrls` ([#2](https://github.com/popcorn245/StencilRS/issues/2)),
-  `globalStyle` ([#3](https://github.com/popcorn245/StencilRS/issues/3))
-- constants as decorator arguments and computed member names
-  ([#4](https://github.com/popcorn245/StencilRS/issues/4)); these are errors today, not fallbacks
-- the lazy-loading and SSR outputs ([#5](https://github.com/popcorn245/StencilRS/issues/5),
-  [#6](https://github.com/popcorn245/StencilRS/issues/6)) and `newSpecPage`
-  ([#7](https://github.com/popcorn245/StencilRS/issues/7)); stencilrs emits the custom-element
-  output Vite, Vitest and Storybook use
-- JSDoc text and full `complexType` for docs output
-  ([#8](https://github.com/popcorn245/StencilRS/issues/8))
+- in the lazy (`loader-bundle`), `ssr` and spec-page outputs, decorated base classes
+  and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
+- `complexType` for types that need the checker: `keyof`, `typeof`, mapped, conditional and
+  generic types, inferred object types, types from packages or tsconfig `paths`, and unions whose
+  member order depends on the whole program. `analyze(..., { complexTypes: true })` reports each
+  as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 
 ## How it works
 

@@ -1,0 +1,415 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-graph-view",
+      "componentClassName": "PopGraphView",
+      "elementRef": "host",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "nodes",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "GraphNode[]",
+            "resolved": "GraphNode[]",
+            "references": {
+              "GraphNode": {
+                "location": "local",
+                "path": "ui-kit/organisms/graph-view/graph-view.tsx",
+                "id": "ui-kit/organisms/graph-view/graph-view.tsx::GraphNode"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Notes → nodes (set as a property)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "edges",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "[]",
+          "complexType": {
+            "original": "GraphEdge[]",
+            "resolved": "GraphEdge[]",
+            "references": {
+              "GraphEdge": {
+                "location": "local",
+                "path": "ui-kit/organisms/graph-view/graph-view.tsx",
+                "id": "ui-kit/organisms/graph-view/graph-view.tsx::GraphEdge"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "`[[links]]` → edges (set as a property). source/target are note ids."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "tagColors",
+          "type": "any",
+          "attribute": "tag-colors",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "{}",
+          "complexType": {
+            "original": "Record<string, string>",
+            "resolved": "string",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Stable tag → CSS colour map for node fill / legend (set as a property)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "nodeCap",
+          "type": "number",
+          "attribute": "node-cap",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "0",
+          "complexType": {
+            "original": "number",
+            "resolved": "number",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Cap node count (lower on mobile). 0 / undefined = no cap."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "filterTag",
+          "type": "string",
+          "attribute": "filter-tag",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Dim nodes whose tags don't include this tag ('' = no filter)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "highlight",
+          "type": "string",
+          "attribute": "highlight",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Highlight nodes whose title matches this query ('' = none)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "orphansOnly",
+          "type": "boolean",
+          "attribute": "orphans-only",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Show only orphans (notes with no resolved links)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [
+        {
+          "name": "reheat",
+          "docs": {
+            "text": "Public: re-run a short simulation burst (used by \"re-layout\" controls).",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "() => Promise<any>",
+            "parameters": [],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "zoomToFit",
+          "docs": {
+            "text": "Public: fit + centre all nodes in the viewport.",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(padding?: number) => Promise<any>",
+            "parameters": [
+              {
+                "name": "padding",
+                "type": "number",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "nodeSelect",
+          "method": "nodeSelect",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired on click / tap of a node → page navigates to /note/:id."
+          },
+          "complexType": {
+            "original": "{ id: string }",
+            "resolved": "{ id: string; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "nodeHover",
+          "method": "nodeHover",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Fired on hover (id) / hover-out (null) → page can show a preview card."
+          },
+          "complexType": {
+            "original": "{ id: string | null }",
+            "resolved": "{ id: string | null; }",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "nodes",
+          "methodName": "graphChanged"
+        },
+        {
+          "propName": "edges",
+          "methodName": "graphChanged"
+        },
+        {
+          "propName": "filterTag",
+          "methodName": "styleChanged"
+        },
+        {
+          "propName": "highlight",
+          "methodName": "styleChanged"
+        },
+        {
+          "propName": "orphansOnly",
+          "methodName": "styleChanged"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-GRAPH-VIEW",
+          "styleStr": null,
+          "styleIdentifier": "PopGraphViewStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/graph-view/graph-view.css",
+              "relativePath": "graph-view.css",
+              "originalComponentPath": "graph-view.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": true,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": false,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "role",
+        "tabindex",
+        "aria-label",
+        "aria-roledescription",
+        "onKeyDown",
+        "name",
+        "iconName",
+        "heading",
+        "message",
+        "size"
+      ],
+      "htmlTagNames": [
+        "div",
+        "canvas",
+        "slot",
+        "pop-empty-state",
+        "code"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "empty"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "pop-graph-view — the 2D force-directed knowledge graph.\n\nLOCKED design (planned/notes-app-digital-brain/linking-and-graph.mdx):\n  • Nodes = notes. Edges = `[[links]]` ONLY. Tags = colour / cluster (NEVER edges).\n  • Node size = link-count (hubs are bigger).\n  • 2D force-directed: d3-force simulation + CANVAS render (not SVG) + quadtree-free\n    linear hit-testing (fine for the \"hundreds → low-thousands\" v1 target).\n  • \"Simplest that works\" perf posture. Idle-pause: the sim ticks for a *capped*\n    number of iterations, then stops — we never run rAF forever. A node drag or a\n    `reheat()` restarts a short burst, then it settles again.\n  • Reduced-motion: run the sim synchronously to convergence on load (no animation),\n    then paint once. No ticking rAF at all.\n\nInputs are set as DOM **properties** (`nodes`, `edges`, `tagColors`).\nEmits `nodeSelect({ id })` on click/tap and `nodeHover({ id | null })`.\n\nThe component owns its <canvas>; it manages its own resize observer, pointer\nlisteners and simulation, and tears all of them down on disconnect.\n\nSee planned/notes-app-digital-brain/components.mdx §pop-graph-view."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/client/standalone"
+    },
+    {
+      "path": "d3-force"
+    }
+  ]
+}

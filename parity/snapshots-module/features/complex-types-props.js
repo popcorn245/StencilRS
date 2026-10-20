@@ -1,0 +1,58 @@
+import { createEvent as __stencil_createEvent, proxyCustomElement as __stencil_proxyCustomElement, HTMLElement } from "@stencil/core/runtime/client/standalone";
+import { h } from "@stencil/core/runtime/client/standalone";
+export const TOne = class extends HTMLElement {
+    constructor(registerHost) {
+        super();
+        if (registerHost !== false) {
+            this.__registerHost();
+        }
+        this.ev1 = __stencil_createEvent(this, "ev1", 7);
+        this.ev2 = __stencil_createEvent(this, "ev2", 7);
+        this.ev3 = __stencil_createEvent(this, "ev3", 7);
+        this.ev4 = __stencil_createEvent(this, "ev4", 7);
+    }
+    f1;
+    f2;
+    f3;
+    f4;
+    f5;
+    f6;
+    f7;
+    f8;
+    f9;
+    f10;
+    f11;
+    f12;
+    f13;
+    f14;
+    f15;
+    f16;
+    f18;
+    f19;
+    ev1;
+    ev2;
+    ev3;
+    ev4;
+    render() { return h("div", { key: '0' }); }
+};
+__stencil_proxyCustomElement(TOne, [512, "t-one", {
+        "f1": [16],
+        "f2": [16],
+        "f3": [16],
+        "f4": [16],
+        "f5": [16],
+        "f6": [16],
+        "f7": [8, "f-7"],
+        "f8": [8, "f-8"],
+        "f9": [2, "f-9"],
+        "f10": [16],
+        "f11": [16],
+        "f12": [16],
+        "f13": [16],
+        "f14": [8, "f-1-4"],
+        "f15": [8, "f-1-5"],
+        "f16": [1, "f-1-6"],
+        "f18": [16],
+        "f19": [16]
+    }]);
+//# sourceMappingURL=complex-types-props.js.map

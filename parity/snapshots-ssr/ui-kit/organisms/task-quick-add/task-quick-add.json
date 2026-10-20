@@ -1,0 +1,302 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-task-quick-add",
+      "componentClassName": "PopTaskQuickAdd",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "open",
+          "type": "boolean",
+          "attribute": "open",
+          "reflect": true,
+          "mutable": true,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Controls visibility"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "quests",
+          "type": "string",
+          "attribute": "quests",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'[]'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "JSON array of {id, emoji, title}"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "defaultQuestId",
+          "type": "string",
+          "attribute": "default-quest-id",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "null",
+          "complexType": {
+            "original": "string | null",
+            "resolved": "null | string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Pre-selected quest (when opened from quest detail)"
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "mentionSources",
+          "type": "any",
+          "attribute": "mention-sources",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "Record<string, MentionSource[]>",
+            "resolved": "any",
+            "references": {
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              },
+              "MentionSource": {
+                "location": "global",
+                "id": "global::MentionSource"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "Optional mention sources keyed by group. When provided, the title input\nis replaced by `<pop-mention-input>` so users can `@`-mention people /\n`#`-tag etc. When absent, the existing plain-text input is rendered."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "title"
+        },
+        {
+          "name": "dueDate"
+        },
+        {
+          "name": "questId"
+        },
+        {
+          "name": "validationError"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "taskCreate",
+          "method": "taskCreate",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "User submitted the form"
+          },
+          "complexType": {
+            "original": "{ title: string; dueDate: string | null; questId: string | null }",
+            "resolved": "{ title: string; dueDate: string | null; questId: string | null; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "quickAddClose",
+          "method": "quickAddClose",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "Popover dismissed"
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [
+        {
+          "propName": "quests",
+          "methodName": "onQuestsChange"
+        },
+        {
+          "propName": "open",
+          "methodName": "onOpenChange"
+        }
+      ],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-TASK-QUICK-ADD",
+          "styleStr": null,
+          "styleIdentifier": "PopTaskQuickAddStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/organisms/task-quick-add/task-quick-add.css",
+              "relativePath": "task-quick-add.css",
+              "originalComponentPath": "task-quick-add.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": true,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": true,
+      "hasReflect": true,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": false,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": true,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "class",
+        "onClick",
+        "onKeyDown",
+        "role",
+        "aria-modal",
+        "aria-label",
+        "onSubmit",
+        "placeholder",
+        "sources",
+        "onValueChanged",
+        "onSubmitted",
+        "type",
+        "value",
+        "onInput",
+        "ref",
+        "autocomplete",
+        "onChange",
+        "selected"
+      ],
+      "htmlTagNames": [
+        "div",
+        "form",
+        "pop-mention-input",
+        "input",
+        "span",
+        "select",
+        "option",
+        "button"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": ""
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

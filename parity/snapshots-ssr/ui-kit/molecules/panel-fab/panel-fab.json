@@ -1,0 +1,300 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "pop-panel-fab",
+      "componentClassName": "PopPanelFab",
+      "elementRef": "el",
+      "encapsulation": "scoped",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "action",
+          "type": "string",
+          "attribute": "action",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "''",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Primary action label. Empty → the FAB is a controls-tray toggle only."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "icon",
+          "type": "string",
+          "attribute": "icon",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'add'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Ionicon name for the primary action."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "compact",
+          "type": "boolean",
+          "attribute": "compact",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Hide the label and render the primary action as an icon-only circle."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "noControls",
+          "type": "boolean",
+          "attribute": "no-controls",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Set when the panel has no list controls — suppresses the tray + chevron."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "attribute": "disabled",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "false",
+          "complexType": {
+            "original": "boolean",
+            "resolved": "boolean",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Disable the primary action (a busy panel, an incomplete precondition)."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "controlsLabel",
+          "type": "string",
+          "attribute": "controls-label",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": false,
+          "defaultValue": "'List controls'",
+          "complexType": {
+            "original": "string",
+            "resolved": "string",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "Accessible name for the tray toggle."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [
+        {
+          "name": "open"
+        }
+      ],
+      "methods": [],
+      "listeners": [],
+      "events": [
+        {
+          "name": "popAction",
+          "method": "popAction",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": "The primary action was tapped."
+          },
+          "complexType": {
+            "original": "void",
+            "resolved": "void",
+            "references": {}
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [
+        {
+          "modeName": "$",
+          "styleId": "POP-PANEL-FAB",
+          "styleStr": null,
+          "styleIdentifier": "PopPanelFabStyle",
+          "externalStyles": [
+            {
+              "absolutePath": "./ui-kit/molecules/panel-fab/panel-fab.css",
+              "relativePath": "panel-fab.css",
+              "originalComponentPath": "panel-fab.css"
+            }
+          ]
+        }
+      ],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": true,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": true,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": true,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": false,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": false,
+      "hasPropBoolean": true,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": true,
+      "hasState": true,
+      "hasStyle": true,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": true,
+      "hasVdomClass": true,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": true,
+      "hasVdomPropOrAttr": true,
+      "hasVdomPropOrAttrPrefix": true,
+      "hasVdomRef": true,
+      "hasVdomRender": true,
+      "hasVdomStyle": true,
+      "hasVdomText": true,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key",
+        "class",
+        "role",
+        "aria-label",
+        "name",
+        "type",
+        "disabled",
+        "title",
+        "onClick",
+        "aria-hidden",
+        "aria-expanded"
+      ],
+      "htmlTagNames": [
+        "div",
+        "slot",
+        "button",
+        "ion-icon",
+        "span"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [
+        "controls"
+      ],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [
+          {
+            "name": "example",
+            "text": "<pop-panel-fab action=\"Add recipe\" icon=\"add\">\n  <pop-list-filter-sort slot=\"controls\" />\n</pop-panel-fab>"
+          }
+        ],
+        "text": "`pop-panel-fab` — the bottom-right floating action button for a data panel,\nwith an expanding tray for that panel's LIST CONTROLS.\n\nTwo jobs in one control, because they compete for the same corner:\n\n • **Primary action** — the panel's one create verb (\"Add recipe\", \"New tag\").\n   Set `action` to render it as the FAB's own tap target.\n • **List controls** — view switcher / search / filter-sort, slotted into\n   `controls`. They live in a tray that expands above the button.\n\nWith both, the FAB shows the primary action and a small chevron that opens\nthe tray. With only one, the FAB *is* that one thing and there is no chevron\n— a disclosure control that reveals nothing is worse than no control.\n\n## Placement is the consumer's job, on purpose\n\nThe host is `position: absolute` against the nearest positioned ancestor, NOT\n`fixed`. The bucket-hub panels this is built for render inside three\ndifferent presentation tiers (bottom sheet, dialog, dock) and two of them\nkeep persistent CSS transforms, which re-base fixed positioning onto the\ntransformed box rather than the viewport. Absolute + a positioned ancestor\nbehaves identically in all three.\n\nSafe-area inset is handled here (`env(safe-area-inset-bottom)`) so a sheet\npinned to the bottom of a phone screen doesn't put the FAB under the home\nindicator."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/runtime/server"
+    }
+  ]
+}

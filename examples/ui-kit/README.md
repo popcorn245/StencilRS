@@ -12,7 +12,15 @@ npm test                # specs on components compiled by stencilrs
 npm run compare         # tests that differ between the two
 node failures.mjs       # failing specs grouped by error
 node coverage.mjs       # which files stencilrs compiles vs hands to Stencil
+npm run test:spec-page  # the same specs on Stencil's own newSpecPage, components compiled in spec-page mode
+npm run test:spec-page:stencil && npm run compare:spec-page   # ... against @stencil/unplugin's spec-page mode
 ```
+
+`test:spec-page` aliases the specs' `test-utils/spec-page` to `@stencil/core/testing`'s
+`newSpecPage` (`harness/stencil-spec-page.ts`) and runs on Stencil's mock-doc instead of jsdom.
+The specs were written against jsdom, so 68 of 872 fail with either compiler (mock-doc lacks
+`getSelection`, `disabled` / property reflection on some native elements, `document` for Editor.js, …);
+`compare:spec-page` checks stencilrs fails none that Stencil passes.
 
 ## Result (2026-10-14)
 
@@ -25,6 +33,50 @@ node coverage.mjs       # which files stencilrs compiles vs hands to Stencil
 | Spec suite (jsdom), stencilrs | **874 / 874**, no test differs |
 | Spec suite in headless Chrome (`npm run test:browser`) | 863 / 874 (the 11 mock browser APIs only jsdom lets a test replace) |
 | Files stencilrs compiles itself | 136 / 136 (no fallback to Stencil) |
+
+## Benchmark: `stencil build` with stencilrs swapped in
+
+```sh
+node bench-stencil-build.mjs 5 --keep   # 5 runs each, stock vs patched, the full config
+node check-standalone.mjs               # the two outputs behave alike (standalone, loader-bundle, www; jsdom, ~6 min)
+```
+
+Flags: `--config full|standalone` (default `full`), `--only stock|patched`, `--keep` (keep the
+outputs for the check), `--json` (also print the `benchmarks.json` entry; it is always written to
+`.bench/stencil-build-results.json`).
+
+Stencil compiles every component twice: a type-checked TypeScript pass that fills its module map
+(kept), then a per-bundle `ts.transpileModule` inside Rolldown (pass B). The script copies
+`@stencil/core` and `@stencil/cli` into `.bench/` (the installed ones are never touched) and patches
+pass B in the copy's `compiler-*.mjs` (failing loudly if Stencil's code no longer matches the
+anchor) to call stencilrs' `transpile()` on the source file:
+
+| Stencil bundle | Output targets | stencilrs `componentExport` | Glue |
+|---|---|---|---|
+| `customElements` | `standalone` | `module` | an exported `defineCustomElement(opts)` for the component and its dependencies, the auto-define call |
+| `lazy` | `loader-bundle`, `www` | `lazy` (core import `@stencil/core`) | none |
+| `ssr`, `lazy-external` | (none in this config / `externalRuntime` only) | not ported, left to Stencil | |
+
+A file stencilrs reports an error starting with `stencilrs:` for (lazy: decorated base classes and
+mixins) falls back to Stencil's pass B and is counted. Both variants build `stencil.bench-full.config.ts`
+(the real `stencil.config.ts`: loader-bundle, standalone, www, docs-json, with each output
+redirected per variant; `tsconfig.bench.json` leaves out the stories, whose Storybook imports aren't
+installed here) alternating. `--config standalone` builds `stencil.standalone.config.ts` (the
+`standalone` target only). The script prints medians of wall time and of Stencil's own "build
+finished" time. This is a benchmark patch, never shipped.
+
+`componentExport: 'module'` is Stencil's `proxyCustomElement` shape, so the glue no longer rewrites
+`defineCustomElement(Class, meta)` or adds the class export; it only appends the
+`defineCustomElement(opts)` function and the auto-define call. The proxy call is a statement after
+the class, not Stencil's `/*@__PURE__*/` initializer, so a bundler can't tree-shake an unused
+component as well; restoring it would mean rewriting stencilrs' output as text, which isn't worth it
+for a benchmark.
+
+`check-standalone.mjs` loads each target of both variants in its own process under jsdom
+(`standalone`: every `pop-*.js` entry; `loader-bundle`: `esm/loader.js` and `defineCustomElements()`;
+`www`: `build/pop.esm.js`), creates every tag, waits for it to render and compares the custom element
+metadata, light and shadow DOM, adopted and injected styles, and logged errors. The lazy bundles
+hash their chunk names from content, so their files are compared by behaviour, not by name.
 
 ## Making the specs green
 
@@ -75,6 +127,21 @@ and so gets an attribute). stencilrs has both:
 - `resolveImports: true` (the Vite plugin's default): follows relative imports and knows lib
   types, matching `stencil build`, as `check-build.mjs` shows.
 - `resolveImports: false`: exactly what `transpileSync` produces, as `../../parity` shows.
+
+## Server rendering
+
+```sh
+npm run test:ssr        # node ssr/smoke.mjs [--no-reference]
+```
+
+Builds the ui-kit's hydrate app from components stencilrs compiled with `componentExport: 'ssr'`
+(`ssr/build.mjs`, the same two Rolldown passes as Stencil's `ssr` output target), renders a page
+with `renderToString`, and checks the output equals Stencil v5's own hydrate app's. The client
+bundle then loads over that HTML in happy-dom and in Chromium (Playwright; found through
+`$STENCILRS_CHROMIUM` or `$PLAYWRIGHT_BROWSERS_PATH/chromium`, skipped when absent, which is how it
+runs in CI). `@stencil/core` 5.0.0-beta.25's client runtime throws `Cannot read properties of
+undefined (reading 'length')` while hydrating childless elements, with Stencil's own lazy build
+too; the test expects that error and fails on any other.
 
 ## Spec harness
 

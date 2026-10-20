@@ -6,6 +6,55 @@ export const root = fileURLToPath(new URL('.', import.meta.url));
 export const fixturesDir = join(root, 'fixtures');
 export const snapshotsDir = join(root, 'snapshots');
 
+/**
+ * The output modes `transpileSync` can be asked for, by `componentExport`. `customelement` is the
+ * default (what @stencil/unplugin runs); `module` keeps the class exported and registers it with
+ * `proxyCustomElement`; `null` is the lazy-loading (`loader-bundle`) shape, which `transpileSync`
+ * only reaches through an explicit `null`. `ssr` is the hydrate (server-side rendering) shape:
+ * Stencil never offers it through `transpileSync`, so `stencil.mjs` runs its `ssrComponentTransform`
+ * with the server runtime as `coreImportPath`; stencilrs asks for `componentExport: 'ssr'`.
+ * Each mode has its own snapshot folder.
+ */
+export const modes = {
+  customelement: { componentExport: 'customelement', dir: 'snapshots' },
+  module: { componentExport: 'module', dir: 'snapshots-module' },
+  lazy: { componentExport: null, dir: 'snapshots-lazy' },
+  ssr: {
+    componentExport: null,
+    ssrExport: 'ssr',
+    dir: 'snapshots-ssr',
+    extra: { coreImportPath: '@stencil/core/runtime/server' },
+  },
+  // @stencil/unplugin's `mode: 'spec-page'` (transform.ts): lazy output plus the compiler
+  // metadata as `static get COMPILER_META()`, the core from `@stencil/core/testing`, no styles.
+  specpage: {
+    componentExport: null,
+    dir: 'snapshots-specpage',
+    extra: { componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null },
+  },
+};
+/**
+ * Fixtures a mode does not port yet: stencilrs reports a `stencilrs:` error for them (the cue to
+ * compile with Stencil) instead of code. They are still compared on metadata, and counted apart.
+ * None today: every mode ports every fixture.
+ */
+export const fallbacks = {
+  lazy: new Set(),
+  specpage: new Set(),
+  ssr: new Set(),
+};
+
+export const snapshotsDirFor = (mode = 'customelement') => join(root, modes[mode].dir);
+
+/** `--mode <name>` (or `--mode=<name>`) from a command line; customelement when absent. */
+export const modeArg = (argv) => {
+  const i = argv.findIndex((a) => a === '--mode' || a.startsWith('--mode='));
+  if (i < 0) return 'customelement';
+  const name = argv[i].includes('=') ? argv[i].split('=')[1] : argv[i + 1];
+  if (!modes[name]) throw new Error(`unknown --mode ${name}; expected ${Object.keys(modes).join(', ')}`);
+  return name;
+};
+
 const walk = (dir) =>
   readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
@@ -56,18 +105,22 @@ export const portable = (text) => text.replaceAll(fixturesDir.replaceAll('\\', '
  * The options @stencil/unplugin passes to transpileSync (unplugin/src/transform.ts:152-176):
  * classic `h` JSX when the file imports `h`, the automatic runtime otherwise.
  */
-export const transpileOptions = (code, id) => ({
+export const transpileOptions = (code, id, mode = 'customelement') => ({
   ...(IMPORTS_H_RE.test(code) ? { jsx: 2 } : { jsx: 4, jsxImportSource: '@stencil/core' }),
   file: inheritance(id) ? absolute(id) : id,
-  componentExport: 'customelement',
+  componentExport: modes[mode].componentExport,
+  ...modes[mode].extra,
   styleImportData: 'queryparams',
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : inheritance(id) ? { resolveImport } : {}),
 });
 
 /** The same settings for stencilrs' `transpile()`. */
-export const stencilrsOptions = (code, id) => ({
+export const stencilrsOptions = (code, id, mode = 'customelement') => ({
   file: inheritance(id) ? absolute(id) : id,
   jsx: IMPORTS_H_RE.test(code) ? 'classic' : 'automatic',
+  complexTypes: true,
+  componentExport: modes[mode].ssrExport ?? modes[mode].componentExport,
+  ...modes[mode].extra,
   ...(isBaseClass(id) ? { transformAsBaseClass: true } : {}),
 });
 
