@@ -9,7 +9,7 @@
 stencilrs replaces the slow part of the Stencil compiler: the TypeScript transform layer that turns
 a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is a
 Rust port on [oxc](https://oxc.rs), runs as a Vite 8 plugin, and produces **the same output as
-Stencil v5**: about **40× faster per file** and **4.7× faster** for a production Vite build.
+Stencil v5**: about **22× faster per file** and **2.9× faster** for a production Vite build.
 
 You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
 own runtime (`@stencil/core`) runs them in the browser.
@@ -68,8 +68,8 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 | Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
-| Per-file compile, 165 files | **68 ms** vs 2.8 s (41×) |
-| Production `vite build` of the library | **0.82 s** vs 3.9 s (4.7×) |
+| Per-file compile, 222 files, source maps on | **108 ms** vs 2.4 s (22×) |
+| Production `vite build` of the library | **1.0 s** vs 3.0 s (2.9×) |
 
 Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
 `@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
