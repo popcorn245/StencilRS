@@ -48,10 +48,9 @@ Same inputs, same output contract, so this is the compiler alone.
 
 <Table head={['Compiler', 'Cold', 'Warm median', 'Per file']} rows={data.transpile.rows.map((r) => [r.compiler, ms(r.coldMs), ms(r.medianMs), `${r.perFileUs.toLocaleString()} µs`])} />
 
-**stencilrs: {data.transpile.speedup} faster.** These numbers predate stencilrs' source maps, which
-is why only Stencil is shown both ways. stencilrs now writes them too (by default, as Stencil does):
-they add roughly 40–50% to its own time, and it stays well over 20× faster than Stencil with maps.
-`node parity/bench.mjs` times both compilers both ways.
+**stencilrs: {data.transpile.speedup} faster.** Source maps are on in the headline rows for both
+compilers (each writes them by default, as `@stencil/unplugin` asks); the no-map rows are for
+reference. `node parity/bench.mjs` times both compilers both ways.
 
 ## Build: the whole ui-kit through Vite
 
@@ -62,8 +61,25 @@ they add roughly 40–50% to its own time, and it stays well over 20× faster th
 
 <Table head={['Compiler', 'First build', 'Warm median']} rows={data.viteBuild.rows.map((r) => [r.compiler, ms(r.firstMs), ms(r.warmMedianMs)])} />
 
-**stencilrs: {data.viteBuild.speedup} faster**, end to end. For scale, a full `stencil build` of the
-same project (type-check plus four output targets) takes {(data.stencilBuild.ms / 1000).toFixed(1)} s.
+**stencilrs: {data.viteBuild.speedup} faster**, end to end, source maps on.
+
+## Build: a full `stencil build`, stencilrs swapped in
+
+{data.stencilBuild.what}. Both rows run the same Stencil v5 CLI and config, alternating. In the
+stencilrs row, Stencil's per-bundle component transform (the `ts.transpileModule` pass inside its
+bundler) is replaced with stencilrs' `transpile()` for the standalone and lazy bundles, with source maps on
+(its default; Stencil keeps its own config default):
+{data.stencilBuild.stencilrsFiles.standalone.stencilrs} and {data.stencilBuild.stencilrsFiles.lazy.stencilrs} files
+respectively, {data.stencilBuild.stencilrsFiles.standalone.fallback + data.stencilBuild.stencilrsFiles.lazy.fallback} falling back to Stencil.
+
+<Bars rows={data.stencilBuild.rows} value="buildFinishedMedianMs" unit="ms" label="Median of Stencil's own 'build finished' time. Shorter is faster." />
+
+<Table head={['Compiler', 'Build finished', 'Wall (incl. CLI start)']} rows={data.stencilBuild.rows.map((r) => [r.compiler, ms(r.buildFinishedMedianMs), ms(r.wallMedianMs)])} />
+
+**With stencilrs: {data.stencilBuild.speedup} faster.** The gain is modest on purpose: only the component transform changes.
+Stencil still runs its type-checked TypeScript pass over every file, processes the CSS, bundles the three
+output targets and writes docs-json, and those dominate the build. This is a benchmark patch of a
+throwaway copy of `@stencil/core` (`examples/ui-kit/bench-stencil-build.mjs`), not something stencilrs ships.
 
 ## What the numbers mean
 
@@ -71,7 +87,8 @@ same project (type-check plus four output targets) takes {(data.stencilBuild.ms 
   ui-kit's Vitest suite, Stencil's compiler took over 10 s to compile all 136 components for a single
   spec file's first test; stencilrs does it in a fraction of a second.
 - **Production builds** spend time on more than compiling (bundling, CSS, minifying), so the speedup
-  is smaller, but still ~5×.
+  is smaller: ~3× through Vite. Inside a full `stencil build` it is ~1.1×, because Stencil's
+  type-checked TypeScript pass, CSS and bundling remain Stencil's.
 - stencilrs is single-threaded here; Vite calls it per file, so it parallelises with Vite's own work.
 
 ## Reproduce
@@ -79,5 +96,5 @@ same project (type-check plus four output targets) takes {(data.stencilBuild.ms 
 ```sh
 cd parity && node bench.mjs 10                     # per file
 cd examples/ui-kit && node bench-build.mjs 3       # whole ui-kit through Vite
-cd examples/ui-kit && npm run build                # full stencil build, for scale
+cd examples/ui-kit && node bench-stencil-build.mjs 5 --json  # full stencil build, stock vs stencilrs
 ```
