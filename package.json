@@ -41,6 +41,7 @@
   "files": [
     "index.js",
     "vite.js",
+    "vite-css.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

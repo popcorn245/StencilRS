@@ -3,9 +3,10 @@
 //   import stencilrs from '@popcorn245/stencilrs/vite';
 //   export default defineConfig({ plugins: [stencilrs()] });
 //
-// stencilrs replaces the one step @stencil/unplugin spends its time in: `transpileSync` on
-// each component file. Everything else (CSS modules and preprocessors, the runtime, build
-// flags, docs, global stylesheets) is still @stencil/unplugin, which is added after this plugin.
+// stencilrs replaces the two steps @stencil/unplugin spends its time in: `transpileSync` on
+// each component file, and the component stylesheets (Sass/Less, PostCSS, lightningcss, then
+// the Rust `scopeCss`; see vite-css.js). Everything else (the runtime, build flags, docs,
+// global stylesheets) is still @stencil/unplugin, which is added after this plugin.
 //
 // A file that uses something stencilrs has not ported yet (serializers, @AttachInternals, …)
 // is left to @stencil/unplugin, which compiles it with Stencil's own compiler. Pass
@@ -29,6 +30,7 @@ import { transpileSync } from '@stencil/core/compiler';
 import { stencilVite } from '@stencil/unplugin';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
+import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;
@@ -113,6 +115,19 @@ export function stencilrs(options = {}) {
   const handled = new Set();
   // Files ancestor classes were read from, served as base-class virtual modules.
   const baseClasses = new Set();
+  // Component stylesheets served here. `docs` reads @stencil/unplugin's stylesheet bookkeeping,
+  // so with it the stylesheets stay with @stencil/unplugin.
+  const serveCss = !stencilOptions.docs;
+  const loadCss = serveCss ? createCssPipeline() : null;
+  // For HMR, as @stencil/unplugin's cssFileToTagNames / cssRealToVirtualIds.
+  const cssFileToTags = new Map();
+  const cssFileToIds = new Map();
+  const trackCss = (file, tag, id) => {
+    if (!cssFileToTags.has(file)) cssFileToTags.set(file, new Set());
+    cssFileToTags.get(file).add(tag);
+    if (!cssFileToIds.has(file)) cssFileToIds.set(file, new Set());
+    cssFileToIds.get(file).add(id);
+  };
 
   /** @type {import('vite').Plugin} */
   const plugin = {
@@ -198,13 +213,30 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     resolveId(id, importer) {
-      if (!baseClasses.size || !importer) return null;
+      if (!importer) return null;
+      if (serveCss) {
+        const css = resolveStencilCss(id, importer);
+        if (css) return css;
+      }
+      if (!baseClasses.size) return null;
       const from = importer.startsWith(BASE_PREFIX) ? importer.slice(BASE_PREFIX.length) : importer.split('?')[0];
       const abs = resolveSpecifier(id, from);
       return abs && baseClasses.has(abs) ? BASE_PREFIX + abs : null;
     },
 
-    load(id) {
+    async load(id) {
+      if (serveCss && id.startsWith(STENCIL_CSS_PREFIX)) {
+        const { file, tag } = parseStencilCssId(id);
+        const css = await loadCss(id, isDev);
+        if (!css) return null; // @stencil/unplugin loads it
+        this.addWatchFile(file);
+        if (tag) trackCss(file, tag, id);
+        for (const dep of css.deps) {
+          this.addWatchFile(dep);
+          if (tag) trackCss(dep, tag, id);
+        }
+        return { code: css.code, map: null };
+      }
       if (!id.startsWith(BASE_PREFIX)) return null;
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
@@ -222,9 +254,16 @@ export function stencilrs(options = {}) {
     },
 
     handleHotUpdate({ file, server }) {
+      const tags = new Set(cssFileToTags.get(file));
       const tagName = fileToTag.get(file.replaceAll('\\', '/'));
-      if (!tagName) return undefined;
-      server.ws.send({ type: 'custom', event: 'stencil:hmr', data: { tagName } });
+      if (tagName) tags.add(tagName);
+      if (!tags.size) return undefined;
+      // A changed stylesheet: drop its modules, then reload the components that import it.
+      for (const id of cssFileToIds.get(file) ?? []) {
+        const mod = server.moduleGraph.getModuleById?.(id) ?? server.moduleGraph.idToModuleMap?.get(id);
+        if (mod) server.moduleGraph.invalidateModule(mod, new Set(), Date.now(), true);
+      }
+      for (const tag of tags) server.ws.send({ type: 'custom', event: 'stencil:hmr', data: { tagName: tag } });
       return [];
     },
 

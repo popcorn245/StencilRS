@@ -48,6 +48,8 @@ npm --prefix examples/ui-kit test
 npm --prefix examples/ui-kit run test:spec-page:stencil || true
 npm --prefix examples/ui-kit run test:spec-page || true
 npm --prefix examples/ui-kit run compare:spec-page
+# Component CSS through the Vite plugin: byte for byte what @stencil/unplugin makes.
+npm --prefix examples/ui-kit run compare:css
 npm --prefix examples/ui-kit run build:stencilrs
 
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
