@@ -6,6 +6,7 @@
 //! See `docs/transformers.md` §5 for the port order.
 
 mod analyze;
+mod cache;
 mod complex_type;
 mod consts;
 pub mod codegen;
@@ -82,7 +83,7 @@ pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
 pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool, complex_types: bool) -> AnalyzeResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, file_name);
-    let resolver = resolve_imports.then(|| resolve::Resolver::new(file_name));
+    let resolver = resolve_imports.then(|| resolve::Resolver::new(file_name, complex_types));
     let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name, complex_types);
     diagnostics.extend(analysis.diagnostics);
     AnalyzeResult { components: analysis.components, diagnostics }
@@ -92,7 +93,7 @@ pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool, comple
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
-    let resolver = opts.resolve_imports.then(|| resolve::Resolver::new(&opts.file));
+    let resolver = opts.resolve_imports.then(|| resolve::Resolver::new(&opts.file, opts.complex_types));
     let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file, opts.complex_types);
     // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
     // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.

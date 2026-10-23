@@ -7,12 +7,14 @@ use std::cell::{Cell, RefCell};
 use rustc_hash::FxHashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use oxc::allocator::Allocator;
 use oxc::ast::ast::{Declaration, Expression, ObjectPropertyKind, Program, Statement, TSType, TSTypeName};
 use oxc::parser::Parser;
 use oxc::span::{GetSpan, SourceType};
 
+use crate::cache::{self, Dep};
 use crate::complex_type::{ExportedType, TypeEnv};
 use crate::consts::{Lit, literal, name_literal, static_member_literals};
 use crate::default_value::initializer_text;
@@ -44,21 +46,51 @@ pub struct ValueSummary {
     pub literal: Option<Lit>,
 }
 
+/// What a module exports. `types` and `values` are shared with the process-wide cache; `defs`
+/// hold type ids of one call's registry, so they are built per call, and only when asked for.
 #[derive(Default, Debug)]
 pub struct ModuleSummary {
     /// The module's path.
     pub file: String,
-    pub types: FxHashMap<String, TypeSummary>,
-    pub values: FxHashMap<String, ValueSummary>,
+    pub types: Arc<FxHashMap<String, TypeSummary>>,
+    pub values: Arc<FxHashMap<String, ValueSummary>>,
     /// The types it exports, for `complexType`.
     pub defs: FxHashMap<String, ExportedType>,
 }
 
+/// A module's exports while they are collected.
+#[derive(Default)]
+struct Collected {
+    types: FxHashMap<String, TypeSummary>,
+    values: FxHashMap<String, ValueSummary>,
+    defs: FxHashMap<String, ExportedType>,
+}
+
 const MAX_DEPTH: u8 = 8;
 
+/// A module read in this call: its summary, the files it came from, and whether it is complete.
+struct Slot {
+    summary: Option<Rc<ModuleSummary>>,
+    deps: Arc<Vec<Dep>>,
+    /// False when an import cycle or the depth limit cut the summary short: it depends on what
+    /// was being read at the time, so it must not outlive the call.
+    complete: bool,
+}
+
+/// The module being read: the files its summary comes from, so far.
+struct Frame {
+    deps: Vec<Dep>,
+    complete: bool,
+}
+
 pub struct Resolver {
-    cache: RefCell<FxHashMap<PathBuf, Option<Rc<ModuleSummary>>>>,
+    cache: RefCell<FxHashMap<PathBuf, Slot>>,
+    frames: RefCell<Vec<Frame>>,
     depth: Cell<u8>,
+    /// Whether the caller reads `ModuleSummary::defs` (`complexType`). They are numbered by
+    /// the registry in the order they are built, so a call that wants them reads every module
+    /// itself, and one that does not shares the process-wide summaries.
+    defs: bool,
     /// The type ids of every module read: TypeScript orders a union by them.
     pub registry: Rc<Registry>,
     /// `strictNullChecks` in the tsconfig that governs the file being analysed.
@@ -66,9 +98,17 @@ pub struct Resolver {
 }
 
 impl Resolver {
-    /// A resolver for the program that contains `file`.
-    pub fn new(file: &str) -> Self {
-        Resolver { cache: RefCell::default(), depth: Cell::new(0), registry: Rc::default(), strict: strict_null_checks(file) }
+    /// A resolver for the program that contains `file`. `defs`: whether the exported types'
+    /// definitions are needed (`complexType`).
+    pub fn new(file: &str, defs: bool) -> Self {
+        Resolver {
+            cache: RefCell::default(),
+            frames: RefCell::default(),
+            depth: Cell::new(0),
+            defs,
+            registry: Rc::default(),
+            strict: strict_null_checks(file),
+        }
     }
 
     /// The summary of the module `specifier` imported from `importer`, if it is a relative
@@ -79,19 +119,50 @@ impl Resolver {
         }
         let dir = Path::new(importer).parent()?;
         let path = clean(&resolve_file(&dir.join(specifier))?);
-        if let Some(hit) = self.cache.borrow().get(&path) {
-            return hit.clone();
+        if let Some(slot) = self.cache.borrow().get(&path) {
+            self.merge(&slot.deps, slot.complete);
+            return slot.summary.clone();
         }
         if self.depth.get() >= MAX_DEPTH {
+            self.merge(&[], false);
             return None;
         }
+        if !self.defs
+            && let Some((exports, deps)) = cache::module(&path)
+        {
+            let summary = Rc::new(ModuleSummary { file: exports.file, types: exports.types, values: exports.values, defs: FxHashMap::default() });
+            self.merge(&deps, true);
+            self.cache.borrow_mut().insert(path, Slot { summary: Some(summary.clone()), deps, complete: true });
+            return Some(summary);
+        }
         // Mark in progress: an import cycle resolves to nothing rather than recursing forever.
-        self.cache.borrow_mut().insert(path.clone(), None);
+        self.cache.borrow_mut().insert(path.clone(), Slot { summary: None, deps: Arc::default(), complete: false });
         self.depth.set(self.depth.get() + 1);
+        // Stamped before it is read: a change in between shows up as a mismatch next time.
+        self.frames.borrow_mut().push(Frame { deps: vec![Dep::of(&path)], complete: true });
         let summary = self.summarize(&path).map(Rc::new);
+        let frame = self.frames.borrow_mut().pop().expect("the frame pushed above");
         self.depth.set(self.depth.get() - 1);
-        self.cache.borrow_mut().insert(path, summary.clone());
+        let complete = frame.complete && summary.is_some();
+        let deps = Arc::new(frame.deps);
+        if let Some(s) = summary.as_ref().filter(|_| complete && !self.defs) {
+            cache::store_module(&path, cache::Exports { file: s.file.clone(), types: s.types.clone(), values: s.values.clone() }, deps.clone());
+        }
+        self.merge(&deps, complete);
+        self.cache.borrow_mut().insert(path, Slot { summary: summary.clone(), deps, complete });
         summary
+    }
+
+    /// The module being read depends on `deps` too.
+    fn merge(&self, deps: &[Dep], complete: bool) {
+        if let Some(frame) = self.frames.borrow_mut().last_mut() {
+            for d in deps {
+                if !frame.deps.iter().any(|f| f.path == d.path) {
+                    frame.deps.push(d.clone());
+                }
+            }
+            frame.complete &= complete;
+        }
     }
 
     fn summarize(&self, path: &Path) -> Option<ModuleSummary> {
@@ -171,16 +242,16 @@ fn is_literal(e: &Expression) -> bool {
         || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
 }
 
-fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, source: &str, out: &mut ModuleSummary) {
+fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, source: &str, out: &mut Collected, defs: bool) {
     if locals.types.contains_key(name) {
         out.types.insert(exported.to_owned(), type_summary(name, locals));
-        if let Some(def) = env.local_def(name) {
+        if let Some(def) = env.local_def(name).filter(|_| defs) {
             let class_or_enum = matches!(locals.types.get(name), Some(LocalType::Class(_) | LocalType::Enum(_)));
             out.defs.insert(exported.to_owned(), ExportedType { orig_name: name.to_owned(), decl_file: env.file.to_owned(), class_or_enum, def });
         }
     } else if let Some(t) = locals.imported_type(name) {
         out.types.insert(exported.to_owned(), t);
-        if let Some(d) = locals.imported_def(name) {
+        if let Some(d) = locals.imported_def(name).filter(|_| defs) {
             out.defs.insert(exported.to_owned(), d);
         }
     }
@@ -214,7 +285,8 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, s
 }
 
 fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: &str, resolver: &Resolver, file: &str) -> ModuleSummary {
-    let mut out = ModuleSummary { file: file.to_owned(), ..ModuleSummary::default() };
+    let mut out = Collected::default();
+    let defs = resolver.defs;
     for stmt in &program.body {
         match stmt {
             Statement::ExportDeclaration(e) => {
@@ -228,12 +300,12 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
                     _ => vec![],
                 };
                 for n in names {
-                    summarize_local(n, n, locals, env, source, &mut out);
+                    summarize_local(n, n, locals, env, source, &mut out, defs);
                 }
             }
             Statement::ExportNamedDeclaration(e) => {
                 for s in &e.specifiers {
-                    summarize_local(s.local.name().as_str(), s.exported.name().as_str(), locals, env, source, &mut out);
+                    summarize_local(s.local.name().as_str(), s.exported.name().as_str(), locals, env, source, &mut out, defs);
                 }
             }
             Statement::ExportFromDeclaration(e) => {
@@ -254,13 +326,13 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
             }
             Statement::ExportAllDeclaration(e) if e.exported.is_none() => {
                 if let Some(m) = resolver.module(file, e.source.value.as_str()) {
-                    for (k, v) in &m.types {
+                    for (k, v) in m.types.iter() {
                         out.types.entry(k.clone()).or_insert(*v);
                     }
                     for (k, v) in &m.defs {
                         out.defs.entry(k.clone()).or_insert_with(|| v.clone());
                     }
-                    for (k, v) in &m.values {
+                    for (k, v) in m.values.iter() {
                         out.values.entry(k.clone()).or_insert_with(|| v.clone());
                     }
                 }
@@ -268,7 +340,7 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
             _ => {}
         }
     }
-    out
+    ModuleSummary { file: file.to_owned(), types: Arc::new(out.types), values: Arc::new(out.values), defs: out.defs }
 }
 
 /// `a/./b/../c` → `a/c`, without touching the file system.
@@ -287,21 +359,36 @@ fn clean(path: &Path) -> PathBuf {
 }
 
 /// Whether the tsconfig that governs `file` turns on `strictNullChecks` (directly or through
-/// `strict`), following `extends` through relative paths.
+/// `strict`), following `extends` through relative paths. Cached per folder, and read again
+/// when any tsconfig it looked at (or looked for) changes.
 fn strict_null_checks(file: &str) -> bool {
     let abs = std::env::current_dir().map(|c| c.join(file)).unwrap_or_else(|_| PathBuf::from(file));
-    let mut dir = abs.parent();
+    let Some(start) = abs.parent() else { return false };
+    if let Some(strict) = cache::tsconfig(start) {
+        return strict;
+    }
+    let mut deps = Vec::new();
+    let mut strict = false;
+    let mut dir = Some(start);
     while let Some(d) = dir {
         let candidate = d.join("tsconfig.json");
-        if candidate.is_file() {
-            return tsconfig_strict(&candidate, 0).unwrap_or(false);
+        let dep = Dep::of(&candidate);
+        let found = dep.stamp.is_some();
+        deps.push(dep);
+        if found {
+            strict = tsconfig_strict(&candidate, 0, &mut deps).unwrap_or(false);
+            break;
         }
         dir = d.parent();
     }
-    false
+    cache::store_tsconfig(start, strict, deps);
+    strict
 }
 
-fn tsconfig_strict(path: &Path, depth: u8) -> Option<bool> {
+fn tsconfig_strict(path: &Path, depth: u8, deps: &mut Vec<Dep>) -> Option<bool> {
+    if depth > 0 {
+        deps.push(Dep::of(path));
+    }
     let text = std::fs::read_to_string(path).ok()?;
     let json: serde_json::Value = serde_json::from_str(&strip_jsonc(&text)).ok()?;
     let options = json.get("compilerOptions");
@@ -317,7 +404,7 @@ fn tsconfig_strict(path: &Path, depth: u8) -> Option<bool> {
     if next.extension().is_none() {
         next.set_extension("json");
     }
-    tsconfig_strict(&next, depth + 1)
+    tsconfig_strict(&next, depth + 1, deps)
 }
 
 /// JSON with comments and trailing commas (what tsconfig.json allows) as plain JSON.
@@ -363,4 +450,115 @@ fn strip_jsonc(text: &str) -> String {
         i += 1;
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::time::{Duration, SystemTime};
+
+    /// A fresh folder; the caches are process-wide, so no two tests share one.
+    fn folder(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("stencilrs-resolve-{}-{name}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Write `text` and set the file's mtime to `age` seconds on, as a later save would (a
+    /// file system's clock can be too coarse to tell two quick writes apart).
+    fn write(path: &Path, text: &str, age: u64) {
+        fs::write(path, text).unwrap();
+        File::options().write(true).open(path).unwrap().set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000 + age)).unwrap();
+    }
+
+    fn prop_type_of(dir: &Path, name: &str) -> Option<PropType> {
+        let importer = dir.join("c.tsx").to_string_lossy().into_owned();
+        let resolver = Resolver::new(&importer, false);
+        resolver.module(&importer, "./shared")?.values.get(name)?.prop_type
+    }
+
+    #[test]
+    fn an_edit_to_an_imported_module_shows_up_in_the_next_call() {
+        let dir = folder("edit");
+        write(&dir.join("shared.ts"), "export const SIZE = 1;", 0);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::Number));
+        write(&dir.join("shared.ts"), "export const SIZE = 'm';", 1);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::String));
+        // Same size, later mtime.
+        write(&dir.join("shared.ts"), "export const SIZE = 3;", 2);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::Number));
+        write(&dir.join("shared.ts"), "export const SIZE = 'x';", 3);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::String));
+    }
+
+    #[test]
+    fn an_edit_to_a_module_behind_a_re_export_shows_up() {
+        let dir = folder("barrel");
+        write(&dir.join("shared.ts"), "export * from './deep';", 0);
+        write(&dir.join("deep.ts"), "export const SIZE = 1;", 0);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::Number));
+        write(&dir.join("deep.ts"), "export const SIZE = true;", 1);
+        assert_eq!(prop_type_of(&dir, "SIZE"), Some(PropType::Boolean));
+    }
+
+    #[test]
+    fn calls_share_a_module_summary_until_it_changes() {
+        let dir = folder("share");
+        write(&dir.join("shared.ts"), "export const SIZE = 1;", 0);
+        let importer = dir.join("c.tsx").to_string_lossy().into_owned();
+        let read = || Resolver::new(&importer, false).module(&importer, "./shared").unwrap();
+        let (first, second) = (read(), read());
+        assert!(Arc::ptr_eq(&first.values, &second.values));
+        write(&dir.join("shared.ts"), "export const SIZE = 2;", 1);
+        assert!(!Arc::ptr_eq(&first.values, &read().values));
+    }
+
+    #[test]
+    fn an_import_cycle_does_not_leave_a_cut_short_summary_behind() {
+        let dir = folder("cycle");
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
+        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
+        let importer = dir.join("c.tsx").to_string_lossy().into_owned();
+        // Read from a, b is summarised while a is in progress, and lacks a's exports.
+        let a = Resolver::new(&importer, false).module(&importer, "./a").unwrap();
+        assert!(a.values.contains_key("A"));
+        // A call that starts at b must not get that summary.
+        let b = Resolver::new(&importer, false).module(&importer, "./b").unwrap();
+        assert!(b.values.contains_key("B"));
+        assert!(b.values.contains_key("A"), "b re-exports a, which is read in full when b is the entry point");
+    }
+
+    fn strict_in(dir: &Path) -> bool {
+        Resolver::new(&dir.join("src").join("c.tsx").to_string_lossy(), false).strict
+    }
+
+    #[test]
+    fn an_edit_to_the_tsconfig_or_its_base_shows_up_in_the_next_call() {
+        let dir = folder("tsconfig");
+        fs::create_dir_all(dir.join("src")).unwrap();
+        write(&dir.join("tsconfig.json"), r#"{ "compilerOptions": { "strict": true } }"#, 0);
+        assert!(strict_in(&dir));
+        write(&dir.join("tsconfig.json"), r#"{ "compilerOptions": { "strict": false } }"#, 1);
+        assert!(!strict_in(&dir));
+        // Through `extends`.
+        write(&dir.join("tsconfig.json"), r#"{ "extends": "./base.json" }"#, 2);
+        write(&dir.join("base.json"), r#"{ "compilerOptions": { "strictNullChecks": true } }"#, 2);
+        assert!(strict_in(&dir));
+        write(&dir.join("base.json"), r#"{ "compilerOptions": { "strictNullChecks": false } }"#, 3);
+        assert!(!strict_in(&dir));
+    }
+
+    #[test]
+    fn a_tsconfig_created_later_is_found() {
+        let dir = folder("created");
+        fs::create_dir_all(dir.join("src")).unwrap();
+        // No tsconfig up the tree yet.
+        assert!(!strict_in(&dir));
+        write(&dir.join("src").join("tsconfig.json"), r#"{ "compilerOptions": { "strictNullChecks": true } }"#, 0);
+        assert!(strict_in(&dir));
+        fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
+        assert!(!strict_in(&dir));
+    }
 }

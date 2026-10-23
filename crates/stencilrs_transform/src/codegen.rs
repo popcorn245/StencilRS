@@ -235,7 +235,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
     // Every other class: base classes and mixins.
     let meta_decorators: Vec<String> =
         META_DECORATORS.iter().map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned())).collect();
-    let resolver = opts.resolve_imports.then(|| Resolver::new(&opts.file));
+    let resolver = opts.resolve_imports.then(|| Resolver::new(&opts.file, true));
     let members_of = |class: &Class| foreign_class_members(class, program, source, &opts.file, resolver.as_ref());
     let mut bases = BaseClasses {
         ed: &mut ed,
