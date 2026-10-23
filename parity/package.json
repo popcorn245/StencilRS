@@ -10,6 +10,7 @@
     "sourcemaps": "node sourcemaps.mjs && node sourcemaps.mjs --mode module && node sourcemaps.mjs --mode lazy && node sourcemaps.mjs --mode ssr && node sourcemaps.mjs --mode specpage",
     "scope-css": "node scope-css.mjs",
     "fold-build-flags": "node fold-build-flags.mjs",
+    "bench:scope-css": "node bench-scope-css.mjs",
     "bench": "node bench.mjs",
     "bench:binding": "node bench-binding.mjs"
   },
