@@ -3,6 +3,7 @@
 use napi_derive::napi;
 use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
 
+#[cfg(not(all(target_os = "linux", target_arch = "aarch64")))]
 #[global_allocator]
 static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
