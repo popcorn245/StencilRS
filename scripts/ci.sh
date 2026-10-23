@@ -51,6 +51,10 @@ npm --prefix examples/ui-kit run compare:spec-page
 # Component CSS through the Vite plugin: byte for byte what @stencil/unplugin makes.
 npm --prefix examples/ui-kit run compare:css
 npm --prefix examples/ui-kit run build:stencilrs
+# ... and it never loads TypeScript or Stencil's compiler: both load only for a file stencilrs falls back on.
+npm --prefix examples/ui-kit run check:no-typescript
+# The dev server: component and stylesheet served, HMR, virtual global stylesheets, still no TypeScript.
+npm --prefix examples/ui-kit run check:dev-server
 
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr

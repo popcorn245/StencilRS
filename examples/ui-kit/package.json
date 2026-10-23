@@ -24,6 +24,8 @@
     "compare:css": "node compare-css.mjs",
     "build": "stencil build",
     "build:stencilrs": "vite build --config vite.lib.config.ts",
+    "check:no-typescript": "node check-no-typescript.mjs",
+    "check:dev-server": "node check-dev-server.mjs",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:ssr": "node ssr/smoke.mjs"
   },

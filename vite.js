@@ -5,12 +5,14 @@
 //
 // stencilrs replaces the two steps @stencil/unplugin spends its time in: `transpileSync` on
 // each component file, and the component stylesheets (Sass/Less, PostCSS, lightningcss, then
-// the Rust `scopeCss`; see vite-css.js). Everything else (the runtime, build flags, docs,
-// global stylesheets) is still @stencil/unplugin, which is added after this plugin.
-//
-// A file that uses something stencilrs has not ported yet (serializers, @AttachInternals, …)
-// is left to @stencil/unplugin, which compiles it with Stencil's own compiler. Pass
-// `{ fallback: false }` to make that an error instead.
+// the Rust `scopeCss`; see vite-css.js), and folds `Build.isBrowser` / `Build.isServer`. Neither
+// `@stencil/unplugin` nor `@stencil/core/compiler` (which loads TypeScript, ~700 ms) is imported
+// until something needs it (vite-fallback.js): a file that uses something stencilrs has not
+// ported yet (serializers, @AttachInternals, …) is compiled by Stencil's own compiler through
+// @stencil/unplugin. So are `docs`, `types`, `include` / `exclude`, and the virtual global
+// stylesheets (`@import 'stencil-hydrate'`). Pass `{ fallback: false }` to make a file that
+// needs the fallback an error instead. What @stencil/unplugin does, and where it went, is in
+// docs/vite-plugin.md.
 //
 // `componentExport: 'ssr'` compiles the components for Stencil's hydrate (server-side rendering)
 // runtime instead, `export class` with a static `cmpMeta` (see the ui-kit's `ssr-smoke.mjs`).
@@ -26,13 +28,13 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { transpileSync } from '@stencil/core/compiler';
-import { stencilVite } from '@stencil/unplugin';
-
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
+import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, projectUsesVirtualGlobalImports, virtualGlobalAlias } from './vite-fallback.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
+// A decorator that starts a line or statement: not the `@Component` in a doc comment.
+const REAL_DECORATOR_RE = /(?:^|[;{}])[ \t]*@(?:Component|Prop|State|Event|Method|Watch|Listen|Element)\b/m;
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
@@ -106,6 +108,10 @@ export function stencilrs(options = {}) {
   }
   const ssr = componentExport === 'ssr';
   const specPage = stencilOptions.mode === 'spec-page';
+  // Options that need @stencil/unplugin's project scan, or its file filter: it is loaded up
+  // front, and compiles every TypeScript file we don't (as it did before it was lazy).
+  const needsUnplugin = !!(stencilOptions.docs || stencilOptions.types || stencilOptions.include || stencilOptions.exclude);
+  let foldFlags = !specPage;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let tsconfigJsx = null;
@@ -113,6 +119,7 @@ export function stencilrs(options = {}) {
   const counts = { stencilrs: 0, stencil: 0 };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
+  const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
   // Files ancestor classes were read from, served as base-class virtual modules.
   const baseClasses = new Set();
   // Component stylesheets served here. `docs` reads @stencil/unplugin's stylesheet bookkeeping,
@@ -129,6 +136,21 @@ export function stencilrs(options = {}) {
     cssFileToIds.get(file).add(id);
   };
 
+  /** The HMR modules for a changed component or stylesheet; undefined when the file is neither. */
+  const hotUpdate = ({ file, server }) => {
+    const tags = new Set(cssFileToTags.get(file));
+    const tagName = fileToTag.get(file.replaceAll('\\', '/'));
+    if (tagName) tags.add(tagName);
+    if (!tags.size) return undefined;
+    // A changed stylesheet: drop its modules, then reload the components that import it.
+    for (const id of cssFileToIds.get(file) ?? []) {
+      const mod = server.moduleGraph.getModuleById?.(id) ?? server.moduleGraph.idToModuleMap?.get(id);
+      if (mod) server.moduleGraph.invalidateModule(mod, new Set(), Date.now(), true);
+    }
+    for (const tag of tags) server.ws.send({ type: 'custom', event: 'stencil:hmr', data: { tagName: tag } });
+    return [];
+  };
+
   /** @type {import('vite').Plugin} */
   const plugin = {
     name: '@popcorn245/stencilrs',
@@ -140,17 +162,51 @@ export function stencilrs(options = {}) {
       defineCacheKeyGenerator?.(() => `stencilrs:${buildId}`);
     },
 
+    config(userConfig, env) {
+      fallbackPlugin.remember('config', [userConfig, env]);
+      return { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+    },
+
     configResolved(config) {
+      fallbackPlugin.remember('resolved', config);
       isDev = stencilOptions.dev ?? config.command === 'serve';
+      foldFlags = config.command === 'build' && !specPage;
       root = config.root;
       tsconfigJsx = readTsconfigJsx(root);
+    },
+
+    configureServer(server) {
+      fallbackPlugin.remember('server', server);
+      // A new stylesheet that imports a virtual global stylesheet: @stencil/unplugin generates it.
+      server.watcher.on('add', async (file) => {
+        if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(file) && mentionsVirtualGlobalImport(file)) await fallbackPlugin.ensure(this);
+      });
+    },
+
+    async buildStart() {
+      if (fallbackPlugin.loaded) return void (await fallbackPlugin.call('buildStart', this, {}));
+      // Stylesheets that import the virtual global stylesheets need them written before the build.
+      if (needsUnplugin || projectUsesVirtualGlobalImports(root)) await fallbackPlugin.ensure(this);
     },
 
     async transform(code, id, transformOpts) {
       const file = id.split('?')[0].replaceAll('\\', '/');
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
-      if (!DECORATORS_RE.test(code)) return null;
+      // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
+      // it gets the file as it came in, and folds the build flags itself.
+      const original = code;
+      const fallBack = async () => {
+        await fallbackPlugin.ensure(this);
+        return fallbackPlugin.call('transform', this, original, id, transformOpts);
+      };
+      if (!DECORATORS_RE.test(code)) {
+        if (needsUnplugin) return fallbackPlugin.call('transform', this, code, id, transformOpts);
+        // As @stencil/unplugin does in a production build: fold the flags in every TypeScript file.
+        if (!foldFlags || transformOpts?.ssr || !code.includes('Build') || handled.has(file) || id.startsWith(BASE_PREFIX)) return null;
+        const folded = foldBuildFlags(code, file, { isBrowser: true, isServer: false });
+        return folded === null ? null : { code: folded, map: null };
+      }
 
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
@@ -169,14 +225,14 @@ export function stencilrs(options = {}) {
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${why}`);
         counts.stencil++;
         if (verbose) this.info?.(`[stencilrs] ${file}: using Stencil's compiler (${why})`);
-        return null; // @stencil/unplugin compiles it
+        return fallBack();
       }
       const errors = result.diagnostics.filter((d) => d.level === 'error');
       if (errors.length) this.error(`[stencilrs] transpile error in ${file}:\n${errors.map((d) => d.message).join('\n')}`);
       for (const d of result.diagnostics) this.warn(`[stencilrs] ${file}: ${d.message}`);
 
       // Base classes and mixins without @Component: Stencil's compiler handles those.
-      if (!result.components.length) return null;
+      if (!result.components.length) return REAL_DECORATOR_RE.test(original) ? fallBack() : null;
       counts.stencilrs++;
       handled.add(file);
       for (const base of result.baseClasses) {
@@ -212,23 +268,33 @@ export function stencilrs(options = {}) {
     // An import of a file an ancestor lives in gets its base-class compilation instead
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
-    resolveId(id, importer) {
-      if (!importer) return null;
-      if (serveCss) {
-        const css = resolveStencilCss(id, importer);
-        if (css) return css;
+    async resolveId(id, importer) {
+      // As @stencil/unplugin: one platform instance for the whole test file.
+      if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
+      if (importer) {
+        if (serveCss) {
+          const css = resolveStencilCss(id, importer);
+          if (css) return css;
+        }
+        if (baseClasses.size) {
+          const from = importer.startsWith(BASE_PREFIX) ? importer.slice(BASE_PREFIX.length) : importer.split('?')[0];
+          const abs = resolveSpecifier(id, from);
+          if (abs && baseClasses.has(abs)) return BASE_PREFIX + abs;
+        }
       }
-      if (!baseClasses.size) return null;
-      const from = importer.startsWith(BASE_PREFIX) ? importer.slice(BASE_PREFIX.length) : importer.split('?')[0];
-      const abs = resolveSpecifier(id, from);
-      return abs && baseClasses.has(abs) ? BASE_PREFIX + abs : null;
+      // The docs module, the virtual global stylesheets, the base classes it compiled itself.
+      return fallbackPlugin.call('resolveId', this, id, importer);
     },
 
     async load(id) {
       if (serveCss && id.startsWith(STENCIL_CSS_PREFIX)) {
         const { file, tag } = parseStencilCssId(id);
         const css = await loadCss(id, isDev);
-        if (!css) return null; // @stencil/unplugin loads it
+        if (!css) {
+          // A step's package can't be loaded from here: @stencil/unplugin resolves it from its own place.
+          await fallbackPlugin.ensure(this);
+          return fallbackPlugin.call('load', this, id);
+        }
         this.addWatchFile(file);
         if (tag) trackCss(file, tag, id);
         for (const dep of css.deps) {
@@ -237,7 +303,7 @@ export function stencilrs(options = {}) {
         }
         return { code: css.code, map: null };
       }
-      if (!id.startsWith(BASE_PREFIX)) return null;
+      if (!id.startsWith(BASE_PREFIX)) return fallbackPlugin.call('load', this, id);
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
       const code = readFileSync(file, 'utf8');
@@ -245,6 +311,7 @@ export function stencilrs(options = {}) {
       if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
         // As @stencil/unplugin's `transpileBaseClass`.
+        const { transpileSync } = await import('@stencil/core/compiler');
         const st = transpileSync(code, { file, componentExport: 'customelement', styleImportData: 'queryparams', transformAsBaseClass: true });
         return { code: st.code, map: st.map ?? null };
       }
@@ -253,18 +320,12 @@ export function stencilrs(options = {}) {
       return { code: result.code, map: result.map ? JSON.parse(result.map) : null };
     },
 
-    handleHotUpdate({ file, server }) {
-      const tags = new Set(cssFileToTags.get(file));
-      const tagName = fileToTag.get(file.replaceAll('\\', '/'));
-      if (tagName) tags.add(tagName);
-      if (!tags.size) return undefined;
-      // A changed stylesheet: drop its modules, then reload the components that import it.
-      for (const id of cssFileToIds.get(file) ?? []) {
-        const mod = server.moduleGraph.getModuleById?.(id) ?? server.moduleGraph.idToModuleMap?.get(id);
-        if (mod) server.moduleGraph.invalidateModule(mod, new Set(), Date.now(), true);
-      }
-      for (const tag of tags) server.ws.send({ type: 'custom', event: 'stencil:hmr', data: { tagName: tag } });
-      return [];
+    async handleHotUpdate(ctx) {
+      const mine = hotUpdate(ctx);
+      // A stylesheet that starts importing a virtual global stylesheet: @stencil/unplugin generates it.
+      if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(ctx.file) && mentionsVirtualGlobalImport(ctx.file)) await fallbackPlugin.ensure(this);
+      const theirs = await fallbackPlugin.call('handleHotUpdate', this, mine ? { ...ctx, modules: mine } : ctx);
+      return theirs ?? mine;
     },
 
     buildEnd() {
@@ -274,21 +335,7 @@ export function stencilrs(options = {}) {
     },
   };
 
-  const stencil = [stencilVite(stencilOptions)].flat();
-  for (const p of stencil) skipHandled(p, handled);
-  return [plugin, ...stencil];
-}
-
-/** Make @stencil/unplugin's `transform` leave files stencilrs already compiled alone. */
-function skipHandled(p, handled) {
-  const hook = p.transform;
-  if (!hook) return;
-  const fn = typeof hook === 'function' ? hook : hook.handler;
-  const wrapped = function (code, id, ...rest) {
-    if (id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/'))) return null;
-    return fn.call(this, code, id, ...rest);
-  };
-  p.transform = typeof hook === 'function' ? wrapped : { ...hook, handler: wrapped };
+  return [plugin];
 }
 
 /** @stencil/unplugin's `stencilSpecPage`, compiled by stencilrs: for `newSpecPage` in Vitest. */
