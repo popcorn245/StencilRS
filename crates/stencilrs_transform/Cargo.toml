@@ -10,3 +10,4 @@ oxc = { version = "0.154.0", features = ["ast_visit", "semantic", "codegen", "tr
 oxc_sourcemap = "9.0.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
+rustc-hash = "2.1.3"

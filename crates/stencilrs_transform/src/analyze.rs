@@ -8,7 +8,7 @@
 //! Behaviour follows Stencil's single-file `transpileSync` (no lib, no imports resolved),
 //! which is what `@stencil/unplugin` runs. Where that differs from a full build it is noted.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
@@ -70,7 +70,7 @@ struct Ctx<'s> {
     comments: &'s [Comment],
     resolver: Option<&'s Resolver>,
     /// Stencil decorator name → local name (`import { Prop as P }` maps `Prop` → `P`).
-    aliases: HashMap<&'static str, String>,
+    aliases: FxHashMap<&'static str, String>,
     diagnostics: Vec<Diagnostic>,
     /// What Stencil threw, if it did: the transform fails with only this (first) message.
     thrown: Option<String>,
@@ -236,8 +236,8 @@ impl<'a> Visit<'a> for OtherDecoratedClasses<'_, '_, '_, '_, 'a> {
 }
 
 /// Port of `ImportAliasMap`: Stencil matches any import whose specifier contains `@stencil/core`.
-pub(crate) fn import_aliases(program: &Program) -> HashMap<&'static str, String> {
-    let mut aliases = HashMap::new();
+pub(crate) fn import_aliases(program: &Program) -> FxHashMap<&'static str, String> {
+    let mut aliases = FxHashMap::default();
     for stmt in &program.body {
         let Statement::ImportDeclaration(import) = stmt else { continue };
         if !import.source.value.contains("@stencil/core") {
@@ -483,7 +483,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
         })
         .collect();
     // Class fields by name, for `@Prop() get x() { return this._x; }`.
-    let fields: HashMap<String, &PropertyDefinition> = class
+    let fields: FxHashMap<String, &PropertyDefinition> = class
         .body
         .body
         .iter()
@@ -1056,7 +1056,7 @@ fn check_private_prop(ctx: &mut Ctx, accessibility: Option<TSAccessibility>, spa
 /// (`parsePropDecorator`, `prop-decorator.ts:121-215`). The checker types a getter by its
 /// return type, inferred from the body when unannotated; the default comes from the first
 /// top-level `return`: a literal, or `x.name` where `name` is a class field with an initializer.
-fn getter_prop<'x, 'a>(ctx: &Ctx, m: &MethodDefinition, fields: &HashMap<String, &'x PropertyDefinition<'a>>, locals: &Locals) -> (PropType, String, Option<String>, Option<&'x PropertyDefinition<'a>>) {
+fn getter_prop<'x, 'a>(ctx: &Ctx, m: &MethodDefinition, fields: &FxHashMap<String, &'x PropertyDefinition<'a>>, locals: &Locals) -> (PropType, String, Option<String>, Option<&'x PropertyDefinition<'a>>) {
     let first_return = m.value.body.as_ref().and_then(|b| {
         b.statements.iter().find_map(|s| match s {
             Statement::ReturnStatement(r) => Some(r.argument.as_ref()),

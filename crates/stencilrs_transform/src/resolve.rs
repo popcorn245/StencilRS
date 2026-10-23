@@ -4,7 +4,7 @@
 //! defaults for initializers.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -37,7 +37,7 @@ pub struct ValueSummary {
     /// Literal source text a prop default resolves to.
     pub default_text: Option<String>,
     /// Members of a `const X = { ... }` object.
-    pub members: HashMap<String, ValueSummary>,
+    pub members: FxHashMap<String, ValueSummary>,
     /// Return type of a function: (classification, written type).
     pub returns: Option<(PropType, String)>,
     /// The value of its literal type, if it has one: decorator arguments read it.
@@ -48,16 +48,16 @@ pub struct ValueSummary {
 pub struct ModuleSummary {
     /// The module's path.
     pub file: String,
-    pub types: HashMap<String, TypeSummary>,
-    pub values: HashMap<String, ValueSummary>,
+    pub types: FxHashMap<String, TypeSummary>,
+    pub values: FxHashMap<String, ValueSummary>,
     /// The types it exports, for `complexType`.
-    pub defs: HashMap<String, ExportedType>,
+    pub defs: FxHashMap<String, ExportedType>,
 }
 
 const MAX_DEPTH: u8 = 8;
 
 pub struct Resolver {
-    cache: RefCell<HashMap<PathBuf, Option<Rc<ModuleSummary>>>>,
+    cache: RefCell<FxHashMap<PathBuf, Option<Rc<ModuleSummary>>>>,
     depth: Cell<u8>,
     /// The type ids of every module read: TypeScript orders a union by them.
     pub registry: Rc<Registry>,
@@ -128,7 +128,7 @@ fn type_summary(name: &str, locals: &Locals) -> TypeSummary {
 pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueSummary {
     let (as_const, inner) = unwrap_as_const(init);
     let (prop_type, original) = infer_expression(init, locals, source);
-    let mut members = HashMap::new();
+    let mut members = FxHashMap::default();
     if let Expression::ObjectExpression(obj) = inner {
         for p in &obj.properties {
             let ObjectPropertyKind::ObjectProperty(p) = p else { continue };

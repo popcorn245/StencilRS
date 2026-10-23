@@ -18,6 +18,7 @@
 //! The Stencil-specific rewrites are applied as text edits on the original TypeScript, then
 //! oxc strips the types and compiles the JSX, the way TypeScript's own emit does in Stencil.
 
+use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -151,13 +152,13 @@ pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], o
     // JSX transform wrote. So: generate once, read those calls from the output, then again with
     // the metadata in the class.
     let first = generate_pass(program, source, components, &CodegenOptions2 { source_map: false, ..opts.clone() }, None)?;
-    let vdom: HashMap<String, VdomMeta> =
+    let vdom: FxHashMap<String, VdomMeta> =
         components.iter().map(|c| (c.component_class_name.clone(), scan_vdom(&first.code, &c.component_class_name))).collect();
     generate_pass(program, source, components, opts, Some(&vdom))
 }
 
 /// One run of the generator; `vdom` is the facts for `COMPILER_META` when it is added.
-fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&HashMap<String, VdomMeta>>) -> Result<Generated, String> {
+fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&FxHashMap<String, VdomMeta>>) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
     let ssr = opts.component_export == ComponentExport::Ssr;
     // Both take over a host (`registerInstance`) instead of being the element.

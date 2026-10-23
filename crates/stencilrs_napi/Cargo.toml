@@ -14,5 +14,15 @@ serde = "1.0.229"
 serde_json = "1.0.154"
 stencilrs_transform = { version = "0.1.0", path = "../stencilrs_transform" }
 
+# mimalloc as the global allocator, as oxc and Rolldown do. `mimalloc-safe` is the napi-rs fork
+# made for cdylibs; on Linux it needs local-dynamic TLS, or dlopen of the addon can fail with
+# "cannot allocate memory in static TLS block". Not on aarch64 Linux: napi-rs's cross toolchain
+# (glibc 2.17, gcc 4.8) has no <stdatomic.h>, so that target keeps the system allocator.
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+mimalloc-safe = { version = "0.1.67", features = ["skip_collect_on_exit"] }
+
+[target.'cfg(all(target_os = "linux", not(target_arch = "aarch64")))'.dependencies]
+mimalloc-safe = { version = "0.1.67", features = ["skip_collect_on_exit", "local_dynamic_tls"] }
+
 [build-dependencies]
 napi-build = "2.6.0"

@@ -3,15 +3,21 @@
 use napi_derive::napi;
 use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
 
-fn to_js<T: serde::Serialize>(value: T) -> napi::Result<serde_json::Value> {
-    serde_json::to_value(value).map_err(|e| napi::Error::from_reason(e.to_string()))
+#[cfg(not(all(target_os = "linux", target_arch = "aarch64")))]
+#[global_allocator]
+static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
+
+/// The result as one JSON string, which `index.js` parses: far cheaper than napi building the
+/// JS objects property by property from a `serde_json::Value`.
+fn to_js<T: serde::Serialize>(value: T) -> napi::Result<String> {
+    serde_json::to_string(&value).map_err(|e| napi::Error::from_reason(e.to_string()))
 }
 
 /// Analyse one component module: `{ components: ComponentMeta[], diagnostics: Diagnostic[] }`.
 /// `resolve_imports`: build-accurate metadata (relative imports followed, lib types known).
 #[napi]
 /// `complex_types`: a type `complexType` cannot be computed for is reported as not ported.
-pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>, complex_types: Option<bool>) -> napi::Result<serde_json::Value> {
+pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>, complex_types: Option<bool>) -> napi::Result<String> {
     to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false), complex_types.unwrap_or(false)))
 }
 
@@ -50,7 +56,7 @@ pub struct JsTranspileOptions {
 /// Generate a component module, `customelement` unless `componentExport` says otherwise:
 /// `{ code, map, components, diagnostics, baseClasses }`.
 #[napi]
-pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<serde_json::Value> {
+pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<String> {
     let jsx = match options.jsx.as_deref() {
         Some("classic") => Jsx::Classic,
         _ => Jsx::Automatic { import_source: options.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
