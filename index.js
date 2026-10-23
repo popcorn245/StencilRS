@@ -91,3 +91,15 @@ export const normalize = (code) => native.normalize(code);
  * @returns {string}
  */
 export const scopeCss = (css, scopeId, commentOriginalSelector = false) => native.scopeCss(css, scopeId, commentOriginalSelector);
+
+/**
+ * Stencil's `foldBuildFlags`: replace `Build.<flag>` reads, where `Build` is a named import from
+ * `@stencil/core`, with the boolean literals in `flags`, so a bundler can drop the gated branches.
+ * Each replacement is padded to the original length, so a source map for `code` stays valid.
+ * Flags left out of `flags` are not folded.
+ * @param {string} code JS or TS source
+ * @param {string} fileName picks the parser (`.tsx`, `.ts`, `.jsx`, else JavaScript)
+ * @param {Record<string, boolean>} flags e.g. `{ isBrowser: true, isServer: false }`
+ * @returns {string | null} the folded code, or null if nothing was folded
+ */
+export const foldBuildFlags = (code, fileName, flags) => native.foldBuildFlags(code, fileName, flags);

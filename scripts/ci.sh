@@ -28,11 +28,12 @@ npm ci
 npm run build:native
 npm test
 
-step "Parity with Stencil v5: output on every fixture, source maps, then scoped CSS"
+step "Parity with Stencil v5: output on every fixture, source maps, then scoped CSS, then foldBuildFlags"
 npm --prefix parity ci
 npm run parity
 npm run parity:sourcemaps
 npm run parity:scope-css
+npm run parity:fold-build-flags
 
 step "Components: starter (tests in happy-dom, then the library build)"
 npm --prefix examples/starter ci

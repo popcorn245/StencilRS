@@ -13,6 +13,7 @@ mod compiler_meta;
 mod default_value;
 mod edits;
 mod eval;
+mod fold_build_flags;
 mod inherit;
 mod jsdoc;
 mod types;
@@ -29,6 +30,7 @@ use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
+pub use fold_build_flags::fold_build_flags;
 pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 

@@ -25,10 +25,10 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { foldBuildFlags, transpileSync } from '@stencil/core/compiler';
+import { transpileSync } from '@stencil/core/compiler';
 import { stencilVite } from '@stencil/unplugin';
 
-import { buildId, transpile } from './index.js';
+import { buildId, foldBuildFlags, transpile } from './index.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;

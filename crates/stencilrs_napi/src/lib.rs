@@ -102,3 +102,11 @@ pub fn scope_css(css: String, scope_id: String, comment_original_selector: Optio
     stencilrs_transform::scope_css::scope_css(&css, &scope_id, comment_original_selector.unwrap_or(false))
         .map_err(|e| napi::Error::from_reason(e.0))
 }
+
+/// Stencil's `foldBuildFlags`: `Build.<flag>` reads (`Build` imported from `@stencil/core`) replaced
+/// by the boolean literals in `flags`, padded to the original length. `null` when nothing folded.
+#[napi]
+pub fn fold_build_flags(code: String, file_name: String, flags: serde_json::Value) -> Option<String> {
+    let flags = flags.as_object()?.iter().filter_map(|(k, v)| v.as_bool().map(|b| (k.clone(), b))).collect();
+    stencilrs_transform::fold_build_flags(&code, &file_name, &flags)
+}
