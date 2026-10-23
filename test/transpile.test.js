@@ -37,3 +37,14 @@ test("componentMetadata: 'compilerstatic' adds COMPILER_META, and style: null dr
   assert.doesNotMatch(transpile(source, options).code, /COMPILER_META/);
   assert.throws(() => transpile(source, { ...options, componentMetadata: 'bogus' }), /unknown componentMetadata/);
 });
+
+test('foldBuildFlags folds Build flags imported from @stencil/core, padded to the original length', async () => {
+  const { foldBuildFlags } = await import('../index.js');
+  const code = "import { Build } from '@stencil/core';\nif (Build.isServer) a(); else b(Build.isBrowser);";
+  assert.equal(
+    foldBuildFlags(code, 'a.ts', { isBrowser: true, isServer: false }),
+    "import { Build } from '@stencil/core';\nif (false         ) a(); else b(true           );",
+  );
+  assert.equal(foldBuildFlags(code, 'a.ts', {}), null);
+  assert.equal(foldBuildFlags('const Build = {}; Build.isServer', 'a.ts', { isServer: true }), null);
+});

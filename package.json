@@ -30,6 +30,7 @@
     "parity": "npm --prefix parity run compare",
     "parity:sourcemaps": "npm --prefix parity run sourcemaps",
     "parity:scope-css": "npm --prefix parity run scope-css",
+    "parity:fold-build-flags": "npm --prefix parity run fold-build-flags",
     "bench": "npm --prefix parity run bench",
     "test:starter": "npm --prefix examples/starter test"
   },
