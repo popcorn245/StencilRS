@@ -1274,6 +1274,7 @@ name = "stencilrs_transform"
 version = "0.1.0"
 dependencies = [
  "fancy-regex",
+ "memchr",
  "oxc",
  "oxc_sourcemap",
  "rustc-hash",
