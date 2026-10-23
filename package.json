@@ -32,6 +32,7 @@
     "parity:scope-css": "npm --prefix parity run scope-css",
     "parity:fold-build-flags": "npm --prefix parity run fold-build-flags",
     "bench": "npm --prefix parity run bench",
+    "bench:refresh": "node scripts/refresh-benchmarks.mjs",
     "test:starter": "npm --prefix examples/starter test"
   },
   "exports": {

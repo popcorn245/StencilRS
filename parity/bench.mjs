@@ -1,11 +1,13 @@
 // Benchmark: Stencil v5 transpileSync vs stencilrs transpile on the parity corpus.
 //
-//   node bench.mjs [rounds=10]
+//   node bench.mjs [rounds=10] [--json <file>]
+//
+// --json writes the numbers (and the file count, size and versions) for scripts/refresh-benchmarks.mjs.
 //
 // Same files, same contract (the customelement module @stencil/unplugin asks for), one
 // process, single-threaded. The first round of each is reported separately (cold: module
 // load, TypeScript warm-up). Both are timed with and without source maps.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import { transpileSync, versions } from '@stencil/core/compiler';
@@ -13,7 +15,9 @@ import { transpileSync, versions } from '@stencil/core/compiler';
 import { transpile } from '../index.js';
 import { listFixtures, stencilrsOptions, transpileOptions } from './lib.mjs';
 
-const rounds = Number(process.argv[2] ?? 10);
+const args = process.argv.slice(2);
+const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : null;
+const rounds = Number(args.find((a, i) => /^\d+$/.test(a) && args[i - 1] !== '--json') ?? 10);
 const files = listFixtures().map(({ id, file }) => ({ id, code: readFileSync(file, 'utf8') }));
 const bytes = files.reduce((n, f) => n + f.code.length, 0);
 
@@ -52,3 +56,6 @@ console.log(
   `\nstencilrs is ${x('stencil (source maps)', 'stencilrs (source maps)')}× faster than stencil with source maps,` +
     ` ${x('stencil (no maps)', 'stencilrs (no maps)')}× without (median, warm).`,
 );
+if (jsonOut) {
+  writeFileSync(jsonOut, JSON.stringify({ files: files.length, kib: Math.round(bytes / 1024), rounds, stencil: versions.stencil, typescript: versions.typescript, results }, null, 2) + '\n');
+}

@@ -33,6 +33,35 @@ export const Table = ({ head, rows }) => (
   </table>
 );
 export const ms = (v) => `${v.toLocaleString()} ms`;
+export const spread = (a) => `${a[0].toLocaleString()}–${a[1].toLocaleString()} ms`;
+
+export const Cold = ({ build, dev }) => (
+  <>
+    <h2>Cold start: a fresh process</h2>
+    <p>
+      The sections above are warm: one process, the compiler already loaded. A real start pays for loading it too (TypeScript for
+      Stencil, a native module for stencilrs), so these rows spawn a fresh <code>node</code> every time, with Vite's cache cleared.
+    </p>
+    {build && (
+      <>
+        <h3>Production build</h3>
+        <p>{build.what}.</p>
+        <Bars rows={build.rows} value="wallMedianMs" unit="ms" label="Median wall time, process spawn to exit. Shorter is faster." />
+        <Table head={['Compiler', 'Wall (spawn to exit)', 'Spawn to build end', 'Wall, min–max']} rows={build.rows.map((r) => [r.compiler, ms(r.wallMedianMs), ms(r.buildEndMedianMs), spread(r.wallSpreadMs)])} />
+        <p><strong>stencilrs: {build.speedup} faster</strong> from a cold process.</p>
+      </>
+    )}
+    {dev && (
+      <>
+        <h3>Dev server to first response</h3>
+        <p>{dev.what}.</p>
+        <Bars rows={dev.rows} value="firstResponseMedianMs" unit="ms" label="Median time from spawn to the first 200. Shorter is faster." />
+        <Table head={['Compiler', 'First response', 'Min–max']} rows={dev.rows.map((r) => [r.compiler, ms(r.firstResponseMedianMs), spread(r.firstResponseSpreadMs)])} />
+        <p><strong>stencilrs: {dev.speedup} faster</strong> to the first module.</p>
+      </>
+    )}
+  </>
+);
 
 # Benchmarks
 
@@ -62,6 +91,8 @@ reference. `node parity/bench.mjs` times both compilers both ways.
 <Table head={['Compiler', 'First build', 'Warm median']} rows={data.viteBuild.rows.map((r) => [r.compiler, ms(r.firstMs), ms(r.warmMedianMs)])} />
 
 **stencilrs: {data.viteBuild.speedup} faster**, end to end, source maps on.
+
+<Cold build={data.coldBuild} dev={data.coldDev} />
 
 ## Build: a full `stencil build`, stencilrs swapped in
 
@@ -97,4 +128,9 @@ throwaway copy of `@stencil/core` (`examples/ui-kit/bench-stencil-build.mjs`), n
 cd parity && node bench.mjs 10                     # per file
 cd examples/ui-kit && node bench-build.mjs 3       # whole ui-kit through Vite
 cd examples/ui-kit && node bench-stencil-build.mjs 5 --json  # full stencil build, stock vs stencilrs
+cd examples/ui-kit && node bench-cold.mjs 5        # cold start: fresh-process build, dev server to first response
 ```
+
+To re-run all of it and rewrite this page's data and the headline numbers in the README, on a quiet
+machine: `node scripts/refresh-benchmarks.mjs` (it writes `data/benchmarks.json`; the options are
+listed at the top of the script).
