@@ -23,5 +23,10 @@ mimalloc-safe = { version = "0.1.67", features = ["skip_collect_on_exit"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 mimalloc-safe = { version = "0.1.67", features = ["skip_collect_on_exit", "local_dynamic_tls"] }
 
+# mimalloc builds arm64 with `-march=armv8.1-a`, which the older gcc in napi-rs's cross toolchain
+# rejects.
+[target.'cfg(all(target_os = "linux", target_arch = "aarch64"))'.dependencies]
+mimalloc-safe = { version = "0.1.67", features = ["no_opt_arch"] }
+
 [build-dependencies]
 napi-build = "2.6.0"
