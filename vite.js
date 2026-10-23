@@ -177,6 +177,10 @@ export function stencilrs(options = {}) {
 
     configureServer(server) {
       fallbackPlugin.remember('server', server);
+      // A new stylesheet that imports a virtual global stylesheet: @stencil/unplugin generates it.
+      server.watcher.on('add', async (file) => {
+        if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(file) && mentionsVirtualGlobalImport(file)) await fallbackPlugin.ensure(this);
+      });
     },
 
     async buildStart() {
