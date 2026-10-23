@@ -1,5 +1,8 @@
 //! Node binding for stencilrs.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use napi::bindgen_prelude::{AsyncTask, Env, Task};
 use napi_derive::napi;
 use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
 
@@ -53,47 +56,161 @@ pub struct JsTranspileOptions {
     pub emit_styles: Option<bool>,
 }
 
+impl JsTranspileOptions {
+    /// The compiler's options, or why they are invalid.
+    fn into_options(self) -> napi::Result<TranspileOptions> {
+        let jsx = match self.jsx.as_deref() {
+            Some("classic") => Jsx::Classic,
+            _ => Jsx::Automatic { import_source: self.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
+        };
+        let component_export = match self.component_export.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+            None | Some("customelement") => ComponentExport::CustomElement,
+            Some("module") => ComponentExport::Module,
+            Some("lazy") => ComponentExport::Lazy,
+            Some("ssr") => ComponentExport::Ssr,
+            Some(other) => {
+                return Err(napi::Error::from_reason(format!(
+                    "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\" or \"ssr\""
+                )));
+            }
+        };
+        let component_metadata = match self.component_metadata.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+            None | Some("") => ComponentMetadata::None,
+            Some("compilerstatic") => ComponentMetadata::CompilerStatic,
+            Some(other) => {
+                return Err(napi::Error::from_reason(format!("unknown componentMetadata {other:?}: expected \"compilerstatic\"")));
+            }
+        };
+        Ok(TranspileOptions {
+            component_export,
+            component_metadata,
+            emit_styles: self.emit_styles.unwrap_or(true),
+            file: self.file,
+            core_import_path: self.core_import_path.unwrap_or_else(|| {
+                if component_export == ComponentExport::Ssr { SSR_CORE_IMPORT_PATH } else { DEFAULT_CORE_IMPORT_PATH }.into()
+            }),
+            jsx,
+            resolve_imports: self.resolve_imports.unwrap_or(false),
+            complex_types: self.complex_types.unwrap_or(false),
+            source_map: self.source_map.unwrap_or(true),
+            transform_as_base_class: self.transform_as_base_class.unwrap_or(false),
+        })
+    }
+}
+
 /// Generate a component module, `customelement` unless `componentExport` says otherwise:
 /// `{ code, map, components, diagnostics, baseClasses }`.
 #[napi]
 pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<String> {
-    let jsx = match options.jsx.as_deref() {
-        Some("classic") => Jsx::Classic,
-        _ => Jsx::Automatic { import_source: options.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
+    to_js(stencilrs_transform::transpile(&source, &options.into_options()?))
+}
+
+/// `transpileAsync`: the work of `transpile` on the libuv thread pool, the result as a JSON string.
+pub struct TranspileTask {
+    source: String,
+    options: TranspileOptions,
+}
+
+impl Task for TranspileTask {
+    type Output = String;
+    type JsValue = String;
+
+    fn compute(&mut self) -> napi::Result<String> {
+        serde_json::to_string(&stencilrs_transform::transpile(&self.source, &self.options)).map_err(|e| napi::Error::from_reason(e.to_string()))
+    }
+
+    fn resolve(&mut self, _env: Env, output: String) -> napi::Result<String> {
+        Ok(output)
+    }
+}
+
+/// `transpile` off the calling thread: a promise of the same result, as a JSON string.
+#[napi]
+pub fn transpile_async(source: String, options: JsTranspileOptions) -> napi::Result<AsyncTask<TranspileTask>> {
+    Ok(AsyncTask::new(TranspileTask { source, options: options.into_options()? }))
+}
+
+#[napi(object)]
+pub struct JsTranspileInput {
+    pub source: String,
+    pub options: JsTranspileOptions,
+}
+
+/// One file of `transpileMany`: the options already checked, or why they are not valid.
+struct ManyJob {
+    source: String,
+    options: Result<TranspileOptions, String>,
+}
+
+/// `{"result": …}` or `{"error": "…"}` for one file.
+fn run_job(job: &ManyJob) -> String {
+    let options = match &job.options {
+        Ok(options) => options,
+        Err(message) => return serde_json::json!({ "error": message }).to_string(),
     };
-    let component_export = match options.component_export.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
-        None | Some("customelement") => ComponentExport::CustomElement,
-        Some("module") => ComponentExport::Module,
-        Some("lazy") => ComponentExport::Lazy,
-        Some("ssr") => ComponentExport::Ssr,
-        Some(other) => {
-            return Err(napi::Error::from_reason(format!(
-                "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\" or \"ssr\""
-            )));
-        }
-    };
-    let component_metadata = match options.component_metadata.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
-        None | Some("") => ComponentMetadata::None,
-        Some("compilerstatic") => ComponentMetadata::CompilerStatic,
-        Some(other) => {
-            return Err(napi::Error::from_reason(format!("unknown componentMetadata {other:?}: expected \"compilerstatic\"")));
-        }
-    };
-    let opts = TranspileOptions {
-        component_export,
-        component_metadata,
-        emit_styles: options.emit_styles.unwrap_or(true),
-        file: options.file,
-        core_import_path: options.core_import_path.unwrap_or_else(|| {
-            if component_export == ComponentExport::Ssr { SSR_CORE_IMPORT_PATH } else { DEFAULT_CORE_IMPORT_PATH }.into()
-        }),
-        jsx,
-        resolve_imports: options.resolve_imports.unwrap_or(false),
-        complex_types: options.complex_types.unwrap_or(false),
-        source_map: options.source_map.unwrap_or(true),
-        transform_as_base_class: options.transform_as_base_class.unwrap_or(false),
-    };
-    to_js(stencilrs_transform::transpile(&source, &opts))
+    // A panic in one file is that file's error, not the batch's.
+    match std::panic::catch_unwind(|| serde_json::to_string(&stencilrs_transform::transpile(&job.source, options))) {
+        Ok(Ok(json)) => format!("{{\"result\":{json}}}"),
+        Ok(Err(e)) => serde_json::json!({ "error": e.to_string() }).to_string(),
+        Err(_) => serde_json::json!({ "error": format!("stencilrs: internal error transpiling {}", options.file) }).to_string(),
+    }
+}
+
+/// `transpileMany`: the files in parallel on scoped threads, a JSON array in input order.
+pub struct TranspileManyTask {
+    jobs: Vec<ManyJob>,
+}
+
+impl Task for TranspileManyTask {
+    type Output = String;
+    type JsValue = String;
+
+    fn compute(&mut self) -> napi::Result<String> {
+        let jobs = &self.jobs;
+        let next = AtomicUsize::new(0);
+        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(jobs.len()).max(1);
+        let mut done: Vec<(usize, String)> = Vec::with_capacity(jobs.len());
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..threads)
+                .map(|_| {
+                    // The parser and the type walk recurse: a roomy stack, as libuv's pool threads have.
+                    std::thread::Builder::new()
+                        .stack_size(8 << 20)
+                        .spawn_scoped(scope, || {
+                            let mut mine = Vec::new();
+                            // A shared counter is the work queue: a thread takes the next file when it is free.
+                            loop {
+                                let i = next.fetch_add(1, Ordering::Relaxed);
+                                let Some(job) = jobs.get(i) else { break };
+                                mine.push((i, run_job(job)));
+                            }
+                            mine
+                        })
+                        .expect("spawn transpile worker")
+                })
+                .collect();
+            for worker in workers {
+                done.extend(worker.join().expect("transpile worker"));
+            }
+        });
+        done.sort_unstable_by_key(|(i, _)| *i);
+        Ok(format!("[{}]", done.into_iter().map(|(_, json)| json).collect::<Vec<_>>().join(",")))
+    }
+
+    fn resolve(&mut self, _env: Env, output: String) -> napi::Result<String> {
+        Ok(output)
+    }
+}
+
+/// `transpile` for many files at once, in parallel: a promise of a JSON array with one
+/// `{ result }` or `{ error }` per input, in input order.
+#[napi]
+pub fn transpile_many(files: Vec<JsTranspileInput>) -> AsyncTask<TranspileManyTask> {
+    let jobs = files
+        .into_iter()
+        .map(|f| ManyJob { source: f.source, options: f.options.into_options().map_err(|e| e.reason.to_string()) })
+        .collect();
+    AsyncTask::new(TranspileManyTask { jobs })
 }
 
 /// Reprint JavaScript through one printer with comments dropped, for comparing outputs.

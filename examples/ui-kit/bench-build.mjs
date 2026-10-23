@@ -1,7 +1,7 @@
 // End-to-end benchmark: a production `vite build` of every ui-kit component (one library
 // bundle), compiled by stencilrs vs by Stencil v5's own Vite plugin (@stencil/unplugin).
 //
-//   node bench-build.mjs [rounds=3]
+//   node bench-build.mjs [rounds=3] [stencilrs|stencil]   (the second argument runs one compiler only)
 //
 // Same Vite 8 (Rolldown), same entry, same everything except the component compiler. Each
 // round is a fresh `build()` in this process; the first round of each compiler includes its
@@ -45,12 +45,13 @@ const run = async (compiler) => {
 };
 
 const results = {};
-for (const compiler of ['stencilrs', 'stencil']) {
+const only = process.argv[3];
+for (const compiler of ['stencilrs', 'stencil'].filter((c) => !only || c === only)) {
   const times = [];
   for (let i = 0; i < rounds; i++) times.push(await run(compiler));
   const warm = times.slice(1).sort((a, b) => a - b);
   results[compiler] = { first: times[0], median: warm.length ? warm[Math.floor(warm.length / 2)] : times[0], all: times };
   console.log(`${compiler.padEnd(10)} first ${times[0].toFixed(0)} ms · warm median ${results[compiler].median.toFixed(0)} ms · ${times.map((t) => t.toFixed(0)).join(', ')}`);
 }
-console.log(`\nstencilrs is ${(results.stencil.median / results.stencilrs.median).toFixed(1)}× faster (warm), ${(results.stencil.first / results.stencilrs.first).toFixed(1)}× (first build)`);
+if (results.stencil && results.stencilrs) console.log(`\nstencilrs is ${(results.stencil.median / results.stencilrs.median).toFixed(1)}× faster (warm), ${(results.stencil.first / results.stencilrs.first).toFixed(1)}× (first build)`);
 writeFileSync(join(root, '.bench/results.json'), JSON.stringify({ components: components.length, rounds, results }, null, 2) + '\n');

@@ -28,7 +28,7 @@ import { dirname, join, resolve } from 'node:path';
 import { transpileSync } from '@stencil/core/compiler';
 import { stencilVite } from '@stencil/unplugin';
 
-import { buildId, foldBuildFlags, transpile } from './index.js';
+import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;
@@ -131,7 +131,7 @@ export function stencilrs(options = {}) {
       tsconfigJsx = readTsconfigJsx(root);
     },
 
-    transform(code, id, transformOpts) {
+    async transform(code, id, transformOpts) {
       const file = id.split('?')[0].replaceAll('\\', '/');
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
@@ -145,7 +145,7 @@ export function stencilrs(options = {}) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const result = transpile(code, { file, resolveImports, componentExport, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
+      const result = await transpileAsync(code, { file, resolveImports, componentExport, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {

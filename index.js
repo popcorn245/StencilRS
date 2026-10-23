@@ -72,17 +72,42 @@ export const analyze = (source, fileName, options = {}) =>
  * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
-export const transpile = (source, options) => {
+export const transpile = (source, options) => JSON.parse(native.transpile(source, nativeOptions(options)));
+
+/** The options as the native binding names them (Stencil's `null` and `style: null` spellings). */
+function nativeOptions(options) {
   const { style, componentMetadata, ...rest } = options;
-  return JSON.parse(
-    native.transpile(source, {
-      ...rest,
-      ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
-      ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
-      ...(style === null ? { emitStyles: false } : {}),
-    }),
+  return {
+    ...rest,
+    ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
+    ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
+    ...(style === null ? { emitStyles: false } : {}),
+  };
+}
+
+/**
+ * `transpile` on the libuv thread pool, off the main thread: a promise of exactly what
+ * `transpile` returns. Many calls in flight run in parallel (the pool has 4 threads unless
+ * `UV_THREADPOOL_SIZE` says otherwise), which is what a bundler's `transform` hook does. Options
+ * that `transpile` would throw on reject the promise.
+ * @param {string} source module source (TS/TSX)
+ * @param {Parameters<typeof transpile>[1]} options as for `transpile`
+ * @returns {Promise<ReturnType<typeof transpile>>}
+ */
+export const transpileAsync = async (source, options) => JSON.parse(await native.transpileAsync(source, nativeOptions(options)));
+
+/**
+ * `transpile` for many files at once, in parallel on one thread per core, results in input
+ * order. Each file stands alone: one that fails does not fail the others. A file with a syntax
+ * or analysis error has it in its `diagnostics`, as with `transpile`; where `transpile` would
+ * throw (options it does not accept) the entry is `{ error: string }` instead of a result.
+ * @param {{ source: string, options: Parameters<typeof transpile>[1] }[]} files
+ * @returns {Promise<(ReturnType<typeof transpile> | { error: string })[]>}
+ */
+export const transpileMany = async (files) =>
+  JSON.parse(await native.transpileMany(files.map(({ source, options }) => ({ source, options: nativeOptions(options) })))).map((r) =>
+    'error' in r ? { error: r.error } : r.result,
   );
-};
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
 export const normalize = (code) => native.normalize(code);
