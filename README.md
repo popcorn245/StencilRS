@@ -53,9 +53,11 @@ Import a component module anywhere and its custom element is registered:
 import './components/my-counter/my-counter';
 ```
 
-The plugin compiles component files with stencilrs and leaves the rest to `@stencil/unplugin`
-(CSS, the runtime, build flags). A file that uses something stencilrs hasn't ported yet falls back
-to Stencil's own compiler, so a project never breaks for want of a feature.
+The plugin compiles component files, their stylesheets and the build flags with stencilrs, and
+loads neither `@stencil/unplugin` nor Stencil's compiler (TypeScript, ~700 ms) unless it has to. A
+file that uses something stencilrs hasn't ported yet falls back to Stencil's own compiler, loaded
+at that point, so a project never breaks for want of a feature
+([what is where](docs/vite-plugin.md)).
 
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).

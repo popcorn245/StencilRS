@@ -42,6 +42,7 @@
     "index.js",
     "vite.js",
     "vite-css.js",
+    "vite-fallback.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
