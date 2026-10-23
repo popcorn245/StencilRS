@@ -1,5 +1,7 @@
 //! Span-based text edits over the original source (a tiny magic-string).
 
+use std::cell::Cell;
+
 pub struct Edits<'s> {
     source: &'s str,
     /// (start, end, replacement, insertion order). Insertions have start == end.
@@ -47,7 +49,7 @@ impl<'s> Edits<'s> {
             pos = pos.max(end);
         }
         push(&mut out, &mut segments, &self.source[pos..], Some(pos));
-        (out, OffsetMap { segments, source_len: self.source.len() as u32 })
+        (out, OffsetMap { segments, source_len: self.source.len() as u32, last: Cell::new(0) })
     }
 }
 
@@ -132,13 +134,24 @@ struct Segment {
 pub struct OffsetMap {
     segments: Vec<Segment>,
     source_len: u32,
+    /// The segment found last, to start the next lookup from (offsets come in near each other).
+    last: Cell<usize>,
 }
 
 impl OffsetMap {
     /// Copied text maps to itself. Text an edit wrote has no original (`None`): like
     /// TypeScript's synthesized nodes, generated code stays unmapped.
     pub fn to_original(&self, offset: u32) -> Option<u32> {
-        let i = self.segments.partition_point(|s| s.end <= offset);
+        let hit = |i: usize| self.segments.get(i).is_some_and(|s| s.start <= offset && offset < s.end);
+        let last = self.last.get();
+        let i = if hit(last) {
+            last
+        } else if hit(last + 1) {
+            last + 1
+        } else {
+            self.segments.partition_point(|s| s.end <= offset)
+        };
+        self.last.set(i);
         match self.segments.get(i) {
             Some(s) => s.from.map(|from| from + (offset - s.start)),
             None => Some(self.source_len),

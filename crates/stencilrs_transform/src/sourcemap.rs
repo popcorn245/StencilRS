@@ -6,7 +6,8 @@
 //! source, so the map points at what the author wrote.
 
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::cell::Cell;
+use rustc_hash::FxHashMap;
 
 use oxc_sourcemap::{SourceMap, Token};
 
@@ -19,7 +20,10 @@ struct LineIndex<'a> {
     text: &'a str,
     starts: Vec<u32>,
     /// Per line: all ASCII, so byte and UTF-16 columns agree (the common case, O(1) lookups).
+    /// Empty when the whole text is ASCII.
     ascii: Vec<bool>,
+    /// The line `position` found last, to start the next search from.
+    last_line: Cell<usize>,
 }
 
 impl<'a> LineIndex<'a> {
@@ -28,39 +32,44 @@ impl<'a> LineIndex<'a> {
         // multi-byte char (`\n`, `\r`, or 0xE2, the lead byte of U+2028 / U+2029).
         let bytes = text.as_bytes();
         let mut starts = vec![0];
+        let all_ascii = text.is_ascii();
         let mut ascii = Vec::new();
-        let mut line_ascii = true;
+        let mut line_start = 0;
         let mut i = 0;
-        while i < bytes.len() {
-            let b = bytes[i];
-            let next = match b {
-                b'\n' => Some(i + 1),
-                b'\r' if bytes.get(i + 1) == Some(&b'\n') => Some(i + 2),
-                b'\r' => Some(i + 1),
-                0xE2 if bytes.get(i + 1) == Some(&0x80) && matches!(bytes.get(i + 2), Some(0xA8 | 0xA9)) => Some(i + 3),
+        while let Some(found) = memchr::memchr3(b'\n', b'\r', 0xE2, &bytes[i..]) {
+            let at = i + found;
+            let end = match bytes[at] {
+                b'\n' => at + 1,
+                b'\r' if bytes.get(at + 1) == Some(&b'\n') => at + 2,
+                b'\r' => at + 1,
+                _ if bytes.get(at + 1) == Some(&0x80) && matches!(bytes.get(at + 2), Some(0xA8 | 0xA9)) => at + 3,
                 _ => {
-                    line_ascii &= b.is_ascii();
-                    None
+                    // Some other char that starts with 0xE2: not a break.
+                    i = at + 1;
+                    continue;
                 }
             };
-            match next {
-                Some(n) => {
-                    ascii.push(line_ascii);
-                    line_ascii = true;
-                    starts.push(n as u32);
-                    i = n;
-                }
-                None => i += 1,
+            if !all_ascii {
+                ascii.push(bytes[line_start..at].is_ascii());
             }
+            starts.push(end as u32);
+            line_start = end;
+            i = end;
         }
-        ascii.push(line_ascii);
-        Self { text, starts, ascii }
+        if !all_ascii {
+            ascii.push(bytes[line_start..].is_ascii());
+        }
+        Self { text, starts, ascii, last_line: Cell::new(0) }
+    }
+
+    fn line_is_ascii(&self, line: usize) -> bool {
+        self.ascii.is_empty() || self.ascii[line]
     }
 
     /// The byte offset of a line and UTF-16 column, if the text has it.
     fn offset(&self, line: u32, col: u32) -> Option<u32> {
         let start = *self.starts.get(line as usize)?;
-        if self.ascii[line as usize] {
+        if self.line_is_ascii(line as usize) {
             let end = self.starts.get(line as usize + 1).map_or(self.text.len() as u32, |&e| e);
             return (start + col <= end).then_some(start + col);
         }
@@ -75,12 +84,31 @@ impl<'a> LineIndex<'a> {
         (units >= col).then_some(self.text.len() as u32)
     }
 
+    /// The line holding a byte offset. Lookups come in near each other, so the last line (or the
+    /// one after) is tried before searching.
+    fn line_of(&self, offset: u32) -> usize {
+        let last = self.last_line.get();
+        let holds = |line: usize| self.starts[line] <= offset && self.starts.get(line + 1).is_none_or(|&next| offset < next);
+        let line = if holds(last) {
+            last
+        } else if last + 1 < self.starts.len() && holds(last + 1) {
+            last + 1
+        } else {
+            self.starts.partition_point(|&s| s <= offset) - 1
+        };
+        self.last_line.set(line);
+        line
+    }
+
     /// The line and UTF-16 column of a byte offset (a char boundary).
     fn position(&self, offset: u32) -> (u32, u32) {
-        let line = self.starts.partition_point(|&s| s <= offset) - 1;
+        let line = self.line_of(offset);
         let start = self.starts[line] as usize;
-        let before = &self.text[start..offset as usize];
-        let col = if self.ascii[line] { before.len() } else { before.encode_utf16().count() };
+        let col = if self.line_is_ascii(line) {
+            offset as usize - start
+        } else {
+            self.text[start..offset as usize].encode_utf16().count()
+        };
         (line as u32, col as u32)
     }
 }
@@ -89,7 +117,7 @@ impl<'a> LineIndex<'a> {
 /// the output to the original source, as source map v3 JSON. `prefix_lines`: lines put in
 /// front of oxc's output afterwards. `anchors` moves a mapped position in `edited` to another
 /// one first (class members, from their modifier to the first token that is printed).
-pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &HashMap<u32, u32>, source: &str, file: &str, prefix_lines: u32) -> String {
+pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &FxHashMap<u32, u32>, source: &str, file: &str, prefix_lines: u32) -> String {
     let edited_lines = LineIndex::new(edited);
     let source_lines = LineIndex::new(source);
     let tokens: Vec<Token> = printed
@@ -102,7 +130,7 @@ pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &H
             Some(Token::new(t.get_dst_line() + prefix_lines, t.get_dst_col(), line, col, Some(0), t.get_name_id()))
         })
         .collect();
-    let names = printed.get_names().map(|n| Cow::Owned(n.to_owned())).collect();
+    let names = printed.get_names().map(Cow::Borrowed).collect();
     let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
     let output = match name.rfind('.') {
         Some(dot) => format!("{}.js", &name[..dot]),

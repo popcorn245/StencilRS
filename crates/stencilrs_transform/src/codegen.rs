@@ -1285,7 +1285,7 @@ fn fmt_num(v: f64) -> String {
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
 /// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
 /// class member positions should point instead (`MemberAnchors`).
-fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>, HashMap<u32, u32>), String> {
+fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>, rustc_hash::FxHashMap<u32, u32>), String> {
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
@@ -1294,7 +1294,7 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
         return Err(format!("stencilrs produced unparsable code: {}\n---\n{edited}", msgs.join("; ")));
     }
     let mut program = parsed.program;
-    let mut anchors = MemberAnchors { text: edited, map: HashMap::new() };
+    let mut anchors = MemberAnchors { text: edited, map: Default::default() };
     if opts.source_map {
         anchors.visit_program(&program);
     }
@@ -1353,7 +1353,7 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
 /// token after the modifiers (`static`, `async`, `get`, `*`, or the key).
 struct MemberAnchors<'t> {
     text: &'t str,
-    map: HashMap<u32, u32>,
+    map: rustc_hash::FxHashMap<u32, u32>,
 }
 
 impl MemberAnchors<'_> {
