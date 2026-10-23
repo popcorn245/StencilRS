@@ -7,7 +7,7 @@
 //! compiler instead of guessing.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
@@ -66,7 +66,7 @@ pub struct TypeEnv<'e, 'a, 'b> {
     pub strict: bool,
     /// The module's path, to tell its declarations apart from other modules'.
     pub file: &'e str,
-    defs: RefCell<HashMap<String, Res<TypeDef>>>,
+    defs: RefCell<FxHashMap<String, Res<TypeDef>>>,
     busy: RefCell<Vec<String>>,
     params: RefCell<Vec<(String, Ty)>>,
 }

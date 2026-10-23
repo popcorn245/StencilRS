@@ -2,7 +2,7 @@
 //! are the only names the checker can resolve; imports and globals are unresolved (`any`).
 //! With a [`Resolver`] (build-accurate mode), relative imports are followed too.
 
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
@@ -48,15 +48,15 @@ pub struct StaticField<'a, 'b> {
 
 #[derive(Default)]
 pub struct Locals<'a, 'b> {
-    pub types: HashMap<&'a str, LocalType<'a, 'b>>,
+    pub types: FxHashMap<&'a str, LocalType<'a, 'b>>,
     /// The type parameters of each generic type alias.
-    pub alias_params: HashMap<&'a str, Vec<&'a str>>,
-    pub values: HashMap<&'a str, LocalValue<'a, 'b>>,
+    pub alias_params: FxHashMap<&'a str, Vec<&'a str>>,
+    pub values: FxHashMap<&'a str, LocalValue<'a, 'b>>,
     /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
-    pub const_annotations: HashMap<&'a str, &'b TSType<'a>>,
+    pub const_annotations: FxHashMap<&'a str, &'b TSType<'a>>,
     /// The static fields of each class declaration.
-    pub statics: HashMap<&'a str, Vec<StaticField<'a, 'b>>>,
-    pub imports: HashMap<&'a str, Import<'a>>,
+    pub statics: FxHashMap<&'a str, Vec<StaticField<'a, 'b>>>,
+    pub imports: FxHashMap<&'a str, Import<'a>>,
     /// Build-accurate mode: follow relative imports, and treat lib types as known objects.
     pub resolver: Option<&'b Resolver>,
     /// Path of this module, for resolving its relative imports.

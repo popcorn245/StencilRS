@@ -27,6 +27,8 @@ const nativePath = (() => {
     );
   }
 })();
+// `analyze` and `transpile` return their result as one JSON string, parsed here: much cheaper
+// than napi building the JS objects property by property.
 const native = require(nativePath);
 
 /** Changes whenever the native binary does: for build caches keyed on plugin output. */
@@ -46,7 +48,7 @@ export const buildId = (() => {
  * @returns {{ components: object[], diagnostics: object[] }}
  */
 export const analyze = (source, fileName, options = {}) =>
-  native.analyze(source, fileName, options.resolveImports ?? false, options.complexTypes ?? false);
+  JSON.parse(native.analyze(source, fileName, options.resolveImports ?? false, options.complexTypes ?? false));
 
 /**
  * Generate a component module, what Stencil's transpileSync emits.
@@ -72,12 +74,14 @@ export const analyze = (source, fileName, options = {}) =>
  */
 export const transpile = (source, options) => {
   const { style, componentMetadata, ...rest } = options;
-  return native.transpile(source, {
-    ...rest,
-    ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
-    ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
-    ...(style === null ? { emitStyles: false } : {}),
-  });
+  return JSON.parse(
+    native.transpile(source, {
+      ...rest,
+      ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
+      ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
+      ...(style === null ? { emitStyles: false } : {}),
+    }),
+  );
 };
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */

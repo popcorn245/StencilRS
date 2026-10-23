@@ -8,7 +8,8 @@
 //! member for Stencil's own compiler instead of guessing.
 
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeSet, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
@@ -43,7 +44,7 @@ const FIRST_ID: u32 = 100;
 #[derive(Default)]
 pub struct Registry {
     next: Cell<u32>,
-    interned: RefCell<HashMap<String, u32>>,
+    interned: RefCell<FxHashMap<String, u32>>,
 }
 
 impl Registry {
