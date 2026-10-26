@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # semantic-release's publish step: the five platform packages, then the root package that
 # depends on them. Anything already on npm at this version is skipped, so a run that failed
-# halfway can simply be re-run.
+# halfway can simply be re-run. npm signs in with the workflow's OIDC token (trusted publishing).
 set -euo pipefail
 
 publish() {

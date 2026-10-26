@@ -173,7 +173,7 @@ jobs:
       contents: write # the tag and the GitHub Release
       issues: write # semantic-release opens an issue when a release fails
       pull-requests: write
-      id-token: write # npm provenance
+      id-token: write # npm trusted publishing (OIDC) and provenance; no npm token
     steps:
       - uses: actions/checkout@v4
         with:
@@ -182,7 +182,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later; Node 22 bundles npm 10.
+      - name: npm with trusted publishing
+        run: npm install -g npm@^11.5.1 && npm --version
 
       - uses: actions/download-artifact@v4
         with:
@@ -200,9 +203,9 @@ jobs:
 
       # Versions every package (scripts/release.mjs), publishes them (scripts/publish.sh), then
       # tags and writes the GitHub Release. A run that fails can be re-run: published versions
-      # are skipped.
+      # are skipped. npm authenticates with this workflow's OIDC identity, which each package
+      # trusts on npmjs.com (owner popcorn245, repo StencilRS, workflow release.yml).
       - name: semantic-release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
