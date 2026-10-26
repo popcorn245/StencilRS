@@ -144,7 +144,9 @@ and picks the version (`fix:` patch, `feat:` minor, `BREAKING CHANGE:` major; `d
 and the like release nothing). [`release.yml`](.github/workflows/release.yml) then builds every
 platform, installs each from its packed tarball on its own OS, publishes the five
 `@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs` with provenance, and
-writes the tag and the GitHub Release. It needs the `NPM_TOKEN` secret.
+writes the tag and the GitHub Release. npm accepts it through
+[trusted publishing](https://docs.npmjs.com/trusted-publishers): each of the six packages trusts
+`release.yml` in this repository, so no npm token is stored anywhere.
 
 ## License
 
