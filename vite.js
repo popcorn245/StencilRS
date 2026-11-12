@@ -16,6 +16,9 @@
 //
 // `componentExport: 'ssr'` compiles the components for Stencil's hydrate (server-side rendering)
 // runtime instead, `export class` with a static `cmpMeta` (see the ui-kit's `ssr-smoke.mjs`).
+// `stencilrs({ dts: true })` writes `components.d.ts` beside the build output (element interfaces,
+// `HTMLElementTagNameMap`, typed custom events, JSX `IntrinsicElements`), what `stencil build`'s
+// `types` output is for a library; see vite-types.js. (`types` is @stencil/unplugin's own option.)
 // The default, `'customelement'`, is the Vite / Vitest / Storybook shape.
 //
 // `stencilrs({ mode: 'spec-page' })` (or `stencilrsSpecPage()`) is @stencil/unplugin's spec-page
@@ -29,6 +32,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
+import { generateTypes } from './vite-types.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, projectUsesVirtualGlobalImports, virtualGlobalAlias } from './vite-fallback.js';
 
@@ -96,17 +100,22 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
+ *   a path inside the output directory (default `components.d.ts`).
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, resolveImports = true, componentExport = 'customelement', ...stencilOptions } = options;
+  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
   const ssr = componentExport === 'ssr';
+  const dtsFileName = dts ? (typeof dts === 'object' && dts.fileName) || 'components.d.ts' : null;
+  // Component source files seen by this build, for the declaration file.
+  const dtsSources = new Map();
   const specPage = stencilOptions.mode === 'spec-page';
   // Options that need @stencil/unplugin's project scan, or its file filter: it is loaded up
   // front, and compiles every TypeScript file we don't (as it did before it was lazy).
@@ -196,6 +205,7 @@ export function stencilrs(options = {}) {
       // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
       // it gets the file as it came in, and folds the build flags itself.
       const original = code;
+      if (dtsFileName && !transformOpts?.ssr && !id.startsWith(BASE_PREFIX) && REAL_DECORATOR_RE.test(code)) dtsSources.set(file, code);
       const fallBack = async () => {
         await fallbackPlugin.ensure(this);
         return fallbackPlugin.call('transform', this, original, id, transformOpts);
@@ -326,6 +336,17 @@ export function stencilrs(options = {}) {
       if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(ctx.file) && mentionsVirtualGlobalImport(ctx.file)) await fallbackPlugin.ensure(this);
       const theirs = await fallbackPlugin.call('handleHotUpdate', this, mine ? { ...ctx, modules: mine } : ctx);
       return theirs ?? mine;
+    },
+
+    generateBundle(outputOptions) {
+      if (!dtsFileName || !dtsSources.size || specPage || ssr) return;
+      const outDir = resolve(root, outputOptions.dir ?? dirname(outputOptions.file ?? 'dist/x.js'));
+      const outFile = resolve(outDir, dtsFileName);
+      const modules = [...dtsSources].map(([file, source]) => ({ file, source }));
+      const { code, components, diagnostics } = generateTypes(modules, { outFile });
+      for (const d of diagnostics) this.warn(`[stencilrs] types: ${d.file}: ${d.message}`);
+      if (!components.length) return;
+      this.emitFile({ type: 'asset', fileName: dtsFileName, source: code });
     },
 
     buildEnd() {

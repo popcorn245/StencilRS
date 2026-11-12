@@ -59,6 +59,19 @@ file that uses something stencilrs hasn't ported yet falls back to Stencil's own
 at that point, so a project never breaks for want of a feature
 ([what is where](docs/vite-plugin.md)).
 
+### Type declarations for a library
+
+`stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
+`types` output does: an `HTML<Name>Element` interface per component with its props and methods,
+the tag in `HTMLElementTagNameMap`, typed custom events, and JSX `IntrinsicElements`. It is off by
+default. `dts: { fileName: 'types/components.d.ts' }` picks the path inside the output directory.
+`generateTypes([{ file, source }], { outFile })` does the same without Vite.
+
+Types a component imports from its own relative modules are imported again relative to the `.d.ts`,
+so ship declarations at those paths too, or call `generateTypes` with `outFile` next to the sources.
+A type that cannot be resolved (a local type that isn't exported, for example) becomes `any`, with a
+build warning.
+
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).
 

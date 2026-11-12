@@ -132,3 +132,5 @@ export const scopeCss = (css, scopeId, commentOriginalSelector = false) => nativ
  * @returns {string | null} the folded code, or null if nothing was folded
  */
 export const foldBuildFlags = (code, fileName, flags) => native.foldBuildFlags(code, fileName, flags);
+
+export { generateTypes } from './vite-types.js';

@@ -22,6 +22,7 @@ cold `vite build` of the ui-kit loads `typescript`, `@stencil/core`'s compiler o
 | `load`, stylesheets | Sass/Less, PostCSS, lightningcss, `scopeCss` | stencilrs (`vite-css.js`); unplugin if a package can't be resolved from here |
 | `load`, `\0stencil-base:` | the compiled base class | stencilrs; unplugin for its own |
 | `config` | alias for the virtual global stylesheets (`stencil-hydrate`, `stencil-component-globals`, `stencil-css-components`) | the alias, in `vite-fallback.js` (a path; nothing is generated) |
+| `generateBundle` | with `dts`, emits `components.d.ts` (vite-types.js) into the output directory | stencilrs |
 | `buildStart` | loads `stencil.config.*` (`signalBacking`, `compat`, `hydratedFlag`); with `docs` / `types`, scans the project; writes the virtual global stylesheets, if a stylesheet imports one; `components.d.ts` with `types` | unplugin, loaded up front when `docs`, `types`, `include`, `exclude` is set or a stylesheet imports a virtual global stylesheet (a text scan, as unplugin does) |
 | `configResolved` | `isDev`, whether to fold flags, the root | both |
 | `configureServer` | watches added / deleted files for docs, virtual stylesheets, `types` | unplugin, when loaded |
