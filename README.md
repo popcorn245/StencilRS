@@ -98,7 +98,9 @@ Not yet (these fall back to Stencil, or are tracked as issues):
 - in the lazy (`loader-bundle`), `ssr` and spec-page outputs, decorated base classes
   and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
 - `complexType` for types that need the checker: `keyof`, `typeof`, mapped, conditional and
-  generic types, inferred object types, types from packages or tsconfig `paths`, and unions whose
+  generic types, intersections with a union, `any`, literal or `{}` member (the checker distributes
+  or collapses those; object, interface and branded-primitive intersections work), inferred object
+  types, types from packages or tsconfig `paths`, and unions whose
   member order depends on the whole program. `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 

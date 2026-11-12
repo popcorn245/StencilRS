@@ -233,3 +233,43 @@ fn imported_constants_resolve_in_build_accurate_mode() {
     assert_eq!(single.diagnostics[0].message, "Error: invalid decorator argument: VALUE");
     std::fs::remove_dir_all(&dir).ok();
 }
+
+fn resolved_of(decl: &str, prelude: &str, complex_types: bool) -> (String, Vec<String>, Vec<String>) {
+    let src = format!(
+        "import {{ Component, Prop }} from '@stencil/core';\n{prelude}\n@Component({{ tag: 'cmp-a' }})\nexport class CmpA {{ @Prop() {decl}; }}"
+    );
+    let result = analyze_with(&src, "cmp-a.tsx", false, complex_types);
+    let ct = &result.components[0].properties[0].complex_type;
+    let refs = ct.references.0.iter().map(|(n, _)| n.clone()).collect();
+    (ct.resolved.clone(), refs, result.diagnostics.iter().map(|d| d.message.clone()).collect())
+}
+
+#[test]
+fn intersection_types_resolve_as_the_checker_prints_them() {
+    // Object literals: the members in written order, each printed in full.
+    let (resolved, _, diags) = resolved_of("both: { a: number } & { b: string }", "", true);
+    assert_eq!(resolved, "{ a: number; } & { b: string; }");
+    assert!(diags.is_empty(), "{diags:?}");
+    // Without `complexTypes` too, and the union next to it is unchanged.
+    assert_eq!(resolved_of("both: { a: number } & { b: string }", "", false).0, "{ a: number; } & { b: string; }");
+    assert_eq!(resolved_of("either: { a: number } | { b: string }", "", false).0, "{ a: number; } | { b: string; }");
+    // References and aliases: interfaces print by name, a nested intersection is flattened,
+    // a repeated member is dropped, references come from every member.
+    let prelude = "interface A { x: number }\ninterface B { y: string }\ntype AB = A & B;";
+    let (resolved, refs, diags) = resolved_of("v: A & B", prelude, true);
+    assert_eq!((resolved.as_str(), refs.as_slice()), ("A & B", ["A".to_owned(), "B".to_owned()].as_slice()));
+    assert!(diags.is_empty(), "{diags:?}");
+    assert_eq!(resolved_of("v: (A & B) & A", prelude, true).0, "A & B");
+    // A top-level alias prints its definition, as it does for unions.
+    assert_eq!(resolved_of("v: AB", prelude, true).0, "A & B");
+    // A brand on a primitive.
+    assert_eq!(resolved_of("v: string & { __brand: 'id' }", "", true).0, "string & { __brand: \"id\"; }");
+    // A union member is distributed by the checker, which is not modelled: not ported.
+    let (resolved, _, diags) = resolved_of("v: (A | B) & { c: 1 }", prelude, true);
+    assert_eq!(resolved, "");
+    assert_eq!(diags.len(), 1);
+    assert!(diags[0].contains("intersection type") && diags[0].contains("not ported yet"), "{diags:?}");
+    // Without `complexTypes` an unresolved type stays silent, as for `keyof` and `typeof`.
+    let (resolved, _, diags) = resolved_of("v: string & number", "", false);
+    assert_eq!((resolved.as_str(), diags.len()), ("", 0));
+}

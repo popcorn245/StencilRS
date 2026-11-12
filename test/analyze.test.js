@@ -79,3 +79,20 @@ test('analyze resolves complexType when asked and leaves what it cannot to Stenc
   // Off by default, so the Vite plugin does not fall back for it.
   assert.deepEqual(analyze(source, 'cmp-a.tsx').diagnostics, []);
 });
+
+test('analyze resolves intersection props like unions, with or without complexTypes', () => {
+  const source = `import { Component, Prop, h } from '@stencil/core';
+     @Component({ tag: 'x-inter' })
+     export class XInter {
+       @Prop() both: { a: number } & { b: string } = { a: 1, b: 'x' };
+       @Prop() either: { a: number } | { b: string } = { a: 1 };
+       render() { return <div>{JSON.stringify(this.both)}</div>; }
+     }`;
+  for (const options of [undefined, { complexTypes: true }]) {
+    const { components, diagnostics } = analyze(source, 'inter.tsx', options);
+    assert.deepEqual(diagnostics, []);
+    const [both, either] = components[0].properties;
+    assert.deepEqual(both.complexType, { original: '{ a: number } & { b: string }', resolved: '{ a: number; } & { b: string; }', references: {} });
+    assert.equal(either.complexType.resolved, '{ a: number; } | { b: string; }');
+  }
+});
