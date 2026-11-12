@@ -2,34 +2,39 @@ import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
+import { bindingName, isMusl, platformKey, unsupportedPlatformError } from './binding.js';
+
 const require = createRequire(import.meta.url);
 
 // The binary for this platform: a local `npm run build:native` first, then the prebuilt package
 // npm installed as an optional dependency.
-const platform = {
-  'linux-x64': 'linux-x64-gnu',
-  'linux-arm64': 'linux-arm64-gnu',
-  'darwin-x64': 'darwin-x64',
-  'darwin-arm64': 'darwin-arm64',
-  'win32-x64': 'win32-x64-msvc',
-}[`${process.platform}-${process.arch}`];
+const musl = isMusl();
+const platform = bindingName(process.platform, process.arch, musl);
+if (!platform) throw unsupportedPlatformError(process.platform, process.arch, musl);
 
 const nativePath = (() => {
   const local = fileURLToPath(new URL(`./stencilrs.${platform}.node`, import.meta.url));
-  if (platform && existsSync(local)) return local;
+  if (existsSync(local)) return local;
   try {
     return require.resolve(`@popcorn245/stencilrs-${platform}`);
-  } catch {
+  } catch (cause) {
     throw new Error(
-      `stencilrs has no prebuilt binary for ${process.platform}-${process.arch}` +
-        (platform ? ` (is @popcorn245/stencilrs-${platform} installed? npm skips it with --no-optional)` : '') +
-        '. Build it from source with Rust: npm run build:native',
+      `stencilrs: the binary for ${platformKey(process.platform, process.arch, musl)} is not installed ` +
+        `(@popcorn245/stencilrs-${platform}; npm skips it with --no-optional or --omit=optional). ` +
+        'Reinstall with optional dependencies, or build it from source with Rust: npm run build:native',
+      { cause },
     );
   }
 })();
 // `analyze` and `transpile` return their result as one JSON string, parsed here: much cheaper
 // than napi building the JS objects property by property.
-const native = require(nativePath);
+const native = (() => {
+  try {
+    return require(nativePath);
+  } catch (cause) {
+    throw new Error(`stencilrs: cannot load the ${platform} binary at ${nativePath}: ${cause.message}`, { cause });
+  }
+})();
 
 /** Changes whenever the native binary does: for build caches keyed on plugin output. */
 export const buildId = (() => {

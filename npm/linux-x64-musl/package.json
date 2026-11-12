@@ -1,0 +1,29 @@
+{
+  "name": "@popcorn245/stencilrs-linux-x64-musl",
+  "version": "0.0.0-development",
+  "cpu": [
+    "x64"
+  ],
+  "main": "stencilrs.linux-x64-musl.node",
+  "files": [
+    "stencilrs.linux-x64-musl.node"
+  ],
+  "description": "Stencil v5 component transforms in Rust (oxc), for Rolldown and tsgo",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "musl"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/popcorn245/StencilRS.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
