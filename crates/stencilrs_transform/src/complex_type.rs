@@ -213,7 +213,10 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 self.anon(Shape::Object(members))
             }
             TSType::TSTypeReference(r) => self.reference(r)?,
-            TSType::TSIntersectionType(_) => return unsupported("an intersection type"),
+            TSType::TSIntersectionType(i) => {
+                let members: Res<Vec<Ty>> = i.types.iter().map(|m| self.eval(m)).collect();
+                self.intersection(members?)?
+            }
             TSType::TSTypeOperatorType(_) => return unsupported("`keyof`, `readonly` or `unique symbol`"),
             TSType::TSTypeQuery(_) => return unsupported("`typeof`"),
             TSType::TSIndexedAccessType(_) => return unsupported("an indexed access type"),
@@ -225,6 +228,47 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             TSType::TSThisType(_) => return unsupported("`this`"),
             _ => return unsupported("this kind of type"),
         })
+    }
+
+    /// `getIntersectionType` for the members this model can reproduce: object-like types
+    /// (object literals, interfaces, functions, tuples, arrays) and at most one of `string`,
+    /// `number`, `bigint` or `symbol` (a brand). The checker distributes an intersection over a
+    /// union, collapses `any`, `never`, `unknown`, literals and clashing primitives, and drops
+    /// `{}`; those are left to Stencil's own compiler.
+    fn intersection(&self, members: Vec<Ty>) -> Res<Ty> {
+        let mut flat: Vec<Ty> = Vec::new();
+        for m in members {
+            match &*m.0 {
+                K::Anon(Anon { shape: Shape::Intersection(inner), .. }) => flat.extend(inner.iter().cloned()),
+                _ => flat.push(m),
+            }
+        }
+        let mut members: Vec<Ty> = Vec::new();
+        let mut primitives = 0;
+        for m in flat {
+            match &*m.0 {
+                K::String | K::Number | K::BigInt | K::Symbol => primitives += 1,
+                K::Ref { .. } | K::Array(..) => {}
+                K::Anon(a) => match &a.shape {
+                    Shape::Object(ms) if !ms.is_empty() => {}
+                    Shape::Function(_) | Shape::Tuple(_) => {}
+                    _ => return unsupported("this member of an intersection type"),
+                },
+                K::Union(..) | K::Enum(_) => return unsupported("a union in an intersection type, which the checker distributes"),
+                _ => return unsupported("this member of an intersection type"),
+            }
+            if !members.iter().any(|e| e.key() == m.key()) {
+                members.push(m);
+            }
+        }
+        if primitives > 1 {
+            return unsupported("an intersection of primitive types");
+        }
+        if members.len() == 1 {
+            return Ok(members.remove(0));
+        }
+        let id = self.reg.intern(&format!("inter {}", members.iter().map(Ty::key).collect::<Vec<_>>().join(",")));
+        Ok(Ty::new(K::Anon(Anon { id, shape: Shape::Intersection(members), alias: None })))
     }
 
     fn anon(&self, shape: Shape) -> Ty {
@@ -607,6 +651,9 @@ impl TypeEnv<'_, '_, '_> {
     pub fn resolve_node(&self, node: &TSType, optional: bool) -> Res<String> {
         if let TSType::TSArrayType(a) = node {
             let inner = self.resolve_node(&a.element_type, false)?;
+            if inner.contains(" & ") {
+                return unsupported("an array of an intersection type");
+            }
             return Ok(if inner.contains(" | ") { format!("({inner})[]") } else { format!("{inner}[]") });
         }
         let mut ty = self.eval(node)?;

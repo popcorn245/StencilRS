@@ -133,6 +133,8 @@ pub enum Shape {
     Text(String),
     /// A lib mapped type (`Record<K, V>`): always printed by its alias.
     Opaque,
+    /// `A & B`: the members in the order written, flattened and without repeats.
+    Intersection(Vec<Ty>),
 }
 
 #[derive(Debug)]
@@ -235,6 +237,10 @@ impl Ty {
         matches!(&*self.0, K::Any | K::Unresolved { .. })
     }
 
+    pub fn is_intersection(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Intersection(_)))
+    }
+
     fn is_function(&self) -> bool {
         matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Function(_)))
     }
@@ -278,6 +284,7 @@ fn clone_shape(s: &Shape) -> Shape {
         Shape::Tuple(es) => Shape::Tuple(es.iter().map(|e| TupleElem { label: e.label.clone(), ty: e.ty.clone(), optional: e.optional, rest: e.rest }).collect()),
         Shape::Text(t) => Shape::Text(t.clone()),
         Shape::Opaque => Shape::Opaque,
+        Shape::Intersection(ms) => Shape::Intersection(ms.clone()),
     }
 }
 
@@ -492,7 +499,7 @@ impl Printer {
             },
             K::Array(el, _) => {
                 let inner = self.print(el, false)?;
-                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1) || el.is_function() { format!("({inner})[]") } else { format!("{inner}[]") }
+                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1) || el.is_function() || el.is_intersection() { format!("({inner})[]") } else { format!("{inner}[]") }
             }
             K::Ref { name, args, .. } | K::Unresolved { name, args } => {
                 self.names.push(name.clone());
@@ -569,6 +576,14 @@ impl Printer {
         match shape {
             Shape::Text(t) => Ok(t.clone()),
             Shape::Opaque => unsupported("a mapped type printed structurally"),
+            Shape::Intersection(ms) => {
+                let mut parts = Vec::new();
+                for m in ms {
+                    let p = self.print(m, false)?;
+                    parts.push(if m.is_function() { format!("({p})") } else { p });
+                }
+                Ok(parts.join(" & "))
+            }
             Shape::Function(sig) => Ok(format!("{} => {}", self.params(&sig.params)?, self.print(&sig.ret, false)?)),
             Shape::Tuple(elems) => {
                 let mut parts = Vec::new();
@@ -660,6 +675,9 @@ fn parse_docs_type(ty: &Ty, parts: &mut BTreeSet<String>) -> Res<()> {
             }
         }
         K::Array(el, _) => {
+            if el.is_intersection() {
+                return unsupported("an array of an intersection type");
+            }
             let mut inner = BTreeSet::new();
             parse_docs_type(el, &mut inner)?;
             let has_true = inner.remove("true");
@@ -758,6 +776,7 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
                     }),
                     Shape::Function(s) => sig_depends(s),
                     Shape::Tuple(es) => es.iter().any(|e| walk(&e.ty, true, false)),
+                    Shape::Intersection(ms) => ms.iter().any(|m| walk(m, true, false)),
                     _ => false,
                 }
             }
@@ -799,6 +818,7 @@ pub fn contains_param(ty: &Ty) -> bool {
                     }),
                     Shape::Function(s) => sig_has_param(s),
                     Shape::Tuple(es) => es.iter().any(|e| contains_param(&e.ty)),
+                    Shape::Intersection(ms) => ms.iter().any(contains_param),
                     _ => false,
                 }
         }
@@ -834,6 +854,7 @@ impl Subst<'_> {
                     Shape::Object(ms) => Shape::Object(ms.iter().map(|m| Member { name: m.name.clone(), optional: m.optional, readonly: m.readonly, kind: self.member(&m.kind) }).collect()),
                     Shape::Function(s) => Shape::Function(self.sig(s)),
                     Shape::Tuple(es) => Shape::Tuple(es.iter().map(|e| TupleElem { label: e.label.clone(), ty: self.apply(&e.ty), optional: e.optional, rest: e.rest }).collect()),
+                    Shape::Intersection(ms) => Shape::Intersection(ms.iter().map(|m| self.apply(m)).collect()),
                     other => clone_shape(other),
                 };
                 Ty::new(K::Anon(Anon { id: self.reg.fresh(), shape, alias: self.alias(&a.alias) }))
