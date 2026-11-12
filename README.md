@@ -23,8 +23,10 @@ npm install --save-dev @popcorn245/stencilrs vite@8 \
   @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25
 ```
 
-Node 22 or newer. Prebuilt binaries ship for Linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and
-Windows x64; no Rust toolchain needed. Other platforms can [build from source](#develop).
+Node 22 or newer. Prebuilt binaries ship for Linux x64/arm64 (glibc 2.17+, and musl, so Alpine
+works), macOS x64/arm64 and Windows x64; no Rust toolchain needed. On any other platform the
+loader fails with an error naming it; you can [build from source](#develop). Install with optional
+dependencies on (no `--omit=optional`), since npm delivers the binary as one.
 
 ## Use it with Vite
 
@@ -155,8 +157,8 @@ Releases are automatic. Pull requests are squash-merged and their titles are
 `main`, [semantic-release](https://semantic-release.gitbook.io) reads the commits since the last tag
 and picks the version (`fix:` patch, `feat:` minor, `BREAKING CHANGE:` major; `docs:`, `chore:`
 and the like release nothing). [`release.yml`](.github/workflows/release.yml) then builds every
-platform, installs each from its packed tarball on its own OS, publishes the five
-`@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs` with provenance, and
+platform, installs each from its packed tarball on its own OS, publishes the
+`@popcorn245/stencilrs-<platform>` packages (seven) and `@popcorn245/stencilrs` with provenance, and
 writes the tag and the GitHub Release. It needs the `NPM_TOKEN` secret.
 
 ## License

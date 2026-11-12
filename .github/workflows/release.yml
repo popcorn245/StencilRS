@@ -1,7 +1,7 @@
 name: release
 
-# Builds the native binary for every platform, installs each one from packed tarballs on its own
-# OS (no Rust involved) and publishes the platform packages and the root package to npm.
+# Builds the native binary for every platform (Linux glibc and musl), installs each one from packed
+# tarballs on its own OS (no Rust involved) and publishes the platform packages and the root package to npm.
 #
 # Releases are semantic-release on main: the conventional commits merged since the last tag pick
 # the version (fix: patch, feat: minor, BREAKING CHANGE: major); no release-worthy commit, no
@@ -73,6 +73,9 @@ jobs:
           # napi's cross toolchain links Linux against glibc 2.17, so old distros load it too.
           - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, flags: --use-napi-cross }
           - { host: ubuntu-latest, target: aarch64-unknown-linux-gnu, flags: --use-napi-cross }
+          # musl (Alpine): cross-built with zig through cargo-zigbuild (`napi build -x`).
+          - { host: ubuntu-latest, target: x86_64-unknown-linux-musl, flags: -x }
+          - { host: ubuntu-latest, target: aarch64-unknown-linux-musl, flags: -x }
           - { host: macos-latest, target: x86_64-apple-darwin }
           - { host: macos-latest, target: aarch64-apple-darwin }
           - { host: windows-latest, target: x86_64-pc-windows-msvc }
@@ -99,6 +102,11 @@ jobs:
 
       - run: npm ci --ignore-scripts
 
+      # napi's -x builds with cargo-zigbuild, which needs zig (both from PyPI).
+      - name: Install zig and cargo-zigbuild
+        if: ${{ contains(matrix.flags, '-x') }}
+        run: pip3 install ziglang cargo-zigbuild
+
       - name: Build
         shell: bash
         run: npm run build:native -- --target ${{ matrix.target }} ${{ matrix.flags }}
@@ -124,7 +132,9 @@ jobs:
         include:
           - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, platform: linux-x64-gnu }
           - { host: ubuntu-latest, target: x86_64-unknown-linux-gnu, platform: linux-x64-gnu, container: 'node:22-bullseye' }
+          - { host: ubuntu-latest, target: x86_64-unknown-linux-musl, platform: linux-x64-musl, alpine: true }
           - { host: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, platform: linux-arm64-gnu }
+          - { host: ubuntu-24.04-arm, target: aarch64-unknown-linux-musl, platform: linux-arm64-musl, alpine: true }
           - { host: macos-15-intel, target: x86_64-apple-darwin, platform: darwin-x64 }
           - { host: macos-latest, target: aarch64-apple-darwin, platform: darwin-arm64 }
           - { host: windows-latest, target: x86_64-pc-windows-msvc, platform: win32-x64-msvc }
@@ -135,7 +145,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
-        if: ${{ !matrix.container }}
+        if: ${{ !matrix.container && !matrix.alpine }}
         with:
           node-version: 22
 
@@ -151,19 +161,17 @@ jobs:
           npm pack --pack-destination "$RUNNER_TEMP/pkgs"
 
       - name: Install and load
-        working-directory: ${{ runner.temp }}/app
+        if: ${{ !matrix.alpine }}
+        run: bash scripts/install-smoke.sh "$RUNNER_TEMP/pkgs" "$RUNNER_TEMP/app"
+
+      # Alpine (musl) runs in `docker run` rather than as the job container: the runner's own
+      # node (for the checkout and artifact actions) is not built for musl. The image is
+      # multi-arch, so the arm64 runner gets arm64 Alpine.
+      - name: Install and load (node:22-alpine)
+        if: ${{ matrix.alpine }}
         run: |
-          npm init -y >/dev/null
-          npm install --legacy-peer-deps --no-audit --no-fund "$RUNNER_TEMP"/pkgs/*.tgz
-          node --input-type=module -e "
-            import { analyze } from '@popcorn245/stencilrs';
-            const { components } = analyze(
-              \"import { Component } from '@stencil/core'; @Component({ tag: 'cmp-a' }) export class A {}\",
-              'a.tsx',
-            );
-            if (components[0]?.tagName !== 'cmp-a') throw new Error(JSON.stringify(components));
-            console.log('loaded on', process.platform, process.arch);
-          "
+          docker run --rm -v "$RUNNER_TEMP:/tmp/runner" -v "$PWD/scripts:/scripts:ro" node:22-alpine \
+            sh /scripts/install-smoke.sh /tmp/runner/pkgs /tmp/runner/app
 
   publish:
     if: ${{ !cancelled() && needs.version.outputs.version && needs.test.result == 'success' }}
