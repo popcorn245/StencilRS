@@ -1,0 +1,205 @@
+{
+  "tag": "build-nav-link",
+  "properties": [
+    {
+      "name": "component",
+      "complexType": {
+        "original": "ComponentRef",
+        "resolved": "Function | HTMLElement | null | string | undefined",
+        "references": {
+          "ComponentRef": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentRef",
+            "referenceLocation": "ComponentRef"
+          }
+        }
+      }
+    },
+    {
+      "name": "componentProps",
+      "complexType": {
+        "original": "ComponentProps",
+        "resolved": "T | undefined",
+        "references": {
+          "ComponentProps": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentProps",
+            "referenceLocation": "ComponentProps"
+          }
+        }
+      }
+    },
+    {
+      "name": "custom",
+      "complexType": {
+        "original": "CustomEvent",
+        "resolved": "CustomEvent<any> | undefined",
+        "references": {
+          "CustomEvent": {
+            "location": "global",
+            "id": "global::CustomEvent"
+          }
+        }
+      }
+    },
+    {
+      "name": "customOf",
+      "complexType": {
+        "original": "CustomEvent<string>",
+        "resolved": "CustomEvent<string> | undefined",
+        "references": {
+          "CustomEvent": {
+            "location": "global",
+            "id": "global::CustomEvent"
+          }
+        }
+      }
+    },
+    {
+      "name": "detail",
+      "complexType": {
+        "original": "OverlayEventDetail",
+        "resolved": "OverlayEventDetail<any> | undefined",
+        "references": {
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        }
+      }
+    },
+    {
+      "name": "detailOf",
+      "complexType": {
+        "original": "OverlayEventDetail<string>",
+        "resolved": "OverlayEventDetail<string> | undefined",
+        "references": {
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        }
+      }
+    },
+    {
+      "name": "handler",
+      "complexType": {
+        "original": "Function",
+        "resolved": "Function | undefined",
+        "references": {
+          "Function": {
+            "location": "global",
+            "id": "global::Function"
+          }
+        }
+      }
+    },
+    {
+      "name": "refs",
+      "complexType": {
+        "original": "ComponentRef[]",
+        "resolved": "(Function | HTMLElement | null | string)[]",
+        "references": {
+          "ComponentRef": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentRef",
+            "referenceLocation": "ComponentRef"
+          }
+        }
+      }
+    },
+    {
+      "name": "typed",
+      "complexType": {
+        "original": "ComponentProps<string>",
+        "resolved": "string | undefined",
+        "references": {
+          "ComponentProps": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentProps",
+            "referenceLocation": "ComponentProps"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "navChange",
+      "complexType": {
+        "original": "OverlayEventDetail",
+        "resolved": "OverlayEventDetail<any>",
+        "references": {
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        }
+      }
+    },
+    {
+      "name": "navProps",
+      "complexType": {
+        "original": "ComponentProps",
+        "resolved": "T",
+        "references": {
+          "ComponentProps": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentProps",
+            "referenceLocation": "ComponentProps"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "setRoot",
+      "complexType": {
+        "signature": "(root: ComponentRef, props?: ComponentProps) => Promise<boolean>",
+        "parameters": [
+          {
+            "name": "root",
+            "type": "string | Function | HTMLElement | null",
+            "docs": ""
+          },
+          {
+            "name": "props",
+            "type": "ComponentProps | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "ComponentRef": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentRef",
+            "referenceLocation": "ComponentRef"
+          },
+          "ComponentProps": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentProps",
+            "referenceLocation": "ComponentProps"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    }
+  ]
+}

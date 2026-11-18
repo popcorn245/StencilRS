@@ -1,0 +1,60 @@
+{
+  "tag": "build-inferred",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "addRipple",
+      "complexType": {
+        "signature": "(x: number, y: number) => Promise<() => number>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "number",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "number",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<() => number>"
+      }
+    },
+    {
+      "name": "canTransition",
+      "complexType": {
+        "signature": "() => Promise<boolean>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "getProgress",
+      "complexType": {
+        "signature": "() => Promise<number>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<number>"
+      }
+    }
+  ]
+}

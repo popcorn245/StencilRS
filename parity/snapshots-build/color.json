@@ -1,0 +1,125 @@
+{
+  "tag": "build-color",
+  "properties": [
+    {
+      "name": "color",
+      "complexType": {
+        "original": "Color",
+        "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        }
+      }
+    },
+    {
+      "name": "colors",
+      "complexType": {
+        "original": "Color[]",
+        "resolved": "(\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never>)[]",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        }
+      }
+    },
+    {
+      "name": "mode",
+      "complexType": {
+        "original": "Mode",
+        "resolved": "\"ios\" | \"md\" | undefined",
+        "references": {
+          "Mode": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Mode",
+            "referenceLocation": "Mode"
+          }
+        }
+      }
+    },
+    {
+      "name": "required",
+      "complexType": {
+        "original": "Color",
+        "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never>",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        }
+      }
+    },
+    {
+      "name": "role",
+      "complexType": {
+        "original": "LiteralUnion<'cancel' | 'destructive', string>",
+        "resolved": "\"cancel\" | \"destructive\" | string & Record<never, never> | undefined",
+        "references": {
+          "LiteralUnion": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::LiteralUnion",
+            "referenceLocation": "LiteralUnion"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "colorChange",
+      "complexType": {
+        "original": "Color",
+        "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never>",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "setColor",
+      "complexType": {
+        "signature": "(color: Color) => Promise<Color>",
+        "parameters": [
+          {
+            "name": "color",
+            "type": "PredefinedColors | (string & Record<never, never>)",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        },
+        "return": "Promise<Color>"
+      }
+    }
+  ]
+}

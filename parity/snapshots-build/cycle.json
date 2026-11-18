@@ -1,0 +1,67 @@
+{
+  "tag": "build-cycle",
+  "properties": [
+    {
+      "name": "one",
+      "complexType": {
+        "original": "NavComponentWithProps<string>",
+        "resolved": "NavComponentWithProps<string> | undefined",
+        "references": {
+          "NavComponentWithProps": {
+            "location": "import",
+            "path": "../nav-interface",
+            "id": "src/nav-interface.ts::NavComponentWithProps",
+            "referenceLocation": "NavComponentWithProps"
+          }
+        }
+      }
+    },
+    {
+      "name": "pages",
+      "complexType": {
+        "original": "NavComponentWithProps[]",
+        "resolved": "NavComponentWithProps<any>[]",
+        "references": {
+          "NavComponentWithProps": {
+            "location": "import",
+            "path": "../nav-interface",
+            "id": "src/nav-interface.ts::NavComponentWithProps",
+            "referenceLocation": "NavComponentWithProps"
+          }
+        }
+      }
+    },
+    {
+      "name": "props",
+      "complexType": {
+        "original": "ComponentProps",
+        "resolved": "T | undefined",
+        "references": {
+          "ComponentProps": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::ComponentProps",
+            "referenceLocation": "ComponentProps"
+          }
+        }
+      }
+    },
+    {
+      "name": "root",
+      "complexType": {
+        "original": "NavComponent",
+        "resolved": "Function | HTMLElement | null | number | string | undefined",
+        "references": {
+          "NavComponent": {
+            "location": "import",
+            "path": "../nav-interface",
+            "id": "src/nav-interface.ts::NavComponent",
+            "referenceLocation": "NavComponent"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": []
+}

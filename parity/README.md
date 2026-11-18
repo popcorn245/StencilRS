@@ -66,6 +66,25 @@ metadata, diagnostics, imports).
   oxc's printer with comments dropped (`normalize()`), then compared exactly. Formatting
   (TypeScript's indentation, quotes, blank lines) is not compared; every token is.
 
+## The `build` suite: types across files
+
+`transpileSync` sees one file and has no lib.d.ts, so a type from another file, `Function`,
+`Record<K, V>` or `Promise<T>` is `any` in every suite above. `fixtures/build/` is a small project
+instead (an `interface.d.ts` with the shapes Ionic gives its components, and components that
+import from it), built as a whole by Stencil with the `docs-json` output target:
+
+```sh
+node build.mjs --snapshot   # build with Stencil v5, write snapshots-build/<component>.json
+node build.mjs [--verbose]  # stencilrs (resolveImports + complexTypes) against those snapshots
+```
+
+Each snapshot holds the `complexType` of every prop, event and method (`original`, `resolved`,
+`references`; for a method the signature, parameters and return type). stencilrs must print the
+same text, or report a `stencilrs:` error for the member, which is counted apart and left out
+(the cue to compile with Stencil). Any other difference fails the run. The fallbacks that remain
+are the ones that need the checker; `docs/quirks.md` lists them. The snapshot is built in a
+temporary copy of the project, so Stencil's generated files never land in the fixtures.
+
 ## Scoped CSS
 
 ```sh

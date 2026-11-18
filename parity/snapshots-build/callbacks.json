@@ -1,0 +1,121 @@
+{
+  "tag": "build-callbacks",
+  "properties": [
+    {
+      "name": "done",
+      "complexType": {
+        "original": "Callback",
+        "resolved": "((ok: boolean) => void) | undefined",
+        "references": {
+          "Callback": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Callback",
+            "referenceLocation": "Callback"
+          }
+        }
+      }
+    },
+    {
+      "name": "doneOrNull",
+      "complexType": {
+        "original": "Callback | null",
+        "resolved": "((ok: boolean) => void) | null | undefined",
+        "references": {
+          "Callback": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Callback",
+            "referenceLocation": "Callback"
+          }
+        }
+      }
+    },
+    {
+      "name": "handlers",
+      "complexType": {
+        "original": "Handlers",
+        "resolved": "Handlers | undefined",
+        "references": {
+          "Handlers": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Handlers",
+            "referenceLocation": "Handlers"
+          }
+        }
+      }
+    },
+    {
+      "name": "list",
+      "complexType": {
+        "original": "Callback[]",
+        "resolved": "(ok: boolean) => void[]",
+        "references": {
+          "Callback": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Callback",
+            "referenceLocation": "Callback"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "finished",
+      "complexType": {
+        "original": "Callback",
+        "resolved": "(ok: boolean) => void",
+        "references": {
+          "Callback": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Callback",
+            "referenceLocation": "Callback"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "run",
+      "complexType": {
+        "signature": "(done?: Callback, handlers?: Handlers) => Promise<Callback | undefined>",
+        "parameters": [
+          {
+            "name": "done",
+            "type": "Callback | undefined",
+            "docs": ""
+          },
+          {
+            "name": "handlers",
+            "type": "Handlers | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Callback": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Callback",
+            "referenceLocation": "Callback"
+          },
+          "Handlers": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Handlers",
+            "referenceLocation": "Handlers"
+          }
+        },
+        "return": "Promise<Callback | undefined>"
+      }
+    }
+  ]
+}
