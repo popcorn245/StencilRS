@@ -1,0 +1,446 @@
+{
+  "schema": 1,
+  "complete": true,
+  "preview": true,
+  "note": "Preview from a shared, noisy cloud container (other agents' builds ran at the same time); not the quiet-machine run.",
+  "startedAt": "2026-11-18T09:47:13.027Z",
+  "finishedAt": "2026-11-18T10:19:33.492Z",
+  "runs": 10,
+  "steps": ["cold", "warm", "dev", "edit", "transpile"],
+  "machine": {
+    "description": "cloud container (shared)",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logicalCores": 4,
+    "ramGiB": 16,
+    "os": "Linux 6.18.44-fc-v595",
+    "platform": "linux-x64",
+    "node": "22.23.5",
+    "loadavgAtStart": [4.25, 6.51, 4.71]
+  },
+  "versions": {
+    "stencil4": "4.45.4",
+    "stencil5": "5.0.0-beta.25",
+    "typescriptInStencil4": "5.8.3 (bundled)",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "sass": "1.99.0",
+    "stencilrs": {
+      "package": "0.0.0-development",
+      "git": "fa9055b3b893b4f4585726138f4cbc560e9e3b41",
+      "dirty": true
+    },
+    "ionic": {
+      "tag": "v9.0.12",
+      "commit": "3b52976fd9187661b108481e87fe4c72ef9eca9b"
+    }
+  },
+  "rows": {
+    "stencil4": "Ionic stock: stencil build, Stencil 4",
+    "stencil": "StencilJS v5: stencil build",
+    "stencilrs": "stencilrs: vite build"
+  },
+  "metrics": {
+    "coldBuild": {
+      "title": "Cold build",
+      "unit": "ms",
+      "what": "fresh process, build caches removed first; the Stencil rows include the Sass step for css/",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 27062.5,
+          "min": 26034,
+          "max": 28033,
+          "samples": [27923, 26786, 26034, 26639, 27482, 26910, 28033, 27047, 27254, 27078]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 24141,
+          "min": 23352,
+          "max": 24722,
+          "samples": [23762, 24692, 23352, 24136, 24722, 24640, 24146, 23874, 23511, 24232]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 4203.5,
+          "min": 4071,
+          "max": 4358,
+          "samples": [4166, 4241, 4088, 4358, 4259, 4071, 4299, 4150, 4138, 4339]
+        }
+      }
+    },
+    "coldBuildCssStep": {
+      "title": "Cold build: of which the separate Sass step for css/",
+      "unit": "ms",
+      "what": "stencil build leaves Ionic's global css/ to a second command; stencilrs builds it in the same run (not counted here)",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 732.5,
+          "min": 660,
+          "max": 766,
+          "samples": [668, 747, 721, 688, 766, 660, 752, 762, 715, 744]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 737.5,
+          "min": 682,
+          "max": 805,
+          "samples": [682, 781, 705, 805, 805, 773, 751, 712, 702, 724]
+        }
+      }
+    },
+    "peakRss": {
+      "title": "Peak memory, cold build",
+      "unit": "MiB",
+      "what": "sum of the RSS of the whole process tree (workers included), peak of samples every 250 ms",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 1994,
+          "min": 1826,
+          "max": 2069,
+          "samples": [1994, 1826, 1867, 1994, 2012, 2069, 1884, 1998, 1966, 2055]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 1996,
+          "min": 1934,
+          "max": 2029,
+          "samples": [2018, 1992, 1934, 2020, 2029, 1993, 2018, 1999, 1986, 1978]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 559.5,
+          "min": 539,
+          "max": 584,
+          "samples": [551, 561, 539, 544, 563, 557, 571, 584, 565, 558]
+        }
+      }
+    },
+    "warmBuild": {
+      "title": "Warm rebuild",
+      "unit": "ms",
+      "what": "the same command again, caches kept; the first, discarded build primes them (Stencil's .stencil, Vite's cache)",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 26090.5,
+          "min": 24893,
+          "max": 32020,
+          "samples": [25335, 26701, 26118, 26063, 25647, 24893, 26306, 26022, 32020, 31835]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 28521.5,
+          "min": 26093,
+          "max": 35199,
+          "samples": [28836, 28171, 26501, 29776, 26377, 29548, 28207, 30943, 35199, 26093]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 4996,
+          "min": 4192,
+          "max": 6497,
+          "samples": [5180, 4930, 5016, 4976, 4597, 4783, 5068, 5891, 6497, 4192]
+        }
+      }
+    },
+    "devStart": {
+      "title": "Dev server: start to ion-button",
+      "unit": "ms",
+      "what": "fresh process, caches removed, until the compiled ion-button module answers 200",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 14943,
+          "min": 13846,
+          "max": 20065,
+          "samples": [14944, 13846, 20065, 14044, 15485, 14942, 15410, 15513, 14501, 14037]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 12599,
+          "min": 11210,
+          "max": 15544,
+          "samples": [13050, 11210, 12299, 12893, 13009, 15544, 12305, 12180, 11418, 14035]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 654.5,
+          "min": 620,
+          "max": 1066,
+          "samples": [657, 1066, 633, 665, 645, 620, 669, 652, 629, 732]
+        }
+      }
+    },
+    "devStartClosure": {
+      "title": "Dev server: start to everything ion-button imports",
+      "unit": "ms",
+      "what": "the same, plus every module the page would then fetch (the import closure of ion-button)",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 14962.5,
+          "min": 13865,
+          "max": 20095,
+          "samples": [14964, 13865, 20095, 14067, 15503, 14961, 15433, 15531, 14529, 14054]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 12619,
+          "min": 11249,
+          "max": 15563,
+          "samples": [13073, 11249, 12311, 12922, 13026, 15563, 12316, 12194, 11435, 14073]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 1302,
+          "min": 1187,
+          "max": 1443,
+          "samples": [1307, 1404, 1312, 1346, 1260, 1187, 1297, 1289, 1214, 1443]
+        }
+      }
+    },
+    "devModules": {
+      "title": "Modules fetched for ion-button",
+      "unit": "count",
+      "what": "size of that closure",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 7,
+          "min": 7,
+          "max": 7,
+          "samples": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 8,
+          "min": 8,
+          "max": 8,
+          "samples": [8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 23,
+          "min": 23,
+          "max": 23,
+          "samples": [23, 23, 23, 23, 23, 23, 23, 23, 23, 23]
+        }
+      }
+    },
+    "devPeakRss": {
+      "title": "Peak memory, dev server",
+      "unit": "MiB",
+      "what": "from start through the edit",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 1681,
+          "min": 1455,
+          "max": 1691,
+          "samples": [1690, 1657, 1690, 1691, 1682, 1680, 1455, 1643, 1683, 1665]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 1669,
+          "min": 1542,
+          "max": 1690,
+          "samples": [1672, 1674, 1671, 1542, 1655, 1682, 1664, 1667, 1666, 1690]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 333.5,
+          "min": 330,
+          "max": 341,
+          "samples": [340, 332, 333, 337, 333, 332, 341, 334, 339, 330]
+        }
+      }
+    },
+    "editRebuild": {
+      "title": "Edit one component, rebuild",
+      "unit": "ms",
+      "what": "one line added to button.tsx while watching (Stencil: the dev server process; stencilrs: vite build --watch), until the rebuild has finished",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 3668,
+          "min": 3321,
+          "max": 5155,
+          "samples": [3898, 3321, 5155, 3507, 3709, 3380, 3809, 3840, 3546, 3627]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 602,
+          "min": 590,
+          "max": 840,
+          "samples": [597, 595, 638, 590, 602, 727, 613, 601, 602, 840]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 3478,
+          "min": 3315,
+          "max": 4365,
+          "samples": [3327, 4365, 3379, 3518, 3474, 3482, 3682, 3315, 3424, 4049]
+        }
+      }
+    },
+    "editRebuildReported": {
+      "title": "Edit one component: the tool's own figure",
+      "unit": "ms",
+      "what": "the duration Stencil / Vite print for that rebuild",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 3460,
+          "min": 3200,
+          "max": 4830,
+          "samples": [3550, 3200, 4830, 3390, 3600, 3270, 3540, 3530, 3300, 3280]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 570,
+          "min": 561,
+          "max": 802,
+          "samples": [568, 561, 604, 561, 564, 698, 584, 566, 572, 802]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 3471.5,
+          "min": 3310,
+          "max": 4361,
+          "samples": [3320, 4361, 3373, 3511, 3469, 3474, 3677, 3310, 3419, 4045]
+        }
+      }
+    },
+    "editDevTransform": {
+      "title": "Edit one component: Vite dev re-transform",
+      "unit": "ms",
+      "what": "stencilrs row only: edit, then a request for the module until it carries the edit",
+      "rows": {
+        "stencilrs": {
+          "n": 10,
+          "median": 49,
+          "min": 20,
+          "max": 80,
+          "samples": [45, 54, 50, 80, 43, 55, 47, 57, 48, 20]
+        }
+      }
+    },
+    "transpileCold": {
+      "title": "Per-file transform of all components: cold pass",
+      "unit": "ms",
+      "what": "first pass over every @Component file in a fresh process (stencilrs transpile, Stencil transpileSync), source maps on",
+      "corpus": {
+        "stencil4": { "files": 95, "kib": 1044, "compilerVersion": "4.45.4", "errorDiagnostics": 0, "outKib": 1133 },
+        "stencil": { "files": 95, "kib": 1046, "compilerVersion": "5.0.0-beta.25", "errorDiagnostics": 34, "outKib": 1120 },
+        "stencilrs": { "files": 95, "kib": 1046, "compilerVersion": "0.0.0-development", "errorDiagnostics": 40, "outKib": 825 }
+      },
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 2671,
+          "min": 2324,
+          "max": 3753,
+          "samples": [3753, 3569, 2725, 2469, 2445, 2617, 2514, 3333, 2972, 2324]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 2867,
+          "min": 2625,
+          "max": 4096,
+          "samples": [4096, 4076, 2805, 2680, 2827, 2692, 2907, 3565, 3398, 2625]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 77,
+          "min": 71,
+          "max": 99,
+          "samples": [77, 77, 76, 99, 77, 71, 76, 73, 97, 79]
+        }
+      }
+    },
+    "transpileWarm": {
+      "title": "Per-file transform of all components: warm pass",
+      "unit": "ms",
+      "what": "median of the passes after the first (4 per process)",
+      "rows": {
+        "stencil4": {
+          "n": 10,
+          "median": 1581,
+          "min": 1487,
+          "max": 1839,
+          "samples": [1839, 1706, 1627, 1487, 1520, 1568, 1559, 1594, 1777, 1562]
+        },
+        "stencil": {
+          "n": 10,
+          "median": 1774.5,
+          "min": 1631,
+          "max": 2071,
+          "samples": [2071, 1686, 1631, 1726, 1765, 1789, 1844, 1880, 1784, 1720]
+        },
+        "stencilrs": {
+          "n": 10,
+          "median": 65,
+          "min": 57,
+          "max": 71,
+          "samples": [66, 64, 67, 57, 70, 63, 62, 58, 71, 66]
+        }
+      }
+    }
+  },
+  "output": {
+    "stencil4": {
+      "files": 2643,
+      "rawBytes": 14257701,
+      "gzipBytes": 3661431,
+      "js": {
+        "rawBytes": 9559566,
+        "gzipBytes": 2235091
+      },
+      "css": {
+        "rawBytes": 1542711,
+        "gzipBytes": 270240
+      },
+      "other": {
+        "rawBytes": 3155424,
+        "gzipBytes": 1156100
+      }
+    },
+    "stencil": {
+      "files": 499,
+      "rawBytes": 5487004,
+      "gzipBytes": 1203749,
+      "js": {
+        "rawBytes": 4046581,
+        "gzipBytes": 1041896
+      },
+      "css": {
+        "rawBytes": 166801,
+        "gzipBytes": 28608
+      },
+      "other": {
+        "rawBytes": 1273622,
+        "gzipBytes": 133245
+      }
+    },
+    "stencilrs": {
+      "files": 42,
+      "rawBytes": 1373033,
+      "gzipBytes": 281819,
+      "js": {
+        "rawBytes": 1206232,
+        "gzipBytes": 253211
+      },
+      "css": {
+        "rawBytes": 166801,
+        "gzipBytes": 28608
+      },
+      "other": {
+        "rawBytes": 0,
+        "gzipBytes": 0
+      }
+    }
+  },
+  "errors": []
+}

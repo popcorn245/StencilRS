@@ -3,7 +3,7 @@
 [Ionic Framework](https://github.com/ionic-team/ionic-framework)'s `core` (MIT, 94 components, per-mode
 iOS / Material Sass, the largest open-source Stencil code base) is the real-world test subject for stencilrs.
 This folder fetches it, migrates a copy to Stencil v5, builds it with `stencil build` and with stencilrs'
-Vite plugin, and checks both in headless Chrome. A later issue benchmarks all three builds (#65).
+Vite plugin, and checks both in headless Chrome. `npm run bench` benchmarks all three builds (below).
 
 Ionic's source is **never committed** (see `THIRD_PARTY_NOTICES.md`). Everything under it is generated from
 upstream plus the checked-in codemod, so the whole thing is reproducible.
@@ -18,6 +18,7 @@ npm run build:stencil4       # the stock Ionic 9 / Stencil 4.45.4 build -> dist-
 npm run build:stencilrs      # the same migrated/ source through @popcorn245/stencilrs/vite -> dist-stencilrs/
 npm run check                # both builds in headless Chrome: smoke, screenshots, all 94 components, no fallbacks
 npm run all                  # fetch, migrate, build:stencil, smoke
+npm run bench                # cold/warm build, dev server, watch rebuild, per-file transform, memory, size -> site/data/benchmarks-ionic.json
 ```
 
 `npm run smoke -- stencil4|stencilrs` runs the same page against the Stencil 4 build. `--shots <dir>` moves the
@@ -157,3 +158,13 @@ it, and the same as `@stencil/unplugin`): about 30 of the 96 component styleshee
 without Stencil's `:lang()` fallbacks, `-webkit-` prefixes, `background: none` as `0 0`, `bold` as `700`,
 `(min-width: 576px)` as `(width >= 576px)`, and `translate3d(x, 0, 0)` as `translate(x)`, which drops the
 compositing layer and is why the ios toggle's edges differ by a few levels.
+
+## Benchmark (`npm run bench`)
+
+`bench.mjs` times the three builds against each other and writes every raw sample, the machine and the versions to
+`../../site/data/benchmarks-ionic.json`, which the Benchmarks page of the site renders (method, caveats and tables are there).
+It fetches, migrates and prepares the Stencil 4 toolchain itself if they are missing, and takes about 50 minutes at the default
+10 runs (`--runs N`, `--rows`, `--steps`, `--out`, `--preview`; `--help`). Each step has a timeout; every child is in its own process group and is
+killed with its tree on exit, Ctrl-C or timeout (dev servers included); ports are chosen free; the edited `button.tsx` is restored on every exit path.
+For the benchmark the configs read `IONIC_STENCIL_CACHE=1` (Stencil's cache on, so a warm build can use it); `build:*` leave it off.
+`.bench/` (git-ignored) holds the outputs.
