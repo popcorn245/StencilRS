@@ -45,6 +45,11 @@ pub struct JsTranspileOptions {
     /// Compile the file as base classes for components to extend (Stencil's
     /// `transformAsBaseClass`). Default false.
     pub transform_as_base_class: Option<bool>,
+    /// TypeScript's `useDefineForClassFields`. Default true. False: field initializers become
+    /// assignments in the constructor, after the host is registered (what Stencil emits for a
+    /// project whose tsconfig says `useDefineForClassFields: false`), and fields without an
+    /// initializer are dropped.
+    pub use_define_for_class_fields: Option<bool>,
     /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
     /// `"module"`, `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil) or `"ssr"`
     /// (the hydrate / server-side rendering shape).
@@ -94,6 +99,7 @@ impl JsTranspileOptions {
             complex_types: self.complex_types.unwrap_or(false),
             source_map: self.source_map.unwrap_or(true),
             transform_as_base_class: self.transform_as_base_class.unwrap_or(false),
+            use_define_for_class_fields: self.use_define_for_class_fields.unwrap_or(true),
         })
     }
 }

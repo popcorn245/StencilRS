@@ -43,6 +43,8 @@ const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
+// What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
+const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 
 /** @stencil/unplugin's `resolveSpecifier`, which stencilrs' ancestor walk mirrors. */
 const resolveSpecifier = (specifier, importer) => {
@@ -62,16 +64,20 @@ const jsxFor = (code, tsconfigJsx) => {
   return IMPORTS_H_RE.test(code) ? { jsx: 'classic' } : { jsx: 'automatic', jsxImportSource: '@stencil/core' };
 };
 
-const readTsconfigJsx = (root) => {
+const readTsconfigOptions = (root) => {
   const path = join(root, 'tsconfig.json');
-  if (!existsSync(path)) return null;
+  if (!existsSync(path)) return {};
   try {
     const raw = readFileSync(path, 'utf8').replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    const co = JSON.parse(raw).compilerOptions ?? {};
-    return co.jsx ? { jsx: String(co.jsx).toLowerCase(), jsxImportSource: co.jsxImportSource } : null;
+    return JSON.parse(raw).compilerOptions ?? {};
   } catch {
-    return null;
+    return {};
   }
+};
+
+const readTsconfigJsx = (root) => {
+  const co = readTsconfigOptions(root);
+  return co.jsx ? { jsx: String(co.jsx).toLowerCase(), jsxImportSource: co.jsxImportSource } : null;
 };
 
 /** @stencil/unplugin's Vite HMR client snippet (transform.ts `buildHmrSnippet`). */
@@ -100,15 +106,18 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { fallback?: boolean, verbose?: boolean, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
+ *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
+ *   Vite build leaves at their defaults (all features on, `hydrateClientSide` too). A client-only library
+ *   sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate output target.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', ...stencilOptions } = options;
+  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -124,6 +133,12 @@ export function stencilrs(options = {}) {
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let tsconfigJsx = null;
+  // A tsconfig with `useDefineForClassFields: false` (Stencil projects set it, so that a @Prop default is a
+  // plain assignment) is honoured as Stencil does: stencilrs emits the initializers as constructor
+  // assignments after `__registerHost()`. Left as class fields, Vite's own TypeScript transform (which
+  // reads the same tsconfig) would move them into the constructor ahead of it, and no prop would keep
+  // its default.
+  let useDefineForClassFields = true;
   const fileToTag = new Map();
   const counts = { stencilrs: 0, stencil: 0 };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
@@ -182,6 +197,8 @@ export function stencilrs(options = {}) {
       foldFlags = config.command === 'build' && !specPage;
       root = config.root;
       tsconfigJsx = readTsconfigJsx(root);
+      // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
+      useDefineForClassFields = readTsconfigOptions(root).useDefineForClassFields !== false;
     },
 
     configureServer(server) {
@@ -226,7 +243,7 @@ export function stencilrs(options = {}) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const result = await transpileAsync(code, { file, resolveImports, componentExport, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
+      const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {
@@ -255,6 +272,7 @@ export function stencilrs(options = {}) {
 
       const overrides = {
         ...(SIGNALS_IMPORT_RE.test(code) ? { vdomSignals: true } : {}),
+        ...buildFlags,
         ...(isDev && !ssr && !specPage ? { hotModuleReplacement: true, isDev: true } : {}),
       };
       const mutations = Object.entries(overrides)
@@ -281,6 +299,13 @@ export function stencilrs(options = {}) {
     async resolveId(id, importer) {
       // As @stencil/unplugin: one platform instance for the whole test file.
       if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
+      // A file that is not a component (a util, a global script) importing `getMode`, `setMode`, `writeTask`,
+      // `h`... from '@stencil/core' gets the runtime the compiled components use. `@stencil/core`'s own
+      // entry is a separate, minimal client whose mode resolver, task queue and vdom state the components
+      // never see (`stencil build` rewrites these imports the same way).
+      if (id === '@stencil/core' && importer && !specPage && !ssr && !importer.startsWith('\0')) {
+        return this.resolve(RUNTIME_ID, importer, { skipSelf: true });
+      }
       if (importer) {
         if (serveCss) {
           const css = resolveStencilCss(id, importer);
@@ -317,7 +342,7 @@ export function stencilrs(options = {}) {
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
       const code = readFileSync(file, 'utf8');
-      const result = transpile(code, { file, resolveImports, componentExport, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
+      const result = transpile(code, { file, resolveImports, componentExport, useDefineForClassFields, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
       if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
         // As @stencil/unplugin's `transpileBaseClass`.

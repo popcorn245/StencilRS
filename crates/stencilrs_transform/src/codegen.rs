@@ -110,6 +110,13 @@ pub struct CodegenOptions2 {
     /// `transformAsBaseClass`, which @stencil/unplugin uses for the files ancestors live in):
     /// `extends HTMLElement` where a class extends nothing, and a constructor calling `super()`.
     pub transform_as_base_class: bool,
+    /// TypeScript's `useDefineForClassFields`, which is on at an ES2022 target. Off (a Stencil
+    /// project's `tsconfig` usually says so): a field's initializer is an assignment in the
+    /// constructor after the host is registered, as in Stencil's output, and fields without an
+    /// initializer are dropped, so nothing shadows the property accessors the runtime defines on
+    /// the prototype, and a tool that lowers class fields later cannot move the initializers ahead
+    /// of `__registerHost()`.
+    pub use_define_for_class_fields: bool,
 }
 
 /// A generated module and, when asked for, its source map (v3 JSON).
@@ -302,6 +309,8 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         }
 
         let mut element_replaced = false;
+        // `useDefineForClassFields: false`: instance field initializers, to run in the constructor.
+        let mut field_assignments: Vec<String> = Vec::new();
         let mut ctor: Option<&MethodDefinition> = None;
         let mut connected: Option<&MethodDefinition> = None;
         for el in &class.body.body {
@@ -319,6 +328,22 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                 continue;
             }
             match el {
+                ClassElement::PropertyDefinition(p)
+                    if !opts.use_define_for_class_fields && !p.r#static && !p.declare && !p.computed && !(key_name.is_some() && key_name == cmp.element_ref) =>
+                {
+                    if let (Some(name), Some(value)) = (&key_name, &p.value) {
+                        let (start, end) = (value.span().start as usize, value.span().end);
+                        if let Some(eq) = source[..start].rfind('=') {
+                            ed.remove(eq as u32, end);
+                            let target = if name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '$') && !name.starts_with(|c: char| c.is_ascii_digit()) {
+                                format!("this.{name}")
+                            } else {
+                                format!("this[{}]", json(name))
+                            };
+                            field_assignments.push(format!("{target} = {};", text(value.span())));
+                        }
+                    }
+                }
                 ClassElement::PropertyDefinition(p) if !p.r#static && key_name.is_some() && key_name == cmp.element_ref => {
                     ed.replace(p.span.start, p.span.end, element_getter(key_name.as_deref().unwrap_or_default(), lazy));
                     element_replaced = true;
@@ -349,6 +374,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                     stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
                 }
             }
+            stmts.append(&mut field_assignments.clone());
             // `updateConstructor`: the `hostRef` parameter first, `super()` only where the class extends.
             match ctor {
                 Some(c) => {
@@ -391,6 +417,7 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                     stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
                 }
             }
+            stmts.append(&mut field_assignments);
             // `super(false)` when an ancestor was found (`cmp.doesExtend`), not merely when the class has an `extends`.
             let super_call = if cmp.does_extend { "super(false);" } else { "super();" };
             match ctor {
@@ -1309,6 +1336,7 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
         jsx_pragma: "h".into(),
         jsx_pragma_frag: "Fragment".into(),
         only_remove_type_imports: false,
+        remove_class_fields_without_initializer: !opts.use_define_for_class_fields,
         ..TypeScriptOptions::default()
     };
     options.jsx = match &opts.jsx {

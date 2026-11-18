@@ -3,8 +3,9 @@
 //
 // A style import the compiler emits, `./foo.css?tag=my-cmp&encapsulation=scoped[&mode=ios]`,
 // resolves to a `\0stencil-css:` virtual id, and loads as `export default () => "…css…"` after
-// Sass/Less -> PostCSS -> lightningcss -> `scopeCss` (scoped encapsulation only). Like
-// @stencil/unplugin, only `tag` and `encapsulation` matter: a mode's stylesheet is its own import.
+// Sass/Less -> PostCSS -> lightningcss -> `scopeCss` (scoped encapsulation only), with the scope id
+// `sc-<tag>`, or `sc-<tag>-<mode>` for a mode's stylesheet (`styleUrls: { ios, md }`). (@stencil/unplugin
+// scopes every mode to `sc-<tag>`, so the runtime's `sc-<tag>-ios` host class never matches its CSS.)
 //
 // Steps run when their package is installed, as in @stencil/unplugin. When one can't be loaded
 // from here, `load` returns null so @stencil/unplugin (which resolves it from its own place)
@@ -13,7 +14,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { scopeCss } from './index.js';
 
@@ -30,6 +31,21 @@ const packageExists = (name) => {
     return true;
   } catch {
     return false;
+  }
+};
+
+/**
+ * `import(name)`, from the project first: a package linked into node_modules (`file:` dependencies,
+ * workspaces) resolves from its real path, where the project's own Sass / PostCSS / lightningcss
+ * are out of reach.
+ */
+const importFromProject = async (name) => {
+  try {
+    const mod = await import(pathToFileURL(createRequire(join(process.cwd(), 'noop.js')).resolve(name)).href);
+    // The CommonJS build (what `require.resolve` finds): its exports are the default, not named exports.
+    return mod.default && typeof mod.default === 'object' ? { ...mod.default, ...mod } : mod;
+  } catch {
+    return import(name);
   }
 };
 
@@ -53,6 +69,7 @@ export function parseStencilCssId(id) {
     file: `${stem}.${decodeURIComponent(params.get('__ext') ?? 'css')}`,
     tag: params.get('tag') ?? '',
     encapsulation: params.get('encapsulation') ?? 'none',
+    mode: params.get('mode') ?? '',
   };
 }
 
@@ -74,7 +91,7 @@ export function createCssPipeline() {
     for (const name of names) {
       if (name in mods) continue;
       try {
-        mods[name] = await import(name);
+        mods[name] = await importFromProject(name);
       } catch {
         mods[name] = null;
       }
@@ -113,7 +130,7 @@ export function createCssPipeline() {
    * @returns `{ code, deps }`, or null to leave the stylesheet to @stencil/unplugin
    */
   return async function load(id, isDev) {
-    const { file, tag, encapsulation } = parseStencilCssId(id);
+    const { file, tag, encapsulation, mode } = parseStencilCssId(id);
     if (!existsSync(file)) return { code: 'export default () => ""', deps: [] };
     const ext = extname(file).slice(1);
     if (!(await need(ext))) return null;
@@ -122,11 +139,35 @@ export function createCssPipeline() {
     if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps } = compileSass(css, file, ext === 'sass'));
     else if (has.less && ext === 'less') ({ css, deps } = await compileLess(css, file));
     if (has.postcss) css = await runPostCss(css, file);
-    if (has.lightningcss) css = mods.lightningcss.transform({ filename: file, code: Buffer.from(css), minify: !isDev }).code.toString();
-    // Stencil's getScopeId(tag), with no mode.
-    if (encapsulation === 'scoped' && tag) {
+    const lower = (code) => mods.lightningcss.transform({ filename: file, code: Buffer.from(code), minify: !isDev }).code.toString();
+    const scoped = encapsulation === 'scoped' && tag;
+    // Stencil's getScopeId(tag, mode): a mode's stylesheet (`styleUrls: { ios, md }`) is scoped to `sc-<tag>-<mode>`,
+    // the class the runtime puts on the host and its children for that mode.
+    const scope = (code) => scopeCss(code, mode ? `sc-${tag}-${mode}` : `sc-${tag}`, false);
+    let scopedFirst = false;
+    if (has.lightningcss) {
       try {
-        css = scopeCss(css, `sc-${tag}`, false);
+        css = lower(css);
+      } catch (err) {
+        // `::slotted(*) h1` (a scoped component's own way of styling slotted content's descendants) is
+        // not valid CSS: lightningcss refuses it, while `stencil build` rewrites the selector (scopeCss)
+        // before it optimizes. Do the same for the stylesheets lightningcss rejects.
+        if (!scoped) {
+          err.message = `${file}: ${err.message}`; // lightningcss's message has no file name
+          throw err;
+        }
+        scopedFirst = true;
+        try {
+          css = lower(scope(css));
+        } catch {
+          err.message = `${file}: ${err.message}`;
+          throw err;
+        }
+      }
+    }
+    if (scoped && !scopedFirst) {
+      try {
+        css = scope(css);
       } catch {
         return null; // a stylesheet stencilrs' scopeCss rejects: Stencil's decides
       }

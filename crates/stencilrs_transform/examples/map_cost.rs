@@ -36,7 +36,7 @@ fn main() {
                     resolve_imports: false,
                     complex_types: false,
                     source_map,
-                    transform_as_base_class: false,
+                    transform_as_base_class: false, use_define_for_class_fields: true,
                     component_export: Default::default(),
                     component_metadata: Default::default(),
                     emit_styles: true,

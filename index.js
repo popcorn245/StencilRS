@@ -74,7 +74,7 @@ export const analyze = (source, fileName, options = {}) =>
  * resolve without the type checker is an error starting `stencilrs:`, the cue to use Stencil.
  * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean, useDefineForClassFields?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
 export const transpile = (source, options) => JSON.parse(native.transpile(source, nativeOptions(options)));
