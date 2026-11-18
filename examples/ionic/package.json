@@ -8,8 +8,10 @@
     "fetch": "node scripts/fetch.mjs",
     "migrate": "node scripts/migrate.mjs",
     "build:stencil": "node scripts/build.mjs stencil",
+    "build:stencilrs": "node scripts/build.mjs stencilrs",
     "build:stencil4": "node scripts/build.mjs stencil4",
     "smoke": "node smoke/run.mjs",
+    "check": "node check/run.mjs",
     "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke"
   },
   "devDependencies": {
@@ -17,6 +19,7 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/keyboard": "8.0.6",
     "@capacitor/status-bar": "8.0.4",
+    "@popcorn245/stencilrs": "file:../..",
     "@stencil/cli": "5.0.0-beta.25",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/sass": "3.3.3",
@@ -24,6 +27,7 @@
     "playwright": "1.64.1",
     "sass": "1.99.0",
     "tslib": "2.8.1",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
   }
 }

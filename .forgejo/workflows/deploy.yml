@@ -56,6 +56,13 @@ jobs:
           key: npm-v1-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: npm-v1-${{ runner.os }}-
 
+      # The Ionic Framework clone the Ionic example builds from (scripts/fetch.mjs restores it from here).
+      - name: Restore the Ionic clone
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/stencilrs/ionic-framework
+          key: ionic-upstream-v1-${{ hashFiles('examples/ionic/scripts/paths.mjs') }}
+
       # Compiler (cargo build, cargo test, node tests), then the components (starter and ui-kit:
       # tests, then a stencilrs library build of each), then the Storybook.
       - name: Build and test

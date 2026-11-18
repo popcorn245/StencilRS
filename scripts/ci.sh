@@ -56,6 +56,17 @@ npm --prefix examples/ui-kit run check:no-typescript
 # The dev server: component and stylesheet served, HMR, virtual global stylesheets, still no TypeScript.
 npm --prefix examples/ui-kit run check:dev-server
 
+step "Components: Ionic core (v9, 94 components) through stencilrs, against stencil build, in Chromium"
+# The upstream clone is cached outside the workspace (restored when it is at the pinned tag), and the browser
+# checks skip themselves when no Chromium is installed (IONIC_REQUIRE_BROWSER=1 to demand one).
+export IONIC_UPSTREAM_CACHE="${IONIC_UPSTREAM_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/stencilrs/ionic-framework}"
+npm --prefix examples/ionic ci --ignore-scripts
+npm --prefix examples/ionic run fetch
+npm --prefix examples/ionic run migrate
+npm --prefix examples/ionic run build:stencil
+npm --prefix examples/ionic run build:stencilrs
+npm --prefix examples/ionic run check
+
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr
 

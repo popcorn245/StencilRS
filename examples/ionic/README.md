@@ -2,8 +2,8 @@
 
 [Ionic Framework](https://github.com/ionic-team/ionic-framework)'s `core` (MIT, 94 components, per-mode
 iOS / Material Sass, the largest open-source Stencil code base) is the real-world test subject for stencilrs.
-This folder fetches it, migrates a copy to Stencil v5, builds it with `stencil build` and checks the result in
-headless Chrome. Later issues swap stencilrs in (#61) and benchmark all three builds (#65).
+This folder fetches it, migrates a copy to Stencil v5, builds it with `stencil build` and with stencilrs'
+Vite plugin, and checks both in headless Chrome. A later issue benchmarks all three builds (#65).
 
 Ionic's source is **never committed** (see `THIRD_PARTY_NOTICES.md`). Everything under it is generated from
 upstream plus the checked-in codemod, so the whole thing is reproducible.
@@ -15,10 +15,12 @@ npm run migrate              # upstream/core -> migrated/ (Stencil v5 source)
 npm run build:stencil        # stencil build (v5) -> dist-stencil/, plus css/ and docs.json
 npm run smoke                # load dist-stencil in headless Chrome, ios + md, screenshots in smoke/shots/
 npm run build:stencil4       # the stock Ionic 9 / Stencil 4.45.4 build -> dist-stencil4/ (reference row)
+npm run build:stencilrs      # the same migrated/ source through @popcorn245/stencilrs/vite -> dist-stencilrs/
+npm run check                # both builds in headless Chrome: smoke, screenshots, all 94 components, no fallbacks
 npm run all                  # fetch, migrate, build:stencil, smoke
 ```
 
-`npm run smoke -- stencil4` runs the same page against the Stencil 4 build. `--shots <dir>` moves the
+`npm run smoke -- stencil4|stencilrs` runs the same page against the Stencil 4 build. `--shots <dir>` moves the
 screenshots. If the Chromium Playwright expects is not installed, point `CHROME_PATH` at any Chromium
 (`npx playwright install chromium` is the proper fix).
 
@@ -32,12 +34,14 @@ screenshots. If the Chromium Playwright expects is not installed, point `CHROME_
 | `config/stencil.config.v4.ts` | trimmed Ionic config; input of `stencil migrate` and of the Stencil 4 build | yes |
 | `config/ionicons-css-fix.ts` | one-line CSS repair plugin for ionicons, added to the v5 config | yes |
 | `scripts/build.mjs` | `build:stencil` / `build:stencil4`, logs in `logs/` | yes |
+| `vite.config.ts` | the stencilrs library build of every component (`build:stencilrs`) | yes |
 | `smoke/` | the smoke page and its Playwright runner | yes |
+| `check/run.mjs` | `npm run check`: stencil vs stencilrs in Chrome (see below) | yes |
 | `stencil4/package.json` | separate toolchain for the Stencil 4 build (it cannot share `node_modules` with v5) | yes |
-| `upstream/` | the clone (untrusted data; nothing in it is installed or run) | **no** |
-| `migrated/` | v5 source: `src/`, `stencil.config.ts`, tsconfigs. **#61 adds `vite.config.ts` and `build:stencilrs` against this folder** | **no** |
+| `upstream/` | the clone (untrusted data; nothing in it is installed or run). `IONIC_UPSTREAM_CACHE=<dir>` restores it from, and saves it to, a copy outside the workspace (CI does) | **no** |
+| `migrated/` | v5 source: `src/`, `stencil.config.ts`, tsconfigs. `vite.config.ts` builds this folder | **no** |
 | `stencil4/stock/` | upstream `core/` unmodified, for the Stencil 4 build | **no** |
-| `dist-stencil/`, `dist-stencil4/` | build outputs: `dist/` and `loader/` (lazy), `components/` (standalone), `css/`, `docs.json` | **no** |
+| `dist-stencil/`, `dist-stencil4/`, `dist-stencilrs/` | build outputs: `dist/` and `loader/` (lazy), `components/` (standalone), `css/`, `docs.json` | **no** |
 
 Both builds are cold (`enableCache: false`), build the same bundles with the same three output targets (lazy
 loader, standalone custom elements, `docs-json`) and write to the same layout, so #65 can time them side by
@@ -110,3 +114,46 @@ stencilrs has to behave the same on (or report).
 The two builds' screenshots are identical (a pixel diff of all four pairs found no differing pixel). Their
 `docs-json` files differ in 15 component entries (union members print in a different order under TypeScript 6,
 and style docs are parsed differently); a later issue compares stencilrs' `analyze()` against the v5 one.
+
+## Ionic through stencilrs (`build:stencilrs`, `check`)
+
+`vite.config.ts` builds `migrated/` with `@popcorn245/stencilrs/vite` (Vite 8, `verbose: true`) into
+`dist-stencilrs/`: `ionic.js`, one ES module that runs Ionic's global script (`initialize()`, first: defining a
+component upgrades the elements already in the page, and they read their mode at once), defines `ion-icon` from
+`ionicons/components/ion-icon.js`, and registers the 95 files that declare a component (the 94 tags of `docs.json` and the internal
+`ion-select-popover`); `css/`, Ionic's global stylesheets (compressed Sass, byte for byte what
+`build:stencil` writes). Sass for the `.ios.scss` / `.md.scss` mode styles is the plugin's own pipeline. The build
+takes about 5 s (`stencil build`: about 30 s) and the log says `compiled 95 component file(s); 0 left to
+Stencil's compiler`.
+
+`npm run check` (`check/run.mjs`) needs both builds and a Chromium (`CHROME_PATH`, or `npx playwright install
+chromium`; without one it skips the browser steps, `IONIC_REQUIRE_BROWSER=1` makes that an error):
+
+1. no file fell back to Stencil's compiler (reads `logs/stencilrs.log`);
+2. `smoke/run.mjs` on `dist-stencil` and `dist-stencilrs` (button, card, list, toggle, modal; ios and md);
+3. the four smoke screenshots of the two builds, pixel by pixel (identical in md; 14 and 32 pixels of an
+   820 x 1000 page differ by at most 4 levels in ios: edge anti-aliasing of the toggle, see below);
+4. every tag of `docs.json` plus `ion-select-popover` (internal) and `ion-icon`, mounted in both modes in each build: defined, hydrated, a shadow root
+   exactly where the encapsulation says (shadow, scoped, none), scoped components carry their `sc-*` class,
+   no console error or page error (Ionic's own "must be used inside ion-content" style diagnostics for a bare
+   element are expected, and must be the same in both builds);
+5. the two builds against each other: same host and shadow DOM, same size, same scope ids in the styles.
+
+### What stencilrs got wrong on Ionic, and what changed
+
+Found by this build, fixed on this branch (each has a test):
+
+| Finding | Fix |
+|---|---|
+| A file that is not a component (a util, Ionic's global script) importing `getMode`, `setMode`, `writeTask`... from `@stencil/core` got `@stencil/core`'s own minimal client, not the runtime the compiled components use: `setMode()` never reached them and no mode stylesheet loaded | `vite.js` resolves a bare `@stencil/core` to `@stencil/core/runtime/client/standalone` (as `stencil build` rewrites it) |
+| `useDefineForClassFields: false` in the tsconfig (Ionic sets it): Vite's own TypeScript transform reads it too, and moves every field of the already compiled component into the constructor ahead of `__registerHost()`: no `@Prop` kept its default (`buttonType` undefined, `undefined-solid` classes) | stencilrs honours the option as Stencil does: the new `useDefineForClassFields` transpile option, set from the tsconfig by the plugin; initializers become assignments after `__registerHost()` / `__attachShadow()` and the events, uninitialized fields are dropped |
+| Mode stylesheets of a scoped component were scoped to `sc-<tag>` while the runtime puts `sc-<tag>-<mode>` on the host: no scoped rule applied (`ion-buttons` 0 px tall, `ion-label`, `ion-input` and others the wrong size). `@stencil/unplugin` does the same | `vite-css.js` scopes to `sc-<tag>-<mode>` (the ui-kit's `compare:css` allows exactly this one difference) |
+| `::slotted(*) h1` (valid only in a scoped component, which rewrites it) made lightningcss throw, with no file name in the error | a stylesheet lightningcss rejects is scoped first for a scoped component, as `stencil build` does; errors name the file |
+| `import('sass')` and the other CSS packages resolved from the plugin's own folder, not the project's: a `file:` / linked install found none | imported from the project first |
+| The runtime's `BUILD` defaults have `hydrateClientSide: true`, so scoped hosts got an extra `sc-<tag>-<mode>` class | new plugin option `buildFlags`: this build sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate target |
+
+Not fixed, by design (they are the Vite pipeline's lightningcss without the browser targets `stencil build` gives
+it, and the same as `@stencil/unplugin`): about 30 of the 96 component stylesheets differ in CSS text: `:dir(rtl)`
+without Stencil's `:lang()` fallbacks, `-webkit-` prefixes, `background: none` as `0 0`, `bold` as `700`,
+`(min-width: 576px)` as `(width >= 576px)`, and `translate3d(x, 0, 0)` as `translate(x)`, which drops the
+compositing layer and is why the ios toggle's edges differ by a few levels.
