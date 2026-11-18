@@ -1,0 +1,572 @@
+{
+  "ion-accordion": {
+    "deps": [
+      "ion-accordion-group"
+    ],
+    "file": "src/components/accordion/accordion.tsx"
+  },
+  "ion-accordion-group": {
+    "deps": [
+      "ion-accordion"
+    ],
+    "file": "src/components/accordion-group/accordion-group.tsx"
+  },
+  "ion-action-sheet": {
+    "deps": [
+      "ion-backdrop",
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/action-sheet/action-sheet.tsx"
+  },
+  "ion-alert": {
+    "deps": [
+      "ion-backdrop",
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/alert/alert.tsx"
+  },
+  "ion-app": {
+    "deps": [],
+    "file": "src/components/app/app.tsx"
+  },
+  "ion-avatar": {
+    "deps": [],
+    "file": "src/components/avatar/avatar.tsx"
+  },
+  "ion-back-button": {
+    "deps": [
+      "ion-nav",
+      "ion-ripple-effect",
+      "ion-toolbar"
+    ],
+    "file": "src/components/back-button/back-button.tsx"
+  },
+  "ion-backdrop": {
+    "deps": [],
+    "file": "src/components/backdrop/backdrop.tsx"
+  },
+  "ion-badge": {
+    "deps": [],
+    "file": "src/components/badge/badge.tsx"
+  },
+  "ion-breadcrumb": {
+    "deps": [
+      "ion-breadcrumbs",
+      "ion-toolbar"
+    ],
+    "file": "src/components/breadcrumb/breadcrumb.tsx"
+  },
+  "ion-breadcrumbs": {
+    "deps": [
+      "ion-breadcrumb",
+      "ion-toolbar"
+    ],
+    "file": "src/components/breadcrumbs/breadcrumbs.tsx"
+  },
+  "ion-button": {
+    "deps": [
+      "ion-buttons",
+      "ion-item",
+      "ion-item-divider",
+      "ion-list-header",
+      "ion-ripple-effect",
+      "ion-toolbar"
+    ],
+    "file": "src/components/button/button.tsx"
+  },
+  "ion-buttons": {
+    "deps": [],
+    "file": "src/components/buttons/buttons.tsx"
+  },
+  "ion-card": {
+    "deps": [
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/card/card.tsx"
+  },
+  "ion-card-content": {
+    "deps": [],
+    "file": "src/components/card-content/card-content.tsx"
+  },
+  "ion-card-header": {
+    "deps": [],
+    "file": "src/components/card-header/card-header.tsx"
+  },
+  "ion-card-subtitle": {
+    "deps": [],
+    "file": "src/components/card-subtitle/card-subtitle.tsx"
+  },
+  "ion-card-title": {
+    "deps": [],
+    "file": "src/components/card-title/card-title.tsx"
+  },
+  "ion-checkbox": {
+    "deps": [
+      "ion-item"
+    ],
+    "file": "src/components/checkbox/checkbox.tsx"
+  },
+  "ion-chip": {
+    "deps": [
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/chip/chip.tsx"
+  },
+  "ion-col": {
+    "deps": [],
+    "file": "src/components/col/col.tsx"
+  },
+  "ion-content": {
+    "deps": [
+      "ion-modal",
+      "ion-popover",
+      "ion-tabs"
+    ],
+    "file": "src/components/content/content.tsx"
+  },
+  "ion-datetime": {
+    "deps": [
+      "ion-button",
+      "ion-buttons",
+      "ion-picker",
+      "ion-picker-column",
+      "ion-picker-column-option",
+      "ion-popover",
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/datetime/datetime.tsx"
+  },
+  "ion-datetime-button": {
+    "deps": [
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/datetime-button/datetime-button.tsx"
+  },
+  "ion-fab": {
+    "deps": [
+      "ion-fab-button",
+      "ion-fab-list"
+    ],
+    "file": "src/components/fab/fab.tsx"
+  },
+  "ion-fab-button": {
+    "deps": [
+      "ion-fab",
+      "ion-fab-list",
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/fab-button/fab-button.tsx"
+  },
+  "ion-fab-list": {
+    "deps": [
+      "ion-fab-button"
+    ],
+    "file": "src/components/fab-list/fab-list.tsx"
+  },
+  "ion-footer": {
+    "deps": [
+      "ion-tabs"
+    ],
+    "file": "src/components/footer/footer.tsx"
+  },
+  "ion-grid": {
+    "deps": [],
+    "file": "src/components/grid/grid.tsx"
+  },
+  "ion-header": {
+    "deps": [
+      "ion-back-button",
+      "ion-menu",
+      "ion-title"
+    ],
+    "file": "src/components/header/header.tsx"
+  },
+  "ion-img": {
+    "deps": [],
+    "file": "src/components/img/img.tsx"
+  },
+  "ion-infinite-scroll": {
+    "deps": [],
+    "file": "src/components/infinite-scroll/infinite-scroll.tsx"
+  },
+  "ion-infinite-scroll-content": {
+    "deps": [
+      "ion-spinner"
+    ],
+    "file": "src/components/infinite-scroll-content/infinite-scroll-content.tsx"
+  },
+  "ion-input": {
+    "deps": [
+      "ion-input-password-toggle",
+      "ion-item"
+    ],
+    "file": "src/components/input/input.tsx"
+  },
+  "ion-input-otp": {
+    "deps": [],
+    "file": "src/components/input-otp/input-otp.tsx"
+  },
+  "ion-input-password-toggle": {
+    "deps": [
+      "ion-button",
+      "ion-input"
+    ],
+    "file": "src/components/input-password-toggle/input-password-toggle.tsx"
+  },
+  "ion-item": {
+    "deps": [
+      "ion-list",
+      "ion-radio-group",
+      "ion-ripple-effect",
+      "ion-toggle"
+    ],
+    "file": "src/components/item/item.tsx"
+  },
+  "ion-item-divider": {
+    "deps": [],
+    "file": "src/components/item-divider/item-divider.tsx"
+  },
+  "ion-item-group": {
+    "deps": [],
+    "file": "src/components/item-group/item-group.tsx"
+  },
+  "ion-item-option": {
+    "deps": [
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/item-option/item-option.tsx"
+  },
+  "ion-item-options": {
+    "deps": [],
+    "file": "src/components/item-options/item-options.tsx"
+  },
+  "ion-item-sliding": {
+    "deps": [
+      "ion-item",
+      "ion-item-option",
+      "ion-item-options"
+    ],
+    "file": "src/components/item-sliding/item-sliding.tsx"
+  },
+  "ion-label": {
+    "deps": [
+      "ion-range"
+    ],
+    "file": "src/components/label/label.tsx"
+  },
+  "ion-list": {
+    "deps": [
+      "ion-item-sliding"
+    ],
+    "file": "src/components/list/list.tsx"
+  },
+  "ion-list-header": {
+    "deps": [],
+    "file": "src/components/list-header/list-header.tsx"
+  },
+  "ion-loading": {
+    "deps": [
+      "ion-backdrop",
+      "ion-spinner"
+    ],
+    "file": "src/components/loading/loading.tsx"
+  },
+  "ion-menu": {
+    "deps": [
+      "ion-backdrop",
+      "ion-split-pane"
+    ],
+    "file": "src/components/menu/menu.tsx"
+  },
+  "ion-menu-button": {
+    "deps": [
+      "ion-ripple-effect",
+      "ion-toolbar"
+    ],
+    "file": "src/components/menu-button/menu-button.tsx"
+  },
+  "ion-menu-toggle": {
+    "deps": [],
+    "file": "src/components/menu-toggle/menu-toggle.tsx"
+  },
+  "ion-modal": {
+    "deps": [
+      "ion-backdrop",
+      "ion-content",
+      "ion-footer"
+    ],
+    "file": "src/components/modal/modal.tsx"
+  },
+  "ion-nav": {
+    "deps": [],
+    "file": "src/components/nav/nav.tsx"
+  },
+  "ion-nav-link": {
+    "deps": [],
+    "file": "src/components/nav-link/nav-link.tsx"
+  },
+  "ion-note": {
+    "deps": [],
+    "file": "src/components/note/note.tsx"
+  },
+  "ion-picker": {
+    "deps": [
+      "ion-picker-column",
+      "ion-picker-column-option"
+    ],
+    "file": "src/components/picker/picker.tsx"
+  },
+  "ion-picker-column": {
+    "deps": [
+      "ion-picker",
+      "ion-picker-column-option"
+    ],
+    "file": "src/components/picker-column/picker-column.tsx"
+  },
+  "ion-picker-column-option": {
+    "deps": [
+      "ion-picker-column"
+    ],
+    "file": "src/components/picker-column-option/picker-column-option.tsx"
+  },
+  "ion-popover": {
+    "deps": [
+      "ion-backdrop",
+      "ion-content",
+      "ion-header"
+    ],
+    "file": "src/components/popover/popover.tsx"
+  },
+  "ion-progress-bar": {
+    "deps": [],
+    "file": "src/components/progress-bar/progress-bar.tsx"
+  },
+  "ion-radio": {
+    "deps": [
+      "ion-item",
+      "ion-radio-group"
+    ],
+    "file": "src/components/radio/radio.tsx"
+  },
+  "ion-radio-group": {
+    "deps": [
+      "ion-item-divider",
+      "ion-label",
+      "ion-list-header",
+      "ion-radio",
+      "ion-select-modal",
+      "ion-select-popover"
+    ],
+    "file": "src/components/radio-group/radio-group.tsx"
+  },
+  "ion-range": {
+    "deps": [
+      "ion-item"
+    ],
+    "file": "src/components/range/range.tsx"
+  },
+  "ion-refresher": {
+    "deps": [
+      "ion-content"
+    ],
+    "file": "src/components/refresher/refresher.tsx"
+  },
+  "ion-refresher-content": {
+    "deps": [
+      "ion-spinner"
+    ],
+    "file": "src/components/refresher-content/refresher-content.tsx"
+  },
+  "ion-reorder": {
+    "deps": [
+      "ion-reorder-group"
+    ],
+    "file": "src/components/reorder/reorder.tsx"
+  },
+  "ion-reorder-group": {
+    "deps": [
+      "ion-reorder"
+    ],
+    "file": "src/components/reorder-group/reorder-group.tsx"
+  },
+  "ion-ripple-effect": {
+    "deps": [],
+    "file": "src/components/ripple-effect/ripple-effect.tsx"
+  },
+  "ion-route": {
+    "deps": [
+      "ion-router-outlet",
+      "ion-tabs"
+    ],
+    "file": "src/components/route/route.tsx"
+  },
+  "ion-route-redirect": {
+    "deps": [],
+    "file": "src/components/route-redirect/route-redirect.tsx"
+  },
+  "ion-router": {
+    "deps": [],
+    "file": "src/components/router/router.tsx"
+  },
+  "ion-router-link": {
+    "deps": [],
+    "file": "src/components/router-link/router-link.tsx"
+  },
+  "ion-router-outlet": {
+    "deps": [],
+    "file": "src/components/router-outlet/router-outlet.tsx"
+  },
+  "ion-row": {
+    "deps": [],
+    "file": "src/components/row/row.tsx"
+  },
+  "ion-searchbar": {
+    "deps": [],
+    "file": "src/components/searchbar/searchbar.tsx"
+  },
+  "ion-segment": {
+    "deps": [
+      "ion-segment-button",
+      "ion-segment-view",
+      "ion-toolbar"
+    ],
+    "file": "src/components/segment/segment.tsx"
+  },
+  "ion-segment-button": {
+    "deps": [
+      "ion-label",
+      "ion-ripple-effect",
+      "ion-segment",
+      "ion-segment-content",
+      "ion-toolbar"
+    ],
+    "file": "src/components/segment-button/segment-button.tsx"
+  },
+  "ion-segment-content": {
+    "deps": [],
+    "file": "src/components/segment-content/segment-content.tsx"
+  },
+  "ion-segment-view": {
+    "deps": [
+      "ion-segment-content"
+    ],
+    "file": "src/components/segment-view/segment-view.tsx"
+  },
+  "ion-select": {
+    "deps": [
+      "ion-action-sheet",
+      "ion-alert",
+      "ion-button",
+      "ion-checkbox",
+      "ion-item",
+      "ion-modal",
+      "ion-popover",
+      "ion-radio",
+      "ion-select-modal",
+      "ion-select-option",
+      "ion-select-popover",
+      "ion-toggle"
+    ],
+    "file": "src/components/select/select.tsx"
+  },
+  "ion-select-modal": {
+    "deps": [
+      "ion-button",
+      "ion-buttons",
+      "ion-checkbox",
+      "ion-content",
+      "ion-header",
+      "ion-item",
+      "ion-list",
+      "ion-modal",
+      "ion-radio",
+      "ion-radio-group",
+      "ion-title",
+      "ion-toolbar"
+    ],
+    "file": "src/components/select-modal/select-modal.tsx"
+  },
+  "ion-select-option": {
+    "deps": [],
+    "file": "src/components/select-option/select-option.tsx"
+  },
+  "ion-select-popover": {
+    "deps": [],
+    "file": "src/components/select-popover/select-popover.tsx"
+  },
+  "ion-skeleton-text": {
+    "deps": [
+      "ion-avatar",
+      "ion-thumbnail"
+    ],
+    "file": "src/components/skeleton-text/skeleton-text.tsx"
+  },
+  "ion-spinner": {
+    "deps": [],
+    "file": "src/components/spinner/spinner.tsx"
+  },
+  "ion-split-pane": {
+    "deps": [],
+    "file": "src/components/split-pane/split-pane.tsx"
+  },
+  "ion-tab": {
+    "deps": [],
+    "file": "src/components/tab/tab.tsx"
+  },
+  "ion-tab-bar": {
+    "deps": [],
+    "file": "src/components/tab-bar/tab-bar.tsx"
+  },
+  "ion-tab-button": {
+    "deps": [
+      "ion-label",
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/tab-button/tab-button.tsx"
+  },
+  "ion-tabs": {
+    "deps": [
+      "ion-router",
+      "ion-router-outlet",
+      "ion-tab",
+      "ion-tab-bar"
+    ],
+    "file": "src/components/tabs/tabs.tsx"
+  },
+  "ion-text": {
+    "deps": [],
+    "file": "src/components/text/text.tsx"
+  },
+  "ion-textarea": {
+    "deps": [
+      "ion-item"
+    ],
+    "file": "src/components/textarea/textarea.tsx"
+  },
+  "ion-thumbnail": {
+    "deps": [],
+    "file": "src/components/thumbnail/thumbnail.tsx"
+  },
+  "ion-title": {
+    "deps": [],
+    "file": "src/components/title/title.tsx"
+  },
+  "ion-toast": {
+    "deps": [
+      "ion-ripple-effect"
+    ],
+    "file": "src/components/toast/toast.tsx"
+  },
+  "ion-toggle": {
+    "deps": [
+      "ion-item"
+    ],
+    "file": "src/components/toggle/toggle.tsx"
+  },
+  "ion-toolbar": {
+    "deps": [
+      "ion-buttons"
+    ],
+    "file": "src/components/toolbar/toolbar.tsx"
+  }
+}

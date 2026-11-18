@@ -21,7 +21,7 @@ runtime (`@stencil/core`) runs them in the browser.
 |---|---|
 | **Guide** | Everything in this sidebar: how to use stencilrs, how it works, how it was built and verified. |
 | [**The story**](/story/) | How the project got here, as a timeline. |
-| [**Components**](/components/) | Live components, compiled by stencilrs as the page loads. Ionic's component pages are coming. |
+| [**Components**](/components/) | Live components, compiled by stencilrs as the page loads: one page per Ionic Framework component, with demos in iOS and Material Design mode and API tables. |
 | [**Benchmarks**](/benchmarks) | The measurements behind the speed claims. |
 | [**Reference**](/reference/pipeline) | Design notes: Stencil v5's compile pipeline, its transformers, and the project READMEs. |
 | [**Storybook**](/storybook/) | The 136-component ui-kit and the starter components, each with its stories. |
