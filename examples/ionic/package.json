@@ -1,0 +1,29 @@
+{
+  "name": "stencilrs-ionic-harness",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Ionic Framework core (v9.0.12, MIT) migrated to Stencil v5: the proving ground for stencilrs",
+  "scripts": {
+    "fetch": "node scripts/fetch.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "build:stencil": "node scripts/build.mjs stencil",
+    "build:stencil4": "node scripts/build.mjs stencil4",
+    "smoke": "node smoke/run.mjs",
+    "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke"
+  },
+  "devDependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/keyboard": "8.0.6",
+    "@capacitor/status-bar": "8.0.4",
+    "@stencil/cli": "5.0.0-beta.25",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/sass": "3.3.3",
+    "ionicons": "8.1.0",
+    "playwright": "1.64.1",
+    "sass": "1.99.0",
+    "tslib": "2.8.1",
+    "typescript": "6.0.3"
+  }
+}
