@@ -106,7 +106,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown> }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
@@ -117,6 +117,8 @@ const SPEC_PAGE_OPTIONS = {
  *   is what `stencil build`'s `autoprefixCss` targets. `minify`: true (lightningcss' own: shortens values), 'whitespace' (default in a build: what
  *   `stencil build` ships, values as authored), false (default in dev).
  *   `sass`: options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, ...).
+ *   `cache` (default true): a stylesheet's result is reused while it and every file Sass loaded for it are unchanged (content hashes),
+ *   so a watch rebuild recompiles only what an edit touched; the Sass step is also kept in node_modules/.cache/stencilrs. 'memory': no disk; false: none.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.

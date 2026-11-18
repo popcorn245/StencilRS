@@ -144,3 +144,42 @@ test('a tsconfig with useDefineForClassFields: false makes @Prop defaults constr
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('component Sass is cached across rebuilds and never served stale: an edited stylesheet or partial recompiles', async () => {
+  write('sassy.tsx', `import { Component, h } from '@stencil/core';
+@Component({ tag: 'cmp-sassy', styleUrl: 'sassy.scss', encapsulation: { type: 'shadow' } })
+export class CmpSassy { render() { return <div>x</div>; } }
+`);
+  write('_vars.scss', '$c: red;');
+  write('sassy.scss', "@use 'vars'; :host { color: vars.$c; }");
+  const { createCssPipeline } = await import('../vite-css.js');
+  const id = `\0stencil-css:${join(project, 'src', 'sassy')}?tag=cmp-sassy&encapsulation=shadow&__ext=scss`;
+  const load = createCssPipeline({ cache: 'memory' });
+  const first = await load(id, false);
+  assert.match(first.code, /color:\s*(?:red|#f00)/);
+  assert.deepEqual(first.deps, [join(project, 'src', '_vars.scss')]);
+  assert.equal(await load(id, false), first, 'nothing changed: the earlier result is reused');
+  write('_vars.scss', '$c: blue;');
+  assert.match((await load(id, false)).code, /color:\s*(?:blue|#00f)/, 'an edited partial rebuilds the stylesheet');
+  write('sassy.scss', "@use 'vars'; :host { color: vars.$c; margin: 0; }");
+  assert.match((await load(id, false)).code, /margin/, 'an edited stylesheet rebuilds');
+  assert.match((await load(id, true)).code, /color:\s*(?:blue|#00f)/, 'dev and build outputs are kept apart');
+  // A new plugin instance (a cold build) reads the disk cache: still correct after the partial changed in between.
+  const cold = createCssPipeline();
+  assert.match((await cold(id, false)).code, /color:\s*(?:blue|#00f)/);
+  write('_vars.scss', '$c: green;');
+  assert.match((await createCssPipeline()(id, false)).code, /color:\s*(?:green|#008000)/, 'the disk cache is checked against the partial\'s content');
+  assert.match((await createCssPipeline({ sass: { loadPaths: [] } })(id, false)).code, /color:\s*(?:green|#008000)/);
+});
+
+test('component Sass in a Vite build: an edited partial changes the next build', async () => {
+  write('_tone.scss', '$t: red;');
+  write('toned.scss', "@use 'tone'; :host { color: tone.$t; }");
+  write('toned.tsx', `import { Component, h } from '@stencil/core';
+@Component({ tag: 'cmp-toned', styleUrl: 'toned.scss', encapsulation: { type: 'shadow' } })
+export class CmpToned { render() { return <div>x</div>; } }
+`);
+  assert.match(await run('toned.tsx'), /color:\s*(?:red|#f00)/);
+  write('_tone.scss', '$t: blue;');
+  assert.match(await run('toned.tsx'), /color:\s*(?:blue|#00f)/);
+});
