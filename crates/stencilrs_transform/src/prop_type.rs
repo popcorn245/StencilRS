@@ -18,7 +18,7 @@ use oxc::ast::ast::{
 };
 use oxc::span::GetSpan;
 
-use crate::locals::{LocalType, LocalValue, Locals};
+use crate::locals::{LocalType, LocalValue, Locals, ThisMember};
 use crate::meta::PropType;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -177,7 +177,13 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
                 infer(init, locals, source, depth + 1)
             }
             Some(LocalValue::Object | LocalValue::Function(_)) => named(PropType::Unknown),
-            Some(LocalValue::Let(None)) => named(PropType::Any),
+            Some(LocalValue::Let(None)) => match locals.declared.get(id.name.as_str()) {
+                Some(t) => (
+                    classify_annotation(t, locals),
+                    t.span().source_text(source).to_owned(),
+                ),
+                None => named(PropType::Any),
+            },
             None => match locals.imported_value(id.name.as_str()) {
                 Some(v) if v.prop_type.is_some() => (v.prop_type.unwrap(), v.original),
                 // Unresolved names, imports and `undefined` (widened to `any`).
@@ -185,6 +191,9 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
             },
         },
         Expression::StaticMemberExpression(m) => match &m.object {
+            Expression::ThisExpression(_) => {
+                this_field(m.property.name.as_str(), locals, source, depth)
+            }
             Expression::Identifier(obj) => match member_value(
                 obj.name.as_str(),
                 m.property.name.as_str(),
@@ -203,6 +212,13 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
                     classify_annotation(ret, locals),
                     ret.span().source_text(source).to_owned(),
                 ),
+                Some(LocalValue::Const(init)) => match function_return(init) {
+                    Some(ret) => (
+                        classify_annotation(ret, locals),
+                        ret.span().source_text(source).to_owned(),
+                    ),
+                    None => named(PropType::Any),
+                },
                 Some(_) => named(PropType::Any),
                 None => match locals
                     .imported_value(f.name.as_str())
@@ -212,11 +228,103 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
                     None => named(PropType::Any),
                 },
             },
+            Expression::StaticMemberExpression(m) => call_of_member(m, locals, source),
             _ => named(PropType::Any),
         },
-        // Build-accurate: `new X()` is an object.
-        Expression::NewExpression(_) if locals.resolving() => named(PropType::Unknown),
+        // Build-accurate: `new X()` is an object, printed by its class (`Config`).
+        Expression::NewExpression(n) if locals.resolving() => match &n.callee {
+            Expression::Identifier(c) if !locals.decl_params.contains_key(c.name.as_str()) => {
+                (PropType::Unknown, c.name.to_string())
+            }
+            _ => named(PropType::Unknown),
+        },
         // Everything else depends on types the single-file program cannot see.
+        _ => named(PropType::Any),
+    }
+}
+
+/// The written return type of an arrow function or function expression.
+pub fn function_return<'x, 'a>(e: &'x Expression<'a>) -> Option<&'x TSType<'a>> {
+    match e {
+        Expression::ArrowFunctionExpression(f) => {
+            f.return_type.as_ref().map(|t| &t.type_annotation)
+        }
+        Expression::FunctionExpression(f) => f.return_type.as_ref().map(|t| &t.type_annotation),
+        Expression::ParenthesizedExpression(p) => function_return(&p.expression),
+        _ => None,
+    }
+}
+
+/// `this.field`: the field's written type, or the type of its initializer.
+fn this_field(name: &str, locals: &Locals, source: &str, depth: u8) -> (PropType, String) {
+    let class = locals.current_class.borrow().clone();
+    let Some(ThisMember::Field {
+        annotation,
+        init,
+        readonly,
+    }) = class
+        .as_deref()
+        .and_then(|c| locals.members.get(c))
+        .and_then(|m| m.get(name))
+    else {
+        return named(PropType::Any);
+    };
+    match (annotation, init) {
+        (Some(t), _) => (
+            classify_annotation(t, locals),
+            t.span().source_text(source).to_owned(),
+        ),
+        (None, Some(init)) => {
+            let (t, printed) = infer(init, locals, source, depth + 1);
+            // A `readonly` field keeps its literal type.
+            if *readonly && let Some(lit) = literal_type_text(init, source) {
+                (t, lit)
+            } else {
+                (t, printed)
+            }
+        }
+        (None, None) => named(PropType::Any),
+    }
+}
+
+/// How TypeScript prints the literal type of a literal expression.
+fn literal_type_text(e: &Expression, source: &str) -> Option<String> {
+    match e {
+        Expression::StringLiteral(s) => Some(format!("\"{}\"", s.value)),
+        Expression::NumericLiteral(_) | Expression::BooleanLiteral(_) => {
+            Some(e.span().source_text(source).to_owned())
+        }
+        _ => None,
+    }
+}
+
+/// `obj.method(…)`: the written return type of a method of an imported `const obj = new Class()`,
+/// or of `this.method(…)`.
+fn call_of_member(
+    m: &oxc::ast::ast::StaticMemberExpression,
+    locals: &Locals,
+    source: &str,
+) -> (PropType, String) {
+    match &m.object {
+        Expression::Identifier(obj) => locals
+            .imported_value(obj.name.as_str())
+            .and_then(|v| v.members.get(m.property.name.as_str()).cloned())
+            .and_then(|v| v.returns)
+            .unwrap_or_else(|| named(PropType::Any)),
+        Expression::ThisExpression(_) => {
+            let class = locals.current_class.borrow().clone();
+            match class
+                .as_deref()
+                .and_then(|c| locals.members.get(c))
+                .and_then(|members| members.get(m.property.name.as_str()))
+            {
+                Some(ThisMember::Method(Some(ret))) => (
+                    classify_annotation(ret, locals),
+                    ret.span().source_text(source).to_owned(),
+                ),
+                _ => named(PropType::Any),
+            }
+        }
         _ => named(PropType::Any),
     }
 }

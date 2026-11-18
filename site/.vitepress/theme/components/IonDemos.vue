@@ -24,15 +24,6 @@ const read = (): Mode => {
   return /iPhone|iPad|Macintosh/.test(navigator.userAgent) ? 'ios' : 'md';
 };
 
-// Ionic's props with an attribute that stencilrs does not map yet (finding: a prop typed with a generic alias
-// of a string union, `color?: Color`, is compiled as [16] "unknown", no attribute, no reflection): copy the
-// attribute to the property so the demos show what Stencil's build would.
-const colorWorkaround = (root: HTMLElement) => {
-  for (const el of root.querySelectorAll<HTMLElement>('[color]')) {
-    if (el.localName.startsWith('ion-') && (el as any).color == null) (el as any).color = el.getAttribute('color');
-  }
-};
-
 async function render() {
   if (!runtime) return;
   const run = ++nonce.value;
@@ -47,7 +38,6 @@ async function render() {
       stage.setAttribute('mode', mode.value);
       stage.innerHTML = demo.html;
       for (const el of stage.querySelectorAll('*')) if (el.localName.startsWith('ion-')) el.setAttribute('mode', mode.value);
-      colorWorkaround(stage);
       if (demo.js) new Function('root', demo.js)(stage);
     }
   } catch (e) {

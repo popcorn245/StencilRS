@@ -84,10 +84,10 @@
           "mutable": false,
           "name": "toggleIcon",
           "optional": false,
-          "original": "any",
+          "original": "string",
           "reflect": false,
           "required": false,
-          "type": "any",
+          "type": "string",
           "typeFrom": "analyze"
         },
         {
@@ -1422,7 +1422,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -1430,7 +1430,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -1663,7 +1663,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -1671,7 +1671,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -1796,7 +1796,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -1990,7 +1990,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -1998,7 +1998,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -2251,7 +2251,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -2259,7 +2259,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -2588,7 +2588,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -2596,7 +2596,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -2793,7 +2793,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -2801,7 +2801,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -2869,7 +2869,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -2877,7 +2877,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -2931,7 +2931,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -2939,7 +2939,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -3129,7 +3129,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -3137,7 +3137,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -3324,7 +3324,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -3332,7 +3332,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -3977,7 +3977,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -3985,7 +3985,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -4343,7 +4343,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, refer to [theming](/docs/theming/basics).",
@@ -4806,7 +4806,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -4814,7 +4814,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -5160,14 +5160,14 @@
           "mutable": false,
           "name": "closeIcon",
           "optional": false,
-          "original": "any",
+          "original": "string",
           "reflect": false,
           "required": false,
-          "type": "any",
+          "type": "string",
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -5175,7 +5175,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -6171,7 +6171,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -6179,7 +6179,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -6795,7 +6795,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -6803,7 +6803,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -6992,7 +6992,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -7000,7 +7000,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -7263,7 +7263,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -7271,7 +7271,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -7298,10 +7298,10 @@
           "mutable": false,
           "name": "detailIcon",
           "optional": false,
-          "original": "any",
+          "original": "string",
           "reflect": false,
           "required": false,
-          "type": "any",
+          "type": "string",
           "typeFrom": "analyze"
         },
         {
@@ -7541,7 +7541,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -7549,7 +7549,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -7666,7 +7666,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -7674,7 +7674,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -7996,7 +7996,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -8004,7 +8004,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -8179,7 +8179,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -8187,7 +8187,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -9051,7 +9051,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -9059,7 +9059,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -10265,7 +10265,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -10273,7 +10273,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -10405,7 +10405,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -10413,7 +10413,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -10499,7 +10499,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -10507,7 +10507,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -11172,7 +11172,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -11180,7 +11180,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -11337,7 +11337,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -11345,7 +11345,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -11822,7 +11822,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -11830,7 +11830,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -11956,10 +11956,10 @@
           "mutable": false,
           "name": "name",
           "optional": false,
-          "original": "any",
+          "original": "string",
           "reflect": false,
           "required": false,
-          "type": "any",
+          "type": "string",
           "typeFrom": "analyze"
         },
         {
@@ -12833,7 +12833,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -12841,7 +12841,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -12934,7 +12934,14 @@
       "docsTags": [],
       "encapsulation": "shadow",
       "events": [],
-      "fallbacks": [],
+      "fallbacks": [
+        {
+          "from": "docs-json",
+          "kind": "prop",
+          "name": "mode",
+          "reason": "the inferred type `Mode`"
+        }
+      ],
       "file": "src/components/router-outlet/router-outlet.tsx",
       "methods": [],
       "modes": [
@@ -12978,11 +12985,11 @@
           "mutable": true,
           "name": "mode",
           "optional": false,
-          "original": "any",
+          "original": "\"ios\" | \"md\"",
           "reflect": false,
           "required": false,
-          "type": "any",
-          "typeFrom": "analyze"
+          "type": "\"ios\" | \"md\"",
+          "typeFrom": "docs-json"
         },
         {
           "attribute": "swipe-gesture",
@@ -13285,7 +13292,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -13293,7 +13300,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -13553,7 +13560,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -13561,7 +13568,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -14306,7 +14313,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).\n\nThis property is only available when using the modern select syntax.",
@@ -14314,7 +14321,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -14919,7 +14926,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -14927,7 +14934,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -15178,7 +15185,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -15186,7 +15193,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -15589,7 +15596,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -15597,7 +15604,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -15854,7 +15861,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -15862,7 +15869,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -16282,7 +16289,7 @@
       "parts": [],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -16290,7 +16297,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -16613,7 +16620,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -16621,7 +16628,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -16648,10 +16655,10 @@
           "mutable": false,
           "name": "duration",
           "optional": false,
-          "original": "any",
+          "original": "number",
           "reflect": false,
           "required": false,
-          "type": "any",
+          "type": "number",
           "typeFrom": "analyze"
         },
         {
@@ -17035,7 +17042,7 @@
           "typeFrom": "analyze"
         },
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -17043,7 +17050,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -17288,7 +17295,7 @@
       ],
       "props": [
         {
-          "attribute": null,
+          "attribute": "color",
           "default": null,
           "deprecated": null,
           "docs": "The color to use from your application's color palette.\nDefault options are: `\"primary\"`, `\"secondary\"`, `\"tertiary\"`, `\"success\"`, `\"warning\"`, `\"danger\"`, `\"light\"`, `\"medium\"`, and `\"dark\"`.\nFor more information on colors, see [theming](/docs/theming/basics).",
@@ -17296,7 +17303,7 @@
           "name": "color",
           "optional": true,
           "original": "Color",
-          "reflect": false,
+          "reflect": true,
           "required": false,
           "type": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
           "typeFrom": "analyze"
@@ -17398,6 +17405,13 @@
       "name": "push",
       "reason": "a union whose members the checker orders by when it first met them",
       "tag": "ion-router"
+    },
+    {
+      "from": "docs-json",
+      "kind": "prop",
+      "name": "mode",
+      "reason": "the inferred type `Mode`",
+      "tag": "ion-router-outlet"
     },
     {
       "from": "docs-json",
@@ -17848,7 +17862,7 @@
     "components": 94,
     "cssProperties": 485,
     "events": 138,
-    "fallbacks": 10,
+    "fallbacks": 11,
     "methods": 83,
     "properties": 589
   }

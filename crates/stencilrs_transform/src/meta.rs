@@ -59,6 +59,9 @@ pub struct ComponentMeta {
     pub deserializers: Vec<WatcherMeta>,
     /// The class's JSDoc.
     pub docs: Docs,
+    /// What docs-json lists as `slots`: the `@slot` tags merged with the `<slot>`s of the class's
+    /// JSX (`getDocsSlots`), sorted by name.
+    pub slots: Vec<SlotDoc>,
     /// The evaluated `@Component({...})` options, for code generation.
     #[serde(skip)]
     pub options: serde_json::Value,
@@ -94,6 +97,12 @@ pub struct PropMeta {
     pub complex_type_original: String,
     pub complex_type: ComplexType,
     pub docs: Docs,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SlotDoc {
+    pub name: String,
+    pub docs: String,
 }
 
 /// JSDoc as `ts.displayPartsToString(getDocumentationComment())` and `getJsDocTags()`.

@@ -256,5 +256,6 @@
         "return": "Promise<Color>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

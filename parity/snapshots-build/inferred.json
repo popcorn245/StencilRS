@@ -56,5 +56,6 @@
         "return": "Promise<number>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

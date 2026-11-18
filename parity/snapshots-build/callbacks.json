@@ -145,5 +145,6 @@
         "return": "Promise<Callback | undefined>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

@@ -1,0 +1,36 @@
+{
+  "tag": "build-jsx-slots",
+  "properties": [],
+  "events": [],
+  "methods": [],
+  "slots": [
+    {
+      "name": "",
+      "docs": "The main content, documented."
+    },
+    {
+      "name": "end",
+      "docs": ""
+    },
+    {
+      "name": "end-icon",
+      "docs": ""
+    },
+    {
+      "name": "footer",
+      "docs": "Shown last, and used in the JSX."
+    },
+    {
+      "name": "separator",
+      "docs": ""
+    },
+    {
+      "name": "start",
+      "docs": "Content at the start."
+    },
+    {
+      "name": "tpl",
+      "docs": ""
+    }
+  ]
+}
