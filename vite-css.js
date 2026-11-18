@@ -11,7 +11,8 @@
 // from here, `load` returns null so @stencil/unplugin (which resolves it from its own place)
 // does the work. Global stylesheets (`globalStyle`, `stencil-component-globals`) and `docs`
 // are not component styles: they stay with @stencil/unplugin.
-import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -82,6 +83,28 @@ const compactWhitespace = (css) =>
 
 const postcssConfigCache = new Map();
 
+const sha = (...parts) => {
+  const h = createHash('sha1');
+  for (const p of parts) h.update(String(p)).update('\0');
+  return h.digest('hex');
+};
+const fileHash = (f) => {
+  try {
+    return createHash('sha1').update(readFileSync(f)).digest('hex');
+  } catch {
+    return 'missing'; // a dependency that vanished: differs from any recorded hash, so the stylesheet recompiles (and reports it)
+  }
+};
+const depsCurrent = (depHashes) => depHashes.every(([f, h]) => fileHash(f) === h);
+
+/** `node_modules/.cache/stencilrs/sass` of the nearest node_modules above the working directory, or null. */
+const diskCacheDir = () => {
+  for (let dir = process.cwd(); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'node_modules'))) return join(dir, 'node_modules', '.cache', 'stencilrs', 'sass');
+    if (dirname(dir) === dir) return null;
+  }
+};
+
 /**
  * The browsers `stencil build` autoprefixes for (`DEFAULT_BROWSER_TARGETS` in @stencil/core's
  * compiler, `autoprefixCss: true`). A browserslist query, resolved when the stylesheets load.
@@ -99,7 +122,22 @@ export function createCssPipeline(options = {}) {
   // lightningcss prints without it and drops the whitespace, which is what `stencil build` ships (autoprefix, then its
   // own whitespace-only minifier); `false` (the default in dev) leaves the output as printed.
   // `sass`: passed to Sass' `compileString` (silenceDeprecations, loadPaths, quietDeps, ...).
-  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {} } = options;
+  // `cache`: results are reused while a stylesheet and every file Sass loaded for it (`loadedUrls`) are unchanged, so a
+  // watch rebuild recompiles only what an edit touched. In memory always; also on disk (node_modules/.cache/stencilrs)
+  // for the Sass step, unless `false` / 'memory', or the Sass options hold functions or importers (not hashable).
+  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {}, cache: cacheOption = true } = options;
+  const sassOptionsKey = (() => {
+    if (sassOptions.functions || sassOptions.importers || sassOptions.logger) return null;
+    try {
+      return JSON.stringify(sassOptions);
+    } catch {
+      return null;
+    }
+  })();
+  const memCache = cacheOption !== false;
+  const diskCache = cacheOption === true && sassOptionsKey !== null ? diskCacheDir() : null;
+  const sassMemo = new Map(); // key -> { css, deps, depHashes }
+  const outputMemo = new Map(); // key -> { code, deps }
   let targets; // lightningcss' targets, resolved once
   const resolveTargets = async () => {
     if (targets !== undefined) return targets;
@@ -135,11 +173,41 @@ export function createCssPipeline(options = {}) {
     return names.every((n) => mods[n]);
   };
 
-  const compileSass = (source, filePath, indented) => {
+  const compileSassUncached = (source, filePath, indented) => {
     const mainUrl = `file://${filePath}`;
     const result = mods.sass.compileString(source, { ...sassOptions, url: new URL(mainUrl), syntax: indented ? 'indented' : 'scss' });
     const deps = result.loadedUrls.filter((u) => u.protocol === 'file:' && u.href !== mainUrl).map((u) => fileURLToPath(u));
     return { css: result.css, deps };
+  };
+  let sassVersion;
+  const compileSass = (source, filePath, indented) => {
+    if (!memCache || sassOptionsKey === null) return compileSassUncached(source, filePath, indented);
+    sassVersion ??= String(mods.sass.info);
+    // The key: the file, its content, the syntax, Sass' version and options. The entry also holds the hash of each file Sass loaded.
+    const key = sha('sass', sassVersion, sassOptionsKey, indented, filePath, source);
+    let hit = sassMemo.get(key);
+    const diskFile = diskCache && join(diskCache, `${key}.json`);
+    if (!hit && diskFile) {
+      try {
+        hit = JSON.parse(readFileSync(diskFile, 'utf8'));
+      } catch {}
+    }
+    if (hit && depsCurrent(hit.depHashes)) {
+      sassMemo.set(key, hit);
+      return { css: hit.css, deps: hit.deps, key: sha(key, ...hit.depHashes.flat()) };
+    }
+    const { css, deps } = compileSassUncached(source, filePath, indented);
+    const entry = { css, deps, depHashes: deps.map((d) => [d, fileHash(d)]) };
+    sassMemo.set(key, entry);
+    if (diskFile) {
+      try {
+        mkdirSync(diskCache, { recursive: true });
+        const tmp = `${diskFile}.${process.pid}.tmp`;
+        writeFileSync(tmp, JSON.stringify(entry));
+        renameSync(tmp, diskFile);
+      } catch {}
+    }
+    return { css, deps, key: sha(key, ...entry.depHashes.flat()) };
   };
   const compileLess = async (source, filePath) => {
     const result = await mods.less.default.render(source, { filename: filePath, paths: [dirname(filePath)] });
@@ -172,8 +240,13 @@ export function createCssPipeline(options = {}) {
     if (!(await need(ext))) return null;
     let css = readFileSync(file, 'utf-8');
     let deps = [];
-    if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps } = compileSass(css, file, ext === 'sass'));
+    let sassKey = null;
+    if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps, key: sassKey } = compileSass(css, file, ext === 'sass'));
     else if (has.less && ext === 'less') ({ css, deps } = await compileLess(css, file));
+    // Everything after Sass is a function of the CSS it produced and of the id: reuse the whole output while both are unchanged.
+    const outKey = sassKey ? sha(sassKey, id, isDev) : null;
+    const memo = outKey && outputMemo.get(outKey);
+    if (memo) return memo;
     if (has.postcss) css = await runPostCss(css, file);
     const lightningTargets = has.lightningcss ? await resolveTargets() : null;
     const minify = minifyOption ?? (isDev ? false : 'whitespace');
@@ -213,6 +286,8 @@ export function createCssPipeline(options = {}) {
         return null; // a stylesheet stencilrs' scopeCss rejects: Stencil's decides
       }
     }
-    return { code: `export default () => ${JSON.stringify(css)};`, deps };
+    const out = { code: `export default () => ${JSON.stringify(css)};`, deps };
+    if (outKey) outputMemo.set(outKey, out);
+    return out;
   };
 }

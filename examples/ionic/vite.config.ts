@@ -8,6 +8,7 @@
 //                              palettes), from src/css/**/*.scss, as `stencil build` writes them to css/
 //
 // The compiler runs from this folder (process.cwd()) so that Sass is found in this node_modules.
+import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,11 +51,24 @@ writeFileSync(
 // src/css/**/*.scss to css/**/*.css, what the `stencil build` output keeps in css/: compressed Sass, as `stencil build`'s
 // build:stencil step does (scripts/build.mjs). Vite's own preprocessCSS is not used: its
 // Sass worker pool keeps the process alive after the build.
+// Cached across rebuilds of `vite build --watch`, as the plugin caches component styles: a file is recompiled only when
+// it or a file Sass loaded for it (`loadedUrls`) changed, by content hash.
+const hashOf = (f: string) => createHash('sha1').update(readFileSync(f)).digest('hex');
+const globalCssCache = new Map<string, { hash: string; deps: [string, string][]; code: string }>();
+const compileGlobal = (file: string): string => {
+  const hash = hashOf(file);
+  const hit = globalCssCache.get(file);
+  if (hit && hit.hash === hash && hit.deps.every(([f, h]) => { try { return hashOf(f) === h; } catch { return false; } })) return hit.code;
+  const result = sass.compile(file, { style: 'compressed', silenceDeprecations: [...silenceDeprecations] });
+  const deps = result.loadedUrls.filter((u) => u.protocol === 'file:').map((u) => fileURLToPath(u)).filter((f) => f !== file);
+  globalCssCache.set(file, { hash, deps: deps.map((f) => [f, hashOf(f)]), code: result.css });
+  return result.css;
+};
 const globalCss = (): Plugin => ({
   name: 'ionic-global-css',
   generateBundle() {
     for (const file of walk(join(src, 'css')).filter((f) => f.endsWith('.scss'))) {
-      const { css: code } = sass.compile(file, { style: 'compressed', silenceDeprecations: [...silenceDeprecations] });
+      const code = compileGlobal(file);
       this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: code + '\n' });
     }
   },
