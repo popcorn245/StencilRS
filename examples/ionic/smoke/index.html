@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ionic core smoke page</title>
+    <link rel="icon" href="data:," />
+    <!-- /build/ is the folder of the build under test (dist-stencil or dist-stencil4), see run.mjs.
+         The mode comes from ?ionic:mode=ios|md, which Ionic's own config reads. -->
+    <link rel="stylesheet" href="/build/css/core.css" />
+    <link rel="stylesheet" href="/build/css/normalize.css" />
+    <link rel="stylesheet" href="/build/css/structure.css" />
+    <link rel="stylesheet" href="/build/css/typography.css" />
+    <script type="module" src="/build/dist/ionic/ionic.esm.js"></script>
+    <style>
+      body { margin: 0; padding: 16px; position: static; overflow: auto; }
+      section { margin-bottom: 20px; }
+      h2 { font: 600 12px/1 sans-serif; text-transform: uppercase; letter-spacing: 0.08em; color: #666; margin: 0 0 8px; }
+    </style>
+  </head>
+  <body>
+    <section id="button">
+      <h2>ion-button</h2>
+      <ion-button id="btn">Default</ion-button>
+      <ion-button color="secondary" fill="outline">Outline</ion-button>
+      <ion-button color="danger" shape="round">Round</ion-button>
+      <ion-button color="success" fill="clear">Clear</ion-button>
+    </section>
+
+    <section id="card">
+      <h2>ion-card</h2>
+      <ion-card style="margin: 0">
+        <ion-card-header>
+          <ion-card-subtitle>Subtitle</ion-card-subtitle>
+          <ion-card-title>Card title</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>Cards group related content, and their styles differ per mode.</ion-card-content>
+      </ion-card>
+    </section>
+
+    <section id="list">
+      <h2>ion-list</h2>
+      <ion-list>
+        <ion-list-header><ion-label>Inbox</ion-label></ion-list-header>
+        <ion-item><ion-label>Pokémon Yellow</ion-label></ion-item>
+        <ion-item><ion-label>Mega Man X</ion-label><ion-note slot="end">12</ion-note></ion-item>
+        <ion-item lines="none"><ion-label>The Legend of Zelda</ion-label></ion-item>
+      </ion-list>
+    </section>
+
+    <section id="toggle">
+      <h2>ion-toggle</h2>
+      <ion-list>
+        <ion-item>
+          <ion-toggle id="tgl">Enable notifications</ion-toggle>
+        </ion-item>
+        <ion-item>
+          <ion-toggle id="tgl-on" checked color="success">Wi-Fi</ion-toggle>
+        </ion-item>
+      </ion-list>
+    </section>
+
+    <ion-modal id="modal" is-open="true">
+      <div style="padding: 24px">
+        <h1 style="margin: 0 0 8px">Modal</h1>
+        <p style="margin: 0 0 16px">Presented by <code>isOpen</code>.</p>
+        <ion-button id="modal-close" expand="block">Close</ion-button>
+      </div>
+    </ion-modal>
+    <script>
+      document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal').dismiss());
+    </script>
+  </body>
+</html>

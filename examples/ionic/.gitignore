@@ -1,0 +1,10 @@
+node_modules/
+# Untrusted upstream clone and everything generated from it
+upstream/
+migrated/
+dist-stencil/
+dist-stencil4/
+stencil4/stock/
+stencil4/node_modules/
+logs/
+smoke/shots/
