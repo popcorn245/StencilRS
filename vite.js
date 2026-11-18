@@ -106,18 +106,23 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown> }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
  *   Vite build leaves at their defaults (all features on, `hydrateClientSide` too). A client-only library
  *   sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate output target.
+ *   css: the component stylesheet pipeline (vite-css.js). `targets`: the browsers lightningcss lowers for and
+ *   prefixes: a browserslist query (string or array), lightningcss' targets object, or false for none; the default
+ *   is what `stencil build`'s `autoprefixCss` targets. `minify`: true (lightningcss' own: shortens values), 'whitespace' (default in a build: what
+ *   `stencil build` ships, values as authored), false (default in dev).
+ *   `sass`: options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, ...).
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, ...stencilOptions } = options;
+  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -149,7 +154,7 @@ export function stencilrs(options = {}) {
   // Component stylesheets served here. `docs` reads @stencil/unplugin's stylesheet bookkeeping,
   // so with it the stylesheets stay with @stencil/unplugin.
   const serveCss = !stencilOptions.docs;
-  const loadCss = serveCss ? createCssPipeline() : null;
+  const loadCss = serveCss ? createCssPipeline(cssOptions) : null;
   // For HMR, as @stencil/unplugin's cssFileToTagNames / cssRealToVirtualIds.
   const cssFileToTags = new Map();
   const cssFileToIds = new Map();

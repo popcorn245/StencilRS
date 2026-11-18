@@ -35,6 +35,21 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
 
+## Component CSS options (`css`)
+
+`stencilrs({ css: { targets, minify, sass } })`:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `targets` | Stencil's `autoprefixCss` targets (`last 2 Chrome versions`, ..., `iOS >= 16`, `> 0.5%`, `not dead`), resolved with `browserslist` when it is installed | the browsers lightningcss prefixes and lowers for: a browserslist query (string or array), lightningcss' targets object, or `false` for none |
+| `minify` | `'whitespace'` in a build, `false` in dev | `true` is lightningcss' own minify (shortens values: `bold` to `700`, `none` to `0 0`, `translate3d(x, 0, 0)` to `translate(x)`); `'whitespace'` keeps the values and drops the whitespace, as `stencil build` ships them |
+| `sass` | `{}` | options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, `logger`, ...); `url` and `syntax` are the plugin's |
+
+The defaults give the CSS `stencil build` writes with `autoprefixCss: true` (the Ionic check compares 94 to 95 of
+96 stylesheets as identical text). @stencil/unplugin runs lightningcss with no targets and `minify: true`;
+`css: { targets: false, minify: true }` reproduces that byte for byte (the ui-kit's `compare:css` does).
+The plugin never calls Vite's `preprocessCSS`, so Vite's Sass worker pool is not started by component styles.
+
 ## Loading it on purpose
 
 Pass `docs`, `types`, `include` or `exclude`, or import a virtual global stylesheet, and
