@@ -5,7 +5,7 @@ description: "Per-file compile, a production Vite build and a full stencil build
 
 <script setup>
 import { data } from './data/site.data'
-import { data as ionic } from './data/ionic.data'
+import { data as ionic } from './data/ionic-bench.data'
 const b = data.bench
 const d = data.derived
 const ms = (v) => `${v.toLocaleString('en-US')} ms`
