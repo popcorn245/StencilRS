@@ -4,7 +4,8 @@
 //   node scripts/build.mjs stencil4   stock upstream (Stencil 4.45.4)     ->  dist-stencil4/
 // Each is a cold, uncached `stencil build` of the same component set with the same output targets
 // (lazy loader, standalone/custom-elements, docs-json). The full log goes to logs/<name>.log; the console
-// gets everything except Sass's deprecation chatter, which is ~80k lines per build.
+// gets everything except Sass's deprecation chatter, which is ~80k lines per build of Stencil's own Sass plugin
+// (the stencilrs build silences it with the plugin's `css.sass` option, and its log is printed unfiltered).
 import { spawn, execFileSync } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, rmSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -78,7 +79,8 @@ const filter = (chunk) => {
   log.write(chunk);
   for (const line of chunk.toString().split('\n')) {
     // A Sass deprecation is a header line plus an indented source excerpt; drop the whole block.
-    if (/^DEPRECATION WARNING|^WARNING: \d+ repetitive deprecation/.test(line)) noisy = true;
+    if (target === 'stencilrs') console.log(line);
+    else if (/^DEPRECATION WARNING|^WARNING: \d+ repetitive deprecation/.test(line)) noisy = true;
     else if (/^\[/.test(line) || /^\s*(Error|SyntaxError)/.test(line)) noisy = false;
     if (!noisy && line.trim() && !/^\s*(Suggestion:|Use color\.mix|More info|Run in verbose)/.test(line)) console.log(line);
   }

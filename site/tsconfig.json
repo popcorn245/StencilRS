@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@stencil/core",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "useDefineForClassFields": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [".vitepress/**/*", "data/**/*", "components/**/*"]
+}

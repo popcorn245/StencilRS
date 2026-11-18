@@ -1,10 +1,25 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import stencilrs from '@popcorn245/stencilrs/vite';
 import { defineConfig } from 'vitepress';
 
+import { ionicCss } from './ionic/css-plugin.ts';
+
 const repo = fileURLToPath(new URL('../../', import.meta.url));
 const github = 'https://github.com/popcorn245/StencilRS';
+
+// Ionic's source (examples/ionic/migrated, made by `npm run prepare:ionic`) and its tsconfig `paths`, which
+// the migrated components import through (`@utils/...`, `@global/...`, `src/...`).
+const ionicSrc = fileURLToPath(new URL('../../examples/ionic/migrated/src/', import.meta.url));
+
+// The Components sidebar: Ionic's own sections, one page per component (data/ionic-api.json, from `npm run gen:components`).
+const ionic = JSON.parse(readFileSync(fileURLToPath(new URL('../data/ionic-api.json', import.meta.url)), 'utf8'));
+const ionicSidebar = ionic.groups.map((g: { name: string; tags: string[] }) => ({
+  text: g.name,
+  collapsed: true,
+  items: g.tags.map((t) => ({ text: t, link: `/components/${t.replace(/^ion-/, '')}` })),
+}));
 
 // Vue is only the shell: every `ion-` / `pop-` tag is a custom element, built by stencilrs.
 const isCustomElement = (tag: string) => /^(ion|pop)-/.test(tag);
@@ -89,8 +104,16 @@ export default defineConfig({
   vite: {
     // The stencilrs plugin is in VitePress's own Vite config: every component in the pages is
     // compiled by it, in dev and in the build.
-    plugins: [stencilrs({ verbose: true })],
-    resolve: { dedupe: ['@stencil/core', 'vue'] },
+    plugins: [ionicCss(), stencilrs({ verbose: true, buildFlags: { hydrateClientSide: false } })],
+    css: { preprocessorOptions: { scss: { silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function', 'slash-div'], quietDeps: true } } },
+    resolve: {
+      dedupe: ['@stencil/core', 'vue'],
+      alias: [
+        { find: /^@utils\//, replacement: `${ionicSrc}utils/` },
+        { find: /^@global\//, replacement: `${ionicSrc}global/` },
+        { find: /^src\//, replacement: ionicSrc },
+      ],
+    },
     server: { fs: { allow: [repo] } },
     build: { chunkSizeWarningLimit: 1200 },
   },
@@ -139,6 +162,7 @@ export default defineConfig({
             { text: 'pop-counter', link: '/components/pop-counter' },
           ],
         },
+        ...ionicSidebar,
       ],
       '/reference/': [
         {
@@ -157,7 +181,7 @@ export default defineConfig({
     outline: { level: [2, 3], label: 'On this page' },
     editLink: { pattern: `${github}/edit/next/site/:path`, text: 'Edit this page on GitHub' },
     footer: {
-      message: 'MIT licensed. Built with VitePress, and compiled by stencilrs. Ionic is the test subject, not our brand.',
+      message: 'MIT licensed. Built with VitePress, and compiled by stencilrs. Ionic Framework (MIT) is the test subject and the source of the Components section, not our brand.',
       copyright: 'stencilrs',
     },
   },

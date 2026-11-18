@@ -73,13 +73,49 @@ export function parseStencilCssId(id) {
   };
 }
 
+/** lightningcss' unminified output (one declaration per line, indented) without its line breaks and indentation. */
+const compactWhitespace = (css) =>
+  css
+    .replace(/([{};,])[ \t]*\n\s*/g, '$1')
+    .replace(/\s*\n\s*/g, ' ')
+    .trim();
+
 const postcssConfigCache = new Map();
+
+/**
+ * The browsers `stencil build` autoprefixes for (`DEFAULT_BROWSER_TARGETS` in @stencil/core's
+ * compiler, `autoprefixCss: true`). A browserslist query, resolved when the stylesheets load.
+ */
+export const STENCIL_CSS_TARGETS = ['last 2 Chrome versions', 'last 2 Firefox versions', 'last 2 Safari versions', 'last 2 Edge versions', 'iOS >= 16', 'Android >= 13', '> 0.5%', 'not dead'];
 
 /**
  * The chain's packages, loaded lazily, once. null when an installed one fails to import from
  * here: the caller leaves the stylesheet to @stencil/unplugin.
  */
-export function createCssPipeline() {
+export function createCssPipeline(options = {}) {
+  // `targets`: a browserslist query (string or array), or lightningcss' own targets object, or false for none.
+  // Default: Stencil's autoprefix targets. `minify`: `true` is lightningcss' minify (shortens values: `bold` to `700`,
+  // `none` to `0 0`, `translate3d(x, 0, 0)` to `translate(x)`); `'whitespace'` (the default in a build) keeps the values
+  // lightningcss prints without it and drops the whitespace, which is what `stencil build` ships (autoprefix, then its
+  // own whitespace-only minifier); `false` (the default in dev) leaves the output as printed.
+  // `sass`: passed to Sass' `compileString` (silenceDeprecations, loadPaths, quietDeps, ...).
+  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {} } = options;
+  let targets; // lightningcss' targets, resolved once
+  const resolveTargets = async () => {
+    if (targets !== undefined) return targets;
+    if (!targetsOption) return (targets = null);
+    if (typeof targetsOption === 'object' && !Array.isArray(targetsOption)) return (targets = targetsOption);
+    const explicit = targetsOption !== STENCIL_CSS_TARGETS;
+    try {
+      const mod = await importFromProject('browserslist');
+      const browserslist = typeof mod === 'function' ? mod : mod.default;
+      targets = mods.lightningcss.browserslistToTargets(browserslist(targetsOption));
+    } catch (err) {
+      if (explicit) throw new Error(`[stencilrs] css.targets needs the browserslist package: ${err.message}`);
+      targets = null; // no browserslist here: no targets, as before
+    }
+    return targets;
+  };
   const has = { sass: packageExists('sass'), less: packageExists('less'), postcss: packageExists('postcss') && packageExists('postcss-load-config'), lightningcss: packageExists('lightningcss') };
   const mods = {};
   const need = async (ext) => {
@@ -101,7 +137,7 @@ export function createCssPipeline() {
 
   const compileSass = (source, filePath, indented) => {
     const mainUrl = `file://${filePath}`;
-    const result = mods.sass.compileString(source, { url: new URL(mainUrl), syntax: indented ? 'indented' : 'scss' });
+    const result = mods.sass.compileString(source, { ...sassOptions, url: new URL(mainUrl), syntax: indented ? 'indented' : 'scss' });
     const deps = result.loadedUrls.filter((u) => u.protocol === 'file:' && u.href !== mainUrl).map((u) => fileURLToPath(u));
     return { css: result.css, deps };
   };
@@ -139,7 +175,12 @@ export function createCssPipeline() {
     if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps } = compileSass(css, file, ext === 'sass'));
     else if (has.less && ext === 'less') ({ css, deps } = await compileLess(css, file));
     if (has.postcss) css = await runPostCss(css, file);
-    const lower = (code) => mods.lightningcss.transform({ filename: file, code: Buffer.from(code), minify: !isDev }).code.toString();
+    const lightningTargets = has.lightningcss ? await resolveTargets() : null;
+    const minify = minifyOption ?? (isDev ? false : 'whitespace');
+    const lower = (code) => {
+      const out = mods.lightningcss.transform({ filename: file, code: Buffer.from(code), minify: minify === true, ...(lightningTargets ? { targets: lightningTargets } : {}) }).code.toString();
+      return minify === 'whitespace' ? compactWhitespace(out) : out;
+    };
     const scoped = encapsulation === 'scoped' && tag;
     // Stencil's getScopeId(tag, mode): a mode's stylesheet (`styleUrls: { ios, md }`) is scoped to `sc-<tag>-<mode>`,
     // the class the runtime puts on the host and its children for that mode.
