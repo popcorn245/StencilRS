@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use oxc::ast::ast::{
     ClassElement, Declaration, Expression, ImportDeclarationSpecifier, Program, Statement,
-    TSEnumDeclaration, TSSignature, TSType, VariableDeclarationKind,
+    TSEnumDeclaration, TSSignature, TSType, TSTypeParameterDeclaration, VariableDeclarationKind,
 };
 
 use crate::complex_type::ExportedType;
@@ -51,6 +51,8 @@ pub struct Locals<'a, 'b> {
     pub types: FxHashMap<&'a str, LocalType<'a, 'b>>,
     /// The type parameters of each generic type alias.
     pub alias_params: FxHashMap<&'a str, Vec<&'a str>>,
+    /// The type parameters of each generic interface and class, with their defaults.
+    pub decl_params: FxHashMap<&'a str, &'b TSTypeParameterDeclaration<'a>>,
     pub values: FxHashMap<&'a str, LocalValue<'a, 'b>>,
     /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
     pub const_annotations: FxHashMap<&'a str, &'b TSType<'a>>,
@@ -95,6 +97,9 @@ impl<'a, 'b> Locals<'a, 'b> {
                 }
                 Some(Declaration::TSInterfaceDeclaration(i)) => {
                     locals.types.insert(i.id.name.as_str(), LocalType::Interface(&i.body.body));
+                    if let Some(params) = &i.type_parameters {
+                        locals.decl_params.insert(i.id.name.as_str(), params);
+                    }
                 }
                 Some(Declaration::ClassDeclaration(c)) => {
                     if let Some(id) = &c.id {
@@ -105,6 +110,9 @@ impl<'a, 'b> Locals<'a, 'b> {
                             .filter_map(|el| el.property_key().and_then(property_key_name))
                             .collect();
                         locals.types.insert(id.name.as_str(), LocalType::Class(members));
+                        if let Some(params) = &c.type_parameters {
+                            locals.decl_params.insert(id.name.as_str(), params);
+                        }
                         locals.values.insert(id.name.as_str(), LocalValue::Object);
                         let statics = c
                             .body

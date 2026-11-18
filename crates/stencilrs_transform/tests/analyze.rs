@@ -273,3 +273,99 @@ fn intersection_types_resolve_as_the_checker_prints_them() {
     let (resolved, _, diags) = resolved_of("v: string & number", "", false);
     assert_eq!((resolved.as_str(), diags.len()), ("", 0));
 }
+
+/// The shapes Ionic's components give complexType, resolved across files as `stencil build` does.
+/// The expected text is what Stencil v5's own build prints (`parity/build.mjs` compares the same
+/// shapes against it, member by member).
+#[test]
+fn ionic_shaped_types_resolve_across_files() {
+    let dir = std::env::temp_dir().join(format!("stencilrs-ionic-shapes-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("tsconfig.json"), "{ \"compilerOptions\": { \"strict\": true } }").unwrap();
+    std::fs::write(
+        dir.join("interface.d.ts"),
+        "export type PredefinedColors = 'primary' | 'dark';\n\
+         export type LiteralUnion<T extends U, U = string> = T | (U & Record<never, never>);\n\
+         export type Color = LiteralUnion<PredefinedColors, string>;\n\
+         export type ComponentRef = Function | HTMLElement | string | null;\n\
+         export type ComponentProps<T = null> = { [key: string]: any };\n\
+         export interface Detail<T = any> { data?: T }\n\
+         export type { NavComponent } from './nav-interface';\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("nav-interface.ts"),
+        "import type { ComponentRef } from './interface';\nexport type NavComponent = ComponentRef | number;\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("spinners.ts"), "const spinners = { bubbles: 1, 'lines-small': 2 };\nexport type SpinnerTypes = keyof typeof spinners;\n").unwrap();
+    let src = "import { Component, Method, Prop } from '@stencil/core';\n\
+               import type { Color, ComponentProps, ComponentRef, Detail } from './interface';\n\
+               import type { NavComponent } from './nav-interface';\n\
+               import type { SpinnerTypes } from './spinners';\n\
+               @Component({ tag: 'cmp-a' })\n\
+               export class CmpA {\n\
+                 @Prop() color: Color;\n\
+                 @Prop() colors: Color[];\n\
+                 @Prop() component: ComponentRef;\n\
+                 @Prop() props: ComponentProps;\n\
+                 @Prop() typed: ComponentProps<string>;\n\
+                 @Prop() detail: Detail;\n\
+                 @Prop() root: NavComponent;\n\
+                 @Prop() spinner: SpinnerTypes | null;\n\
+                 @Method() async onDidDismiss<T = any>(): Promise<Detail<T>> { return null as any; }\n\
+                 @Method() async push<T extends string>(item: T, extra?: Record<string, any>): Promise<T[]> { return [item]; }\n\
+                 @Method() async setFocus(ev?: globalThis.Event) {}\n\
+               }";
+    let file = dir.join("cmp-a.tsx").to_string_lossy().replace('\\', "/");
+    let result = analyze_with(src, &file, true, true);
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    let c = &result.components[0];
+    let resolved: Vec<(&str, &str)> = c.properties.iter().map(|p| (p.name.as_str(), p.complex_type.resolved.as_str())).collect();
+    assert_eq!(
+        resolved,
+        [
+            ("color", "\"dark\" | \"primary\" | string & Record<never, never>"),
+            ("colors", "(\"dark\" | \"primary\" | string & Record<never, never>)[]"),
+            ("component", "Function | HTMLElement | null | string"),
+            // An alias written without its type arguments is read off its declaration: `T`.
+            ("props", "T"),
+            ("typed", "string"),
+            // A generic interface written without arguments is printed with its defaults.
+            ("detail", "Detail<any>"),
+            ("root", "Function | HTMLElement | null | number | string"),
+            ("spinner", "\"bubbles\" | \"lines-small\" | null"),
+        ]
+    );
+    let m = |name: &str| c.methods.iter().find(|m| m.name == name).unwrap().complex_type.clone();
+    let dismiss = m("onDidDismiss");
+    assert_eq!(dismiss.signature, "<T = any>() => Promise<Detail<T>>");
+    assert_eq!(dismiss.return_type, "Promise<Detail<T>>");
+    let names: Vec<_> = dismiss.references.0.iter().map(|(n, _)| n.as_str()).collect();
+    assert_eq!(names, ["Promise", "Detail", "T"]);
+    let push = m("push");
+    assert_eq!(push.signature, "<T extends string>(item: T, extra?: Record<string, any>) => Promise<T[]>");
+    let types: Vec<_> = push.parameters.iter().map(|p| p.type_text.as_str()).collect();
+    assert_eq!(types, ["T", "Record<string, any> | undefined"]);
+    let focus = m("setFocus");
+    assert_eq!((focus.signature.as_str(), focus.return_type.as_str()), ("(ev?: globalThis.Event) => Promise<void>", "Promise<void>"));
+    assert_eq!(focus.references.0[0].0, "Promise");
+
+    // What needs the checker stays Stencil's: a union ordered by type id, an inferred return type.
+    let src = "import { Component, Method } from '@stencil/core';\n\
+               @Component({ tag: 'cmp-b' })\n\
+               export class CmpB {\n\
+                 @Method() async present(e?: MouseEvent | TouchEvent): Promise<void> {}\n\
+                 @Method() async progress() { return Promise.resolve(1); }\n\
+               }";
+    let result = analyze_with(src, &file, true, true);
+    let messages: Vec<_> = result.diagnostics.iter().map(|d| d.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "stencilrs: the type of method `present` (a union whose members the checker orders by when it first met them) is not ported yet.",
+            "stencilrs: the type of method `progress` (a return type inferred from the body) is not ported yet.",
+        ]
+    );
+    std::fs::remove_dir_all(&dir).ok();
+}
