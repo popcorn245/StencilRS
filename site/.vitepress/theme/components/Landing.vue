@@ -19,10 +19,10 @@ const cold = [
 ];
 
 const paths = [
-  { title: 'Guide', text: 'Install it, add the Vite plugin, write components.', to: '/guide/introduction' },
+  { title: 'Guide', text: 'Install it, add the Vite plugin, write components.', to: '/guide/introduction.html' },
   { title: 'The story', text: 'Parity, the fallbacks, the speed, the cold start.', to: '/story/' },
   { title: 'Components', text: 'Live components, compiled as the page loads.', to: '/components/' },
-  { title: 'Benchmarks', text: 'The tables behind every speed claim.', to: '/benchmarks' },
+  { title: 'Benchmarks', text: 'The tables behind every speed claim.', to: '/benchmarks.html' },
 ];
 </script>
 
@@ -36,9 +36,9 @@ const paths = [
         custom element. Same output as Stencil v5, a fraction of the time, as a Vite plugin.
       </p>
       <div class="actions">
-        <a class="btn btn-primary" :href="withBase('/guide/getting-started')">Get started</a>
+        <a class="btn btn-primary" :href="withBase('/guide/getting-started.html')">Get started</a>
         <a class="btn" :href="withBase('/story/')">Read the story</a>
-        <a class="btn btn-ghost" :href="withBase('/benchmarks')">Benchmarks</a>
+        <a class="btn btn-ghost" :href="withBase('/benchmarks.html')">Benchmarks</a>
       </div>
     </section>
 
