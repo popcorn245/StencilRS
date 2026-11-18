@@ -23,14 +23,14 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use oxc::allocator::{Allocator, TakeIn};
-use oxc::ast::builder::AstBuilder;
 use oxc::ast::ast::{
-    AccessorProperty, Argument, ObjectExpression, ObjectPropertyKind, PropertyDefinition,
-    CallExpression, Class, ClassElement, ConditionalExpression, Declaration, Decorator, Expression,
-    ImportDeclarationSpecifier, JSXAttributeItem, JSXAttributeName, JSXElementName, JSXFragment,
-    JSXOpeningElement, MethodDefinition, MethodDefinitionKind, Program, ReturnStatement, Statement,
-    StringLiteral, TSEnumDeclaration,
+    AccessorProperty, Argument, CallExpression, Class, ClassElement, ConditionalExpression,
+    Declaration, Decorator, Expression, ImportDeclarationSpecifier, JSXAttributeItem,
+    JSXAttributeName, JSXElementName, JSXFragment, JSXOpeningElement, MethodDefinition,
+    MethodDefinitionKind, ObjectExpression, ObjectPropertyKind, Program, PropertyDefinition,
+    ReturnStatement, Statement, StringLiteral, TSEnumDeclaration,
 };
+use oxc::ast::builder::AstBuilder;
 use oxc::ast_visit::{Visit, VisitMut, walk, walk_mut};
 use oxc::codegen::{Codegen, CodegenOptions, CommentOptions};
 use oxc::parser::Parser;
@@ -41,12 +41,12 @@ use serde_json::Value;
 
 use crate::analyze::{Members, foreign_class_members, import_aliases, style_url_modes};
 use crate::compiler_meta::{self, MetaInput, VdomMeta, decorator_getters, scan_vdom};
-use crate::edits::Edits;
 use crate::consts::{Lit, enum_values, order_like_object_keys};
-use crate::locals::Locals;
+use crate::edits::Edits;
 use crate::eval::property_key_name;
-use crate::resolve::Resolver;
+use crate::locals::Locals;
 use crate::meta::{ComponentMeta, Encapsulation, PropType, WatcherMeta};
+use crate::resolve::Resolver;
 use crate::scope_css::{scope_css, scope_id};
 
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
@@ -126,46 +126,122 @@ pub struct Generated {
 }
 
 const KEEP_IMPORTS: [&str; 24] = [
-    "Build", "Env", "Fragment", "Host", "Mixin", "ReactiveControllerHost", "forceUpdate",
-    "forceModeUpdate", "getAssetPath", "getElement", "getMode", "getRenderingRef", "getShadowRoot",
-    "h", "jsx", "jsxs", "readTask", "render", "setErrorHandler", "setMode", "setPlatformHelpers",
-    "setTagTransformer", "transformTag", "writeTask",
+    "Build",
+    "Env",
+    "Fragment",
+    "Host",
+    "Mixin",
+    "ReactiveControllerHost",
+    "forceUpdate",
+    "forceModeUpdate",
+    "getAssetPath",
+    "getElement",
+    "getMode",
+    "getRenderingRef",
+    "getShadowRoot",
+    "h",
+    "jsx",
+    "jsxs",
+    "readTask",
+    "render",
+    "setErrorHandler",
+    "setMode",
+    "setPlatformHelpers",
+    "setTagTransformer",
+    "transformTag",
+    "writeTask",
 ];
 
 const MEMBER_DECORATORS_TO_REMOVE: [&str; 10] = [
-    "AttachInternals", "AttrDeserialize", "PropSerialize", "Element", "Event", "Listen", "Method",
-    "Prop", "State", "Watch",
+    "AttachInternals",
+    "AttrDeserialize",
+    "PropSerialize",
+    "Element",
+    "Event",
+    "Listen",
+    "Method",
+    "Prop",
+    "State",
+    "Watch",
 ];
 
 const STATIC_GETTERS_TO_REMOVE: [&str; 18] = [
-    "attachInternalsMemberName", "deserializers", "elementRef", "encapsulation", "events", "is",
-    "listeners", "methods", "originalStyleUrls", "properties", "serializers", "states", "style",
-    "styleMode", "styleUrl", "styleUrls", "styles", "watchers",
+    "attachInternalsMemberName",
+    "deserializers",
+    "elementRef",
+    "encapsulation",
+    "events",
+    "is",
+    "listeners",
+    "methods",
+    "originalStyleUrls",
+    "properties",
+    "serializers",
+    "states",
+    "style",
+    "styleMode",
+    "styleUrl",
+    "styleUrls",
+    "styles",
+    "watchers",
 ];
 
 const LIFECYCLE_METHODS: [&str; 9] = [
-    "componentWillLoad", "componentDidLoad", "componentShouldUpdate", "componentWillUpdate",
-    "componentDidUpdate", "componentWillRender", "componentDidRender", "connectedCallback",
+    "componentWillLoad",
+    "componentDidLoad",
+    "componentShouldUpdate",
+    "componentWillUpdate",
+    "componentDidUpdate",
+    "componentWillRender",
+    "componentDidRender",
+    "connectedCallback",
     "disconnectedCallback",
 ];
 
 /// Generate the customelement module for an already analysed program. `components` are the
 /// valid components `analyze_program` found, in source order.
-pub fn generate(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2) -> Result<Generated, String> {
+pub fn generate(
+    program: &Program,
+    source: &str,
+    components: &[ComponentMeta],
+    opts: &CodegenOptions2,
+) -> Result<Generated, String> {
     if opts.component_metadata == ComponentMetadata::None {
         return generate_pass(program, source, components, opts, None);
     }
     // The metadata holds facts about the vdom calls, which Stencil reads off the `h()` calls its
     // JSX transform wrote. So: generate once, read those calls from the output, then again with
     // the metadata in the class.
-    let first = generate_pass(program, source, components, &CodegenOptions2 { source_map: false, ..opts.clone() }, None)?;
-    let vdom: FxHashMap<String, VdomMeta> =
-        components.iter().map(|c| (c.component_class_name.clone(), scan_vdom(&first.code, &c.component_class_name))).collect();
+    let first = generate_pass(
+        program,
+        source,
+        components,
+        &CodegenOptions2 {
+            source_map: false,
+            ..opts.clone()
+        },
+        None,
+    )?;
+    let vdom: FxHashMap<String, VdomMeta> = components
+        .iter()
+        .map(|c| {
+            (
+                c.component_class_name.clone(),
+                scan_vdom(&first.code, &c.component_class_name),
+            )
+        })
+        .collect();
     generate_pass(program, source, components, opts, Some(&vdom))
 }
 
 /// One run of the generator; `vdom` is the facts for `COMPILER_META` when it is added.
-fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], opts: &CodegenOptions2, vdom: Option<&FxHashMap<String, VdomMeta>>) -> Result<Generated, String> {
+fn generate_pass(
+    program: &Program,
+    source: &str,
+    components: &[ComponentMeta],
+    opts: &CodegenOptions2,
+    vdom: Option<&FxHashMap<String, VdomMeta>>,
+) -> Result<Generated, String> {
     let mut ed = Edits::new(source);
     let ssr = opts.component_export == ComponentExport::Ssr;
     // Both take over a host (`registerInstance`) instead of being the element.
@@ -177,16 +253,25 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         .iter()
         .map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned()))
         .collect();
-    let component_decorator = aliases.get("Component").cloned().unwrap_or_else(|| "Component".into());
+    let component_decorator = aliases
+        .get("Component")
+        .cloned()
+        .unwrap_or_else(|| "Component".into());
 
     // `updateStencilCoreImports`
     let mut last_import_end = None;
     for stmt in &program.body {
-        let Statement::ImportDeclaration(imp) = stmt else { continue };
+        let Statement::ImportDeclaration(imp) = stmt else {
+            continue;
+        };
         last_import_end = Some(imp.span.end);
         let src = imp.source.value.as_str();
         if src == "@stencil/core/jsx-runtime" || src == "@stencil/core/jsx-dev-runtime" {
-            ed.replace(imp.source.span.start, imp.source.span.end, json(&opts.core_import_path));
+            ed.replace(
+                imp.source.span.start,
+                imp.source.span.end,
+                json(&opts.core_import_path),
+            );
         } else if src == "@stencil/core" {
             let keep: Vec<&str> = imp
                 .specifiers
@@ -198,9 +283,21 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                 })
                 .filter(|t| KEEP_IMPORTS.contains(t))
                 .collect();
-            let has_named = imp.specifiers.iter().flatten().any(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_)));
+            let has_named = imp
+                .specifiers
+                .iter()
+                .flatten()
+                .any(|s| matches!(s, ImportDeclarationSpecifier::ImportSpecifier(_)));
             if has_named && !keep.is_empty() {
-                ed.replace(imp.span.start, imp.span.end, format!("import {{ {} }} from {};", keep.join(", "), json(&opts.core_import_path)));
+                ed.replace(
+                    imp.span.start,
+                    imp.span.end,
+                    format!(
+                        "import {{ {} }} from {};",
+                        keep.join(", "),
+                        json(&opts.core_import_path)
+                    ),
+                );
             } else {
                 ed.remove(imp.span.start, imp.span.end);
             }
@@ -240,10 +337,16 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
     let mut define_calls = Vec::new();
 
     // Every other class: base classes and mixins.
-    let meta_decorators: Vec<String> =
-        META_DECORATORS.iter().map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned())).collect();
-    let resolver = opts.resolve_imports.then(|| Resolver::new(&opts.file, true));
-    let members_of = |class: &Class| foreign_class_members(class, program, source, &opts.file, resolver.as_ref());
+    let meta_decorators: Vec<String> = META_DECORATORS
+        .iter()
+        .map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned()))
+        .collect();
+    let resolver = opts
+        .resolve_imports
+        .then(|| Resolver::new(&opts.file, true));
+    let members_of = |class: &Class| {
+        foreign_class_members(class, program, source, &opts.file, resolver.as_ref())
+    };
     let mut bases = BaseClasses {
         ed: &mut ed,
         component: &component_decorator,
@@ -251,7 +354,10 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         meta: &meta_decorators,
         as_base: opts.transform_as_base_class && !lazy,
         lazy,
-        watch: aliases.get("Watch").cloned().unwrap_or_else(|| "Watch".into()),
+        watch: aliases
+            .get("Watch")
+            .cloned()
+            .unwrap_or_else(|| "Watch".into()),
         members_of: &members_of,
         complex_types: opts.complex_types,
         html_element: false,
@@ -274,22 +380,38 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
             },
             _ => continue,
         };
-        let Some(name) = class.id.as_ref().map(|id| id.name.as_str()) else { continue };
+        let Some(name) = class.id.as_ref().map(|id| id.name.as_str()) else {
+            continue;
+        };
         if !has_decorator(&class.decorators, &component_decorator) {
             continue;
         }
-        let Some(cmp) = components.iter().find(|c| c.component_class_name == name) else { continue };
+        let Some(cmp) = components.iter().find(|c| c.component_class_name == name) else {
+            continue;
+        };
 
         let info = ClassInfo::collect(class, cmp);
         // Lazy classes aren't elements, so nothing is plain (`isPlain` only drives native output).
         let plain = !lazy && info.is_plain(cmp);
 
         // Class → `const X = class extends HTMLElement { ... };`; `ssr` keeps the class as it is.
-        let header_start = class.decorators.iter().map(|d| d.span.start).min().unwrap_or(stmt_span.start).min(stmt_span.start);
+        let header_start = class
+            .decorators
+            .iter()
+            .map(|d| d.span.start)
+            .min()
+            .unwrap_or(stmt_span.start)
+            .min(stmt_span.start);
         let extends = match &class.heritage {
             Some(h) => {
-                let end = h.type_arguments.as_ref().map_or(h.expression.span().end, |t| t.span.end);
-                format!(" extends {}", &source[h.expression.span().start as usize..end as usize])
+                let end = h
+                    .type_arguments
+                    .as_ref()
+                    .map_or(h.expression.span().end, |t| t.span.end);
+                format!(
+                    " extends {}",
+                    &source[h.expression.span().start as usize..end as usize]
+                )
             }
             None if lazy => String::new(),
             None => {
@@ -298,13 +420,21 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
             }
         };
         // `createConstClass` keeps the `export` unless the output is `customelement`.
-        let export = if !customelement && matches!(stmt, Statement::ExportDeclaration(_)) { "export " } else { "" };
+        let export = if !customelement && matches!(stmt, Statement::ExportDeclaration(_)) {
+            "export "
+        } else {
+            ""
+        };
         if ssr {
             for d in &class.decorators {
                 ed.remove(d.span.start, d.span.end);
             }
         } else {
-            ed.replace(header_start, class.body.span.start, format!("{export}const {name} = class{extends} "));
+            ed.replace(
+                header_start,
+                class.body.span.start,
+                format!("{export}const {name} = class{extends} "),
+            );
             ed.insert(class.body.span.end, ";");
         }
 
@@ -315,27 +445,47 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         let mut connected: Option<&MethodDefinition> = None;
         for el in &class.body.body {
             let (decorators, is_static, key_name, span) = match el {
-                ClassElement::PropertyDefinition(p) => (&p.decorators, p.r#static, property_key_name(&p.key), p.span),
-                ClassElement::MethodDefinition(m) => (&m.decorators, m.r#static, property_key_name(&m.key), m.span),
-                ClassElement::AccessorProperty(a) => (&a.decorators, a.r#static, property_key_name(&a.key), a.span),
+                ClassElement::PropertyDefinition(p) => {
+                    (&p.decorators, p.r#static, property_key_name(&p.key), p.span)
+                }
+                ClassElement::MethodDefinition(m) => {
+                    (&m.decorators, m.r#static, property_key_name(&m.key), m.span)
+                }
+                ClassElement::AccessorProperty(a) => {
+                    (&a.decorators, a.r#static, property_key_name(&a.key), a.span)
+                }
                 _ => continue,
             };
-            for d in decorators.iter().filter(|d| decorator_name(d).is_some_and(|n| remove_decorators.iter().any(|r| r == n))) {
+            for d in decorators.iter().filter(|d| {
+                decorator_name(d).is_some_and(|n| remove_decorators.iter().any(|r| r == n))
+            }) {
                 ed.remove(d.span.start, d.span.end);
             }
-            if is_static && key_name.as_deref().is_some_and(|n| STATIC_GETTERS_TO_REMOVE.contains(&n)) {
+            if is_static
+                && key_name
+                    .as_deref()
+                    .is_some_and(|n| STATIC_GETTERS_TO_REMOVE.contains(&n))
+            {
                 ed.remove(span.start, span.end);
                 continue;
             }
             match el {
                 ClassElement::PropertyDefinition(p)
-                    if !opts.use_define_for_class_fields && !p.r#static && !p.declare && !p.computed && !(key_name.is_some() && key_name == cmp.element_ref) =>
+                    if !opts.use_define_for_class_fields
+                        && !p.r#static
+                        && !p.declare
+                        && !p.computed
+                        && !(key_name.is_some() && key_name == cmp.element_ref) =>
                 {
                     if let (Some(name), Some(value)) = (&key_name, &p.value) {
                         let (start, end) = (value.span().start as usize, value.span().end);
                         if let Some(eq) = source[..start].rfind('=') {
                             ed.remove(eq as u32, end);
-                            let target = if name.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '$') && !name.starts_with(|c: char| c.is_ascii_digit()) {
+                            let target = if name
+                                .chars()
+                                .all(|c| c.is_alphanumeric() || c == '_' || c == '$')
+                                && !name.starts_with(|c: char| c.is_ascii_digit())
+                            {
                                 format!("this.{name}")
                             } else {
                                 format!("this[{}]", json(name))
@@ -344,12 +494,25 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                         }
                     }
                 }
-                ClassElement::PropertyDefinition(p) if !p.r#static && key_name.is_some() && key_name == cmp.element_ref => {
-                    ed.replace(p.span.start, p.span.end, element_getter(key_name.as_deref().unwrap_or_default(), lazy));
+                ClassElement::PropertyDefinition(p)
+                    if !p.r#static && key_name.is_some() && key_name == cmp.element_ref =>
+                {
+                    ed.replace(
+                        p.span.start,
+                        p.span.end,
+                        element_getter(key_name.as_deref().unwrap_or_default(), lazy),
+                    );
                     element_replaced = true;
                 }
-                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Constructor && m.value.body.is_some() => ctor = Some(m),
-                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method && key_name.as_deref() == Some("connectedCallback") => {
+                ClassElement::MethodDefinition(m)
+                    if m.kind == MethodDefinitionKind::Constructor && m.value.body.is_some() =>
+                {
+                    ctor = Some(m)
+                }
+                ClassElement::MethodDefinition(m)
+                    if m.kind == MethodDefinitionKind::Method
+                        && key_name.as_deref() == Some("connectedCallback") =>
+                {
                     connected = Some(m)
                 }
                 _ => {}
@@ -358,7 +521,10 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
 
         // `updateLazyComponentConstructor`
         if lazy {
-            add(&mut runtime_apis, "registerInstance as __stencil_registerInstance");
+            add(
+                &mut runtime_apis,
+                "registerInstance as __stencil_registerInstance",
+            );
             let mut stmts = vec!["__stencil_registerInstance(this, hostRef);".to_owned()];
             for ev in &cmp.events {
                 add(&mut runtime_apis, "createEvent as __stencil_createEvent");
@@ -370,7 +536,11 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                     "if (hostRef.$hostElement$[\"s-ei\"]) {{ this.{member} = hostRef.$hostElement$[\"s-ei\"]; }} \
                      else {{ this.{member} = hostRef.$hostElement$.attachInternals(); hostRef.$hostElement$[\"s-ei\"] = this.{member}; }}"
                 ));
-                for state in cmp.attach_internals_custom_states.iter().filter(|s| s.initial_value) {
+                for state in cmp
+                    .attach_internals_custom_states
+                    .iter()
+                    .filter(|s| s.initial_value)
+                {
                     stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
                 }
             }
@@ -379,7 +549,12 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
             match ctor {
                 Some(c) => {
                     let params = &c.value.params;
-                    let open = params.span.start + if source.as_bytes()[params.span.start as usize] == b'(' { 1 } else { 0 };
+                    let open = params.span.start
+                        + if source.as_bytes()[params.span.start as usize] == b'(' {
+                            1
+                        } else {
+                            0
+                        };
                     let empty = params.items.is_empty() && params.rest.is_none();
                     ed.insert(open, if empty { "hostRef" } else { "hostRef, " });
                     let body = c.value.body.as_ref().expect("constructor body");
@@ -391,18 +566,32 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                         None if class.heritage.is_some() => "super();".to_owned(),
                         None => String::new(),
                     };
-                    ed.insert(body.span.start + 1, format!(" {first} {} ", stmts.join(" ")));
+                    ed.insert(
+                        body.span.start + 1,
+                        format!(" {first} {} ", stmts.join(" ")),
+                    );
                 }
                 None => {
-                    let super_call = if class.heritage.is_some() { "super();" } else { "" };
-                    ed.insert(class.body.span.start + 1, format!(" constructor(hostRef) {{ {super_call} {} }} ", stmts.join(" ")));
+                    let super_call = if class.heritage.is_some() {
+                        "super();"
+                    } else {
+                        ""
+                    };
+                    ed.insert(
+                        class.body.span.start + 1,
+                        format!(
+                            " constructor(hostRef) {{ {super_call} {} }} ",
+                            stmts.join(" ")
+                        ),
+                    );
                 }
             }
         }
 
         // `updateNativeConstructor`
         if !lazy && !plain {
-            let mut stmts = vec!["if (registerHost !== false) { this.__registerHost(); }".to_owned()];
+            let mut stmts =
+                vec!["if (registerHost !== false) { this.__registerHost(); }".to_owned()];
             if cmp.encapsulation == Encapsulation::Shadow {
                 stmts.push("this.__attachShadow();".into());
             }
@@ -413,31 +602,64 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
             // `createNativeAttachInternalsBinding`
             if let Some(member) = &cmp.attach_internals_member_name {
                 stmts.push(format!("this.{member} = this.attachInternals();"));
-                for state in cmp.attach_internals_custom_states.iter().filter(|s| s.initial_value) {
+                for state in cmp
+                    .attach_internals_custom_states
+                    .iter()
+                    .filter(|s| s.initial_value)
+                {
                     stmts.push(format!("this.{member}.states.add({});", json(&state.name)));
                 }
             }
             stmts.append(&mut field_assignments);
             // `super(false)` when an ancestor was found (`cmp.doesExtend`), not merely when the class has an `extends`.
-            let super_call = if cmp.does_extend { "super(false);" } else { "super();" };
+            let super_call = if cmp.does_extend {
+                "super(false);"
+            } else {
+                "super();"
+            };
             match ctor {
                 Some(c) => {
                     let params = &c.value.params;
-                    let open = params.span.start + if source.as_bytes()[params.span.start as usize] == b'(' { 1 } else { 0 };
+                    let open = params.span.start
+                        + if source.as_bytes()[params.span.start as usize] == b'(' {
+                            1
+                        } else {
+                            0
+                        };
                     let empty = params.items.is_empty() && params.rest.is_none();
-                    ed.insert(open, if empty { "registerHost" } else { "registerHost, " });
+                    ed.insert(
+                        open,
+                        if empty {
+                            "registerHost"
+                        } else {
+                            "registerHost, "
+                        },
+                    );
                     let body = c.value.body.as_ref().expect("constructor body");
                     let found = body.statements.iter().find(|s| is_super_call(s));
                     let first = match found {
                         Some(s) => {
                             ed.remove(s.span().start, s.span().end);
-                            if cmp.does_extend { super_call.to_owned() } else { text(s.span()).to_owned() }
+                            if cmp.does_extend {
+                                super_call.to_owned()
+                            } else {
+                                text(s.span()).to_owned()
+                            }
                         }
                         None => super_call.to_owned(),
                     };
-                    ed.insert(body.span.start + 1, format!(" {first} {} ", stmts.join(" ")));
+                    ed.insert(
+                        body.span.start + 1,
+                        format!(" {first} {} ", stmts.join(" ")),
+                    );
                 }
-                None => ed.insert(class.body.span.start + 1, format!(" constructor(registerHost) {{ {super_call} {} }} ", stmts.join(" "))),
+                None => ed.insert(
+                    class.body.span.start + 1,
+                    format!(
+                        " constructor(registerHost) {{ {super_call} {} }} ",
+                        stmts.join(" ")
+                    ),
+                ),
             }
         }
 
@@ -445,15 +667,35 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         let mut tail: Vec<String> = Vec::new();
         tail.extend(surviving_static_getters(cmp));
         // `styleToStatic`: the global style getters survive; they sit ahead of the rest.
-        if let Some(url) = cmp.options.get("globalStyleUrl").and_then(Value::as_str).filter(|u| !u.is_empty()) {
-            tail.push(format!("static get originalGlobalStyleUrl() {{ return {}; }}", json(url)));
+        if let Some(url) = cmp
+            .options
+            .get("globalStyleUrl")
+            .and_then(Value::as_str)
+            .filter(|u| !u.is_empty())
+        {
+            tail.push(format!(
+                "static get originalGlobalStyleUrl() {{ return {}; }}",
+                json(url)
+            ));
         }
-        if let Some(css) = cmp.options.get("globalStyle").and_then(Value::as_str).map(str::trim).filter(|s| !s.is_empty()) {
-            tail.push(format!("static get globalStyle() {{ return {}; }}", json(css)));
+        if let Some(css) = cmp
+            .options
+            .get("globalStyle")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            tail.push(format!(
+                "static get globalStyle() {{ return {}; }}",
+                json(css)
+            ));
         }
         // Left behind by `attachInternalsDecoratorsToStatic`, after the component's own getters.
         if !cmp.attach_internals_custom_states.is_empty() {
-            tail.push(format!("static get attachInternalsCustomStates() {{ return {}; }}", js_value(&custom_states_value(cmp))));
+            tail.push(format!(
+                "static get attachInternalsCustomStates() {{ return {}; }}",
+                js_value(&custom_states_value(cmp))
+            ));
         }
         if cmp.form_associated {
             tail.push("static get formAssociated() { return true; }".into());
@@ -462,7 +704,13 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         // `convertDecoratorsToStatic`; the lazy and native transforms then remove some of those
         // and write them again (below), after it.
         if let Some(vdom) = vdom.and_then(|v| v.get(name)) {
-            let input = MetaInput { cmp, vdom, file: &opts.file, has_modern_property_decls: info.has_modern_property_decls, has_heritage: info.has_heritage };
+            let input = MetaInput {
+                cmp,
+                vdom,
+                file: &opts.file,
+                has_modern_property_decls: info.has_modern_property_decls,
+                has_heritage: info.has_heritage,
+            };
             tail.push(compiler_meta::getter(&input));
         }
         if plain && info.has_render_fn {
@@ -472,7 +720,9 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
                         ed.insert(body.span.start + 1, " this.textContent = this.render(); ");
                     }
                 }
-                None => tail.push("connectedCallback() { this.textContent = this.render(); }".into()),
+                None => {
+                    tail.push("connectedCallback() { this.textContent = this.render(); }".into())
+                }
             }
         }
         if lazy && cmp.element_ref.is_some() {
@@ -482,18 +732,34 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
             tail.push(element_getter(el, lazy));
         }
         if !cmp.watchers.is_empty() {
-            tail.push(format!("static get watchers() {{ return {}; }}", js_value(&handlers_value(&cmp.watchers))));
+            tail.push(format!(
+                "static get watchers() {{ return {}; }}",
+                js_value(&handlers_value(&cmp.watchers))
+            ));
         }
         if !cmp.serializers.is_empty() {
-            tail.push(format!("static get serializers() {{ return {}; }}", js_value(&handlers_value(&cmp.serializers))));
+            tail.push(format!(
+                "static get serializers() {{ return {}; }}",
+                js_value(&handlers_value(&cmp.serializers))
+            ));
         }
         if !cmp.deserializers.is_empty() {
-            tail.push(format!("static get deserializers() {{ return {}; }}", js_value(&handlers_value(&cmp.deserializers))));
+            tail.push(format!(
+                "static get deserializers() {{ return {}; }}",
+                js_value(&handlers_value(&cmp.deserializers))
+            ));
         }
         if plain {
-            tail.push(format!("static get is() {{ return {}; }}", json(&cmp.tag_name)));
+            tail.push(format!(
+                "static get is() {{ return {}; }}",
+                json(&cmp.tag_name)
+            ));
         }
-        let styles = if opts.emit_styles { styles_of(cmp) } else { Vec::new() };
+        let styles = if opts.emit_styles {
+            styles_of(cmp)
+        } else {
+            Vec::new()
+        };
         if let Some(expr) = style_expression(cmp, &styles) {
             if lazy && !ssr {
                 // `addStaticStylePropertyToClass`: an assignment after the class.
@@ -509,7 +775,11 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         for style in &styles {
             for (i, url) in style.urls.iter().enumerate() {
                 let path = style_import_path(&opts.file, url, cmp, &style.mode);
-                style_imports.push(format!("import {}{i} from {};", style.identifier, json(&path)));
+                style_imports.push(format!(
+                    "import {}{i} from {};",
+                    style.identifier,
+                    json(&path)
+                ));
             }
         }
         if !tail.is_empty() {
@@ -518,13 +788,21 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
 
         // `performAutomaticKeyInsertion`
         if let Some(render) = class.body.body.iter().find_map(|el| match el {
-            ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method && property_key_name(&m.key).as_deref() == Some("render") => Some(m),
+            ClassElement::MethodDefinition(m)
+                if m.kind == MethodDefinitionKind::Method
+                    && property_key_name(&m.key).as_deref() == Some("render") =>
+            {
+                Some(m)
+            }
             _ => None,
         }) {
             let mut count = ReturnCounter(0);
             count.visit_function(&render.value, oxc::syntax::scope::ScopeFlags::Function);
             if count.0 == 1 {
-                let mut keys = KeyInserter { counter: 0, edits: &mut ed };
+                let mut keys = KeyInserter {
+                    counter: 0,
+                    edits: &mut ed,
+                };
                 if let Some(body) = &render.value.body {
                     keys.visit_function_body(body);
                 }
@@ -535,37 +813,79 @@ fn generate_pass(program: &Program, source: &str, components: &[ComponentMeta], 
         match opts.component_export {
             ComponentExport::Lazy | ComponentExport::Ssr => {}
             ComponentExport::Module => {
-                add(&mut runtime_apis, "proxyCustomElement as __stencil_proxyCustomElement");
-                define_calls.push(format!("__stencil_proxyCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+                add(
+                    &mut runtime_apis,
+                    "proxyCustomElement as __stencil_proxyCustomElement",
+                );
+                define_calls.push(format!(
+                    "__stencil_proxyCustomElement({name}, {});",
+                    runtime_meta(cmp, &info, &styles)
+                ));
             }
             ComponentExport::CustomElement if plain => {
-                define_calls.push(format!("customElements.define(__stencil_transformTag({}), {name});", json(&cmp.tag_name)));
+                define_calls.push(format!(
+                    "customElements.define(__stencil_transformTag({}), {name});",
+                    json(&cmp.tag_name)
+                ));
             }
             ComponentExport::CustomElement => {
                 add(&mut runtime_apis, "transformTag as __stencil_transformTag");
-                add(&mut runtime_apis, "defineCustomElement as __stencil_defineCustomElement");
-                define_calls.push(format!("__stencil_defineCustomElement({name}, {});", runtime_meta(cmp, &info, &styles)));
+                add(
+                    &mut runtime_apis,
+                    "defineCustomElement as __stencil_defineCustomElement",
+                );
+                define_calls.push(format!(
+                    "__stencil_defineCustomElement({name}, {});",
+                    runtime_meta(cmp, &info, &styles)
+                ));
             }
         }
     }
 
     if !style_imports.is_empty() {
-        ed.insert(last_import_end.unwrap_or(0), format!("\n{}\n", style_imports.join("\n")));
+        ed.insert(
+            last_import_end.unwrap_or(0),
+            format!("\n{}\n", style_imports.join("\n")),
+        );
     }
     if !define_calls.is_empty() {
-        ed.insert(source.len() as u32, format!("\n{}\n", define_calls.join("\n")));
+        ed.insert(
+            source.len() as u32,
+            format!("\n{}\n", define_calls.join("\n")),
+        );
     }
 
     let (edited, offsets) = ed.apply_mapped();
     let (js, printed_map, anchors) = strip_types_and_jsx(&edited, opts)?;
 
-    let apis: Vec<&str> = runtime_apis.iter().chain(target_apis.iter()).copied().collect();
+    let apis: Vec<&str> = runtime_apis
+        .iter()
+        .chain(target_apis.iter())
+        .copied()
+        .collect();
     let (code, prefix_lines) = if apis.is_empty() {
         (js, 0)
     } else {
-        (format!("import {{ {} }} from {};\n{js}", apis.join(", "), json(&opts.core_import_path)), 1)
+        (
+            format!(
+                "import {{ {} }} from {};\n{js}",
+                apis.join(", "),
+                json(&opts.core_import_path)
+            ),
+            1,
+        )
     };
-    let map = printed_map.map(|printed| crate::sourcemap::compose(&printed, &edited, &offsets, &anchors, source, &opts.file, prefix_lines));
+    let map = printed_map.map(|printed| {
+        crate::sourcemap::compose(
+            &printed,
+            &edited,
+            &offsets,
+            &anchors,
+            source,
+            &opts.file,
+            prefix_lines,
+        )
+    });
     Ok(Generated { code, map })
 }
 
@@ -634,7 +954,9 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
             };
             decorated |= !decorators.is_empty();
             for d in decorators {
-                let Some(name) = decorator_name(d) else { continue };
+                let Some(name) = decorator_name(d) else {
+                    continue;
+                };
                 meta |= self.meta.iter().any(|m| m == name);
                 if self.remove.iter().any(|r| r == name) {
                     has_stencil_decorator = true;
@@ -649,8 +971,12 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
             if class.is_declaration() && decorated {
                 if class.heritage.is_some() {
                     match ctor.and_then(|m| m.value.body.as_ref()) {
-                        None => self.ed.insert(class.body.span.start + 1, " constructor() { super(); } "),
-                        Some(body) if !body.statements.iter().any(is_super_call) => self.ed.insert(body.span.start + 1, " super(); "),
+                        None => self
+                            .ed
+                            .insert(class.body.span.start + 1, " constructor() { super(); } "),
+                        Some(body) if !body.statements.iter().any(is_super_call) => {
+                            self.ed.insert(body.span.start + 1, " super(); ")
+                        }
                         Some(_) => {}
                     }
                 }
@@ -664,17 +990,28 @@ impl<'a> Visit<'a> for BaseClasses<'_, '_, '_> {
             // `implements` doesn't count: TypeScript has erased it by the time Stencil looks.
             if base && !extends {
                 // After the name and type parameters: `extends` has to come before `implements`.
-                match class.type_parameters.as_ref().map(|t| t.span.end).or(class.id.as_ref().map(|id| id.span.end)) {
+                match class
+                    .type_parameters
+                    .as_ref()
+                    .map(|t| t.span.end)
+                    .or(class.id.as_ref().map(|id| id.span.end))
+                {
                     Some(at) => self.ed.insert(at, " extends HTMLElement"),
-                    None => self.ed.insert(class.body.span.start, "extends HTMLElement "),
+                    None => self
+                        .ed
+                        .insert(class.body.span.start, "extends HTMLElement "),
                 }
                 self.html_element = true;
                 extends = true;
             }
             if (decorated || base) && extends {
                 match ctor.and_then(|m| m.value.body.as_ref()) {
-                    None => self.ed.insert(class.body.span.start + 1, " constructor() { super(); } "),
-                    Some(body) if !body.statements.iter().any(is_super_call) => self.ed.insert(body.span.start + 1, " super(); "),
+                    None => self
+                        .ed
+                        .insert(class.body.span.start + 1, " constructor() { super(); } "),
+                    Some(body) if !body.statements.iter().any(is_super_call) => {
+                        self.ed.insert(body.span.start + 1, " super(); ")
+                    }
                     Some(_) => {}
                 }
             }
@@ -694,10 +1031,15 @@ impl BaseClasses<'_, '_, '_> {
                 ClassElement::MethodDefinition(m) => (&m.decorators, m.computed),
                 _ => return false,
             };
-            decorators.iter().any(|d| match (decorator_name(d), &d.expression) {
-                (Some(name), Expression::CallExpression(call)) => (name == self.watch && call.arguments.len() > 1) || (computed && (name == "Prop" || name == "State")),
-                _ => false,
-            })
+            decorators
+                .iter()
+                .any(|d| match (decorator_name(d), &d.expression) {
+                    (Some(name), Expression::CallExpression(call)) => {
+                        (name == self.watch && call.arguments.len() > 1)
+                            || (computed && (name == "Prop" || name == "State"))
+                    }
+                    _ => false,
+                })
         });
         let members = (self.members_of)(class);
         let message = if unsupported {
@@ -714,7 +1056,10 @@ impl BaseClasses<'_, '_, '_> {
         let getters = decorator_getters(&members);
         if !getters.is_empty() {
             // On its own line: the last member may lack a semicolon.
-            self.ed.insert(class.body.span.end - 1, format!("\n{}\n", getters.join("\n")));
+            self.ed.insert(
+                class.body.span.end - 1,
+                format!("\n{}\n", getters.join("\n")),
+            );
         }
     }
 }
@@ -745,18 +1090,30 @@ impl ClassInfo {
             .body
             .iter()
             .filter_map(|el| match el {
-                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method => property_key_name(&m.key),
+                ClassElement::MethodDefinition(m) if m.kind == MethodDefinitionKind::Method => {
+                    property_key_name(&m.key)
+                }
                 _ => None,
             })
             .collect();
         let mut vdom = VdomScan::default();
         vdom.visit_class(class);
-        let names: Vec<&str> = cmp.properties.iter().filter(|p| !p.getter).map(|p| p.name.as_str()).chain(cmp.states.iter().map(|s| s.name.as_str())).collect();
+        let names: Vec<&str> = cmp
+            .properties
+            .iter()
+            .filter(|p| !p.getter)
+            .map(|p| p.name.as_str())
+            .chain(cmp.states.iter().map(|s| s.name.as_str()))
+            .collect();
         // `detectModernPropDeclarations`: a field named like a prop or state, or a computed
         // `@Prop`/`@State` field (its `ogPropName` is the field's own expression).
         let has_modern_property_decls = class.body.body.iter().any(|el| match el {
-            ClassElement::PropertyDefinition(p) if p.computed => has_decorator(&p.decorators, "Prop") || has_decorator(&p.decorators, "State"),
-            ClassElement::PropertyDefinition(p) => property_key_name(&p.key).is_some_and(|n| names.contains(&n.as_str())),
+            ClassElement::PropertyDefinition(p) if p.computed => {
+                has_decorator(&p.decorators, "Prop") || has_decorator(&p.decorators, "State")
+            }
+            ClassElement::PropertyDefinition(p) => {
+                property_key_name(&p.key).is_some_and(|n| names.contains(&n.as_str()))
+            }
             _ => false,
         }) || cmp.does_extend;
         let mut tag_names = Vec::new();
@@ -777,9 +1134,18 @@ impl ClassInfo {
 
     /// `setComponentBuildConditionals` → `isPlain`.
     fn is_plain(&self, cmp: &ComponentMeta) -> bool {
-        let has_member = !cmp.properties.is_empty() || !cmp.states.is_empty() || !cmp.methods.is_empty();
-        let has_lifecycle = self.methods.iter().any(|m| LIFECYCLE_METHODS.contains(&m.as_str()));
-        !has_member && !has_style(cmp) && !has_lifecycle && cmp.listeners.is_empty() && !self.has_vdom_render && !self.has_heritage
+        let has_member =
+            !cmp.properties.is_empty() || !cmp.states.is_empty() || !cmp.methods.is_empty();
+        let has_lifecycle = self
+            .methods
+            .iter()
+            .any(|m| LIFECYCLE_METHODS.contains(&m.as_str()));
+        !has_member
+            && !has_style(cmp)
+            && !has_lifecycle
+            && cmp.listeners.is_empty()
+            && !self.has_vdom_render
+            && !self.has_heritage
     }
 
     fn has_slot(&self) -> bool {
@@ -800,7 +1166,9 @@ impl<'a> Visit<'a> for VdomScan {
         self.render = true;
         match &it.name {
             JSXElementName::Identifier(id) => self.tags.push(id.name.to_lowercase()),
-            JSXElementName::NamespacedName(n) => self.tags.push(format!("{}:{}", n.namespace.name, n.name.name).to_lowercase()),
+            JSXElementName::NamespacedName(n) => self
+                .tags
+                .push(format!("{}:{}", n.namespace.name, n.name.name).to_lowercase()),
             _ => {}
         }
         walk::walk_jsx_opening_element(self, it);
@@ -813,7 +1181,11 @@ impl<'a> Visit<'a> for VdomScan {
 
     fn visit_call_expression(&mut self, it: &CallExpression<'a>) {
         if let Expression::Identifier(id) = &it.callee {
-            if matches!(id.name.as_str(), "h" | "__stencil_h" | "createElement" | "jsx" | "jsxs" | "_jsx" | "_jsxs") && !it.arguments.is_empty() {
+            if matches!(
+                id.name.as_str(),
+                "h" | "__stencil_h" | "createElement" | "jsx" | "jsxs" | "_jsx" | "_jsxs"
+            ) && !it.arguments.is_empty()
+            {
                 if let Some(Expression::StringLiteral(s)) = it.arguments[0].as_expression() {
                     self.tags.push(s.value.to_lowercase());
                 }
@@ -867,8 +1239,12 @@ impl<'a> Visit<'a> for KeyInserter<'_, '_> {
         if has_key {
             return;
         }
-        let at = it.type_arguments.as_ref().map_or(it.name.span().end, |t| t.span.end);
-        self.edits.insert(at, format!(" key=\"{}\"", to_base36(self.counter)));
+        let at = it
+            .type_arguments
+            .as_ref()
+            .map_or(it.name.span().end, |t| t.span.end);
+        self.edits
+            .insert(at, format!(" key=\"{}\"", to_base36(self.counter)));
         self.counter += 1;
     }
 }
@@ -893,7 +1269,8 @@ fn surviving_static_getters(cmp: &ComponentMeta) -> Vec<String> {
     let enc = o.get("encapsulation");
     let enc_type = enc.and_then(|e| e.get("type")).and_then(Value::as_str);
     let mut out = Vec::new();
-    let getter = |name: &str, v: &Value| format!("static get {name}() {{ return {}; }}", js_value(v));
+    let getter =
+        |name: &str, v: &Value| format!("static get {name}() {{ return {}; }}", js_value(v));
     if enc_type == Some("shadow") {
         let e = enc.expect("encapsulation");
         if e.get("mode").and_then(Value::as_str) == Some("closed") {
@@ -930,7 +1307,9 @@ fn surviving_static_getters(cmp: &ComponentMeta) -> Vec<String> {
 fn handlers_value(handlers: &[WatcherMeta]) -> Value {
     let mut obj = serde_json::Map::new();
     for w in handlers {
-        let list = obj.entry(w.prop_name.clone()).or_insert_with(|| Value::Array(Vec::new()));
+        let list = obj
+            .entry(w.prop_name.clone())
+            .or_insert_with(|| Value::Array(Vec::new()));
         if let Value::Array(items) = list {
             let mut handler = serde_json::Map::new();
             handler.insert(w.method_name.clone(), Value::from(0));
@@ -968,13 +1347,27 @@ fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
         .into_iter()
         .map(|(mode, urls)| {
             // `createStyleIdentifier`: the mode name is part of the identifier.
-            let identifier = if mode == DEFAULT_STYLE_MODE { format!("{base}Style") } else { format!("{base}{}Style", dash_to_pascal_case(&mode)) };
-            StyleMode { mode, identifier, urls, inline: None }
+            let identifier = if mode == DEFAULT_STYLE_MODE {
+                format!("{base}Style")
+            } else {
+                format!("{base}{}Style", dash_to_pascal_case(&mode))
+            };
+            StyleMode {
+                mode,
+                identifier,
+                urls,
+                inline: None,
+            }
         })
         .collect();
     if modes.is_empty() {
         if let Some(Value::String(s)) = cmp.options.get("styles") {
-            modes.push(StyleMode { mode: DEFAULT_STYLE_MODE.into(), identifier: format!("{base}Style"), urls: Vec::new(), inline: Some(s.clone()) });
+            modes.push(StyleMode {
+                mode: DEFAULT_STYLE_MODE.into(),
+                identifier: format!("{base}Style"),
+                urls: Vec::new(),
+                inline: Some(s.clone()),
+            });
         }
     }
     modes
@@ -989,7 +1382,12 @@ fn has_style(cmp: &ComponentMeta) -> bool {
 fn style_expression(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String> {
     let expr_of = |style: &StyleMode| -> Option<String> {
         if !style.urls.is_empty() {
-            Some((0..style.urls.len()).map(|i| format!("{}{i}()", style.identifier)).collect::<Vec<_>>().join(" + "))
+            Some(
+                (0..style.urls.len())
+                    .map(|i| format!("{}{i}()", style.identifier))
+                    .collect::<Vec<_>>()
+                    .join(" + "),
+            )
         } else {
             let css = style.inline.as_deref()?;
             // `createStyleLiteral`: a scoped component's inline styles are scoped at compile time.
@@ -1000,14 +1398,22 @@ fn style_expression(cmp: &ComponentMeta, styles: &[StyleMode]) -> Option<String>
             } else {
                 css
             };
-            Some(format!("`{}`", css.replace('\\', "\\\\").replace('`', "\\`").replace("${", "\\${")))
+            Some(format!(
+                "`{}`",
+                css.replace('\\', "\\\\")
+                    .replace('`', "\\`")
+                    .replace("${", "\\${")
+            ))
         }
     };
     match styles {
         [] => None,
         [style] if style.mode == DEFAULT_STYLE_MODE => expr_of(style),
         _ => {
-            let props: Vec<String> = styles.iter().map(|s| Some(format!("        {}: {}", s.mode, expr_of(s)?))).collect::<Option<_>>()?;
+            let props: Vec<String> = styles
+                .iter()
+                .map(|s| Some(format!("        {}: {}", s.mode, expr_of(s)?)))
+                .collect::<Option<_>>()?;
             Some(format!("{{\n{}\n    }}", props.join(",\n")))
         }
     }
@@ -1024,8 +1430,14 @@ fn element_getter(name: &str, lazy: bool) -> String {
 
 /// `addCreateEvents`: `this.<method> = createEvent(this, "<name>", <flags>);`
 fn event_creation(ev: &crate::meta::EventMeta) -> String {
-    let flags = (if ev.bubbles { 4 } else { 0 }) | (if ev.composed { 2 } else { 0 }) | (if ev.cancelable { 1 } else { 0 });
-    format!("this.{} = __stencil_createEvent(this, {}, {flags});", ev.method, json(&ev.name))
+    let flags = (if ev.bubbles { 4 } else { 0 })
+        | (if ev.composed { 2 } else { 0 })
+        | (if ev.cancelable { 1 } else { 0 });
+    format!(
+        "this.{} = __stencil_createEvent(this, {}, {flags});",
+        ev.method,
+        json(&ev.name)
+    )
 }
 
 /// `normalizePath(join(dirname(file), url))` then `serializeImportPath` with query params.
@@ -1037,7 +1449,11 @@ fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> 
         relative_url(url)
     } else {
         let dir = file.rsplit_once('/').map_or("", |(d, _)| d);
-        normalize_path(&if dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") })
+        normalize_path(&if dir.is_empty() {
+            url.to_owned()
+        } else {
+            format!("{dir}/{url}")
+        })
     };
     if !p.starts_with('.') {
         p = format!("./{p}");
@@ -1093,7 +1509,9 @@ pub(crate) fn normalize_path(path: &str) -> String {
 fn url_encode(s: &str) -> String {
     s.bytes()
         .map(|b| match b {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'*' => (b as char).to_string(),
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'*' => {
+                (b as char).to_string()
+            }
             b' ' => "+".into(),
             _ => format!("%{b:02X}"),
         })
@@ -1115,19 +1533,40 @@ fn dash_to_pascal_case(s: &str) -> String {
 
 /// `formatComponentRuntimeMeta(cmp, true)`, printed the way `convertValueToLiteral` does.
 fn runtime_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> String {
-    format!("[{}]", runtime_meta_items(cmp, info, styles).into_iter().map(|i| i.unwrap_or_else(|| "undefined".into())).collect::<Vec<_>>().join(", "))
+    format!(
+        "[{}]",
+        runtime_meta_items(cmp, info, styles)
+            .into_iter()
+            .map(|i| i.unwrap_or_else(|| "undefined".into()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 /// `addHydrateRuntimeCmpMeta`: the hydrate runtime reads the same compact metadata from a static
 /// `cmpMeta` getter, with no bundle to load (`$lazyBundleId$` is `"-"`).
 fn ssr_cmp_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> String {
     let items = runtime_meta_items(cmp, info, styles);
-    let item = |i: usize| items.get(i).cloned().flatten().unwrap_or_else(|| "undefined".into());
+    let item = |i: usize| {
+        items
+            .get(i)
+            .cloned()
+            .flatten()
+            .unwrap_or_else(|| "undefined".into())
+    };
     let reflected: Vec<String> = cmp
         .properties
         .iter()
         .filter(|p| p.reflect)
-        .map(|p| format!("[{}, {}]", json(&p.name), p.attribute.as_deref().map_or_else(|| "undefined".to_owned(), json)))
+        .map(|p| {
+            format!(
+                "[{}, {}]",
+                json(&p.name),
+                p.attribute
+                    .as_deref()
+                    .map_or_else(|| "undefined".to_owned(), json)
+            )
+        })
         .collect();
     format!(
         "static get cmpMeta() {{ return {{ \"$flags$\": {}, \"$tagName$\": {}, \"$members$\": {}, \"$listeners$\": {}, \"$lazyBundleId$\": \"-\", \"$attrsToReflect$\": [{}] }}; }}",
@@ -1141,7 +1580,11 @@ fn ssr_cmp_meta(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> 
 
 /// The array `formatComponentRuntimeMeta` returns, one printed item per slot (`None` where it
 /// holds `undefined`), trailing gaps trimmed.
-fn runtime_meta_items(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode]) -> Vec<Option<String>> {
+fn runtime_meta_items(
+    cmp: &ComponentMeta,
+    info: &ClassInfo,
+    styles: &[StyleMode],
+) -> Vec<Option<String>> {
     let o = &cmp.options;
     let enc = o.get("encapsulation");
     let mut flags = 0u32;
@@ -1217,10 +1660,13 @@ fn runtime_meta_items(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode
             f |= 1 << 12;
         }
         let attr = p.attribute.as_ref().filter(|a| **a != p.name);
-        members.push((p.name.clone(), match attr {
-            Some(a) => format!("[{f}, {}]", json(a)),
-            None => format!("[{f}]"),
-        }));
+        members.push((
+            p.name.clone(),
+            match attr {
+                Some(a) => format!("[{f}, {}]", json(a)),
+                None => format!("[{f}]"),
+            },
+        ));
     }
     for s in &cmp.states {
         members.push((s.name.clone(), "[32]".into()));
@@ -1262,7 +1708,17 @@ fn runtime_meta_items(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode
     let mut items: Vec<Option<String>> = vec![
         Some(flags.to_string()),
         Some(json(&cmp.tag_name)),
-        (!dedup.is_empty()).then(|| format!("{{ {} }}", dedup.iter().filter(|(k, _)| !k.starts_with('_')).map(|(k, v)| format!("{}: {v}", json(k))).collect::<Vec<_>>().join(", "))),
+        (!dedup.is_empty()).then(|| {
+            format!(
+                "{{ {} }}",
+                dedup
+                    .iter()
+                    .filter(|(k, _)| !k.starts_with('_'))
+                    .map(|(k, v)| format!("{}: {v}", json(k)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }),
         (!listeners.is_empty()).then(|| format!("[{}]", listeners.join(", "))),
         (!cmp.watchers.is_empty()).then(|| js_value(&handlers_value(&cmp.watchers))),
         (!cmp.serializers.is_empty()).then(|| js_value(&handlers_value(&cmp.serializers))),
@@ -1278,8 +1734,18 @@ fn runtime_meta_items(cmp: &ComponentMeta, info: &ClassInfo, styles: &[StyleMode
 /// A JSON value as a JS literal with quoted keys (`convertValueToLiteral`).
 fn js_value(v: &Value) -> String {
     match v {
-        Value::Object(map) => format!("{{ {} }}", map.iter().filter(|(k, _)| !k.starts_with('_')).map(|(k, v)| format!("{}: {}", json(k), js_value(v))).collect::<Vec<_>>().join(", ")),
-        Value::Array(a) => format!("[{}]", a.iter().map(js_value).collect::<Vec<_>>().join(", ")),
+        Value::Object(map) => format!(
+            "{{ {} }}",
+            map.iter()
+                .filter(|(k, _)| !k.starts_with('_'))
+                .map(|(k, v)| format!("{}: {}", json(k), js_value(v)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Value::Array(a) => format!(
+            "[{}]",
+            a.iter().map(js_value).collect::<Vec<_>>().join(", ")
+        ),
         other => other.to_string(),
     }
 }
@@ -1302,30 +1768,62 @@ fn lower_enum(e: &TSEnumDeclaration, exported: bool, locals: &Locals) -> Option<
         });
     }
     let export = if exported { "export " } else { "" };
-    Some(format!("{export}var {name};\n(function ({name}) {{\n{}\n}})({name} || ({name} = {{}}));", lines.join("\n")))
+    Some(format!(
+        "{export}var {name};\n(function ({name}) {{\n{}\n}})({name} || ({name} = {{}}));",
+        lines.join("\n")
+    ))
 }
 
 fn fmt_num(v: f64) -> String {
-    if v.fract() == 0.0 && v.abs() < 1e21 { format!("{}", v as i64) } else { v.to_string() }
+    if v.fract() == 0.0 && v.abs() < 1e21 {
+        format!("{}", v as i64)
+    } else {
+        v.to_string()
+    }
 }
 
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
 /// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
 /// class member positions should point instead (`MemberAnchors`).
-fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, Option<oxc_sourcemap::SourceMap<'static>>, rustc_hash::FxHashMap<u32, u32>), String> {
+fn strip_types_and_jsx(
+    edited: &str,
+    opts: &CodegenOptions2,
+) -> Result<
+    (
+        String,
+        Option<oxc_sourcemap::SourceMap<'static>>,
+        rustc_hash::FxHashMap<u32, u32>,
+    ),
+    String,
+> {
     let allocator = Allocator::default();
-    let source_type = SourceType::from_path(&opts.file).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
+    let source_type = SourceType::from_path(&opts.file)
+        .unwrap_or_else(|_| SourceType::tsx())
+        .with_module(true);
     let parsed = Parser::new(&allocator, edited, source_type).parse();
     if parsed.diagnostics.has_errors() {
-        let msgs: Vec<String> = parsed.diagnostics.errors().map(|e| e.message.to_string()).collect();
-        return Err(format!("stencilrs produced unparsable code: {}\n---\n{edited}", msgs.join("; ")));
+        let msgs: Vec<String> = parsed
+            .diagnostics
+            .errors()
+            .map(|e| e.message.to_string())
+            .collect();
+        return Err(format!(
+            "stencilrs produced unparsable code: {}\n---\n{edited}",
+            msgs.join("; ")
+        ));
     }
     let mut program = parsed.program;
-    let mut anchors = MemberAnchors { text: edited, map: Default::default() };
+    let mut anchors = MemberAnchors {
+        text: edited,
+        map: Default::default(),
+    };
     if opts.source_map {
         anchors.visit_program(&program);
     }
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let scoping = SemanticBuilder::new()
+        .build(&program)
+        .semantic
+        .into_scoping();
     let mut lone_spreads = LoneSpreads(Vec::new());
     if matches!(opts.jsx, Jsx::Classic) {
         lone_spreads.visit_program(&program);
@@ -1354,25 +1852,42 @@ fn strip_types_and_jsx(edited: &str, opts: &CodegenOptions2) -> Result<(String, 
             ..JsxOptions::default()
         },
     };
-    let ret = Transformer::new(&allocator, Path::new(&opts.file), &options).build_with_scoping(scoping, &mut program);
+    let ret = Transformer::new(&allocator, Path::new(&opts.file), &options)
+        .build_with_scoping(scoping, &mut program);
     if !ret.diagnostics.is_empty() {
-        let msgs: Vec<String> = ret.diagnostics.iter().map(|e| e.message.to_string()).collect();
+        let msgs: Vec<String> = ret
+            .diagnostics
+            .iter()
+            .map(|e| e.message.to_string())
+            .collect();
         return Err(format!("oxc transform failed: {}", msgs.join("; ")));
     }
     if !lone_spreads.0.is_empty() {
-        let mut wrap = WrapLoneSpreads { spans: lone_spreads.0, builder: AstBuilder::new(&allocator) };
+        let mut wrap = WrapLoneSpreads {
+            spans: lone_spreads.0,
+            builder: AstBuilder::new(&allocator),
+        };
         wrap.visit_program(&mut program);
     }
     // TypeScript emits the automatic runtime's import as the module's first statement.
     if let Jsx::Automatic { import_source } = &opts.jsx {
         let runtime = format!("{import_source}/jsx-runtime");
-        if let Some(i) = program.body.iter().position(|s| matches!(s, Statement::ImportDeclaration(d) if d.source.value == runtime.as_str())) {
+        if let Some(i) = program.body.iter().position(
+            |s| matches!(s, Statement::ImportDeclaration(d) if d.source.value == runtime.as_str()),
+        ) {
             program.body[..=i].rotate_right(1);
         }
     }
-    let options = CodegenOptions { source_map_path: opts.source_map.then(|| PathBuf::from(&opts.file)), ..CodegenOptions::default() };
+    let options = CodegenOptions {
+        source_map_path: opts.source_map.then(|| PathBuf::from(&opts.file)),
+        ..CodegenOptions::default()
+    };
     let printed = Codegen::new().with_options(options).build(&program);
-    Ok((printed.code, printed.map.map(|m| m.into_owned()), anchors.map))
+    Ok((
+        printed.code,
+        printed.map.map(|m| m.into_owned()),
+        anchors.map,
+    ))
 }
 
 /// oxc's printer maps a class member to its span start. TypeScript modifiers don't survive
@@ -1416,11 +1931,17 @@ fn skip_ts_modifiers(text: &str, from: u32, end: u32) -> u32 {
     let mut at = from as usize;
     loop {
         let start = at + (text[at..end].len() - text[at..end].trim_start().len());
-        let word_len = text[start..end].find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$')).unwrap_or(end - start);
+        let word_len = text[start..end]
+            .find(|c: char| !(c.is_alphanumeric() || c == '_' || c == '$'))
+            .unwrap_or(end - start);
         let word = &text[start..start + word_len];
         let rest = text[start + word_len..end].trim_start();
         let is_name = rest.is_empty() || rest.starts_with(['(', '=', ':', ';', '?', '!', '<', '}']);
-        if matches!(word, "public" | "private" | "protected" | "readonly" | "override" | "declare" | "abstract") && !is_name {
+        if matches!(
+            word,
+            "public" | "private" | "protected" | "readonly" | "override" | "declare" | "abstract"
+        ) && !is_name
+        {
             at = start + word_len;
         } else {
             return start as u32;
@@ -1451,7 +1972,10 @@ impl<'a> VisitMut<'a> for WrapLoneSpreads<'a> {
     fn visit_call_expression(&mut self, it: &mut CallExpression<'a>) {
         walk_mut::walk_call_expression(self, it);
         let is_h = matches!(&it.callee, Expression::Identifier(id) if id.name == "h");
-        if !is_h || it.arguments.len() < 2 || matches!(it.arguments[1], Argument::ObjectExpression(_)) {
+        if !is_h
+            || it.arguments.len() < 2
+            || matches!(it.arguments[1], Argument::ObjectExpression(_))
+        {
             return;
         }
         if !self.spans.contains(&it.arguments[1].span()) {
@@ -1459,8 +1983,16 @@ impl<'a> VisitMut<'a> for WrapLoneSpreads<'a> {
         }
         let span = it.arguments[1].span();
         let arg = it.arguments[1].take_in(&self.builder).into_expression();
-        let props = oxc::allocator::Vec::from_iter_in([ObjectPropertyKind::new_spread_property(span, arg, &self.builder)], &self.builder);
-        it.arguments[1] = Argument::ObjectExpression(ObjectExpression::boxed(span, props, &self.builder));
+        let props = oxc::allocator::Vec::from_iter_in(
+            [ObjectPropertyKind::new_spread_property(
+                span,
+                arg,
+                &self.builder,
+            )],
+            &self.builder,
+        );
+        it.arguments[1] =
+            Argument::ObjectExpression(ObjectExpression::boxed(span, props, &self.builder));
     }
 }
 
@@ -1469,9 +2001,19 @@ pub fn normalize(code: &str) -> Result<String, String> {
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, code, SourceType::mjs()).parse();
     if parsed.diagnostics.has_errors() {
-        let msgs: Vec<String> = parsed.diagnostics.errors().map(|e| e.message.to_string()).collect();
+        let msgs: Vec<String> = parsed
+            .diagnostics
+            .errors()
+            .map(|e| e.message.to_string())
+            .collect();
         return Err(msgs.join("; "));
     }
-    let options = CodegenOptions { comments: CommentOptions::disabled(), ..CodegenOptions::default() };
-    Ok(Codegen::new().with_options(options).build(&parsed.program).code)
+    let options = CodegenOptions {
+        comments: CommentOptions::disabled(),
+        ..CodegenOptions::default()
+    };
+    Ok(Codegen::new()
+        .with_options(options)
+        .build(&parsed.program)
+        .code)
 }

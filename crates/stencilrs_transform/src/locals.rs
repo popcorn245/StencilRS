@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use oxc::ast::ast::{
     ClassElement, Declaration, Expression, ImportDeclarationSpecifier, Program, Statement,
-    TSEnumDeclaration, TSSignature, TSType, VariableDeclarationKind,
+    TSEnumDeclaration, TSSignature, TSType, TSTypeParameterDeclaration, VariableDeclarationKind,
 };
 
 use crate::complex_type::ExportedType;
@@ -51,6 +51,8 @@ pub struct Locals<'a, 'b> {
     pub types: FxHashMap<&'a str, LocalType<'a, 'b>>,
     /// The type parameters of each generic type alias.
     pub alias_params: FxHashMap<&'a str, Vec<&'a str>>,
+    /// The type parameters of each generic interface and class, with their defaults.
+    pub decl_params: FxHashMap<&'a str, &'b TSTypeParameterDeclaration<'a>>,
     pub values: FxHashMap<&'a str, LocalValue<'a, 'b>>,
     /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
     pub const_annotations: FxHashMap<&'a str, &'b TSType<'a>>,
@@ -70,11 +72,23 @@ impl<'a, 'b> Locals<'a, 'b> {
             if let Statement::ImportDeclaration(import) = stmt {
                 for spec in import.specifiers.iter().flatten() {
                     let (local, imported) = match spec {
-                        ImportDeclarationSpecifier::ImportSpecifier(s) => (s.local.name.as_str(), s.imported.name().to_string()),
-                        ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => (s.local.name.as_str(), "default".to_owned()),
-                        ImportDeclarationSpecifier::ImportNamespaceSpecifier(s) => (s.local.name.as_str(), "*".to_owned()),
+                        ImportDeclarationSpecifier::ImportSpecifier(s) => {
+                            (s.local.name.as_str(), s.imported.name().to_string())
+                        }
+                        ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => {
+                            (s.local.name.as_str(), "default".to_owned())
+                        }
+                        ImportDeclarationSpecifier::ImportNamespaceSpecifier(s) => {
+                            (s.local.name.as_str(), "*".to_owned())
+                        }
                     };
-                    locals.imports.insert(local, Import { source: import.source.value.as_str(), imported });
+                    locals.imports.insert(
+                        local,
+                        Import {
+                            source: import.source.value.as_str(),
+                            imported,
+                        },
+                    );
                 }
                 continue;
             }
@@ -84,9 +98,14 @@ impl<'a, 'b> Locals<'a, 'b> {
             };
             match decl {
                 Some(Declaration::TSTypeAliasDeclaration(t)) => {
-                    locals.types.insert(t.id.name.as_str(), LocalType::Alias(&t.type_annotation));
+                    locals
+                        .types
+                        .insert(t.id.name.as_str(), LocalType::Alias(&t.type_annotation));
                     if let Some(params) = &t.type_parameters {
-                        locals.alias_params.insert(t.id.name.as_str(), params.params.iter().map(|p| p.name.name.as_str()).collect());
+                        locals.alias_params.insert(
+                            t.id.name.as_str(),
+                            params.params.iter().map(|p| p.name.name.as_str()).collect(),
+                        );
                     }
                 }
                 Some(Declaration::TSEnumDeclaration(e)) => {
@@ -94,7 +113,12 @@ impl<'a, 'b> Locals<'a, 'b> {
                     locals.values.insert(e.id.name.as_str(), LocalValue::Object);
                 }
                 Some(Declaration::TSInterfaceDeclaration(i)) => {
-                    locals.types.insert(i.id.name.as_str(), LocalType::Interface(&i.body.body));
+                    locals
+                        .types
+                        .insert(i.id.name.as_str(), LocalType::Interface(&i.body.body));
+                    if let Some(params) = &i.type_parameters {
+                        locals.decl_params.insert(i.id.name.as_str(), params);
+                    }
                 }
                 Some(Declaration::ClassDeclaration(c)) => {
                     if let Some(id) = &c.id {
@@ -104,19 +128,31 @@ impl<'a, 'b> Locals<'a, 'b> {
                             .iter()
                             .filter_map(|el| el.property_key().and_then(property_key_name))
                             .collect();
-                        locals.types.insert(id.name.as_str(), LocalType::Class(members));
+                        locals
+                            .types
+                            .insert(id.name.as_str(), LocalType::Class(members));
+                        if let Some(params) = &c.type_parameters {
+                            locals.decl_params.insert(id.name.as_str(), params);
+                        }
                         locals.values.insert(id.name.as_str(), LocalValue::Object);
                         let statics = c
                             .body
                             .body
                             .iter()
                             .filter_map(|el| match el {
-                                ClassElement::PropertyDefinition(p) if p.r#static && !p.computed => Some(StaticField {
-                                    name: property_key_name(&p.key)?,
-                                    readonly: p.readonly,
-                                    annotation: p.type_annotation.as_ref().map(|t| &t.type_annotation),
-                                    init: p.value.as_ref(),
-                                }),
+                                ClassElement::PropertyDefinition(p)
+                                    if p.r#static && !p.computed =>
+                                {
+                                    Some(StaticField {
+                                        name: property_key_name(&p.key)?,
+                                        readonly: p.readonly,
+                                        annotation: p
+                                            .type_annotation
+                                            .as_ref()
+                                            .map(|t| &t.type_annotation),
+                                        init: p.value.as_ref(),
+                                    })
+                                }
                                 _ => None,
                             })
                             .collect();
@@ -126,14 +162,22 @@ impl<'a, 'b> Locals<'a, 'b> {
                 Some(Declaration::FunctionDeclaration(f)) => {
                     if let Some(id) = &f.id {
                         let returns = f.return_type.as_ref().map(|t| &t.type_annotation);
-                        locals.values.insert(id.name.as_str(), LocalValue::Function(returns));
+                        locals
+                            .values
+                            .insert(id.name.as_str(), LocalValue::Function(returns));
                     }
                 }
                 Some(Declaration::VariableDeclaration(v)) => {
                     for d in &v.declarations {
-                        let Some(name) = d.id.get_identifier_name() else { continue };
-                        if let (VariableDeclarationKind::Const, Some(t)) = (v.kind, &d.type_annotation) {
-                            locals.const_annotations.insert(name.as_str(), &t.type_annotation);
+                        let Some(name) = d.id.get_identifier_name() else {
+                            continue;
+                        };
+                        if let (VariableDeclarationKind::Const, Some(t)) =
+                            (v.kind, &d.type_annotation)
+                        {
+                            locals
+                                .const_annotations
+                                .insert(name.as_str(), &t.type_annotation);
                         }
                         let value = match (v.kind, &d.init) {
                             (VariableDeclarationKind::Const, Some(init)) => LocalValue::Const(init),

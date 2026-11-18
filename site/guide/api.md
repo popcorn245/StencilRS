@@ -1,0 +1,119 @@
+---
+title: "API"
+description: "The JavaScript and Rust APIs: transpile, analyze, normalize and the result shapes."
+---
+
+# API
+
+## JavaScript (`@popcorn245/stencilrs`)
+
+```ts
+import { analyze, buildId, normalize, transpile } from '@popcorn245/stencilrs';
+```
+
+### `transpile(source, options)`
+
+Compile one component module to its **customelement** module by default: what Stencil's `transpileSync` emits
+with `componentExport: 'customelement'`, the shape `@stencil/unplugin` and Stencil's `standalone`
+output use.
+
+```ts
+const { code, map, components, diagnostics, baseClasses } = transpile(source, {
+  file: '/abs/path/my-counter.tsx', // picks the parser (.ts / .tsx), resolves style and relative imports
+  jsx: 'automatic',                  // 'classic' (h) or 'automatic' (default)
+  jsxImportSource: '@stencil/core',  // automatic runtime source (default)
+  coreImportPath: '@stencil/core/runtime/client/standalone', // runtime import (default)
+  resolveImports: true,              // build-accurate metadata (default false here; true in the Vite plugin)
+  sourceMap: true,                   // return `map` (default true, as transpileSync does)
+  transformAsBaseClass: false,       // compile the file as base classes (see below)
+  componentExport: 'customelement',  // or 'module' or 'lazy' (see below)
+});
+```
+
+`componentExport` picks the output, as in `transpileSync`. `'customelement'` (the default) defines
+the element. `'module'` keeps the class exported and registers it with `proxyCustomElement`
+instead. `'lazy'` (Stencil spells it `null`, which is accepted too) is the lazy-loading
+`loader-bundle` shape: a class with no base that takes over a bootstrapped host through
+`registerInstance(this, hostRef)`. Decorated base classes and mixins are not ported for `'lazy'`;
+those files report an error starting with `stencilrs:`, the cue to compile them with Stencil.
+
+A component that extends a class or `Mixin(...)` gets its ancestors' members merged in. They're
+read from the same file or through relative imports of `file` (so `file` must be the real path).
+`baseClasses` lists the other files read. Compile those with `transformAsBaseClass: true` and
+serve them in place of the originals, as the Vite plugin does: every class there that extends
+nothing then extends `HTMLElement`.
+
+`map` is a source map v3 JSON string from `code` back to `source` (`null` with
+`sourceMap: false`). Its one source is the file's name, with the original embedded as
+`sourcesContent`. Code stencilrs generates (the constructor, `createEvent` calls, static
+getters, inserted `key`s) is left unmapped, as TypeScript leaves synthesized code. The Vite
+plugin hands these maps to Vite, so DevTools and stack traces show your TypeScript.
+
+### `analyze(source, fileName, { resolveImports })`
+
+Metadata and diagnostics only, no code.
+
+### `normalize(code)`
+
+Reprints JavaScript through oxc's printer with comments dropped. The parity harness compares
+Stencil's and stencilrs' output after both go through it.
+
+### `buildId`
+
+A string that changes whenever the native binary does (size + mtime), for build caches keyed on
+compiler output.
+
+### Result shapes
+
+```ts
+interface ComponentMeta {
+  tagName: string;
+  componentClassName: string;
+  encapsulation: 'none' | 'scoped' | 'shadow';
+  styleUrls: string[];
+  properties: {
+    name: string;
+    type: 'string' | 'number' | 'boolean' | 'any' | 'unknown'; // Stencil's runtime type
+    mutable: boolean; required: boolean; optional: boolean;
+    getter: boolean; setter: boolean; reflect: boolean;
+    attribute: string | null;        // null: no attribute (object-typed props)
+    defaultValue?: string;           // source text, resolved through consts like Stencil
+    complexTypeOriginal: string;     // the type as written / printed
+  }[];
+  states: { name: string }[];
+  events: { name: string; method: string; bubbles: boolean; cancelable: boolean; composed: boolean }[];
+  methods: { name: string }[];
+  listeners: { name: string; method: string; target?: string; capture: boolean; passive: boolean }[];
+  watchers: { propName: string; methodName: string }[];
+  elementRef: string | null;
+}
+
+interface Diagnostic {
+  level: 'error' | 'warn';
+  message: string; // Stencil's own message text; "stencilrs: …" = a feature not ported yet
+  start: number;   // byte offsets into the source
+  end: number;
+}
+```
+
+## Rust (`stencilrs_transform`)
+
+```rust
+use stencilrs_transform::{analyze_with, normalize, transpile, ComponentExport, Jsx, TranspileOptions, DEFAULT_CORE_IMPORT_PATH};
+
+let out = transpile(source, &TranspileOptions {
+    file: "src/my-counter.tsx".into(),
+    core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
+    jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
+    resolve_imports: true,
+    source_map: true,
+    transform_as_base_class: false,
+    component_export: ComponentExport::CustomElement, // or Module, Lazy
+});
+// out.code, out.components, out.diagnostics (serde-serialisable)
+
+let meta = analyze_with(source, "src/my-counter.tsx", true);
+```
+
+`analyze(source, file)` is `analyze_with(source, file, false)`. The Node binding
+(`crates/stencilrs_napi`) is a thin wrapper over these.

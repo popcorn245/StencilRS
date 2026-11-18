@@ -9,7 +9,10 @@
 //! The JSDoc (`docs`) and `complexType` of members are the analysis's own (`stencilrs:` errors
 //! mark the types it leaves to Stencil's compiler); `internal` follows from the `@internal` tag.
 
-use oxc::ast::ast::{Argument, CallExpression, Class, Expression, ObjectPropertyKind, PropertyKey, StringLiteral, VariableDeclarator};
+use oxc::ast::ast::{
+    Argument, CallExpression, Class, Expression, ObjectPropertyKind, PropertyKey, StringLiteral,
+    VariableDeclarator,
+};
 use oxc::ast_visit::{Visit, walk};
 use oxc::parser::Parser;
 use oxc::span::SourceType;
@@ -18,7 +21,9 @@ use serde_json::Value;
 use crate::analyze::{Members, style_url_modes};
 use crate::codegen::normalize_path;
 use crate::consts::order_like_object_keys;
-use crate::meta::{ComplexType, ComponentMeta, Docs, Encapsulation, MethodComplexType, PropType, References};
+use crate::meta::{
+    ComplexType, ComponentMeta, Docs, Encapsulation, MethodComplexType, PropType, References,
+};
 
 /// A JavaScript value, printed the way `convertValueToLiteral` does (`undefined` included).
 pub enum J {
@@ -123,10 +128,19 @@ impl VdomMeta {
 pub fn scan_vdom(code: &str, class_name: &str) -> VdomMeta {
     let allocator = oxc::allocator::Allocator::default();
     let parsed = Parser::new(&allocator, code, SourceType::mjs()).parse();
-    let mut find = FindClass { name: class_name, scan: Scan::default(), done: false };
+    let mut find = FindClass {
+        name: class_name,
+        scan: Scan::default(),
+        done: false,
+    };
     find.visit_program(&parsed.program);
     let mut meta = find.scan.meta;
-    for list in [&mut meta.attr_names, &mut meta.tag_names, &mut meta.parts, &mut meta.slots] {
+    for list in [
+        &mut meta.attr_names,
+        &mut meta.tag_names,
+        &mut meta.parts,
+        &mut meta.slots,
+    ] {
         let mut seen: Vec<String> = Vec::new();
         for item in list.drain(..) {
             if !seen.contains(&item) {
@@ -175,7 +189,11 @@ struct Scan {
 fn static_string(e: &Expression) -> Option<String> {
     match e {
         Expression::StringLiteral(s) => Some(s.value.to_string()),
-        Expression::TemplateLiteral(t) if t.expressions.is_empty() => t.quasis.first().and_then(|q| q.value.cooked.as_ref()).map(|c| c.to_string()),
+        Expression::TemplateLiteral(t) if t.expressions.is_empty() => t
+            .quasis
+            .first()
+            .and_then(|q| q.value.cooked.as_ref())
+            .map(|c| c.to_string()),
         _ => None,
     }
 }
@@ -254,7 +272,9 @@ impl Scan {
                             continue;
                         }
                         // A `PropertyAssignment`: not shorthand, not a method or accessor.
-                        let assignment = !p.shorthand && !p.method && p.kind == oxc::ast::ast::PropertyKind::Init;
+                        let assignment = !p.shorthand
+                            && !p.method
+                            && p.kind == oxc::ast::ast::PropertyKind::Init;
                         match name.as_str() {
                             "key" => m.key = true,
                             "ref" => m.reference = true,
@@ -265,12 +285,19 @@ impl Scan {
                                 m.xlink = true;
                                 m.prop_or_attr = true;
                             }
-                            _ if name.starts_with("attr:") || name.starts_with("prop:") => m.prop_or_attr_prefix = true,
+                            _ if name.starts_with("attr:") || name.starts_with("prop:") => {
+                                m.prop_or_attr_prefix = true
+                            }
                             _ => m.prop_or_attr = true,
                         }
                         if name == "part" && assignment {
                             if let Some(value) = static_string(&p.value) {
-                                m.parts.extend(value.split(' ').filter(|s| !s.is_empty()).map(str::to_owned));
+                                m.parts.extend(
+                                    value
+                                        .split(' ')
+                                        .filter(|s| !s.is_empty())
+                                        .map(str::to_owned),
+                                );
                             }
                         }
                         if slot_tag && name == "name" && assignment {
@@ -305,7 +332,9 @@ impl Scan {
 
 /// `/^on(-|[A-Z])/`
 fn is_listener_name(name: &str) -> bool {
-    name.strip_prefix("on").and_then(|rest| rest.chars().next()).is_some_and(|c| c == '-' || c.is_ascii_uppercase())
+    name.strip_prefix("on")
+        .and_then(|rest| rest.chars().next())
+        .is_some_and(|c| c == '-' || c.is_ascii_uppercase())
 }
 
 impl<'a> Visit<'a> for Scan {
@@ -353,7 +382,12 @@ fn docs(docs: &Docs, tags_first: bool) -> J {
     let tags = J::Arr(
         docs.tags
             .iter()
-            .map(|t| J::Obj(vec![("name", J::str(&t.name)), ("text", J::opt_str(t.text.as_deref()))]))
+            .map(|t| {
+                J::Obj(vec![
+                    ("name", J::str(&t.name)),
+                    ("text", J::opt_str(t.text.as_deref())),
+                ])
+            })
             .collect(),
     );
     let text = J::str(&docs.text);
@@ -393,7 +427,11 @@ fn references(refs: &References) -> J {
 
 /// `{ original, resolved, references }`.
 fn complex_type(t: &ComplexType) -> J {
-    J::Obj(vec![("original", J::str(&t.original)), ("resolved", J::str(&t.resolved)), ("references", references(&t.references))])
+    J::Obj(vec![
+        ("original", J::str(&t.original)),
+        ("resolved", J::str(&t.resolved)),
+        ("references", references(&t.references)),
+    ])
 }
 
 fn method_complex_type(t: &MethodComplexType) -> J {
@@ -401,7 +439,18 @@ fn method_complex_type(t: &MethodComplexType) -> J {
         ("signature", J::str(&t.signature)),
         (
             "parameters",
-            J::Arr(t.parameters.iter().map(|p| J::Obj(vec![("name", J::str(&p.name)), ("type", J::str(&p.type_text)), ("docs", J::str(&p.docs))])).collect()),
+            J::Arr(
+                t.parameters
+                    .iter()
+                    .map(|p| {
+                        J::Obj(vec![
+                            ("name", J::str(&p.name)),
+                            ("type", J::str(&p.type_text)),
+                            ("docs", J::str(&p.docs)),
+                        ])
+                    })
+                    .collect(),
+            ),
         ),
         ("references", references(&t.references)),
         ("return", J::str(&t.return_type)),
@@ -437,7 +486,11 @@ fn styles(input: &MetaInput) -> (J, bool) {
             .map(|u| u.trim())
             .filter(|u| !u.is_empty())
             .map(|url| {
-                let joined = if url.starts_with('/') || dir.is_empty() { url.to_owned() } else { format!("{dir}/{url}") };
+                let joined = if url.starts_with('/') || dir.is_empty() {
+                    url.to_owned()
+                } else {
+                    format!("{dir}/{url}")
+                };
                 J::Obj(vec![
                     ("absolutePath", J::str(normalize_path(&joined))),
                     ("relativePath", J::str(normalize_path(url))),
@@ -448,7 +501,11 @@ fn styles(input: &MetaInput) -> (J, bool) {
         if external.is_empty() {
             continue;
         }
-        let style_id = if mode == "$" { id.clone() } else { format!("{id}#{mode}") };
+        let style_id = if mode == "$" {
+            id.clone()
+        } else {
+            format!("{id}#{mode}")
+        };
         out.push((
             mode.clone(),
             J::Obj(vec![
@@ -489,12 +546,18 @@ pub fn getter(input: &MetaInput) -> String {
                     set.push(name);
                 }
             }
-            if set.is_empty() { J::Null } else { J::Obj(set.into_iter().map(|n| (n, J::Bool(true))).collect()) }
+            if set.is_empty() {
+                J::Null
+            } else {
+                J::Obj(set.into_iter().map(|n| (n, J::Bool(true))).collect())
+            }
         }
         _ => J::Null,
     };
-    let patch_flag = |name: &str| matches!(&patches, J::Obj(f) if f.iter().any(|(k, _)| *k == name));
-    let [patch_all, patch_children, patch_clone, patch_insert] = ["all", "children", "clone", "insert"].map(patch_flag);
+    let patch_flag =
+        |name: &str| matches!(&patches, J::Obj(f) if f.iter().any(|(k, _)| *k == name));
+    let [patch_all, patch_children, patch_clone, patch_insert] =
+        ["all", "children", "clone", "insert"].map(patch_flag);
 
     let properties = J::Arr(
         cmp.properties
@@ -518,7 +581,12 @@ pub fn getter(input: &MetaInput) -> String {
             })
             .collect(),
     );
-    let states = J::Arr(cmp.states.iter().map(|s| J::Obj(vec![("name", J::str(&s.name))])).collect());
+    let states = J::Arr(
+        cmp.states
+            .iter()
+            .map(|s| J::Obj(vec![("name", J::str(&s.name))]))
+            .collect(),
+    );
     let methods = J::Arr(
         cmp.methods
             .iter()
@@ -566,16 +634,37 @@ pub fn getter(input: &MetaInput) -> String {
     let watchers = J::Arr(
         cmp.watchers
             .iter()
-            .map(|w| J::Obj(vec![("propName", J::str(&w.prop_name)), ("methodName", J::str(&w.method_name)), ("handlerOptions", J::Undefined)]))
+            .map(|w| {
+                J::Obj(vec![
+                    ("propName", J::str(&w.prop_name)),
+                    ("methodName", J::str(&w.method_name)),
+                    ("handlerOptions", J::Undefined),
+                ])
+            })
             .collect(),
     );
     let translators = |list: &[crate::meta::WatcherMeta]| {
-        J::Arr(list.iter().map(|w| J::Obj(vec![("propName", J::str(&w.prop_name)), ("methodName", J::str(&w.method_name))])).collect())
+        J::Arr(
+            list.iter()
+                .map(|w| {
+                    J::Obj(vec![
+                        ("propName", J::str(&w.prop_name)),
+                        ("methodName", J::str(&w.method_name)),
+                    ])
+                })
+                .collect(),
+        )
     };
     let custom_states = J::Arr(
         cmp.attach_internals_custom_states
             .iter()
-            .map(|s| J::Obj(vec![("name", J::str(&s.name)), ("initialValue", J::Bool(s.initial_value)), ("docs", J::str(&s.docs))]))
+            .map(|s| {
+                J::Obj(vec![
+                    ("name", J::str(&s.name)),
+                    ("initialValue", J::Bool(s.initial_value)),
+                    ("docs", J::str(&s.docs)),
+                ])
+            })
             .collect(),
     );
 
@@ -583,7 +672,15 @@ pub fn getter(input: &MetaInput) -> String {
     let global_styles = J::Arr(
         cmp.global_styles
             .iter()
-            .map(|g| J::Obj(vec![("absolutePath", g.absolute_path.as_deref().map_or(J::Null, J::str)), ("styleStr", g.style_str.as_deref().map_or(J::Null, J::str))]))
+            .map(|g| {
+                J::Obj(vec![
+                    (
+                        "absolutePath",
+                        g.absolute_path.as_deref().map_or(J::Null, J::str),
+                    ),
+                    ("styleStr", g.style_str.as_deref().map_or(J::Null, J::str)),
+                ])
+            })
             .collect(),
     );
     let has_style = matches!(&styles, J::Arr(a) if !a.is_empty());
@@ -591,32 +688,86 @@ pub fn getter(input: &MetaInput) -> String {
     let has_state = !cmp.states.is_empty();
     let has_method = !cmp.methods.is_empty();
     let has_listener = !cmp.listeners.is_empty();
-    let has_lifecycle = ["componentWillLoad", "componentDidLoad", "componentShouldUpdate", "componentWillUpdate", "componentDidUpdate", "componentWillRender", "componentDidRender", "connectedCallback", "disconnectedCallback"]
-        .iter()
-        .any(|m| has(m));
+    let has_lifecycle = [
+        "componentWillLoad",
+        "componentDidLoad",
+        "componentShouldUpdate",
+        "componentWillUpdate",
+        "componentDidUpdate",
+        "componentWillRender",
+        "componentDidRender",
+        "connectedCallback",
+        "disconnectedCallback",
+    ]
+    .iter()
+    .any(|m| has(m));
     // `hasElement` is never set by Stencil's metadata pass.
     let has_member = has_prop || has_state || has_method || cmp.form_associated;
-    let is_plain = !has_member && !has_style && !has_lifecycle && !has_listener && !vd.render && !input.has_heritage;
+    let is_plain = !has_member
+        && !has_style
+        && !has_lifecycle
+        && !has_listener
+        && !vd.render
+        && !input.has_heritage;
     let target = |t: &str| cmp.listeners.iter().any(|l| l.target.as_deref() == Some(t));
     let b = J::Bool;
 
     let fields: Vec<(&'static str, J)> = vec![
-        ("attachInternalsMemberName", cmp.attach_internals_member_name.as_deref().map_or(J::Null, J::str)),
+        (
+            "attachInternalsMemberName",
+            cmp.attach_internals_member_name
+                .as_deref()
+                .map_or(J::Null, J::str),
+        ),
         ("attachInternalsCustomStates", custom_states),
         ("formAssociated", b(cmp.form_associated)),
         ("tagName", J::str(&cmp.tag_name)),
         ("componentClassName", J::str(&cmp.component_class_name)),
-        ("elementRef", cmp.element_ref.as_deref().map_or(J::Null, J::str)),
-        ("encapsulation", J::str(match cmp.encapsulation {
-            Encapsulation::None => "none",
-            Encapsulation::Scoped => "scoped",
-            Encapsulation::Shadow => "shadow",
-        })),
-        ("shadowDelegatesFocus", b(shadow && enc_flag("delegatesFocus"))),
+        (
+            "elementRef",
+            cmp.element_ref.as_deref().map_or(J::Null, J::str),
+        ),
+        (
+            "encapsulation",
+            J::str(match cmp.encapsulation {
+                Encapsulation::None => "none",
+                Encapsulation::Scoped => "scoped",
+                Encapsulation::Shadow => "shadow",
+            }),
+        ),
+        (
+            "shadowDelegatesFocus",
+            b(shadow && enc_flag("delegatesFocus")),
+        ),
         ("shadowClonable", b(shadow && enc_flag("clonable"))),
         ("shadowSerializable", b(shadow && enc_flag("serializable"))),
-        ("shadowMode", if shadow { J::str(if enc.and_then(|e| e.get("mode")).and_then(Value::as_str) == Some("closed") { "closed" } else { "open" }) } else { J::Null }),
-        ("slotAssignment", if shadow && enc.and_then(|e| e.get("slotAssignment")).and_then(Value::as_str) == Some("manual") { J::str("manual") } else { J::Null }),
+        (
+            "shadowMode",
+            if shadow {
+                J::str(
+                    if enc.and_then(|e| e.get("mode")).and_then(Value::as_str) == Some("closed") {
+                        "closed"
+                    } else {
+                        "open"
+                    },
+                )
+            } else {
+                J::Null
+            },
+        ),
+        (
+            "slotAssignment",
+            if shadow
+                && enc
+                    .and_then(|e| e.get("slotAssignment"))
+                    .and_then(Value::as_str)
+                    == Some("manual")
+            {
+                J::str("manual")
+            } else {
+                J::Null
+            },
+        ),
         ("patches", patches),
         ("properties", properties),
         ("virtualProperties", J::Arr(vec![])),
@@ -632,10 +783,16 @@ pub fn getter(input: &MetaInput) -> String {
         ("sourceMapPath", J::Null),
         ("serializers", translators(&cmp.serializers)),
         ("deserializers", translators(&cmp.deserializers)),
-        ("hasAttributeChangedCallbackFn", b(has("attributeChangedCallback"))),
+        (
+            "hasAttributeChangedCallbackFn",
+            b(has("attributeChangedCallback")),
+        ),
         ("hasComponentWillLoadFn", b(has("componentWillLoad"))),
         ("hasComponentDidLoadFn", b(has("componentDidLoad"))),
-        ("hasComponentShouldUpdateFn", b(has("componentShouldUpdate"))),
+        (
+            "hasComponentShouldUpdateFn",
+            b(has("componentShouldUpdate")),
+        ),
         ("hasComponentWillUpdateFn", b(has("componentWillUpdate"))),
         ("hasComponentDidUpdateFn", b(has("componentDidUpdate"))),
         ("hasComponentWillRenderFn", b(has("componentWillRender"))),
@@ -647,7 +804,13 @@ pub fn getter(input: &MetaInput) -> String {
         ("hasEvent", b(!cmp.events.is_empty())),
         ("hasLifecycle", b(has_lifecycle)),
         ("hasListener", b(has_listener)),
-        ("hasListenerTarget", b(cmp.listeners.iter().any(|l| l.target.as_deref().is_some_and(|t| !t.is_empty())))),
+        (
+            "hasListenerTarget",
+            b(cmp
+                .listeners
+                .iter()
+                .any(|l| l.target.as_deref().is_some_and(|t| !t.is_empty()))),
+        ),
         ("hasListenerTargetWindow", b(target("window"))),
         ("hasListenerTargetDocument", b(target("document"))),
         ("hasListenerTargetBody", b(target("body"))),
@@ -655,12 +818,36 @@ pub fn getter(input: &MetaInput) -> String {
         ("hasMethod", b(has_method)),
         ("hasMode", b(has_mode)),
         ("hasModernPropertyDecls", b(input.has_modern_property_decls)),
-        ("hasAttribute", b(cmp.properties.iter().any(|p| p.attribute.is_some()))),
+        (
+            "hasAttribute",
+            b(cmp.properties.iter().any(|p| p.attribute.is_some())),
+        ),
         ("hasProp", b(has_prop)),
-        ("hasPropNumber", b(cmp.properties.iter().any(|p| p.prop_type == PropType::Number))),
-        ("hasPropBoolean", b(cmp.properties.iter().any(|p| p.prop_type == PropType::Boolean))),
-        ("hasPropString", b(cmp.properties.iter().any(|p| p.prop_type == PropType::String))),
-        ("hasPropMutable", b(cmp.properties.iter().any(|p| p.mutable))),
+        (
+            "hasPropNumber",
+            b(cmp
+                .properties
+                .iter()
+                .any(|p| p.prop_type == PropType::Number)),
+        ),
+        (
+            "hasPropBoolean",
+            b(cmp
+                .properties
+                .iter()
+                .any(|p| p.prop_type == PropType::Boolean)),
+        ),
+        (
+            "hasPropString",
+            b(cmp
+                .properties
+                .iter()
+                .any(|p| p.prop_type == PropType::String)),
+        ),
+        (
+            "hasPropMutable",
+            b(cmp.properties.iter().any(|p| p.mutable)),
+        ),
         ("hasReflect", b(cmp.properties.iter().any(|p| p.reflect))),
         ("hasRenderFn", b(has("render"))),
         ("hasSerializer", b(!cmp.serializers.is_empty())),
@@ -713,7 +900,16 @@ pub fn decorator_getters(m: &Members) -> Vec<String> {
         out
     };
     let translators = |list: &[crate::meta::WatcherMeta]| {
-        J::Arr(list.iter().map(|w| J::Obj(vec![("propName", J::str(&w.prop_name)), ("methodName", J::str(&w.method_name))])).collect())
+        J::Arr(
+            list.iter()
+                .map(|w| {
+                    J::Obj(vec![
+                        ("propName", J::str(&w.prop_name)),
+                        ("methodName", J::str(&w.method_name)),
+                    ])
+                })
+                .collect(),
+        )
     };
     let mut out = Vec::new();
     if !m.serializers.is_empty() {
@@ -738,10 +934,15 @@ pub fn decorator_getters(m: &Members) -> Vec<String> {
             ];
             // `reflect` is only set for a typed prop or one with a serializer; `attribute` also
             // for a reflected prop or one with a deserializer (and may then be `undefined`).
-            if p.prop_type != PropType::Unknown || m.serializers.iter().any(|s| s.prop_name == p.name) {
+            if p.prop_type != PropType::Unknown
+                || m.serializers.iter().any(|s| s.prop_name == p.name)
+            {
                 f.push(("reflect", J::Bool(p.reflect)));
             }
-            if p.prop_type != PropType::Unknown || p.reflect || m.deserializers.iter().any(|s| s.prop_name == p.name) {
+            if p.prop_type != PropType::Unknown
+                || p.reflect
+                || m.deserializers.iter().any(|s| s.prop_name == p.name)
+            {
                 f.push(("attribute", J::opt_str(p.attribute.as_deref())));
             }
             if let Some(d) = &p.default_value {
@@ -754,7 +955,15 @@ pub fn decorator_getters(m: &Members) -> Vec<String> {
     if !m.states.is_empty() {
         let mut states: Vec<_> = m.states.iter().collect();
         order_like_object_keys(&mut states, |s| s.name.as_str());
-        out.push(getter("states", J::Map(states.into_iter().map(|s| (s.name.clone(), J::Obj(vec![]))).collect())));
+        out.push(getter(
+            "states",
+            J::Map(
+                states
+                    .into_iter()
+                    .map(|s| (s.name.clone(), J::Obj(vec![])))
+                    .collect(),
+            ),
+        ));
     }
     if !m.events.is_empty() {
         let events = m.events.iter().map(|e| {
@@ -771,7 +980,15 @@ pub fn decorator_getters(m: &Members) -> Vec<String> {
         out.push(getter("events", J::Arr(events.collect())));
     }
     if !m.methods.is_empty() {
-        let methods = m.methods.iter().map(|x| (x.name.clone(), J::Obj(vec![("complexType", method_complex_type(&x.complex_type)), ("docs", docs(&x.docs, false))])));
+        let methods = m.methods.iter().map(|x| {
+            (
+                x.name.clone(),
+                J::Obj(vec![
+                    ("complexType", method_complex_type(&x.complex_type)),
+                    ("docs", docs(&x.docs, false)),
+                ]),
+            )
+        });
         out.push(getter("methods", J::Map(methods.collect())));
     }
     if let Some(el) = &m.element_ref {
@@ -795,8 +1012,17 @@ pub fn decorator_getters(m: &Members) -> Vec<String> {
     if let Some(name) = &m.attach_internals_member_name {
         out.push(getter("attachInternalsMemberName", J::str(name)));
         if !m.attach_internals_custom_states.is_empty() {
-            let states = m.attach_internals_custom_states.iter().map(|s| J::Obj(vec![("name", J::str(&s.name)), ("initialValue", J::Bool(s.initial_value)), ("docs", J::str(&s.docs))]));
-            out.push(getter("attachInternalsCustomStates", J::Arr(states.collect())));
+            let states = m.attach_internals_custom_states.iter().map(|s| {
+                J::Obj(vec![
+                    ("name", J::str(&s.name)),
+                    ("initialValue", J::Bool(s.initial_value)),
+                    ("docs", J::str(&s.docs)),
+                ])
+            });
+            out.push(getter(
+                "attachInternalsCustomStates",
+                J::Arr(states.collect()),
+            ));
         }
         if m.form_associated {
             out.push(getter("formAssociated", J::Bool(true)));

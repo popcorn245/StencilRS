@@ -50,7 +50,11 @@ enum Tok {
 }
 
 fn is_space(c: char) -> bool {
-    matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200b}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
+    matches!(
+        c,
+        ' ' | '\t' | '\u{b}' | '\u{c}' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200b}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'
+    )
 }
 
 fn is_line_break(c: char) -> bool {
@@ -85,7 +89,9 @@ impl Scan<'_> {
     /// `scanJsDocToken`.
     fn next(&mut self) -> Tok {
         self.start = self.pos;
-        let Some(c) = self.at(self.pos) else { return self.set(Tok::Eof) };
+        let Some(c) = self.at(self.pos) else {
+            return self.set(Tok::Eof);
+        };
         self.pos += 1;
         let tok = match c {
             '\t' | '\u{b}' | '\u{c}' | ' ' => {
@@ -110,7 +116,10 @@ impl Scan<'_> {
             '`' => Tok::Backtick,
             '=' => Tok::Equals,
             c if is_ident_start(c) => {
-                while self.at(self.pos).is_some_and(|c| is_ident_part(c) || c == '-') {
+                while self
+                    .at(self.pos)
+                    .is_some_and(|c| is_ident_part(c) || c == '-')
+                {
                     self.pos += 1;
                 }
                 Tok::Ident
@@ -137,7 +146,9 @@ impl Scan<'_> {
                 if c == '@'
                     && self.pos > 0
                     && is_space(self.s[self.pos - 1])
-                    && !self.at(self.pos + 1).is_some_and(|n| is_space(n) || is_line_break(n))
+                    && !self
+                        .at(self.pos + 1)
+                        .is_some_and(|n| is_space(n) || is_line_break(n))
                 {
                     break;
                 }
@@ -232,12 +243,18 @@ impl Parser<'_> {
         if s.get(from + 1) != Some(&'@') {
             return None;
         }
-        let word: String = s[from + 2..].iter().take_while(|c| c.is_alphabetic()).collect();
+        let word: String = s[from + 2..]
+            .iter()
+            .take_while(|c| c.is_alphabetic())
+            .collect();
         if !matches!(word.as_str(), "link" | "linkcode" | "linkplain") {
             return None;
         }
         let body = from + 2 + word.chars().count();
-        let close = s[body..].iter().position(|&c| c == '}' || is_line_break(c))? + body;
+        let close = s[body..]
+            .iter()
+            .position(|&c| c == '}' || is_line_break(c))?
+            + body;
         if s[close] != '}' {
             return None;
         }
@@ -251,7 +268,10 @@ impl Parser<'_> {
             while s.get(i).is_some_and(|&c| is_ident_part(c) || c == '-') {
                 i += 1;
             }
-            if i < close && matches!(s[i], '.' | '#') && s.get(i + 1).is_some_and(|&c| is_ident_start(c)) {
+            if i < close
+                && matches!(s[i], '.' | '#')
+                && s.get(i + 1).is_some_and(|&c| is_ident_start(c))
+            {
                 i += 1;
             } else {
                 break;
@@ -277,7 +297,11 @@ impl Parser<'_> {
             return Some(format!("{prefix}{name}{rest}}}"));
         }
         let bar_after_name = text.chars().nth(suffix) == Some('|') && !name.ends_with(' ');
-        let separator = if suffix == 0 || bar_after_name { " " } else { "" };
+        let separator = if suffix == 0 || bar_after_name {
+            " "
+        } else {
+            ""
+        };
         Some(format!("{prefix}{name}{separator}{rest}}}"))
     }
 
@@ -297,10 +321,15 @@ impl Parser<'_> {
                 return String::new();
             }
         }
-        let mut preceding_line_break = self.sc.start > 0 && self.sc.s[..self.sc.start].last().is_some_and(|&c| is_line_break(c));
+        let mut preceding_line_break = self.sc.start > 0
+            && self.sc.s[..self.sc.start]
+                .last()
+                .is_some_and(|&c| is_line_break(c));
         let mut seen_line_break = false;
         let mut indent_text = String::new();
-        while (preceding_line_break && self.sc.tok == Tok::Asterisk) || matches!(self.sc.tok, Tok::Whitespace | Tok::Newline) {
+        while (preceding_line_break && self.sc.tok == Tok::Asterisk)
+            || matches!(self.sc.tok, Tok::Whitespace | Tok::Newline)
+        {
             indent_text.push_str(&self.sc.text());
             if self.sc.tok == Tok::Newline {
                 preceding_line_break = true;
@@ -311,7 +340,11 @@ impl Parser<'_> {
             }
             self.sc.next();
         }
-        if seen_line_break { indent_text } else { String::new() }
+        if seen_line_break {
+            indent_text
+        } else {
+            String::new()
+        }
     }
 
     fn skip_whitespace(&mut self) {
@@ -335,7 +368,12 @@ impl Parser<'_> {
     }
 
     /// `parseTrailingTagComments`.
-    fn trailing_comments(&mut self, tag_start: usize, mut margin: usize, indent_text: &str) -> Option<String> {
+    fn trailing_comments(
+        &mut self,
+        tag_start: usize,
+        mut margin: usize,
+        indent_text: &str,
+    ) -> Option<String> {
         if indent_text.is_empty() {
             margin += self.sc.start - tag_start;
         }
@@ -395,7 +433,11 @@ impl Parser<'_> {
                     }
                 }
                 Tok::Backtick => {
-                    state = if state == State::SavingBackticks { State::SavingComments } else { State::SavingBackticks };
+                    state = if state == State::SavingBackticks {
+                        State::SavingComments
+                    } else {
+                        State::SavingBackticks
+                    };
                     push!(self.sc.text());
                 }
                 Tok::CommentText => {
@@ -526,13 +568,21 @@ impl Parser<'_> {
             Some(c) => format!("{param} {c}"),
             None => param.clone(),
         };
-        Tag { name, text: Some(text), comment, param: Some(param) }
+        Tag {
+            name,
+            text: Some(text),
+            comment,
+            param: Some(param),
+        }
     }
 
     fn link_ahead(&self) -> bool {
         let s = self.sc.s;
         self.sc.tok == Tok::OpenBrace && s.get(self.sc.start + 1) == Some(&'@') && {
-            let word: String = s[self.sc.start + 2..].iter().take_while(|c| c.is_alphabetic()).collect();
+            let word: String = s[self.sc.start + 2..]
+                .iter()
+                .take_while(|c| c.is_alphabetic())
+                .collect();
             matches!(word.as_str(), "link" | "linkcode" | "linkplain")
         }
     }
@@ -554,7 +604,12 @@ impl Parser<'_> {
             "return" | "returns" => {
                 self.type_expression();
                 let comment = self.trailing_comments(tag_start, margin, &indent_text);
-                Tag { name, text: comment.clone(), comment, param: None }
+                Tag {
+                    name,
+                    text: comment.clone(),
+                    comment,
+                    param: None,
+                }
             }
             "type" | "satisfies" | "throws" | "exception" => {
                 let ty = self.type_expression();
@@ -564,11 +619,21 @@ impl Parser<'_> {
                     (Some(t), None) => Some(t.clone()),
                     (None, c) => c.clone(),
                 };
-                Tag { name, text, comment, param: None }
+                Tag {
+                    name,
+                    text,
+                    comment,
+                    param: None,
+                }
             }
             _ => {
                 let comment = self.trailing_comments(tag_start, margin, &indent_text);
-                Tag { name, text: comment.clone(), comment, param: None }
+                Tag {
+                    name,
+                    text: comment.clone(),
+                    comment,
+                    param: None,
+                }
             }
         }
     }
@@ -582,7 +647,16 @@ pub fn parse(comment: &str, column: usize, resolves: &dyn Fn(&str) -> bool) -> J
     }
     // Between `/**` and `*/`.
     let interior = &chars[3..chars.len() - 2];
-    let mut p = Parser { sc: Scan { s: interior, pos: 0, start: 0, tok: Tok::Other }, tags: Vec::new(), resolves };
+    let mut p = Parser {
+        sc: Scan {
+            s: interior,
+            pos: 0,
+            start: 0,
+            tok: Tok::Other,
+        },
+        tags: Vec::new(),
+        resolves,
+    };
 
     let mut state = State::SawAsterisk;
     let mut margin: Option<usize> = None;
@@ -665,25 +739,40 @@ pub fn parse(comment: &str, column: usize, resolves: &dyn Fn(&str) -> bool) -> J
             p.sc.next();
         }
     }
-    JsDoc { comment: comments.concat().trim_end().to_owned(), tags: p.tags }
+    JsDoc {
+        comment: comments.concat().trim_end().to_owned(),
+        tags: p.tags,
+    }
 }
 
 /// The `/** … */` comments TypeScript attaches to the node starting at `at` (`getJSDocCommentRanges`):
 /// the last of those in the trivia right before it that come after a line break.
-pub fn leading(source: &str, comments: &[Comment], at: u32, resolves: &dyn Fn(&str) -> bool) -> Vec<JsDoc> {
+pub fn leading(
+    source: &str,
+    comments: &[Comment],
+    at: u32,
+    resolves: &dyn Fn(&str) -> bool,
+) -> Vec<JsDoc> {
     // Walk back over whitespace and comments from `at` to the previous token.
     let mut chain: Vec<&Comment> = Vec::new();
     let mut end = at as usize;
     loop {
         let before = source[..end].trim_end();
-        let Some(c) = comments.iter().find(|c| c.span.end as usize == before.len()) else { break };
+        let Some(c) = comments
+            .iter()
+            .find(|c| c.span.end as usize == before.len())
+        else {
+            break;
+        };
         chain.push(c);
         end = c.span.start as usize;
     }
     chain.reverse();
     let mut out = Vec::new();
     let mut seen_newline = false;
-    let mut cursor = chain.first().map_or(0, |c| source[..c.span.start as usize].trim_end().len());
+    let mut cursor = chain
+        .first()
+        .map_or(0, |c| source[..c.span.start as usize].trim_end().len());
     if cursor == 0 {
         // The start of the file: comments there are leading too.
         seen_newline = true;
@@ -694,7 +783,9 @@ pub fn leading(source: &str, comments: &[Comment], at: u32, resolves: &dyn Fn(&s
         cursor = c.span.end as usize;
         let text = &source[c.span.start as usize..c.span.end as usize];
         if seen_newline && text.starts_with("/**") && !text.starts_with("/**/") {
-            let line_start = source[..c.span.start as usize].rfind('\n').map_or(0, |i| i + 1);
+            let line_start = source[..c.span.start as usize]
+                .rfind('\n')
+                .map_or(0, |i| i + 1);
             let column = source[line_start..c.span.start as usize].chars().count();
             out.push(parse(text, column, resolves));
         }
@@ -711,9 +802,15 @@ pub fn docs(declarations: &[Vec<JsDoc>]) -> Docs {
         if !jsdoc.comment.is_empty() && !parts.contains(&jsdoc.comment.as_str()) {
             parts.push(&jsdoc.comment);
         }
-        tags.extend(jsdoc.tags.iter().map(|t| DocsTag { name: t.name.clone(), text: t.text.clone() }));
+        tags.extend(jsdoc.tags.iter().map(|t| DocsTag {
+            name: t.name.clone(),
+            text: t.text.clone(),
+        }));
     }
-    Docs { text: parts.join("\n"), tags }
+    Docs {
+        text: parts.join("\n"),
+        tags,
+    }
 }
 
 /// The docs of a parameter: the comment of the `@param` tag naming it.

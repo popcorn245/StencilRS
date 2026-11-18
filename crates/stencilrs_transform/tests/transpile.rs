@@ -1,14 +1,28 @@
 //! Code generation for the customelement, module and lazy outputs. Exact parity against Stencil v5 is checked by
 //! `parity/` (all fixtures); these cover the shape of the output.
 
-use stencilrs_transform::{ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile};
+use stencilrs_transform::{
+    ComponentExport, DEFAULT_CORE_IMPORT_PATH, Jsx, TranspileOptions, normalize, transpile,
+};
 
 fn run(src: &str, jsx: Jsx) -> String {
     run_as(src, jsx, ComponentExport::CustomElement)
 }
 
 fn run_as(src: &str, jsx: Jsx, component_export: ComponentExport) -> String {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx, resolve_imports: false, complex_types: false, source_map: false, transform_as_base_class: false, use_define_for_class_fields: true, component_export, component_metadata: Default::default(), emit_styles: true };
+    let opts = TranspileOptions {
+        file: "cmp/cmp-a.tsx".into(),
+        core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
+        jsx,
+        resolve_imports: false,
+        complex_types: false,
+        source_map: false,
+        transform_as_base_class: false,
+        use_define_for_class_fields: true,
+        component_export,
+        component_metadata: Default::default(),
+        emit_styles: true,
+    };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     normalize(&out.code).expect("valid JS")
@@ -63,12 +77,20 @@ fn automatic_runtime_and_keys() {
             render() { return <Host><ul>{this.items.map((i) => <li>{i}</li>)}</ul></Host>; }
         }
         "#,
-        Jsx::Automatic { import_source: "@stencil/core".into() },
+        Jsx::Automatic {
+            import_source: "@stencil/core".into(),
+        },
     );
-    assert!(code.contains(r#"import { jsx as _jsx } from "@stencil/core/jsx-runtime";"#), "{code}");
+    assert!(
+        code.contains(r#"import { jsx as _jsx } from "@stencil/core/jsx-runtime";"#),
+        "{code}"
+    );
     // Elements inside a call (the map callback) get no key.
     assert!(code.contains(r#"_jsx("li", { children: i })"#), "{code}");
-    assert!(code.contains(r#"}, "1")"#) && code.contains(r#"}, "0")"#), "{code}");
+    assert!(
+        code.contains(r#"}, "1")"#) && code.contains(r#"}, "0")"#),
+        "{code}"
+    );
 }
 
 #[test]
@@ -77,7 +99,10 @@ fn plain_component_has_no_runtime_proxy() {
         "import { Component } from '@stencil/core';\n@Component({ tag: 'cmp-a' })\nexport class CmpA { render() { return 'hello'; } }",
         Jsx::Classic,
     );
-    assert!(code.contains(r#"customElements.define(__stencil_transformTag("cmp-a"), CmpA);"#), "{code}");
+    assert!(
+        code.contains(r#"customElements.define(__stencil_transformTag("cmp-a"), CmpA);"#),
+        "{code}"
+    );
     assert!(code.contains("this.textContent = this.render();"), "{code}");
     assert!(code.contains(r#"static get is() {"#), "{code}");
     assert!(!code.contains("__registerHost"), "{code}");
@@ -104,7 +129,10 @@ fn module_output_keeps_the_export_and_proxies_the_class() {
     ] {
         assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
     }
-    assert!(!code.contains("defineCustomElement"), "defined, not just proxied:\n{code}");
+    assert!(
+        !code.contains("defineCustomElement"),
+        "defined, not just proxied:\n{code}"
+    );
 }
 
 #[test]
@@ -121,8 +149,16 @@ fn lazy_output_registers_the_instance_with_its_host() {
     ] {
         assert!(code.contains(expected), "missing `{expected}` in:\n{code}");
     }
-    for unexpected in ["HTMLElement", "defineCustomElement", "proxyCustomElement", "static get style"] {
-        assert!(!code.contains(unexpected), "`{unexpected}` in lazy output:\n{code}");
+    for unexpected in [
+        "HTMLElement",
+        "defineCustomElement",
+        "proxyCustomElement",
+        "static get style",
+    ] {
+        assert!(
+            !code.contains(unexpected),
+            "`{unexpected}` in lazy output:\n{code}"
+        );
     }
 }
 
@@ -134,7 +170,8 @@ fn lazy_base(source: &str, complex_types: bool) -> stencilrs_transform::Transpil
         resolve_imports: false,
         complex_types,
         source_map: false,
-        transform_as_base_class: false, use_define_for_class_fields: true,
+        transform_as_base_class: false,
+        use_define_for_class_fields: true,
         component_export: ComponentExport::Lazy,
         component_metadata: Default::default(),
         emit_styles: true,
@@ -144,7 +181,10 @@ fn lazy_base(source: &str, complex_types: bool) -> stencilrs_transform::Transpil
 
 #[test]
 fn lazy_output_keeps_the_static_getters_of_decorated_base_classes() {
-    let out = lazy_base("import { Prop } from '@stencil/core';\nexport class Base { @Prop() a = 1; }", true);
+    let out = lazy_base(
+        "import { Prop } from '@stencil/core';\nexport class Base { @Prop() a = 1; }",
+        true,
+    );
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert!(out.code.contains("static get properties()"), "{}", out.code);
     assert!(out.code.contains("\"complexType\""), "{}", out.code);
@@ -152,13 +192,29 @@ fn lazy_output_keeps_the_static_getters_of_decorated_base_classes() {
 
 #[test]
 fn lazy_output_leaves_base_class_members_it_cannot_type_to_stencil() {
-    let source = "import { Prop } from '@stencil/core';\nexport class Base { @Prop() a: typeof Math; }";
+    let source =
+        "import { Prop } from '@stencil/core';\nexport class Base { @Prop() a: typeof Math; }";
     let out = lazy_base(source, true);
     assert!(out.code.is_empty());
-    assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.starts_with("stencilrs:")),
+        "{:?}",
+        out.diagnostics
+    );
     // Computed names and watch options are not in the metadata.
-    let out = lazy_base("import { Prop } from '@stencil/core';\nconst k = 'a';\nexport class Base { @Prop() [k] = 1; }", true);
-    assert!(out.diagnostics.iter().any(|d| d.message.starts_with("stencilrs:")), "{:?}", out.diagnostics);
+    let out = lazy_base(
+        "import { Prop } from '@stencil/core';\nconst k = 'a';\nexport class Base { @Prop() [k] = 1; }",
+        true,
+    );
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.starts_with("stencilrs:")),
+        "{:?}",
+        out.diagnostics
+    );
 }
 
 #[test]
@@ -173,8 +229,14 @@ fn global_styles_stay_as_static_getters() {
         "#,
         Jsx::Classic,
     );
-    assert!(code.contains("static get originalGlobalStyleUrl()") && code.contains(r#""./g.css""#), "{code}");
-    assert!(code.contains("static get globalStyle()") && code.contains(r#""a { color: red }""#), "{code}");
+    assert!(
+        code.contains("static get originalGlobalStyleUrl()") && code.contains(r#""./g.css""#),
+        "{code}"
+    );
+    assert!(
+        code.contains("static get globalStyle()") && code.contains(r#""a { color: red }""#),
+        "{code}"
+    );
     assert!(!code.contains("static get style()"), "{code}");
 }
 
@@ -201,15 +263,39 @@ fn per_mode_style_urls() {
 
 /// The source text a map sends the first occurrence of `needle` in the output to.
 fn mapped_source<'a>(src: &'a str, needle: &str) -> &'a str {
-    let opts = TranspileOptions { file: "cmp/cmp-a.tsx".into(), core_import_path: DEFAULT_CORE_IMPORT_PATH.into(), jsx: Jsx::Classic, resolve_imports: false, complex_types: false, source_map: true, transform_as_base_class: false, use_define_for_class_fields: true, component_export: Default::default(), component_metadata: Default::default(), emit_styles: true };
+    let opts = TranspileOptions {
+        file: "cmp/cmp-a.tsx".into(),
+        core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
+        jsx: Jsx::Classic,
+        resolve_imports: false,
+        complex_types: false,
+        source_map: true,
+        transform_as_base_class: false,
+        use_define_for_class_fields: true,
+        component_export: Default::default(),
+        component_metadata: Default::default(),
+        emit_styles: true,
+    };
     let out = transpile(src, &opts);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let json = out.map.as_deref().expect("a source map");
     let map = oxc_sourcemap::SourceMap::from_json_string(json).expect("valid map");
-    let line = out.code.lines().position(|l| l.trim_start().starts_with(needle)).unwrap_or_else(|| panic!("`{needle}` not in\n{}", out.code));
+    let line = out
+        .code
+        .lines()
+        .position(|l| l.trim_start().starts_with(needle))
+        .unwrap_or_else(|| panic!("`{needle}` not in\n{}", out.code));
     let col = out.code.lines().nth(line).unwrap().find(needle).unwrap();
-    let token = map.get_tokens().find(|t| t.get_dst_line() as usize == line && t.get_dst_col() as usize == col).expect("a mapping");
-    let at = src.lines().take(token.get_src_line() as usize).map(|l| l.len() + 1).sum::<usize>() + token.get_src_col() as usize;
+    let token = map
+        .get_tokens()
+        .find(|t| t.get_dst_line() as usize == line && t.get_dst_col() as usize == col)
+        .expect("a mapping");
+    let at = src
+        .lines()
+        .take(token.get_src_line() as usize)
+        .map(|l| l.len() + 1)
+        .sum::<usize>()
+        + token.get_src_col() as usize;
     &src[at..]
 }
 
@@ -229,6 +315,10 @@ export class CmpA {
 ";
     for name in ["foo", "static async bar", "get baz", "qux", "handler"] {
         let at = mapped_source(src, name);
-        assert!(at.starts_with(name), "`{name}` maps to `{}`", &at[..at.len().min(30)]);
+        assert!(
+            at.starts_with(name),
+            "`{name}` maps to `{}`",
+            &at[..at.len().min(30)]
+        );
     }
 }

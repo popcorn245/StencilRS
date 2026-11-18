@@ -1,5 +1,6 @@
 name: deploy
-# Build the compiler, the components and the Storybook, then publish the Storybook at
+# Build the compiler, the components and the site (docs plus the ui-kit Storybook at /storybook/),
+# then publish site/dist at
 # https://stencilrs.popcorn245.com (tailnet-only: the name resolves to the tower's Tailscale IP).
 #
 # HOW IT IS HOSTED (the same way as docs.popcorn245.com)
@@ -64,7 +65,7 @@ jobs:
           key: ionic-upstream-v1-${{ hashFiles('examples/ionic/scripts/paths.mjs') }}
 
       # Compiler (cargo build, cargo test, node tests), then the components (starter and ui-kit:
-      # tests, then a stencilrs library build of each), then the Storybook.
+      # tests, then a stencilrs library build of each), then the site.
       - name: Build and test
         run: bash scripts/ci.sh
 
@@ -73,9 +74,9 @@ jobs:
         run: |
           set -eu
           [ -d /docs-deploy ] || { echo "::error::/docs-deploy is not mounted (runner container.options)"; exit 1; }
-          # Swap whole folders, so a visitor never sees half a Storybook.
+          # Swap whole folders, so a visitor never sees half a site.
           rm -rf "$PUBLISH_DIR.new" "$PUBLISH_DIR.old"
-          cp -a storybook/dist "$PUBLISH_DIR.new"
+          cp -a site/dist "$PUBLISH_DIR.new"
           if [ -d "$PUBLISH_DIR" ]; then mv "$PUBLISH_DIR" "$PUBLISH_DIR.old"; fi
           mv "$PUBLISH_DIR.new" "$PUBLISH_DIR"
           rm -rf "$PUBLISH_DIR.old"
@@ -88,7 +89,7 @@ jobs:
         run: |
           set -eu
           CADDY_IP=$(getent hosts caddy | awk '{print $1}')
-          for path in / /index.json /iframe.html; do
+          for path in / /guide/introduction.html /story/ /storybook/index.html /storybook/iframe.html; do
             code=$(curl -s -o /dev/null -w '%{http_code}' --resolve "$SITE_HOST:443:$CADDY_IP" "https://$SITE_HOST$path")
             echo "$code https://$SITE_HOST$path"
             [ "$code" = 200 ] || exit 1

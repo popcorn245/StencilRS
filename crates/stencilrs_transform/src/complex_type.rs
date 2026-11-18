@@ -6,13 +6,14 @@
 //! this cannot reproduce is [`Unsupported`], and the caller flags the member for Stencil's own
 //! compiler instead of guessing.
 
-use std::cell::RefCell;
 use rustc_hash::FxHashMap;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
-    Expression, FormalParameters, MethodDefinition, Program, Statement, TSEnumDeclaration, TSEnumMemberName, TSLiteral, TSSignature,
-    TSTupleElement, TSType, TSTypeName, TSTypeReference, UnaryOperator,
+    Expression, FormalParameters, MethodDefinition, Program, Statement, TSEnumDeclaration,
+    TSEnumMemberName, TSLiteral, TSSignature, TSTupleElement, TSType, TSTypeName,
+    TSTypeOperatorOperator, TSTypeReference, UnaryOperator,
 };
 use oxc::ast_visit::Visit;
 
@@ -32,7 +33,10 @@ pub enum TypeDef {
     /// An enum whose members are all literals: a union of them.
     UnionEnum(Rc<EnumInfo>),
     /// An interface, a class or an enum with computed members: printed by name.
-    Named { name: String },
+    Named {
+        name: String,
+        defaults: Vec<Option<Ty>>,
+    },
 }
 
 /// A type a module exports, as the importing module needs it.
@@ -46,14 +50,78 @@ pub struct ExportedType {
     pub def: Res<TypeDef>,
 }
 
-/// The type names of lib.d.ts the model prints by name (`Promise<T>`, `HTMLElement`).
-const LIB_INTERFACES: [&str; 48] = [
-    "Promise", "Map", "Set", "WeakMap", "WeakSet", "Date", "Error", "RegExp", "Event", "CustomEvent", "MouseEvent", "KeyboardEvent",
-    "PointerEvent", "TouchEvent", "FocusEvent", "InputEvent", "DragEvent", "WheelEvent", "Node", "Element", "HTMLElement",
-    "HTMLInputElement", "HTMLTextAreaElement", "HTMLSelectElement", "HTMLButtonElement", "HTMLDivElement", "HTMLImageElement",
-    "HTMLCanvasElement", "HTMLVideoElement", "HTMLAudioElement", "HTMLFormElement", "HTMLAnchorElement", "SVGElement", "File",
-    "Blob", "FileList", "FormData", "DOMRect", "AbortSignal", "AbortController", "MediaStream", "URL", "Response", "Request",
-    "Headers", "ShadowRoot", "Document", "Window",
+/// The type names of lib.d.ts the model prints by name (`Promise<T>`, `HTMLElement`). Generic
+/// ones need their arguments written (`CustomEvent` without any prints `CustomEvent<any>`).
+const LIB_INTERFACES: &[&str] = &[
+    "Promise",
+    "Map",
+    "Set",
+    "WeakMap",
+    "WeakSet",
+    "Date",
+    "Error",
+    "RegExp",
+    "Function",
+    "Event",
+    "CustomEvent",
+    "UIEvent",
+    "MouseEvent",
+    "KeyboardEvent",
+    "PointerEvent",
+    "TouchEvent",
+    "FocusEvent",
+    "InputEvent",
+    "DragEvent",
+    "WheelEvent",
+    "CompositionEvent",
+    "AnimationEvent",
+    "TransitionEvent",
+    "ClipboardEvent",
+    "ErrorEvent",
+    "ProgressEvent",
+    "Node",
+    "Element",
+    "HTMLElement",
+    "HTMLInputElement",
+    "HTMLTextAreaElement",
+    "HTMLSelectElement",
+    "HTMLButtonElement",
+    "HTMLDivElement",
+    "HTMLImageElement",
+    "HTMLCanvasElement",
+    "HTMLVideoElement",
+    "HTMLAudioElement",
+    "HTMLFormElement",
+    "HTMLAnchorElement",
+    "HTMLSlotElement",
+    "HTMLLabelElement",
+    "HTMLSpanElement",
+    "HTMLIFrameElement",
+    "HTMLDialogElement",
+    "HTMLTemplateElement",
+    "SVGElement",
+    "SVGSVGElement",
+    "File",
+    "Blob",
+    "FileList",
+    "FormData",
+    "DOMRect",
+    "AbortSignal",
+    "AbortController",
+    "MediaStream",
+    "URL",
+    "Response",
+    "Request",
+    "Headers",
+    "ShadowRoot",
+    "Document",
+    "DocumentFragment",
+    "Text",
+    "Window",
+    "MutationObserver",
+    "ResizeObserver",
+    "IntersectionObserver",
+    "CSSStyleDeclaration",
 ];
 
 /// Mapped lib types: the checker always prints them by their alias.
@@ -73,7 +141,15 @@ pub struct TypeEnv<'e, 'a, 'b> {
 
 impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     pub fn new(locals: &'e Locals<'a, 'b>, reg: &'e Registry, strict: bool, file: &'e str) -> Self {
-        TypeEnv { locals, reg, strict, file, defs: RefCell::default(), busy: RefCell::default(), params: RefCell::default() }
+        TypeEnv {
+            locals,
+            reg,
+            strict,
+            file,
+            defs: RefCell::default(),
+            busy: RefCell::default(),
+            params: RefCell::default(),
+        }
     }
 
     fn resolving(&self) -> bool {
@@ -81,7 +157,11 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     }
 
     fn with_undefined(&self, ty: Ty) -> Ty {
-        if self.strict { union_of(vec![ty, Ty::new(K::Undefined)], true, None) } else { ty }
+        if self.strict {
+            union_of(vec![ty, Ty::new(K::Undefined)], true, None)
+        } else {
+            ty
+        }
     }
 
     /// The declaration of a type this module declares.
@@ -97,31 +177,93 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
         let def = match local {
             LocalType::Alias(node) => self.alias_def(name, node),
             LocalType::Enum(decl) => Ok(self.enum_def(decl)),
-            LocalType::Interface(_) | LocalType::Class(_) => Ok(TypeDef::Named { name: name.to_owned() }),
+            LocalType::Interface(_) | LocalType::Class(_) => self.named_def(name),
         };
         self.busy.borrow_mut().pop();
         self.defs.borrow_mut().insert(name.to_owned(), def.clone());
         Some(def)
     }
 
+    /// A generic interface or class: the defaults of its type parameters, written in terms of
+    /// the parameters before them.
+    fn named_def(&self, name: &str) -> Res<TypeDef> {
+        let mut defaults = Vec::new();
+        if let Some(decl) = self.locals.decl_params.get(name) {
+            let depth = self.params.borrow().len();
+            let mut result = Ok(());
+            for (i, p) in decl.params.iter().enumerate() {
+                let default = match &p.default {
+                    Some(d) => match self.eval(d) {
+                        Ok(ty) => Some(ty),
+                        Err(e) => {
+                            result = Err(e);
+                            break;
+                        }
+                    },
+                    None => None,
+                };
+                defaults.push(default);
+                self.params
+                    .borrow_mut()
+                    .push((p.name.name.to_string(), Ty::new(K::Param(i))));
+            }
+            self.params.borrow_mut().truncate(depth);
+            result?;
+        }
+        Ok(TypeDef::Named {
+            name: name.to_owned(),
+            defaults,
+        })
+    }
+
     fn alias_def(&self, name: &str, node: &TSType) -> Res<TypeDef> {
-        let names = self.locals.alias_params.get(name).cloned().unwrap_or_default();
+        let names = self
+            .locals
+            .alias_params
+            .get(name)
+            .cloned()
+            .unwrap_or_default();
         let depth = self.params.borrow().len();
         for (i, p) in names.iter().enumerate() {
-            self.params.borrow_mut().push(((*p).to_owned(), Ty::new(K::Param(i))));
+            self.params
+                .borrow_mut()
+                .push(((*p).to_owned(), Ty::new(K::Param(i))));
         }
         let ty = self.eval(node);
         self.params.borrow_mut().truncate(depth);
         let ty = ty?;
         let args = (0..names.len()).map(|i| Ty::new(K::Param(i))).collect();
-        let alias = Rc::new(Alias { name: name.to_owned(), args, id: self.reg.fresh() });
-        Ok(TypeDef::Alias { name: name.to_owned(), params: names.len(), ty: ty.with_alias(alias) })
+        let alias = Rc::new(Alias {
+            name: name.to_owned(),
+            args,
+            id: self.reg.fresh(),
+            declared: names.iter().map(|n| (*n).to_owned()).collect(),
+        });
+        // `keyof X` is made by `getIndexType`, which does not give the union the alias it is declared as.
+        let mut written = node;
+        while let TSType::TSParenthesizedType(p) = written {
+            written = &p.type_annotation;
+        }
+        let ty = if matches!(written, TSType::TSTypeOperatorType(op) if matches!(op.operator, TSTypeOperatorOperator::Keyof))
+        {
+            ty
+        } else {
+            ty.with_alias(alias)
+        };
+        Ok(TypeDef::Alias {
+            name: name.to_owned(),
+            params: names.len(),
+            ty,
+        })
     }
 
     /// A union enum, or (a member that is computed) a plain named type.
     fn enum_def(&self, decl: &TSEnumDeclaration) -> TypeDef {
         let name = decl.id.name.to_string();
-        let named = TypeDef::Named { name: name.clone() };
+        let named = TypeDef::Named {
+            name: name.clone(),
+            defaults: Vec::new(),
+        };
         let mut members = Vec::new();
         for m in &decl.body.members {
             let member = match &m.id {
@@ -133,7 +275,12 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 None | Some(Expression::NumericLiteral(_)) => false,
                 Some(Expression::StringLiteral(_)) => true,
                 Some(Expression::TemplateLiteral(t)) if t.expressions.is_empty() => true,
-                Some(Expression::UnaryExpression(u)) if matches!(u.operator, UnaryOperator::UnaryNegation) && matches!(u.argument, Expression::NumericLiteral(_)) => false,
+                Some(Expression::UnaryExpression(u))
+                    if matches!(u.operator, UnaryOperator::UnaryNegation)
+                        && matches!(u.argument, Expression::NumericLiteral(_)) =>
+                {
+                    false
+                }
                 _ => return named,
             };
             members.push((member, is_string));
@@ -145,21 +292,70 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
         for _ in 0..members.len() {
             self.reg.fresh();
         }
-        TypeDef::UnionEnum(Rc::new(EnumInfo { name, members, base_id }))
+        TypeDef::UnionEnum(Rc::new(EnumInfo {
+            name,
+            members,
+            base_id,
+        }))
     }
 
-    pub fn instantiate(&self, def: &TypeDef, decl_file: &str, args: Vec<Ty>) -> Res<Ty> {
+    /// `imported`: the name is an import, which the checker gives an empty list of alias type
+    /// arguments when none are written.
+    pub fn instantiate(
+        &self,
+        def: &TypeDef,
+        decl_file: &str,
+        args: Vec<Ty>,
+        imported: bool,
+    ) -> Res<Ty> {
         match def {
             TypeDef::Alias { params, ty, name } => {
+                if args.is_empty() && *params > 0 && imported {
+                    return match ty.without_arguments(self.reg.fresh()) {
+                        Some(bare) => Ok(bare),
+                        None => unsupported(format!("`{name}` with default type arguments")),
+                    };
+                }
                 if args.len() != *params {
                     return unsupported(format!("`{name}` with default type arguments"));
                 }
-                Ok(Subst { reg: self.reg, strict: self.strict, args: &args }.apply(ty))
+                let applied = Subst {
+                    reg: self.reg,
+                    strict: self.strict,
+                    args: &args,
+                }
+                .apply(ty);
+                self.check_intersections(&applied)?;
+                Ok(applied)
             }
             TypeDef::UnionEnum(e) => Ok(Ty::new(K::Enum(e.clone()))),
-            TypeDef::Named { name } => {
-                let key = format!("ref {decl_file}::{name}<{}>", args.iter().map(Ty::key).collect::<Vec<_>>().join(","));
-                Ok(Ty::new(K::Ref { name: name.clone(), args, id: self.reg.intern(&key) }))
+            TypeDef::Named { name, defaults } => {
+                // A type argument left out is its default (`Box` for `Box<T = any>` is `Box<any>`).
+                let mut args = args;
+                if args.len() > defaults.len() {
+                    return unsupported(format!("`{name}` with too many type arguments"));
+                }
+                while args.len() < defaults.len() {
+                    let Some(default) = &defaults[args.len()] else {
+                        return unsupported(format!("`{name}` without its type arguments"));
+                    };
+                    let filled = Subst {
+                        reg: self.reg,
+                        strict: self.strict,
+                        args: &args,
+                    }
+                    .apply(default);
+                    args.push(filled);
+                }
+                let key = format!(
+                    "ref {decl_file}::{name}<{}>",
+                    args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+                );
+                Ok(Ty::new(K::Ref {
+                    name: name.clone(),
+                    args,
+                    id: self.reg.intern(&key),
+                }))
             }
         }
     }
@@ -217,7 +413,10 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 let members: Res<Vec<Ty>> = i.types.iter().map(|m| self.eval(m)).collect();
                 self.intersection(members?)?
             }
-            TSType::TSTypeOperatorType(_) => return unsupported("`keyof`, `readonly` or `unique symbol`"),
+            TSType::TSTypeOperatorType(op) => match op.operator {
+                TSTypeOperatorOperator::Keyof => self.keyof(&op.type_annotation)?,
+                _ => return unsupported("`readonly` or `unique symbol`"),
+            },
             TSType::TSTypeQuery(_) => return unsupported("`typeof`"),
             TSType::TSIndexedAccessType(_) => return unsupported("an indexed access type"),
             TSType::TSConditionalType(_) => return unsupported("a conditional type"),
@@ -239,7 +438,10 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
         let mut flat: Vec<Ty> = Vec::new();
         for m in members {
             match &*m.0 {
-                K::Anon(Anon { shape: Shape::Intersection(inner), .. }) => flat.extend(inner.iter().cloned()),
+                K::Anon(Anon {
+                    shape: Shape::Intersection(inner),
+                    ..
+                }) => flat.extend(inner.iter().cloned()),
                 _ => flat.push(m),
             }
         }
@@ -249,12 +451,20 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             match &*m.0 {
                 K::String | K::Number | K::BigInt | K::Symbol => primitives += 1,
                 K::Ref { .. } | K::Array(..) => {}
+                // A generic alias's parameter: checked again once it is replaced (`check_intersections`).
+                K::Param(_) => {}
                 K::Anon(a) => match &a.shape {
                     Shape::Object(ms) if !ms.is_empty() => {}
                     Shape::Function(_) | Shape::Tuple(_) => {}
+                    // A lib mapped type (`Record<never, never>`): an object type the checker keeps.
+                    Shape::Opaque if a.alias.is_some() => {}
                     _ => return unsupported("this member of an intersection type"),
                 },
-                K::Union(..) | K::Enum(_) => return unsupported("a union in an intersection type, which the checker distributes"),
+                K::Union(..) | K::Enum(_) => {
+                    return unsupported(
+                        "a union in an intersection type, which the checker distributes",
+                    );
+                }
                 _ => return unsupported("this member of an intersection type"),
             }
             if !members.iter().any(|e| e.key() == m.key()) {
@@ -267,12 +477,186 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
         if members.len() == 1 {
             return Ok(members.remove(0));
         }
-        let id = self.reg.intern(&format!("inter {}", members.iter().map(Ty::key).collect::<Vec<_>>().join(",")));
-        Ok(Ty::new(K::Anon(Anon { id, shape: Shape::Intersection(members), alias: None })))
+        let id = self.reg.intern(&format!(
+            "inter {}",
+            members.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+        ));
+        Ok(Ty::new(K::Anon(Anon {
+            id,
+            shape: Shape::Intersection(members),
+            alias: None,
+        })))
+    }
+
+    /// `keyof T` for the operands whose keys are written down: an object type literal, a
+    /// `typeof` a local `const` initialised with an object literal, and a local alias of those.
+    /// A union of the keys' string literals, created in the order the keys are written.
+    fn keyof(&self, operand: &TSType) -> Res<Ty> {
+        let keys = self.keys_of(operand, 0)?;
+        let lits: Vec<Ty> = keys.iter().map(|k| self.string_literal(k)).collect();
+        Ok(if lits.is_empty() {
+            Ty::new(K::Never)
+        } else {
+            union_of(lits, self.strict, None)
+        })
+    }
+
+    fn keys_of(&self, t: &TSType, depth: u8) -> Res<Vec<String>> {
+        if depth > 8 {
+            return unsupported("a recursive `keyof`");
+        }
+        let mut keys: Vec<String> = Vec::new();
+        let mut add = |name: String| {
+            if !keys.contains(&name) {
+                keys.push(name);
+            }
+        };
+        match t {
+            TSType::TSParenthesizedType(p) => return self.keys_of(&p.type_annotation, depth + 1),
+            TSType::TSTypeLiteral(l) => {
+                for m in &l.members {
+                    let key = match m {
+                        TSSignature::TSPropertySignature(p) if !p.computed => &p.key,
+                        TSSignature::TSMethodSignature(s) if !s.computed => &s.key,
+                        _ => return unsupported("the keys of this object type"),
+                    };
+                    add(self.literal_key(key)?);
+                }
+            }
+            TSType::TSTypeQuery(q) => {
+                let oxc::ast::ast::TSTypeQueryExprName::IdentifierReference(id) = &q.expr_name
+                else {
+                    return unsupported("`typeof` of a qualified name");
+                };
+                let name = id.name.as_str();
+                if self.locals.const_annotations.contains_key(name) || self.type_params_shadow(name)
+                {
+                    return unsupported("`typeof` a value with a written type");
+                }
+                let Some(init) = self.locals.const_init(name) else {
+                    return unsupported("`typeof` this value");
+                };
+                let mut init = init;
+                loop {
+                    init = match init {
+                        Expression::ParenthesizedExpression(p) => &p.expression,
+                        Expression::TSAsExpression(a) => &a.expression,
+                        Expression::TSSatisfiesExpression(a) => &a.expression,
+                        _ => break,
+                    };
+                }
+                let Expression::ObjectExpression(obj) = init else {
+                    return unsupported("`typeof` a value that is not an object literal");
+                };
+                for prop in &obj.properties {
+                    let oxc::ast::ast::ObjectPropertyKind::ObjectProperty(p) = prop else {
+                        return unsupported("`typeof` an object literal with a spread");
+                    };
+                    if p.computed || !matches!(p.kind, oxc::ast::ast::PropertyKind::Init) {
+                        return unsupported(
+                            "`typeof` an object literal with computed or accessor members",
+                        );
+                    }
+                    add(self.literal_key(&p.key)?);
+                }
+            }
+            TSType::TSTypeReference(r) if r.type_arguments.is_none() => {
+                let TSTypeName::IdentifierReference(id) = &r.type_name else {
+                    return unsupported("`keyof` a qualified name");
+                };
+                match self.locals.types.get(id.name.as_str()) {
+                    Some(LocalType::Alias(node))
+                        if !self.locals.alias_params.contains_key(id.name.as_str()) =>
+                    {
+                        return self.keys_of(node, depth + 1);
+                    }
+                    _ => return unsupported(format!("`keyof {}`", id.name)),
+                }
+            }
+            _ => return unsupported("`keyof` of this type"),
+        }
+        Ok(keys)
+    }
+
+    fn type_params_shadow(&self, name: &str) -> bool {
+        self.params.borrow().iter().any(|(n, _)| n == name)
+    }
+
+    /// A property key that is a string literal type: an identifier or a string, not a number.
+    fn literal_key(&self, key: &oxc::ast::ast::PropertyKey) -> Res<String> {
+        use oxc::ast::ast::PropertyKey;
+        match key {
+            PropertyKey::StaticIdentifier(id) => Ok(id.name.to_string()),
+            PropertyKey::StringLiteral(s) if s.value.parse::<f64>().is_err() => {
+                Ok(s.value.to_string())
+            }
+            _ => unsupported("a numeric or computed key in `keyof`"),
+        }
+    }
+
+    /// An intersection written with a type parameter (`U & Record<never, never>`) is only known
+    /// once the parameter is replaced: run the checks of [`Self::intersection`] again.
+    fn check_intersections(&self, ty: &Ty) -> Res<()> {
+        match &*ty.0 {
+            K::Union(ms, alias, _) => {
+                for m in ms {
+                    self.check_intersections(m)?;
+                }
+                for a in alias.iter().flat_map(|a| a.args.iter()) {
+                    self.check_intersections(a)?;
+                }
+            }
+            K::Array(t, _) => self.check_intersections(t)?,
+            K::Ref { args, .. } | K::Unresolved { args, .. } => {
+                for a in args {
+                    self.check_intersections(a)?;
+                }
+            }
+            K::Anon(a) => match &a.shape {
+                Shape::Intersection(ms) => {
+                    for m in ms {
+                        self.check_intersections(m)?;
+                    }
+                    self.intersection(ms.clone())?;
+                }
+                Shape::Object(ms) => {
+                    for m in ms {
+                        match &m.kind {
+                            MemberKind::Prop(t) => self.check_intersections(t)?,
+                            MemberKind::Method(s) | MemberKind::Call(s) => self.check_sig(s)?,
+                            MemberKind::Index { key, value, .. } => {
+                                self.check_intersections(key)?;
+                                self.check_intersections(value)?;
+                            }
+                        }
+                    }
+                }
+                Shape::Function(s) => self.check_sig(s)?,
+                Shape::Tuple(es) => {
+                    for e in es {
+                        self.check_intersections(&e.ty)?;
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn check_sig(&self, s: &Sig) -> Res<()> {
+        for p in &s.params {
+            self.check_intersections(&p.ty)?;
+        }
+        self.check_intersections(&s.ret)
     }
 
     fn anon(&self, shape: Shape) -> Ty {
-        Ty::new(K::Anon(Anon { id: self.reg.fresh(), shape, alias: None }))
+        Ty::new(K::Anon(Anon {
+            id: self.reg.fresh(),
+            shape,
+            alias: None,
+        }))
     }
 
     fn array(&self, el: Ty) -> Ty {
@@ -281,7 +665,11 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             Ty::new(K::Array(el, id))
         } else {
             // Without the lib `Array` is an empty generic type, which prints as `{}`.
-            Ty::new(K::Anon(Anon { id, shape: Shape::Text("{}".into()), alias: None }))
+            Ty::new(K::Anon(Anon {
+                id,
+                shape: Shape::Text("{}".into()),
+                alias: None,
+            }))
         }
     }
 
@@ -290,33 +678,46 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             TSLiteral::BooleanLiteral(b) => Ty::new(if b.value { K::True } else { K::False }),
             TSLiteral::StringLiteral(s) => self.string_literal(&s.value),
             TSLiteral::TemplateLiteral(t) if t.expressions.is_empty() => {
-                let text: Option<String> = t.quasis.iter().map(|q| q.value.cooked.as_ref().map(|c| c.to_string())).collect();
+                let text: Option<String> = t
+                    .quasis
+                    .iter()
+                    .map(|q| q.value.cooked.as_ref().map(|c| c.to_string()))
+                    .collect();
                 match text {
                     Some(text) => self.string_literal(&text),
                     None => return unsupported("a template literal type"),
                 }
             }
-            TSLiteral::NumericLiteral(n) => match js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default()) {
-                Some(text) => self.number_literal(text),
-                None => return unsupported("this number literal type"),
-            },
+            TSLiteral::NumericLiteral(n) => {
+                match js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default()) {
+                    Some(text) => self.number_literal(text),
+                    None => return unsupported("this number literal type"),
+                }
+            }
             TSLiteral::UnaryExpression(u) => match (&u.operator, &u.argument) {
-                (UnaryOperator::UnaryNegation, Expression::NumericLiteral(n)) => match js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default()) {
-                    Some(text) if text != "0" => {
-                        // The checker meets the number before its negation.
-                        self.number_literal(text.clone());
-                        self.number_literal(format!("-{text}"))
+                (UnaryOperator::UnaryNegation, Expression::NumericLiteral(n)) => {
+                    match js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default()) {
+                        Some(text) if text != "0" => {
+                            // The checker meets the number before its negation.
+                            self.number_literal(text.clone());
+                            self.number_literal(format!("-{text}"))
+                        }
+                        _ => return unsupported("this number literal type"),
                     }
-                    _ => return unsupported("this number literal type"),
-                },
+                }
                 _ => return unsupported("this literal type"),
             },
-            TSLiteral::BigIntLiteral(_) | TSLiteral::TemplateLiteral(_) => return unsupported("a bigint or template literal type"),
+            TSLiteral::BigIntLiteral(_) | TSLiteral::TemplateLiteral(_) => {
+                return unsupported("a bigint or template literal type");
+            }
         })
     }
 
     fn string_literal(&self, value: &str) -> Ty {
-        Ty::new(K::Str(value.to_owned(), self.reg.intern(&format!("str {value}"))))
+        Ty::new(K::Str(
+            value.to_owned(),
+            self.reg.intern(&format!("str {value}")),
+        ))
     }
 
     fn number_literal(&self, text: String) -> Ty {
@@ -325,35 +726,67 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     }
 
     fn tuple_elem(&self, e: &TSTupleElement) -> Res<TupleElem> {
-        let Some(t) = e.as_ts_type() else { return unsupported("an optional or rest tuple element") };
+        let Some(t) = e.as_ts_type() else {
+            return unsupported("an optional or rest tuple element");
+        };
         if let TSType::TSNamedTupleMember(m) = t {
-            let Some(inner) = m.element_type.as_ts_type() else { return unsupported("a rest tuple element") };
+            let Some(inner) = m.element_type.as_ts_type() else {
+                return unsupported("a rest tuple element");
+            };
             if m.optional {
                 return unsupported("an optional tuple element");
             }
-            return Ok(TupleElem { label: Some(m.label.name.to_string()), ty: self.eval(inner)?, optional: false, rest: false });
+            return Ok(TupleElem {
+                label: Some(m.label.name.to_string()),
+                ty: self.eval(inner)?,
+                optional: false,
+                rest: false,
+            });
         }
-        Ok(TupleElem { label: None, ty: self.eval(t)?, optional: false, rest: false })
+        Ok(TupleElem {
+            label: None,
+            ty: self.eval(t)?,
+            optional: false,
+            rest: false,
+        })
     }
 
     fn params(&self, fp: &FormalParameters) -> Res<Vec<Param>> {
         let mut out = Vec::new();
         for p in &fp.items {
-            let Some(name) = p.pattern.get_identifier_name() else { return unsupported("a destructured parameter") };
+            let Some(name) = p.pattern.get_identifier_name() else {
+                return unsupported("a destructured parameter");
+            };
             let ty = match &p.type_annotation {
                 Some(t) => self.eval(&t.type_annotation)?,
                 None => Ty::any(),
             };
             let optional = p.optional || p.initializer.is_some();
-            out.push(Param { name: name.to_string(), optional, rest: false, ty: if optional { self.with_undefined(ty) } else { ty } });
+            out.push(Param {
+                name: name.to_string(),
+                optional,
+                rest: false,
+                ty: if optional {
+                    self.with_undefined(ty)
+                } else {
+                    ty
+                },
+            });
         }
         if let Some(rest) = &fp.rest {
-            let Some(name) = rest.rest.argument.get_identifier_name() else { return unsupported("a destructured rest parameter") };
+            let Some(name) = rest.rest.argument.get_identifier_name() else {
+                return unsupported("a destructured rest parameter");
+            };
             let ty = match &rest.type_annotation {
                 Some(t) => self.eval(&t.type_annotation)?,
                 None => self.array(Ty::any()),
             };
-            out.push(Param { name: name.to_string(), optional: false, rest: true, ty });
+            out.push(Param {
+                name: name.to_string(),
+                optional: false,
+                rest: true,
+                ty,
+            });
         }
         Ok(out)
     }
@@ -364,29 +797,60 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 if p.computed {
                     return unsupported("a computed property name");
                 }
-                let Some(name) = property_key_name(&p.key) else { return unsupported("this property name") };
+                let Some(name) = property_key_name(&p.key) else {
+                    return unsupported("this property name");
+                };
                 let ty = match &p.type_annotation {
                     Some(t) => self.eval(&t.type_annotation)?,
                     None => Ty::any(),
                 };
-                Member { name: key_text(&p.key, &name), optional: p.optional, readonly: p.readonly, kind: MemberKind::Prop(if p.optional { self.with_undefined(ty) } else { ty }) }
+                Member {
+                    name: key_text(&p.key, &name),
+                    optional: p.optional,
+                    readonly: p.readonly,
+                    kind: MemberKind::Prop(if p.optional {
+                        self.with_undefined(ty)
+                    } else {
+                        ty
+                    }),
+                }
             }
             TSSignature::TSMethodSignature(s) => {
-                if s.computed || s.type_parameters.is_some() || s.this_param.is_some() || !matches!(s.kind, oxc::ast::ast::TSMethodSignatureKind::Method) {
+                if s.computed
+                    || s.type_parameters.is_some()
+                    || s.this_param.is_some()
+                    || !matches!(s.kind, oxc::ast::ast::TSMethodSignatureKind::Method)
+                {
                     return unsupported("a generic, computed or accessor method signature");
                 }
-                let Some(name) = property_key_name(&s.key) else { return unsupported("this property name") };
+                let Some(name) = property_key_name(&s.key) else {
+                    return unsupported("this property name");
+                };
                 let params = self.params(&s.params)?;
                 let ret = match &s.return_type {
                     Some(t) => self.eval(&t.type_annotation)?,
                     None => Ty::any(),
                 };
-                Member { name: key_text(&s.key, &name), optional: s.optional, readonly: false, kind: MemberKind::Method(Sig { params, ret }) }
+                Member {
+                    name: key_text(&s.key, &name),
+                    optional: s.optional,
+                    readonly: false,
+                    kind: MemberKind::Method(Sig { params, ret }),
+                }
             }
             TSSignature::TSIndexSignature(i) => {
                 let key = self.eval(&i.parameter.type_annotation.type_annotation)?;
                 let value = self.eval(&i.type_annotation.type_annotation)?;
-                Member { name: String::new(), optional: false, readonly: i.readonly, kind: MemberKind::Index { param: i.parameter.name.to_string(), key, value } }
+                Member {
+                    name: String::new(),
+                    optional: false,
+                    readonly: i.readonly,
+                    kind: MemberKind::Index {
+                        param: i.parameter.name.to_string(),
+                        key,
+                        value,
+                    },
+                }
             }
             TSSignature::TSCallSignatureDeclaration(c) => {
                 if c.type_parameters.is_some() || c.this_param.is_some() {
@@ -397,9 +861,16 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     Some(t) => self.eval(&t.type_annotation)?,
                     None => Ty::any(),
                 };
-                Member { name: String::new(), optional: false, readonly: false, kind: MemberKind::Call(Sig { params, ret }) }
+                Member {
+                    name: String::new(),
+                    optional: false,
+                    readonly: false,
+                    kind: MemberKind::Call(Sig { params, ret }),
+                }
             }
-            TSSignature::TSConstructSignatureDeclaration(_) => return unsupported("a construct signature"),
+            TSSignature::TSConstructSignatureDeclaration(_) => {
+                return unsupported("a construct signature");
+            }
         })
     }
 
@@ -414,9 +885,23 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             TSTypeName::IdentifierReference(id) => self.named(id.name.as_str(), args),
             TSTypeName::QualifiedName(q) => {
                 // `Enum.Member`.
-                let TSTypeName::IdentifierReference(left) = &q.left else { return unsupported("a qualified type name") };
+                let TSTypeName::IdentifierReference(left) = &q.left else {
+                    return unsupported("a qualified type name");
+                };
+                // `globalThis.Event` is the lib's `Event`.
+                if left.name == "globalThis"
+                    && self.resolving()
+                    && self.local_def("globalThis").is_none()
+                    && !self.locals.imports.contains_key("globalThis")
+                {
+                    return self.lib_type(q.right.name.as_str(), args);
+                }
                 match self.local_def(left.name.as_str()) {
-                    Some(Ok(TypeDef::UnionEnum(e))) => match e.members.iter().position(|(m, _)| m == q.right.name.as_str()) {
+                    Some(Ok(TypeDef::UnionEnum(e))) => match e
+                        .members
+                        .iter()
+                        .position(|(m, _)| m == q.right.name.as_str())
+                    {
                         Some(i) => Ok(Ty::new(K::EnumLit(e, i))),
                         None => unsupported("an unknown enum member"),
                     },
@@ -432,34 +917,62 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             return Ok(ty.clone());
         }
         if let Some(def) = self.local_def(name) {
-            return self.instantiate(&def?, self.file, args);
+            return self.instantiate(&def?, self.file, args, false);
         }
         if self.locals.imports.contains_key(name) {
             if !self.resolving() {
-                return Ok(Ty::new(K::Unresolved { name: name.to_owned(), args }));
+                return Ok(Ty::new(K::Unresolved {
+                    name: name.to_owned(),
+                    args,
+                }));
             }
             return match self.locals.imported_def(name) {
-                Some(ExportedType { def, decl_file, .. }) => self.instantiate(&def?, &decl_file, args),
+                Some(ExportedType { def, decl_file, .. }) => {
+                    self.instantiate(&def?, &decl_file, args, true)
+                }
                 None => unsupported(format!("the imported type `{name}`")),
             };
         }
         if !self.resolving() {
-            return Ok(Ty::new(K::Unresolved { name: name.to_owned(), args }));
+            return Ok(Ty::new(K::Unresolved {
+                name: name.to_owned(),
+                args,
+            }));
         }
         self.lib_type(name, args)
     }
 
-    fn lib_type(&self, name: &str, args: Vec<Ty>) -> Res<Ty> {
-        let key = format!("{name}<{}>", args.iter().map(Ty::key).collect::<Vec<_>>().join(","));
+    fn lib_type(&self, name: &str, mut args: Vec<Ty>) -> Res<Ty> {
+        // A written `CustomEvent` is `CustomEvent<any>`: the checker fills in the default.
+        if name == "CustomEvent" && args.is_empty() {
+            args.push(Ty::any());
+        }
+        let key = format!(
+            "{name}<{}>",
+            args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+        );
         if name == "Array" && args.len() == 1 {
             return Ok(self.array(args[0].clone()));
         }
         if LIB_INTERFACES.contains(&name) {
-            return Ok(Ty::new(K::Ref { name: name.to_owned(), args, id: self.reg.intern(&format!("lib {key}")) }));
+            return Ok(Ty::new(K::Ref {
+                name: name.to_owned(),
+                args,
+                id: self.reg.intern(&format!("lib {key}")),
+            }));
         }
         if LIB_ALIASES.contains(&name) && !args.is_empty() {
             let id = self.reg.intern(&format!("lib {key}"));
-            return Ok(Ty::new(K::Anon(Anon { id, shape: Shape::Opaque, alias: Some(Rc::new(Alias { name: name.to_owned(), args, id })) })));
+            return Ok(Ty::new(K::Anon(Anon {
+                id,
+                shape: Shape::Opaque,
+                alias: Some(Rc::new(Alias {
+                    name: name.to_owned(),
+                    args,
+                    id,
+                    declared: Vec::new(),
+                })),
+            })));
         }
         unsupported(format!("the global type `{name}`"))
     }
@@ -499,7 +1012,11 @@ pub struct FileInfo {
 }
 
 enum StmtInfo {
-    Import { source: String, named: Vec<(String, String)>, default: Option<String> },
+    Import {
+        source: String,
+        named: Vec<(String, String)>,
+        default: Option<String>,
+    },
     /// `export default Name;`
     ExportDefault(String),
     /// `export { local as exported };`
@@ -510,7 +1027,9 @@ enum StmtInfo {
 
 impl FileInfo {
     pub fn collect(program: &Program) -> Self {
-        use oxc::ast::ast::{Declaration, ExportDefaultDeclarationKind, ImportDeclarationSpecifier};
+        use oxc::ast::ast::{
+            Declaration, ExportDefaultDeclarationKind, ImportDeclarationSpecifier,
+        };
         let mut stmts = Vec::new();
         for stmt in &program.body {
             match stmt {
@@ -519,36 +1038,63 @@ impl FileInfo {
                     let mut default = None;
                     for spec in import.specifiers.iter().flatten() {
                         match spec {
-                            ImportDeclarationSpecifier::ImportSpecifier(s) => named.push((s.local.name.to_string(), s.imported.name().to_string())),
-                            ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => default = Some(s.local.name.to_string()),
+                            ImportDeclarationSpecifier::ImportSpecifier(s) => named
+                                .push((s.local.name.to_string(), s.imported.name().to_string())),
+                            ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => {
+                                default = Some(s.local.name.to_string())
+                            }
                             ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
                         }
                     }
-                    stmts.push(StmtInfo::Import { source: import.source.value.to_string(), named, default });
+                    stmts.push(StmtInfo::Import {
+                        source: import.source.value.to_string(),
+                        named,
+                        default,
+                    });
                 }
                 Statement::ExportNamedDeclaration(e) => {
-                    stmts.push(StmtInfo::ExportClause(e.specifiers.iter().map(|s| (s.local.name().to_string(), s.exported.name().to_string())).collect()));
+                    stmts.push(StmtInfo::ExportClause(
+                        e.specifiers
+                            .iter()
+                            .map(|s| (s.local.name().to_string(), s.exported.name().to_string()))
+                            .collect(),
+                    ));
                 }
                 Statement::ExportDeclaration(e) => {
                     let name = match &e.declaration {
                         Declaration::TSInterfaceDeclaration(i) => Some(i.id.name.to_string()),
                         Declaration::TSTypeAliasDeclaration(t) => Some(t.id.name.to_string()),
                         Declaration::TSEnumDeclaration(en) => Some(en.id.name.to_string()),
-                        Declaration::ClassDeclaration(c) => c.id.as_ref().map(|id| id.name.to_string()),
+                        Declaration::ClassDeclaration(c) => {
+                            c.id.as_ref().map(|id| id.name.to_string())
+                        }
                         _ => None,
                     };
                     if let Some(name) = name {
-                        stmts.push(StmtInfo::Declaration { name, is_default: false });
+                        stmts.push(StmtInfo::Declaration {
+                            name,
+                            is_default: false,
+                        });
                     }
                 }
                 Statement::ExportDefaultDeclaration(e) => match &e.declaration {
                     ExportDefaultDeclarationKind::ClassDeclaration(c) => {
                         if let Some(id) = &c.id {
-                            stmts.push(StmtInfo::Declaration { name: id.name.to_string(), is_default: true });
+                            stmts.push(StmtInfo::Declaration {
+                                name: id.name.to_string(),
+                                is_default: true,
+                            });
                         }
                     }
-                    ExportDefaultDeclarationKind::TSInterfaceDeclaration(i) => stmts.push(StmtInfo::Declaration { name: i.id.name.to_string(), is_default: true }),
-                    ExportDefaultDeclarationKind::Identifier(id) => stmts.push(StmtInfo::ExportDefault(id.name.to_string())),
+                    ExportDefaultDeclarationKind::TSInterfaceDeclaration(i) => {
+                        stmts.push(StmtInfo::Declaration {
+                            name: i.id.name.to_string(),
+                            is_default: true,
+                        })
+                    }
+                    ExportDefaultDeclarationKind::Identifier(id) => {
+                        stmts.push(StmtInfo::ExportDefault(id.name.to_string()))
+                    }
                     _ => {}
                 },
                 _ => {}
@@ -561,7 +1107,9 @@ impl FileInfo {
 /// `path.relative(process.cwd(), path)`, `/`-separated.
 pub fn relative_to_cwd(path: &str) -> String {
     let path = path.replace('\\', "/");
-    let cwd = std::env::current_dir().map(|c| c.to_string_lossy().replace('\\', "/")).unwrap_or_default();
+    let cwd = std::env::current_dir()
+        .map(|c| c.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_default();
     let normalize = |p: &str| -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
         for part in p.split('/') {
@@ -579,7 +1127,11 @@ pub fn relative_to_cwd(path: &str) -> String {
         }
         out
     };
-    let target = if path.starts_with('/') { normalize(&path) } else { normalize(&format!("{cwd}/{path}")) };
+    let target = if path.starts_with('/') {
+        normalize(&path)
+    } else {
+        normalize(&format!("{cwd}/{path}"))
+    };
     let base = normalize(&cwd);
     let common = target.iter().zip(&base).take_while(|(a, b)| a == b).count();
     let mut parts: Vec<String> = vec!["..".to_owned(); base.len() - common];
@@ -590,23 +1142,45 @@ pub fn relative_to_cwd(path: &str) -> String {
 /// `addToLibrary`'s id for a type declared in `file`.
 fn type_id(file: &str, name: &str) -> String {
     let rel = relative_to_cwd(file);
-    if rel.starts_with("node_modules") { format!("node_modules::{name}") } else { format!("{rel}::{name}") }
+    if rel.starts_with("node_modules") {
+        format!("node_modules::{name}")
+    } else {
+        format!("{rel}::{name}")
+    }
 }
 
 /// `getTypeReferenceLocation`.
-pub fn locate(name: &str, file: &str, info: &FileInfo, resolver: Option<&Resolver>) -> Res<TypeReference> {
+pub fn locate(
+    name: &str,
+    file: &str,
+    info: &FileInfo,
+    resolver: Option<&Resolver>,
+) -> Res<TypeReference> {
     // A named import whose module TypeScript finds.
     let import = info.stmts.iter().find_map(|s| match s {
-        StmtInfo::Import { source, named, .. } => named.iter().find(|(local, _)| local == name).map(|(_, imported)| (source, imported)),
+        StmtInfo::Import { source, named, .. } => named
+            .iter()
+            .find(|(local, _)| local == name)
+            .map(|(_, imported)| (source, imported)),
         _ => None,
     });
     if let (Some((source, imported)), Some(resolver)) = (import, resolver) {
         if !source.starts_with('.') {
-            return unsupported(format!("`{name}`, imported from the package or alias `{source}`"));
+            return unsupported(format!(
+                "`{name}`, imported from the package or alias `{source}`"
+            ));
         }
         if let Some(home) = resolver.module(file, source) {
-            let Some(ty) = home.defs.get(imported) else { return unsupported(format!("`{name}`, which `{source}` does not export as a type")) };
-            let declared_in = if ty.class_or_enum { &ty.decl_file } else { &home.file };
+            let Some(ty) = home.defs.get(imported) else {
+                return unsupported(format!(
+                    "`{name}`, which `{source}` does not export as a type"
+                ));
+            };
+            let declared_in = if ty.class_or_enum {
+                &ty.decl_file
+            } else {
+                &home.file
+            };
             return Ok(TypeReference {
                 location: "import",
                 path: Some(source.clone()),
@@ -620,22 +1194,49 @@ pub fn locate(name: &str, file: &str, info: &FileInfo, resolver: Option<&Resolve
     // Declared and exported here.
     let local = info.stmts.iter().find_map(|s| match s {
         StmtInfo::ExportDefault(n) if n == name => Some((true, None)),
-        StmtInfo::ExportClause(specs) => specs.iter().find(|(local, _)| local == name).map(|(_, exported)| {
-            if exported == "default" { (true, None) } else { (false, (exported != name).then(|| exported.clone())) }
-        }),
-        StmtInfo::Declaration { name: n, is_default } if n == name => Some((*is_default, None)),
+        StmtInfo::ExportClause(specs) => {
+            specs
+                .iter()
+                .find(|(local, _)| local == name)
+                .map(|(_, exported)| {
+                    if exported == "default" {
+                        (true, None)
+                    } else {
+                        (false, (exported != name).then(|| exported.clone()))
+                    }
+                })
+        }
+        StmtInfo::Declaration {
+            name: n,
+            is_default,
+        } if n == name => Some((*is_default, None)),
         _ => None,
     });
     if let Some((is_default, reference_location)) = local {
-        return Ok(TypeReference { location: "local", path: Some(file.to_owned()), id: type_id(file, name), is_default, reference_location });
+        return Ok(TypeReference {
+            location: "local",
+            path: Some(file.to_owned()),
+            id: type_id(file, name),
+            is_default,
+            reference_location,
+        });
     }
 
     // A default import.
-    let default_import = info.stmts.iter().any(|s| matches!(s, StmtInfo::Import { default: Some(d), .. } if d == name));
+    let default_import = info
+        .stmts
+        .iter()
+        .any(|s| matches!(s, StmtInfo::Import { default: Some(d), .. } if d == name));
     if default_import && resolver.is_some() {
         return unsupported(format!("`{name}`, a default import"));
     }
-    Ok(TypeReference { location: "global", path: None, id: format!("global::{name}"), is_default: false, reference_location: None })
+    Ok(TypeReference {
+        location: "global",
+        path: None,
+        id: format!("global::{name}"),
+        is_default: false,
+        reference_location: None,
+    })
 }
 
 /// Where the members being described live, to find where the types they name come from.
@@ -651,17 +1252,20 @@ impl TypeEnv<'_, '_, '_> {
     pub fn resolve_node(&self, node: &TSType, optional: bool) -> Res<String> {
         if let TSType::TSArrayType(a) = node {
             let inner = self.resolve_node(&a.element_type, false)?;
-            if inner.contains(" & ") {
-                return unsupported("an array of an intersection type");
-            }
-            return Ok(if inner.contains(" | ") { format!("({inner})[]") } else { format!("{inner}[]") });
+            return Ok(if inner.contains(" | ") {
+                format!("({inner})[]")
+            } else {
+                format!("{inner}[]")
+            });
         }
         let mut ty = self.eval(node)?;
         if optional {
             ty = self.with_undefined(ty);
         }
         if self.resolving() && order_depends_on_program(&ty) {
-            return unsupported("a union nested in a type, whose members the checker orders by when it first met them");
+            return unsupported(
+                "a union nested in a type, whose members the checker orders by when it first met them",
+            );
         }
         resolve_type(&ty)
     }
@@ -684,11 +1288,22 @@ pub fn references(names: RefNames, site: &Site) -> Res<References> {
 }
 
 /// The `resolved` text and `references` of a prop or an event.
-pub fn member_type(env: &TypeEnv, site: &Site, annotation: Option<&TSType>, optional: bool, original: &str, visit: impl FnOnce(&mut RefNames)) -> Res<(String, References)> {
+pub fn member_type(
+    env: &TypeEnv,
+    site: &Site,
+    annotation: Option<&TSType>,
+    optional: bool,
+    original: &str,
+    visit: impl FnOnce(&mut RefNames),
+) -> Res<(String, References)> {
     let Some(annotation) = annotation else {
         // Inferred from the initializer: only the types that print as one word are known.
         return match original {
-            "string" | "number" | "boolean" | "any" | "bigint" | "symbol" | "unknown" if !optional => Ok((original.to_owned(), References::default())),
+            "string" | "number" | "boolean" | "any" | "bigint" | "symbol" | "unknown"
+                if !optional =>
+            {
+                Ok((original.to_owned(), References::default()))
+            }
             _ => unsupported(format!("the inferred type `{original}`")),
         };
     };
@@ -731,16 +1346,30 @@ impl TypeEnv<'_, '_, '_> {
                     _ => return unsupported("this literal type"),
                 }
             }
-            TSType::TSUnionType(u) => u.types.iter().map(|m| self.node_text(m)).collect::<Res<Vec<_>>>()?.join(" | "),
+            TSType::TSUnionType(u) => u
+                .types
+                .iter()
+                .map(|m| self.node_text(m))
+                .collect::<Res<Vec<_>>>()?
+                .join(" | "),
             TSType::TSArrayType(a) => format!("{}[]", self.node_text(&a.element_type)?),
             TSType::TSTupleType(t) => {
                 let mut parts = Vec::new();
                 for e in &t.element_types {
-                    let Some(inner) = e.as_ts_type() else { return unsupported("an optional or rest tuple element") };
+                    let Some(inner) = e.as_ts_type() else {
+                        return unsupported("an optional or rest tuple element");
+                    };
                     parts.push(match inner {
                         TSType::TSNamedTupleMember(m) => {
-                            let Some(el) = m.element_type.as_ts_type() else { return unsupported("a rest tuple element") };
-                            format!("{}{}: {}", m.label.name, if m.optional { "?" } else { "" }, self.node_text(el)?)
+                            let Some(el) = m.element_type.as_ts_type() else {
+                                return unsupported("a rest tuple element");
+                            };
+                            format!(
+                                "{}{}: {}",
+                                m.label.name,
+                                if m.optional { "?" } else { "" },
+                                self.node_text(el)?
+                            )
                         }
                         other => self.node_text(other)?,
                     });
@@ -751,7 +1380,11 @@ impl TypeEnv<'_, '_, '_> {
                 if f.type_parameters.is_some() || f.this_param.is_some() {
                     return unsupported("a generic function type");
                 }
-                format!("{} => {}", self.params_text(&f.params)?, self.node_text(&f.return_type.type_annotation)?)
+                format!(
+                    "{} => {}",
+                    self.params_text(&f.params)?,
+                    self.node_text(&f.return_type.type_annotation)?
+                )
             }
             TSType::TSTypeLiteral(l) => {
                 if l.members.is_empty() {
@@ -769,14 +1402,23 @@ impl TypeEnv<'_, '_, '_> {
                 let name = match &r.type_name {
                     TSTypeName::IdentifierReference(id) => id.name.to_string(),
                     TSTypeName::QualifiedName(q) => match &q.left {
-                        TSTypeName::IdentifierReference(left) => format!("{}.{}", left.name, q.right.name),
+                        TSTypeName::IdentifierReference(left) => {
+                            format!("{}.{}", left.name, q.right.name)
+                        }
                         _ => return unsupported("a qualified type name"),
                     },
                     TSTypeName::ThisExpression(_) => return unsupported("`this`"),
                 };
                 match &r.type_arguments {
                     Some(args) if !args.params.is_empty() => {
-                        format!("{name}<{}>", args.params.iter().map(|a| self.node_text(a)).collect::<Res<Vec<_>>>()?.join(", "))
+                        format!(
+                            "{name}<{}>",
+                            args.params
+                                .iter()
+                                .map(|a| self.node_text(a))
+                                .collect::<Res<Vec<_>>>()?
+                                .join(", ")
+                        )
                     }
                     _ => name,
                 }
@@ -788,7 +1430,9 @@ impl TypeEnv<'_, '_, '_> {
     fn params_text(&self, fp: &FormalParameters) -> Res<String> {
         let mut parts = Vec::new();
         for p in &fp.items {
-            let Some(name) = p.pattern.get_identifier_name() else { return unsupported("a destructured parameter") };
+            let Some(name) = p.pattern.get_identifier_name() else {
+                return unsupported("a destructured parameter");
+            };
             let ty = match &p.type_annotation {
                 Some(t) => self.node_text(&t.type_annotation)?,
                 None => "any".into(),
@@ -796,7 +1440,9 @@ impl TypeEnv<'_, '_, '_> {
             parts.push(format!("{name}{}: {ty}", if p.optional { "?" } else { "" }));
         }
         if let Some(rest) = &fp.rest {
-            let Some(name) = rest.rest.argument.get_identifier_name() else { return unsupported("a destructured rest parameter") };
+            let Some(name) = rest.rest.argument.get_identifier_name() else {
+                return unsupported("a destructured rest parameter");
+            };
             let ty = match &rest.type_annotation {
                 Some(t) => self.node_text(&t.type_annotation)?,
                 None => "any[]".into(),
@@ -812,35 +1458,57 @@ impl TypeEnv<'_, '_, '_> {
             match k {
                 PropertyKey::StaticIdentifier(id) => Ok(id.name.to_string()),
                 PropertyKey::StringLiteral(s) => Ok(quote(&s.value)),
-                PropertyKey::NumericLiteral(n) => js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default()).map_or_else(|| unsupported("this property name"), Ok),
+                PropertyKey::NumericLiteral(n) => {
+                    js_number(n.raw.as_ref().map(|r| r.as_str()).unwrap_or_default())
+                        .map_or_else(|| unsupported("this property name"), Ok)
+                }
                 _ => unsupported("a computed property name"),
             }
         };
-        let ret = |t: &Option<oxc::allocator::Box<oxc::ast::ast::TSTypeAnnotation>>| -> Res<String> {
-            match t {
-                Some(t) => self.node_text(&t.type_annotation),
-                None => Ok("any".into()),
-            }
-        };
+        let ret =
+            |t: &Option<oxc::allocator::Box<oxc::ast::ast::TSTypeAnnotation>>| -> Res<String> {
+                match t {
+                    Some(t) => self.node_text(&t.type_annotation),
+                    None => Ok("any".into()),
+                }
+            };
         Ok(match m {
             TSSignature::TSPropertySignature(p) => {
                 let ty = match &p.type_annotation {
                     Some(t) => self.node_text(&t.type_annotation)?,
                     None => "any".into(),
                 };
-                format!("{}{}{}: {ty};", if p.readonly { "readonly " } else { "" }, key(&p.key)?, if p.optional { "?" } else { "" })
+                format!(
+                    "{}{}{}: {ty};",
+                    if p.readonly { "readonly " } else { "" },
+                    key(&p.key)?,
+                    if p.optional { "?" } else { "" }
+                )
             }
             TSSignature::TSMethodSignature(s) => {
-                if s.type_parameters.is_some() || s.this_param.is_some() || !matches!(s.kind, oxc::ast::ast::TSMethodSignatureKind::Method) {
+                if s.type_parameters.is_some()
+                    || s.this_param.is_some()
+                    || !matches!(s.kind, oxc::ast::ast::TSMethodSignatureKind::Method)
+                {
                     return unsupported("a generic or accessor method signature");
                 }
-                format!("{}{}{}: {};", key(&s.key)?, if s.optional { "?" } else { "" }, self.params_text(&s.params)?, ret(&s.return_type)?)
+                format!(
+                    "{}{}{}: {};",
+                    key(&s.key)?,
+                    if s.optional { "?" } else { "" },
+                    self.params_text(&s.params)?,
+                    ret(&s.return_type)?
+                )
             }
             TSSignature::TSCallSignatureDeclaration(c) => {
                 if c.type_parameters.is_some() || c.this_param.is_some() {
                     return unsupported("a generic call signature");
                 }
-                format!("{}: {};", self.params_text(&c.params)?, ret(&c.return_type)?)
+                format!(
+                    "{}: {};",
+                    self.params_text(&c.params)?,
+                    ret(&c.return_type)?
+                )
             }
             TSSignature::TSIndexSignature(i) => format!(
                 "{}[{}: {}]: {};",
@@ -849,20 +1517,70 @@ impl TypeEnv<'_, '_, '_> {
                 self.node_text(&i.parameter.type_annotation.type_annotation)?,
                 self.node_text(&i.type_annotation.type_annotation)?
             ),
-            TSSignature::TSConstructSignatureDeclaration(_) => return unsupported("a construct signature"),
+            TSSignature::TSConstructSignatureDeclaration(_) => {
+                return unsupported("a construct signature");
+            }
         })
     }
 }
 
 /// A `@Method()`'s `complexType` (`parseMethodDecorator`).
-pub fn method_type(env: &TypeEnv, site: &Site, m: &MethodDefinition, docs: &[Vec<JsDoc>]) -> Res<MethodComplexType> {
+pub fn method_type(
+    env: &TypeEnv,
+    site: &Site,
+    m: &MethodDefinition,
+    docs: &[Vec<JsDoc>],
+) -> Res<MethodComplexType> {
     let func = &m.value;
-    if func.type_parameters.is_some() || func.this_param.is_some() {
-        return unsupported("a generic method");
+    if func.this_param.is_some() {
+        return unsupported("a method with a `this` parameter");
     }
+    let Some(type_params) = &func.type_parameters else {
+        return method_type_in_scope(env, site, m, docs, "");
+    };
+
+    // The method's type parameters are in scope for its signature, and printed in front of it.
+    let depth = env.params.borrow().len();
+    for p in &type_params.params {
+        if p.r#const || p.r#in || p.out {
+            env.params.borrow_mut().truncate(depth);
+            return unsupported("a type parameter with a modifier");
+        }
+        let ty = Ty::new(K::TypeParam(p.name.name.to_string(), env.reg.fresh()));
+        env.params.borrow_mut().push((p.name.name.to_string(), ty));
+    }
+    let result = (|| {
+        let mut texts = Vec::new();
+        for p in &type_params.params {
+            let mut text = p.name.name.to_string();
+            for (keyword, ty) in [(" extends ", &p.constraint), (" = ", &p.default)] {
+                let Some(ty) = ty else { continue };
+                // The checker reuses the type node a bound or default was written with.
+                let written = env.node_text(ty)?;
+                text.push_str(keyword);
+                text.push_str(&written);
+            }
+            texts.push(text);
+        }
+        method_type_in_scope(env, site, m, docs, &format!("<{}>", texts.join(", ")))
+    })();
+    env.params.borrow_mut().truncate(depth);
+    result
+}
+
+fn method_type_in_scope(
+    env: &TypeEnv,
+    site: &Site,
+    m: &MethodDefinition,
+    docs: &[Vec<JsDoc>],
+    type_params: &str,
+) -> Res<MethodComplexType> {
+    let func = &m.value;
     let check = |ty: &Ty| -> Res<String> {
         if env.resolving() && print_order_depends_on_program(ty) {
-            return unsupported("a union whose members the checker orders by when it first met them");
+            return unsupported(
+                "a union whose members the checker orders by when it first met them",
+            );
         }
         type_to_string(ty)
     };
@@ -870,9 +1588,14 @@ pub fn method_type(env: &TypeEnv, site: &Site, m: &MethodDefinition, docs: &[Vec
     let mut parameters = Vec::new();
     let mut shown = Vec::new();
     for p in &func.params.items {
-        let Some(name) = p.pattern.get_identifier_name() else { return unsupported("a destructured parameter") };
+        let Some(name) = p.pattern.get_identifier_name() else {
+            return unsupported("a destructured parameter");
+        };
         let (ty, text) = match (&p.type_annotation, &p.initializer) {
-            (Some(t), _) => (env.eval(&t.type_annotation)?, env.node_text(&t.type_annotation)?),
+            (Some(t), _) => (
+                env.eval(&t.type_annotation)?,
+                env.node_text(&t.type_annotation)?,
+            ),
             (None, None) => (Ty::any(), "any".to_owned()),
             // The type of the initializer, widened.
             (None, Some(init)) => match &**init {
@@ -882,22 +1605,49 @@ pub fn method_type(env: &TypeEnv, site: &Site, m: &MethodDefinition, docs: &[Vec
                 _ => return unsupported("a parameter typed by its default value"),
             },
         };
-        let ty = if p.optional { env.with_undefined(ty) } else { ty };
-        parameters.push(MethodParameter { name: name.to_string(), type_text: check(&ty)?, docs: param_docs(docs, name.as_str()) });
-        shown.push(format!("{name}{}: {text}", if p.optional || p.initializer.is_some() { "?" } else { "" }));
+        let ty = if p.optional {
+            env.with_undefined(ty)
+        } else {
+            ty
+        };
+        parameters.push(MethodParameter {
+            name: name.to_string(),
+            type_text: check(&ty)?,
+            docs: param_docs(docs, name.as_str()),
+        });
+        shown.push(format!(
+            "{name}{}: {text}",
+            if p.optional || p.initializer.is_some() {
+                "?"
+            } else {
+                ""
+            }
+        ));
     }
     if let Some(rest) = &func.params.rest {
-        let Some(name) = rest.rest.argument.get_identifier_name() else { return unsupported("a destructured rest parameter") };
+        let Some(name) = rest.rest.argument.get_identifier_name() else {
+            return unsupported("a destructured rest parameter");
+        };
         let (ty, text) = match &rest.type_annotation {
-            Some(t) => (env.eval(&t.type_annotation)?, env.node_text(&t.type_annotation)?),
+            Some(t) => (
+                env.eval(&t.type_annotation)?,
+                env.node_text(&t.type_annotation)?,
+            ),
             None => (env.array(Ty::any()), "any[]".to_owned()),
         };
-        parameters.push(MethodParameter { name: name.to_string(), type_text: check(&ty)?, docs: param_docs(docs, name.as_str()) });
+        parameters.push(MethodParameter {
+            name: name.to_string(),
+            type_text: check(&ty)?,
+            docs: param_docs(docs, name.as_str()),
+        });
         shown.push(format!("...{name}: {text}"));
     }
 
     let (mut returned, shown_return) = match &func.return_type {
-        Some(t) => (check(&env.eval(&t.type_annotation)?)?, env.node_text(&t.type_annotation)?),
+        Some(t) => (
+            check(&env.eval(&t.type_annotation)?)?,
+            env.node_text(&t.type_annotation)?,
+        ),
         None if returns_value(func) => return unsupported("a return type inferred from the body"),
         // `async` without a return type: `any` where `Promise` is missing (the single-file program).
         None if func.r#async && !env.resolving() => ("any".to_owned(), "any".to_owned()),
@@ -914,14 +1664,22 @@ pub fn method_type(env: &TypeEnv, site: &Site, m: &MethodDefinition, docs: &[Vec
     let mut names = RefNames::default();
     if let Some(ret) = &func.return_type {
         names.visit_ts_type_annotation(ret);
+    } else if func.r#async && env.resolving() {
+        // The inferred `Promise<void>` is a type node of its own: it names `Promise`.
+        names.names.push("Promise".to_owned());
     }
     names.visit_method_definition(m);
-    let mut signature = format!("({}) => {shown_return}", shown.join(", "));
+    let mut signature = format!("{type_params}({}) => {shown_return}", shown.join(", "));
     if was_void && signature.ends_with("=> void") {
         signature.truncate(signature.len() - "void".len());
         signature.push_str("Promise<void>");
     }
-    Ok(MethodComplexType { signature, parameters, references: references(names, site)?, return_type: returned })
+    Ok(MethodComplexType {
+        signature,
+        parameters,
+        references: references(names, site)?,
+        return_type: returned,
+    })
 }
 
 /// A property key as the checker prints it: a quoted name keeps the quote its declaration used.
@@ -929,7 +1687,12 @@ fn key_text(key: &oxc::ast::ast::PropertyKey, name: &str) -> String {
     let text = property_name(name);
     if let oxc::ast::ast::PropertyKey::StringLiteral(lit) = key {
         if text.starts_with('"') && lit.raw.as_ref().is_some_and(|r| r.starts_with('\'')) {
-            return format!("'{}'", text[1..text.len() - 1].replace("\\\"", "\"").replace('\'', "\\'"));
+            return format!(
+                "'{}'",
+                text[1..text.len() - 1]
+                    .replace("\\\"", "\"")
+                    .replace('\'', "\\'")
+            );
         }
     }
     text

@@ -35,35 +35,56 @@ fn unwrap<'a, 'b>(mut e: &'b Expression<'a>) -> &'b Expression<'a> {
 
 fn is_primitive_literal(e: &Expression) -> bool {
     match e {
-        Expression::StringLiteral(_) | Expression::NumericLiteral(_) | Expression::BooleanLiteral(_) | Expression::NullLiteral(_) => true,
+        Expression::StringLiteral(_)
+        | Expression::NumericLiteral(_)
+        | Expression::BooleanLiteral(_)
+        | Expression::NullLiteral(_) => true,
         Expression::TemplateLiteral(t) => t.expressions.is_empty(),
         Expression::UnaryExpression(u) => {
-            matches!(u.operator, UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus)
-                && matches!(u.argument, Expression::NumericLiteral(_))
+            matches!(
+                u.operator,
+                UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus
+            ) && matches!(u.argument, Expression::NumericLiteral(_))
         }
         _ => false,
     }
 }
 
-fn resolve_literal_text(node: &Expression, locals: &Locals, source: &str, depth: u8) -> Option<String> {
+fn resolve_literal_text(
+    node: &Expression,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> Option<String> {
     if depth > MAX_RESOLVE_DEPTH {
         return None;
     }
     let node = unwrap(node);
-    if is_primitive_literal(node) || matches!(node, Expression::ObjectExpression(_) | Expression::ArrayExpression(_)) {
+    if is_primitive_literal(node)
+        || matches!(
+            node,
+            Expression::ObjectExpression(_) | Expression::ArrayExpression(_)
+        )
+    {
         return Some(text(node, source));
     }
     match node {
         Expression::Identifier(id) => match locals.const_init(id.name.as_str()) {
             Some(init) => resolve_literal_text(init, locals, source, depth + 1),
             None if id.name == "undefined" => Some("undefined".into()),
-            None => locals.imported_value(id.name.as_str()).and_then(|v| v.default_text),
+            None => locals
+                .imported_value(id.name.as_str())
+                .and_then(|v| v.default_text),
         },
         Expression::StaticMemberExpression(m) => {
             if let Expression::Identifier(id) = &m.object {
                 if locals.const_init(id.name.as_str()).is_none() {
                     let v = locals.imported_value(id.name.as_str())?;
-                    return v.members.get(m.property.name.as_str())?.default_text.clone();
+                    return v
+                        .members
+                        .get(m.property.name.as_str())?
+                        .default_text
+                        .clone();
                 }
             }
             let obj = resolve_object_literal(&m.object, locals, depth + 1)?;
@@ -76,7 +97,10 @@ fn resolve_literal_text(node: &Expression, locals: &Locals, source: &str, depth:
                 Expression::TemplateLiteral(t) if t.expressions.is_empty() => {
                     t.quasis.iter().map(|q| q.value.raw.as_str()).collect()
                 }
-                Expression::NumericLiteral(n) => n.raw.as_ref().map_or_else(|| n.value.to_string(), |r| r.to_string()),
+                Expression::NumericLiteral(n) => n
+                    .raw
+                    .as_ref()
+                    .map_or_else(|| n.value.to_string(), |r| r.to_string()),
                 _ => return None,
             };
             let obj = resolve_object_literal(&m.object, locals, depth + 1)?;
@@ -87,20 +111,28 @@ fn resolve_literal_text(node: &Expression, locals: &Locals, source: &str, depth:
     }
 }
 
-fn resolve_object_literal<'a, 'b>(node: &'b Expression<'a>, locals: &Locals<'a, 'b>, depth: u8) -> Option<&'b ObjectExpression<'a>> {
+fn resolve_object_literal<'a, 'b>(
+    node: &'b Expression<'a>,
+    locals: &Locals<'a, 'b>,
+    depth: u8,
+) -> Option<&'b ObjectExpression<'a>> {
     if depth > MAX_RESOLVE_DEPTH {
         return None;
     }
     match unwrap(node) {
         Expression::ObjectExpression(obj) => Some(obj),
-        Expression::Identifier(id) => resolve_object_literal(locals.const_init(id.name.as_str())?, locals, depth + 1),
+        Expression::Identifier(id) => {
+            resolve_object_literal(locals.const_init(id.name.as_str())?, locals, depth + 1)
+        }
         _ => None,
     }
 }
 
 fn find_member<'a, 'b>(obj: &'b ObjectExpression<'a>, key: &str) -> Option<&'b Expression<'a>> {
     obj.properties.iter().rev().find_map(|p| match p {
-        ObjectPropertyKind::ObjectProperty(p) if !p.computed || matches!(p.key, PropertyKey::StringLiteral(_)) => {
+        ObjectPropertyKind::ObjectProperty(p)
+            if !p.computed || matches!(p.key, PropertyKey::StringLiteral(_)) =>
+        {
             (crate::eval::property_key_name(&p.key).as_deref() == Some(key)).then_some(&p.value)
         }
         _ => None,

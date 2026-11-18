@@ -9,7 +9,10 @@
 //! opaque `{"__node": "<source>"}` object. Identifiers become `{"__identifier": "<name>"}`
 //! (Stencil's `getIdentifierValue`), except `undefined`, which leaves the key out.
 
-use oxc::ast::ast::{Argument, ArrayExpressionElement, CallExpression, Expression, ObjectExpression, ObjectPropertyKind, PropertyKey};
+use oxc::ast::ast::{
+    Argument, ArrayExpressionElement, CallExpression, Expression, ObjectExpression,
+    ObjectPropertyKind, PropertyKey,
+};
 use oxc::span::{GetSpan, Span};
 use serde_json::{Map, Value, json};
 
@@ -30,21 +33,30 @@ pub enum Arg {
 /// identifiers or property accesses whose type is a literal. The argument must be exactly
 /// one of those: `('x')` or `{...} as Opts` is invalid.
 pub fn eval_argument(arg: &Argument, source: &str, locals: &Locals) -> Arg {
-    let Some(expr) = arg.as_expression() else { return invalid(arg.span(), source) };
+    let Some(expr) = arg.as_expression() else {
+        return invalid(arg.span(), source);
+    };
     match expr {
         Expression::StringLiteral(s) => Arg::Value(Value::String(s.value.to_string())),
         Expression::ObjectExpression(_) => Arg::Value(object_value(expr, source)),
-        Expression::CallExpression(call) if is_resolve_var(&call.callee) => resolve_var(call, source, locals),
-        Expression::Identifier(_) | Expression::StaticMemberExpression(_) => match literal(expr, locals) {
-            Some(lit) => Arg::Lit(lit),
-            None => invalid(expr.span(), source),
-        },
+        Expression::CallExpression(call) if is_resolve_var(&call.callee) => {
+            resolve_var(call, source, locals)
+        }
+        Expression::Identifier(_) | Expression::StaticMemberExpression(_) => {
+            match literal(expr, locals) {
+                Some(lit) => Arg::Lit(lit),
+                None => invalid(expr.span(), source),
+            }
+        }
         _ => invalid(expr.span(), source),
     }
 }
 
 fn invalid(span: Span, source: &str) -> Arg {
-    Arg::Throw(format!("Error: invalid decorator argument: {}", span.source_text(source)))
+    Arg::Throw(format!(
+        "Error: invalid decorator argument: {}",
+        span.source_text(source)
+    ))
 }
 
 fn is_resolve_var(callee: &Expression) -> bool {
@@ -66,9 +78,14 @@ fn resolve_var(call: &CallExpression, source: &str, locals: &Locals) -> Arg {
     let [arg] = call.arguments.as_slice() else {
         return Arg::Throw("Error: resolveVar() expects exactly one argument.".into());
     };
-    let Some(expr) = arg.as_expression() else { return unresolved(arg.span().source_text(source)) };
+    let Some(expr) = arg.as_expression() else {
+        return unresolved(arg.span().source_text(source));
+    };
     let text = expr.span().source_text(source);
-    if matches!(expr, Expression::Identifier(_) | Expression::StaticMemberExpression(_)) {
+    if matches!(
+        expr,
+        Expression::Identifier(_) | Expression::StaticMemberExpression(_)
+    ) {
         if let Some(Lit::Str(s)) = literal(expr, locals) {
             return Arg::Lit(Lit::Str(s));
         }
@@ -116,23 +133,38 @@ fn string_value(expr: &Expression, locals: &Locals) -> Option<String> {
 
 /// Whether the checker finds property `name` on `object`'s type (`getPropertyOfType`):
 /// `None` when it doesn't; otherwise the initializer to fall back on, for class fields.
-fn has_property<'e, 'a>(object: &'e Expression<'a>, name: &str, locals: &'e Locals<'a, 'e>) -> Option<Option<&'e Expression<'a>>> {
+fn has_property<'e, 'a>(
+    object: &'e Expression<'a>,
+    name: &str,
+    locals: &'e Locals<'a, 'e>,
+) -> Option<Option<&'e Expression<'a>>> {
     if let Expression::Identifier(id) = object {
         let target = id.name.as_str();
         if let Some(LocalType::Enum(e)) = locals.types.get(target) {
-            return e.body.members.iter().any(|m| m.id.static_name() == name).then_some(None);
+            return e
+                .body
+                .members
+                .iter()
+                .any(|m| m.id.static_name() == name)
+                .then_some(None);
         }
         if let Some(statics) = locals.statics.get(target) {
             return statics.iter().find(|f| f.name == name).map(|f| f.init);
         }
         if !locals.values.contains_key(target) {
             // Build-accurate mode: an imported object, enum or class.
-            return locals.imported_value(target)?.members.contains_key(name).then_some(None);
+            return locals
+                .imported_value(target)?
+                .members
+                .contains_key(name)
+                .then_some(None);
         }
     }
     let obj = match object {
         Expression::Identifier(id) => match locals.values.get(id.name.as_str()) {
-            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => object_literal(init)?,
+            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+                object_literal(init)?
+            }
             _ => return None,
         },
         _ => object_literal(object)?,
@@ -158,8 +190,12 @@ fn object_value(expr: &Expression, source: &str) -> Value {
         Expression::ObjectExpression(obj) => {
             let mut map = Map::new();
             for prop in &obj.properties {
-                let ObjectPropertyKind::ObjectProperty(p) = prop else { continue };
-                let Some(key) = property_key_name(&p.key) else { continue };
+                let ObjectPropertyKind::ObjectProperty(p) = prop else {
+                    continue;
+                };
+                let Some(key) = property_key_name(&p.key) else {
+                    continue;
+                };
                 if p.shorthand {
                     map.insert(key.clone(), json!({ "__identifier": key }));
                     continue;
@@ -179,14 +215,18 @@ fn member_value(expr: &Expression, source: &str) -> Option<Value> {
     Some(match expr {
         Expression::StringLiteral(s) => Value::String(s.value.to_string()),
         Expression::TemplateLiteral(t) if t.expressions.is_empty() => Value::String(
-            t.quasis.iter().map(|q| q.value.cooked.as_ref().map_or("", |c| c.as_str())).collect(),
+            t.quasis
+                .iter()
+                .map(|q| q.value.cooked.as_ref().map_or("", |c| c.as_str()))
+                .collect(),
         ),
         Expression::BooleanLiteral(b) => Value::Bool(b.value),
         Expression::ArrayExpression(arr) => Value::Array(
             arr.elements
                 .iter()
                 .filter_map(|el| match el {
-                    ArrayExpressionElement::SpreadElement(_) | ArrayExpressionElement::Elision(_) => None,
+                    ArrayExpressionElement::SpreadElement(_)
+                    | ArrayExpressionElement::Elision(_) => None,
                     other => other.as_expression().and_then(|e| array_element(e, source)),
                 })
                 .collect(),
@@ -206,7 +246,9 @@ fn array_element(expr: &Expression, source: &str) -> Option<Value> {
         Expression::StringLiteral(s) => Value::String(s.value.to_string()),
         Expression::NumericLiteral(n) => json!(n.value),
         Expression::BooleanLiteral(b) => Value::Bool(b.value),
-        Expression::ArrayExpression(_) | Expression::ObjectExpression(_) => member_value(expr, source)?,
+        Expression::ArrayExpression(_) | Expression::ObjectExpression(_) => {
+            member_value(expr, source)?
+        }
         _ => opaque(expr, source),
     })
 }

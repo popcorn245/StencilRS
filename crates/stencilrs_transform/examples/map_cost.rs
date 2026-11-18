@@ -20,9 +20,22 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn main() {
     let mut files = Vec::new();
-    walk(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../parity/fixtures")), &mut files);
-    let sources: Vec<(String, String)> =
-        files.iter().map(|p| (p.to_string_lossy().replace('\\', "/"), std::fs::read_to_string(p).unwrap())).collect();
+    walk(
+        Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../parity/fixtures"
+        )),
+        &mut files,
+    );
+    let sources: Vec<(String, String)> = files
+        .iter()
+        .map(|p| {
+            (
+                p.to_string_lossy().replace('\\', "/"),
+                std::fs::read_to_string(p).unwrap(),
+            )
+        })
+        .collect();
     let rounds = 10;
     for source_map in [false, true, false, true] {
         let t = Instant::now();
@@ -32,11 +45,14 @@ fn main() {
                 let opts = TranspileOptions {
                     file: file.clone(),
                     core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
-                    jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
+                    jsx: Jsx::Automatic {
+                        import_source: "@stencil/core".into(),
+                    },
                     resolve_imports: false,
                     complex_types: false,
                     source_map,
-                    transform_as_base_class: false, use_define_for_class_fields: true,
+                    transform_as_base_class: false,
+                    use_define_for_class_fields: true,
                     component_export: Default::default(),
                     component_metadata: Default::default(),
                     emit_styles: true,
@@ -45,6 +61,10 @@ fn main() {
             }
         }
         let ms = t.elapsed().as_secs_f64() * 1000.0 / rounds as f64;
-        println!("maps {source_map:5}: {ms:6.1} ms per pass over {} files ({} KiB of maps)", sources.len(), bytes / rounds / 1024);
+        println!(
+            "maps {source_map:5}: {ms:6.1} ms per pass over {} files ({} KiB of maps)",
+            sources.len(),
+            bytes / rounds / 1024
+        );
     }
 }

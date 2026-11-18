@@ -3,14 +3,16 @@
 //! summary of its exports: type flags for prop classification, and value types / literal
 //! defaults for initializers.
 
-use std::cell::{Cell, RefCell};
 use rustc_hash::FxHashMap;
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
 use oxc::allocator::Allocator;
-use oxc::ast::ast::{Declaration, Expression, ObjectPropertyKind, Program, Statement, TSType, TSTypeName};
+use oxc::ast::ast::{
+    Declaration, Expression, ObjectPropertyKind, Program, Statement, TSType, TSTypeName,
+};
 use oxc::parser::Parser;
 use oxc::span::{GetSpan, SourceType};
 
@@ -21,7 +23,9 @@ use crate::default_value::initializer_text;
 use crate::eval::property_key_name;
 use crate::locals::{LocalType, LocalValue, Locals};
 use crate::meta::PropType;
-use crate::prop_type::{Flags, classify_annotation, infer_expression, keyof_name_flags, name_flags};
+use crate::prop_type::{
+    Flags, classify_annotation, infer_expression, keyof_name_flags, name_flags,
+};
 use crate::types::Registry;
 
 #[derive(Clone, Copy, Debug)]
@@ -130,27 +134,83 @@ impl Resolver {
         if !self.defs
             && let Some((exports, deps)) = cache::module(&path)
         {
-            let summary = Rc::new(ModuleSummary { file: exports.file, types: exports.types, values: exports.values, defs: FxHashMap::default() });
+            let summary = Rc::new(ModuleSummary {
+                file: exports.file,
+                types: exports.types,
+                values: exports.values,
+                defs: FxHashMap::default(),
+            });
             self.merge(&deps, true);
-            self.cache.borrow_mut().insert(path, Slot { summary: Some(summary.clone()), deps, complete: true });
+            self.cache.borrow_mut().insert(
+                path,
+                Slot {
+                    summary: Some(summary.clone()),
+                    deps,
+                    complete: true,
+                },
+            );
             return Some(summary);
         }
         // Mark in progress: an import cycle resolves to nothing rather than recursing forever.
-        self.cache.borrow_mut().insert(path.clone(), Slot { summary: None, deps: Arc::default(), complete: false });
+        self.cache.borrow_mut().insert(
+            path.clone(),
+            Slot {
+                summary: None,
+                deps: Arc::default(),
+                complete: false,
+            },
+        );
         self.depth.set(self.depth.get() + 1);
         // Stamped before it is read: a change in between shows up as a mismatch next time.
-        self.frames.borrow_mut().push(Frame { deps: vec![Dep::of(&path)], complete: true });
+        self.frames.borrow_mut().push(Frame {
+            deps: vec![Dep::of(&path)],
+            complete: true,
+        });
         let summary = self.summarize(&path).map(Rc::new);
-        let frame = self.frames.borrow_mut().pop().expect("the frame pushed above");
+        let frame = self
+            .frames
+            .borrow_mut()
+            .pop()
+            .expect("the frame pushed above");
         self.depth.set(self.depth.get() - 1);
         let complete = frame.complete && summary.is_some();
         let deps = Arc::new(frame.deps);
         if let Some(s) = summary.as_ref().filter(|_| complete && !self.defs) {
-            cache::store_module(&path, cache::Exports { file: s.file.clone(), types: s.types.clone(), values: s.values.clone() }, deps.clone());
+            cache::store_module(
+                &path,
+                cache::Exports {
+                    file: s.file.clone(),
+                    types: s.types.clone(),
+                    values: s.values.clone(),
+                },
+                deps.clone(),
+            );
         }
         self.merge(&deps, complete);
-        self.cache.borrow_mut().insert(path, Slot { summary: summary.clone(), deps, complete });
+        self.cache.borrow_mut().insert(
+            path,
+            Slot {
+                summary: summary.clone(),
+                deps,
+                complete,
+            },
+        );
         summary
+    }
+
+    /// Makes what a module has declared so far visible to the modules it leads back to (an import
+    /// cycle), instead of nothing.
+    fn publish(&self, path: &Path, file: &str, out: &Collected) {
+        let mut cache = self.cache.borrow_mut();
+        if let Some(slot) = cache.get_mut(&clean(path)) {
+            let partial = ModuleSummary {
+                file: file.to_owned(),
+                types: Arc::new(out.types.clone()),
+                values: Arc::new(out.values.clone()),
+                defs: out.defs.clone(),
+            };
+            slot.summary = Some(Rc::new(partial));
+        }
     }
 
     /// The module being read depends on `deps` too.
@@ -168,12 +228,22 @@ impl Resolver {
     fn summarize(&self, path: &Path) -> Option<ModuleSummary> {
         let source = std::fs::read_to_string(path).ok()?;
         let allocator = Allocator::default();
-        let source_type = SourceType::from_path(path).unwrap_or_else(|_| SourceType::ts()).with_module(true);
+        let source_type = SourceType::from_path(path)
+            .unwrap_or_else(|_| SourceType::ts())
+            .with_module(true);
         let parsed = Parser::new(&allocator, &source, source_type).parse();
         let file = path.to_string_lossy().replace('\\', "/");
         let locals = Locals::collect(&parsed.program).with_resolver(Some(self), &file);
         let env = TypeEnv::new(&locals, &self.registry, self.strict, &file);
-        Some(summarize_program(&parsed.program, &locals, &env, &source, self, &file))
+        Some(summarize_program(
+            &parsed.program,
+            &locals,
+            &env,
+            &source,
+            self,
+            &file,
+            path,
+        ))
     }
 }
 
@@ -189,11 +259,17 @@ fn resolve_file(base: &Path) -> Option<PathBuf> {
         format!("{stem}/index.ts"),
         format!("{stem}/index.tsx"),
     ];
-    candidates.into_iter().map(PathBuf::from).find(|p| p.is_file() && p.extension().is_some_and(|e| e == "ts" || e == "tsx"))
+    candidates
+        .into_iter()
+        .map(PathBuf::from)
+        .find(|p| p.is_file() && p.extension().is_some_and(|e| e == "ts" || e == "tsx"))
 }
 
 fn type_summary(name: &str, locals: &Locals) -> TypeSummary {
-    TypeSummary { flags: name_flags(name, locals), keyof: keyof_name_flags(name, locals) }
+    TypeSummary {
+        flags: name_flags(name, locals),
+        keyof: keyof_name_flags(name, locals),
+    }
 }
 
 pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueSummary {
@@ -202,15 +278,23 @@ pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueS
     let mut members = FxHashMap::default();
     if let Expression::ObjectExpression(obj) = inner {
         for p in &obj.properties {
-            let ObjectPropertyKind::ObjectProperty(p) = p else { continue };
-            let Some(key) = property_key_name(&p.key) else { continue };
+            let ObjectPropertyKind::ObjectProperty(p) = p else {
+                continue;
+            };
+            let Some(key) = property_key_name(&p.key) else {
+                continue;
+            };
             let mut member = value_summary(&p.value, locals, source);
             // `as const` keeps literal member types: a prop initialised from one prints the literal.
             if as_const && is_literal(&p.value) {
                 member.original = p.value.span().source_text(source).to_owned();
             }
             // In a mutable object a member widens, unless it says `as const` itself.
-            member.literal = if as_const || matches!(&p.value, Expression::TSAsExpression(_)) { literal(&p.value, locals) } else { None };
+            member.literal = if as_const || matches!(&p.value, Expression::TSAsExpression(_)) {
+                literal(&p.value, locals)
+            } else {
+                None
+            };
             members.insert(key, member);
         }
     }
@@ -238,16 +322,40 @@ fn unwrap_as_const<'x, 'a>(e: &'x Expression<'a>) -> (bool, &'x Expression<'a>) 
 }
 
 fn is_literal(e: &Expression) -> bool {
-    matches!(e, Expression::StringLiteral(_) | Expression::NumericLiteral(_) | Expression::BooleanLiteral(_))
-        || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
+    matches!(
+        e,
+        Expression::StringLiteral(_)
+            | Expression::NumericLiteral(_)
+            | Expression::BooleanLiteral(_)
+    ) || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
 }
 
-fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, source: &str, out: &mut Collected, defs: bool) {
+fn summarize_local(
+    name: &str,
+    exported: &str,
+    locals: &Locals,
+    env: &TypeEnv,
+    source: &str,
+    out: &mut Collected,
+    defs: bool,
+) {
     if locals.types.contains_key(name) {
-        out.types.insert(exported.to_owned(), type_summary(name, locals));
+        out.types
+            .insert(exported.to_owned(), type_summary(name, locals));
         if let Some(def) = env.local_def(name).filter(|_| defs) {
-            let class_or_enum = matches!(locals.types.get(name), Some(LocalType::Class(_) | LocalType::Enum(_)));
-            out.defs.insert(exported.to_owned(), ExportedType { orig_name: name.to_owned(), decl_file: env.file.to_owned(), class_or_enum, def });
+            let class_or_enum = matches!(
+                locals.types.get(name),
+                Some(LocalType::Class(_) | LocalType::Enum(_))
+            );
+            out.defs.insert(
+                exported.to_owned(),
+                ExportedType {
+                    orig_name: name.to_owned(),
+                    decl_file: env.file.to_owned(),
+                    class_or_enum,
+                    def,
+                },
+            );
         }
     } else if let Some(t) = locals.imported_type(name) {
         out.types.insert(exported.to_owned(), t);
@@ -262,19 +370,46 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, s
             out.values.insert(exported.to_owned(), summary);
         }
         Some(LocalValue::Let(Some(init))) => {
-            out.values.insert(exported.to_owned(), value_summary(init, locals, source));
+            out.values
+                .insert(exported.to_owned(), value_summary(init, locals, source));
         }
         Some(LocalValue::Function(returns)) => {
-            let returns = returns.map(|t| (classify_annotation(t, locals), t.span().source_text(source).to_owned()));
-            out.values.insert(exported.to_owned(), ValueSummary { returns, ..ValueSummary::default() });
+            let returns = returns.map(|t| {
+                (
+                    classify_annotation(t, locals),
+                    t.span().source_text(source).to_owned(),
+                )
+            });
+            out.values.insert(
+                exported.to_owned(),
+                ValueSummary {
+                    returns,
+                    ..ValueSummary::default()
+                },
+            );
         }
         Some(_) => {
             // Enums and classes: their members' literal values (enum members, `static readonly` fields).
             let members = static_member_literals(name, locals)
                 .into_iter()
-                .map(|(k, literal)| (k, ValueSummary { literal, ..ValueSummary::default() }))
+                .map(|(k, literal)| {
+                    (
+                        k,
+                        ValueSummary {
+                            literal,
+                            ..ValueSummary::default()
+                        },
+                    )
+                })
                 .collect();
-            out.values.insert(exported.to_owned(), ValueSummary { prop_type: Some(PropType::Unknown), members, ..ValueSummary::default() });
+            out.values.insert(
+                exported.to_owned(),
+                ValueSummary {
+                    prop_type: Some(PropType::Unknown),
+                    members,
+                    ..ValueSummary::default()
+                },
+            );
         }
         None => {
             if let Some(v) = locals.imported_value(name) {
@@ -284,34 +419,108 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, s
     }
 }
 
-fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: &str, resolver: &Resolver, file: &str) -> ModuleSummary {
+fn summarize_program(
+    program: &Program,
+    locals: &Locals,
+    env: &TypeEnv,
+    source: &str,
+    resolver: &Resolver,
+    file: &str,
+    path: &Path,
+) -> ModuleSummary {
     let mut out = Collected::default();
     let defs = resolver.defs;
+    // What the module declares comes first, then what it re-exports: reading a re-exported module
+    // can lead back here (an `interface.ts` that re-exports the files that import it), and those
+    // imports find the declarations made so far.
+    let mut published = false;
+    for pass in 0..2 {
+        if pass == 1 && !published {
+            resolver.publish(path, file, &out);
+            published = true;
+        }
+        summarize_statements(
+            program,
+            locals,
+            env,
+            source,
+            resolver,
+            file,
+            &mut out,
+            defs,
+            pass == 1,
+        );
+    }
+    ModuleSummary {
+        file: file.to_owned(),
+        types: Arc::new(out.types),
+        values: Arc::new(out.values),
+        defs: out.defs,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn summarize_statements(
+    program: &Program,
+    locals: &Locals,
+    env: &TypeEnv,
+    source: &str,
+    resolver: &Resolver,
+    file: &str,
+    out: &mut Collected,
+    defs: bool,
+    reexports: bool,
+) {
     for stmt in &program.body {
+        if matches!(
+            stmt,
+            Statement::ExportFromDeclaration(_) | Statement::ExportAllDeclaration(_)
+        ) != reexports
+        {
+            continue;
+        }
         match stmt {
             Statement::ExportDeclaration(e) => {
                 let names: Vec<&str> = match &e.declaration {
-                    Declaration::VariableDeclaration(v) => v.declarations.iter().filter_map(|d| d.id.get_identifier_name()).map(|n| n.as_str()).collect(),
-                    Declaration::FunctionDeclaration(f) => f.id.iter().map(|id| id.name.as_str()).collect(),
-                    Declaration::ClassDeclaration(c) => c.id.iter().map(|id| id.name.as_str()).collect(),
+                    Declaration::VariableDeclaration(v) => v
+                        .declarations
+                        .iter()
+                        .filter_map(|d| d.id.get_identifier_name())
+                        .map(|n| n.as_str())
+                        .collect(),
+                    Declaration::FunctionDeclaration(f) => {
+                        f.id.iter().map(|id| id.name.as_str()).collect()
+                    }
+                    Declaration::ClassDeclaration(c) => {
+                        c.id.iter().map(|id| id.name.as_str()).collect()
+                    }
                     Declaration::TSTypeAliasDeclaration(t) => vec![t.id.name.as_str()],
                     Declaration::TSInterfaceDeclaration(i) => vec![i.id.name.as_str()],
                     Declaration::TSEnumDeclaration(en) => vec![en.id.name.as_str()],
                     _ => vec![],
                 };
                 for n in names {
-                    summarize_local(n, n, locals, env, source, &mut out, defs);
+                    summarize_local(n, n, locals, env, source, out, defs);
                 }
             }
             Statement::ExportNamedDeclaration(e) => {
                 for s in &e.specifiers {
-                    summarize_local(s.local.name().as_str(), s.exported.name().as_str(), locals, env, source, &mut out, defs);
+                    summarize_local(
+                        s.local.name().as_str(),
+                        s.exported.name().as_str(),
+                        locals,
+                        env,
+                        source,
+                        out,
+                        defs,
+                    );
                 }
             }
             Statement::ExportFromDeclaration(e) => {
                 if let Some(m) = resolver.module(file, e.source.value.as_str()) {
                     for s in &e.specifiers {
-                        let (from, to) = (s.local.name().to_string(), s.exported.name().to_string());
+                        let (from, to) =
+                            (s.local.name().to_string(), s.exported.name().to_string());
                         if let Some(t) = m.types.get(&from) {
                             out.types.insert(to.clone(), *t);
                         }
@@ -340,7 +549,6 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
             _ => {}
         }
     }
-    ModuleSummary { file: file.to_owned(), types: Arc::new(out.types), values: Arc::new(out.values), defs: out.defs }
 }
 
 /// `a/./b/../c` → `a/c`, without touching the file system.
@@ -362,8 +570,12 @@ fn clean(path: &Path) -> PathBuf {
 /// `strict`), following `extends` through relative paths. Cached per folder, and read again
 /// when any tsconfig it looked at (or looked for) changes.
 fn strict_null_checks(file: &str) -> bool {
-    let abs = std::env::current_dir().map(|c| c.join(file)).unwrap_or_else(|_| PathBuf::from(file));
-    let Some(start) = abs.parent() else { return false };
+    let abs = std::env::current_dir()
+        .map(|c| c.join(file))
+        .unwrap_or_else(|_| PathBuf::from(file));
+    let Some(start) = abs.parent() else {
+        return false;
+    };
     if let Some(strict) = cache::tsconfig(start) {
         return strict;
     }
@@ -392,7 +604,11 @@ fn tsconfig_strict(path: &Path, depth: u8, deps: &mut Vec<Dep>) -> Option<bool> 
     let text = std::fs::read_to_string(path).ok()?;
     let json: serde_json::Value = serde_json::from_str(&strip_jsonc(&text)).ok()?;
     let options = json.get("compilerOptions");
-    let flag = |key: &str| options.and_then(|o| o.get(key)).and_then(serde_json::Value::as_bool);
+    let flag = |key: &str| {
+        options
+            .and_then(|o| o.get(key))
+            .and_then(serde_json::Value::as_bool)
+    };
     if let Some(strict) = flag("strictNullChecks").or_else(|| flag("strict")) {
         return Some(strict);
     }
@@ -460,7 +676,8 @@ mod tests {
 
     /// A fresh folder; the caches are process-wide, so no two tests share one.
     fn folder(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("stencilrs-resolve-{}-{name}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("stencilrs-resolve-{}-{name}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -470,13 +687,22 @@ mod tests {
     /// file system's clock can be too coarse to tell two quick writes apart).
     fn write(path: &Path, text: &str, age: u64) {
         fs::write(path, text).unwrap();
-        File::options().write(true).open(path).unwrap().set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000 + age)).unwrap();
+        File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000 + age))
+            .unwrap();
     }
 
     fn prop_type_of(dir: &Path, name: &str) -> Option<PropType> {
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         let resolver = Resolver::new(&importer, false);
-        resolver.module(&importer, "./shared")?.values.get(name)?.prop_type
+        resolver
+            .module(&importer, "./shared")?
+            .values
+            .get(name)?
+            .prop_type
     }
 
     #[test]
@@ -508,7 +734,11 @@ mod tests {
         let dir = folder("share");
         write(&dir.join("shared.ts"), "export const SIZE = 1;", 0);
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
-        let read = || Resolver::new(&importer, false).module(&importer, "./shared").unwrap();
+        let read = || {
+            Resolver::new(&importer, false)
+                .module(&importer, "./shared")
+                .unwrap()
+        };
         let (first, second) = (read(), read());
         assert!(Arc::ptr_eq(&first.values, &second.values));
         write(&dir.join("shared.ts"), "export const SIZE = 2;", 1);
@@ -518,16 +748,31 @@ mod tests {
     #[test]
     fn an_import_cycle_does_not_leave_a_cut_short_summary_behind() {
         let dir = folder("cycle");
-        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
-        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
+        write(
+            &dir.join("a.ts"),
+            "export { B } from './b'; export const A = 1;",
+            0,
+        );
+        write(
+            &dir.join("b.ts"),
+            "export { A } from './a'; export const B = 'b';",
+            0,
+        );
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         // Read from a, b is summarised while a is in progress, and lacks a's exports.
-        let a = Resolver::new(&importer, false).module(&importer, "./a").unwrap();
+        let a = Resolver::new(&importer, false)
+            .module(&importer, "./a")
+            .unwrap();
         assert!(a.values.contains_key("A"));
         // A call that starts at b must not get that summary.
-        let b = Resolver::new(&importer, false).module(&importer, "./b").unwrap();
+        let b = Resolver::new(&importer, false)
+            .module(&importer, "./b")
+            .unwrap();
         assert!(b.values.contains_key("B"));
-        assert!(b.values.contains_key("A"), "b re-exports a, which is read in full when b is the entry point");
+        assert!(
+            b.values.contains_key("A"),
+            "b re-exports a, which is read in full when b is the entry point"
+        );
     }
 
     fn strict_in(dir: &Path) -> bool {
@@ -538,15 +783,35 @@ mod tests {
     fn an_edit_to_the_tsconfig_or_its_base_shows_up_in_the_next_call() {
         let dir = folder("tsconfig");
         fs::create_dir_all(dir.join("src")).unwrap();
-        write(&dir.join("tsconfig.json"), r#"{ "compilerOptions": { "strict": true } }"#, 0);
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "compilerOptions": { "strict": true } }"#,
+            0,
+        );
         assert!(strict_in(&dir));
-        write(&dir.join("tsconfig.json"), r#"{ "compilerOptions": { "strict": false } }"#, 1);
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "compilerOptions": { "strict": false } }"#,
+            1,
+        );
         assert!(!strict_in(&dir));
         // Through `extends`.
-        write(&dir.join("tsconfig.json"), r#"{ "extends": "./base.json" }"#, 2);
-        write(&dir.join("base.json"), r#"{ "compilerOptions": { "strictNullChecks": true } }"#, 2);
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "extends": "./base.json" }"#,
+            2,
+        );
+        write(
+            &dir.join("base.json"),
+            r#"{ "compilerOptions": { "strictNullChecks": true } }"#,
+            2,
+        );
         assert!(strict_in(&dir));
-        write(&dir.join("base.json"), r#"{ "compilerOptions": { "strictNullChecks": false } }"#, 3);
+        write(
+            &dir.join("base.json"),
+            r#"{ "compilerOptions": { "strictNullChecks": false } }"#,
+            3,
+        );
         assert!(!strict_in(&dir));
     }
 
@@ -556,7 +821,11 @@ mod tests {
         fs::create_dir_all(dir.join("src")).unwrap();
         // No tsconfig up the tree yet.
         assert!(!strict_in(&dir));
-        write(&dir.join("src").join("tsconfig.json"), r#"{ "compilerOptions": { "strictNullChecks": true } }"#, 0);
+        write(
+            &dir.join("src").join("tsconfig.json"),
+            r#"{ "compilerOptions": { "strictNullChecks": true } }"#,
+            0,
+        );
         assert!(strict_in(&dir));
         fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
         assert!(!strict_in(&dir));

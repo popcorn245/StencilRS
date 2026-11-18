@@ -5,9 +5,9 @@
 //! edited text; this module carries those mappings on through the edits to the original
 //! source, so the map points at what the author wrote.
 
+use rustc_hash::FxHashMap;
 use std::borrow::Cow;
 use std::cell::Cell;
-use rustc_hash::FxHashMap;
 
 use oxc_sourcemap::{SourceMap, Token};
 
@@ -42,7 +42,11 @@ impl<'a> LineIndex<'a> {
                 b'\n' => at + 1,
                 b'\r' if bytes.get(at + 1) == Some(&b'\n') => at + 2,
                 b'\r' => at + 1,
-                _ if bytes.get(at + 1) == Some(&0x80) && matches!(bytes.get(at + 2), Some(0xA8 | 0xA9)) => at + 3,
+                _ if bytes.get(at + 1) == Some(&0x80)
+                    && matches!(bytes.get(at + 2), Some(0xA8 | 0xA9)) =>
+                {
+                    at + 3
+                }
                 _ => {
                     // Some other char that starts with 0xE2: not a break.
                     i = at + 1;
@@ -59,7 +63,12 @@ impl<'a> LineIndex<'a> {
         if !all_ascii {
             ascii.push(bytes[line_start..].is_ascii());
         }
-        Self { text, starts, ascii, last_line: Cell::new(0) }
+        Self {
+            text,
+            starts,
+            ascii,
+            last_line: Cell::new(0),
+        }
     }
 
     fn line_is_ascii(&self, line: usize) -> bool {
@@ -70,7 +79,10 @@ impl<'a> LineIndex<'a> {
     fn offset(&self, line: u32, col: u32) -> Option<u32> {
         let start = *self.starts.get(line as usize)?;
         if self.line_is_ascii(line as usize) {
-            let end = self.starts.get(line as usize + 1).map_or(self.text.len() as u32, |&e| e);
+            let end = self
+                .starts
+                .get(line as usize + 1)
+                .map_or(self.text.len() as u32, |&e| e);
             return (start + col <= end).then_some(start + col);
         }
         let rest = &self.text[start as usize..];
@@ -88,7 +100,10 @@ impl<'a> LineIndex<'a> {
     /// one after) is tried before searching.
     fn line_of(&self, offset: u32) -> usize {
         let last = self.last_line.get();
-        let holds = |line: usize| self.starts[line] <= offset && self.starts.get(line + 1).is_none_or(|&next| offset < next);
+        let holds = |line: usize| {
+            self.starts[line] <= offset
+                && self.starts.get(line + 1).is_none_or(|&next| offset < next)
+        };
         let line = if holds(last) {
             last
         } else if last + 1 < self.starts.len() && holds(last + 1) {
@@ -117,7 +132,15 @@ impl<'a> LineIndex<'a> {
 /// the output to the original source, as source map v3 JSON. `prefix_lines`: lines put in
 /// front of oxc's output afterwards. `anchors` moves a mapped position in `edited` to another
 /// one first (class members, from their modifier to the first token that is printed).
-pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &FxHashMap<u32, u32>, source: &str, file: &str, prefix_lines: u32) -> String {
+pub fn compose(
+    printed: &SourceMap,
+    edited: &str,
+    edits: &OffsetMap,
+    anchors: &FxHashMap<u32, u32>,
+    source: &str,
+    file: &str,
+    prefix_lines: u32,
+) -> String {
     let edited_lines = LineIndex::new(edited);
     let source_lines = LineIndex::new(source);
     let tokens: Vec<Token> = printed
@@ -127,7 +150,14 @@ pub fn compose(printed: &SourceMap, edited: &str, edits: &OffsetMap, anchors: &F
             let at = edited_lines.offset(t.get_src_line(), t.get_src_col())?;
             let at = anchors.get(&at).copied().unwrap_or(at);
             let (line, col) = source_lines.position(edits.to_original(at)?);
-            Some(Token::new(t.get_dst_line() + prefix_lines, t.get_dst_col(), line, col, Some(0), t.get_name_id()))
+            Some(Token::new(
+                t.get_dst_line() + prefix_lines,
+                t.get_dst_col(),
+                line,
+                col,
+                Some(0),
+                t.get_name_id(),
+            ))
         })
         .collect();
     let names = printed.get_names().map(Cow::Borrowed).collect();

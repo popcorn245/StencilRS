@@ -1,0 +1,160 @@
+{
+  "tag": "build-spinner",
+  "properties": [
+    {
+      "name": "fromAlias",
+      "complexType": {
+        "original": "Names | null",
+        "resolved": "\"a\" | \"b\" | null | undefined",
+        "references": {
+          "Names": {
+            "location": "global",
+            "id": "global::Names"
+          }
+        }
+      }
+    },
+    {
+      "name": "fromConst",
+      "complexType": {
+        "original": "keyof typeof spinners",
+        "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "inArray",
+      "complexType": {
+        "original": "SpinnerTypes[]",
+        "resolved": "(\"bubbles\" | \"circles\" | \"lines-small\")[]",
+        "references": {
+          "SpinnerTypes": {
+            "location": "global",
+            "id": "global::SpinnerTypes"
+          }
+        }
+      }
+    },
+    {
+      "name": "list",
+      "complexType": {
+        "original": "readonly string[]",
+        "resolved": "string[] | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "literal",
+      "complexType": {
+        "original": "keyof { 'a-b': 1; c(): void }",
+        "resolved": "\"a-b\" | \"c\" | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "name",
+      "complexType": {
+        "original": "SpinnerTypes",
+        "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | undefined",
+        "references": {
+          "SpinnerTypes": {
+            "location": "global",
+            "id": "global::SpinnerTypes"
+          }
+        }
+      }
+    },
+    {
+      "name": "names",
+      "complexType": {
+        "original": "Names",
+        "resolved": "\"a\" | \"b\" | undefined",
+        "references": {
+          "Names": {
+            "location": "global",
+            "id": "global::Names"
+          }
+        }
+      }
+    },
+    {
+      "name": "pair",
+      "complexType": {
+        "original": "readonly [string, number]",
+        "resolved": "readonly [string, number] | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "pulling",
+      "complexType": {
+        "original": "SpinnerTypes | string | null",
+        "resolved": "null | string | undefined",
+        "references": {
+          "SpinnerTypes": {
+            "location": "global",
+            "id": "global::SpinnerTypes"
+          }
+        }
+      }
+    },
+    {
+      "name": "spinner",
+      "complexType": {
+        "original": "SpinnerTypes | null",
+        "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | null | undefined",
+        "references": {
+          "SpinnerTypes": {
+            "location": "global",
+            "id": "global::SpinnerTypes"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "names2",
+      "complexType": {
+        "signature": "() => Promise<Names>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Names": {
+            "location": "global",
+            "id": "global::Names"
+          }
+        },
+        "return": "Promise<\"a\" | \"b\">"
+      }
+    },
+    {
+      "name": "pick",
+      "complexType": {
+        "signature": "(which: SpinnerTypes) => Promise<SpinnerTypes>",
+        "parameters": [
+          {
+            "name": "which",
+            "type": "\"bubbles\" | \"circles\" | \"lines-small\"",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "SpinnerTypes": {
+            "location": "global",
+            "id": "global::SpinnerTypes"
+          }
+        },
+        "return": "Promise<\"bubbles\" | \"circles\" | \"lines-small\">"
+      }
+    }
+  ]
+}
