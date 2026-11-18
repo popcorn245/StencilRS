@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# The CI build, in order: the compiler, parity with Stencil v5, the components, the Storybook.
+# The CI build, in order: the compiler, parity with Stencil v5, the components, the site (which
+# includes the ui-kit Storybook).
 # The Forgejo workflow (.forgejo/workflows/deploy.yml) runs this, and so can you, in the same
 # image:
 #
 #   docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts/ci.sh
 #
-# Output: storybook/dist (the static Storybook the workflow publishes).
+# Output: site/dist (the static site the workflow publishes; the Storybook is at site/dist/storybook).
+# SITE_BASE (default /) is the path the site is served under, e.g. /StencilRS/ on GitHub Pages.
 set -euo pipefail
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
@@ -59,9 +61,9 @@ npm --prefix examples/ui-kit run check:dev-server
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr
 
-step "Storybook"
-npm --prefix storybook ci
-npm --prefix storybook run build
+step "Site: VitePress (dead links fail it), then the ui-kit Storybook under /storybook/ (base ${SITE_BASE:-/})"
+npm --prefix site ci
+npm --prefix site run build:all
 
-step "Done: storybook/dist"
-du -sh storybook/dist
+step "Done: site/dist"
+du -sh site/dist

@@ -51,16 +51,19 @@ jobs:
       - name: Build and test
         run: bash scripts/ci.sh
 
-      # On main, rebuild the Storybook for the /StencilRS/ base path and publish that copy.
+      # On main, rebuild the site for the /StencilRS/ base path and publish that copy: VitePress with
+      # base /StencilRS/, and the ui-kit Storybook nested at /StencilRS/storybook/.
       # (scripts/ci.sh's own build, for the Forgejo mirror, stays at the root path.)
-      - name: Build Storybook for GitHub Pages
+      - name: Build the site for GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: STORYBOOK_BASE_PATH=/StencilRS/ npm --prefix storybook run build -- -o dist-pages
+        run: |
+          SITE_BASE=/StencilRS/ npm --prefix site run build:all
+          touch site/dist/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          path: storybook/dist-pages
+          path: site/dist
 
   deploy:
     needs: build

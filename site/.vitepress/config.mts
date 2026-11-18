@@ -9,20 +9,60 @@ const github = 'https://github.com/popcorn245/StencilRS';
 // Vue is only the shell: every `ion-` / `pop-` tag is a custom element, built by stencilrs.
 const isCustomElement = (tag: string) => /^(ion|pop)-/.test(tag);
 
+// Where the site is served: '/' by default (Caddy), '/StencilRS/' on GitHub Pages (SITE_BASE).
+// The ui-kit Storybook is built for `${base}storybook/` (site/package.json, build:storybook).
+const raw = process.env.SITE_BASE || '/';
+const base = `/${raw.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
+
+// Links of the old site, which was the Storybook at the root: `/?path=/docs/docs-<name>--docs` for
+// the docs pages, `/?path=/story/ui-kit-...` and `/?path=/docs/ui-kit-...` for the components.
+// Static hosting has no redirect rules, so this runs from every page's <head> and acts only on the
+// root URL with a `path` query (the 404 page, too, for hosts that serve it at the root).
+const oldDocs: Record<string, string> = {
+  introduction: 'guide/introduction',
+  'getting-started': 'guide/getting-started',
+  'writing-components': 'guide/writing-components',
+  'vite-plugin': 'guide/vite-plugin',
+  api: 'guide/api',
+  testing: 'guide/testing',
+  migrating: 'guide/migrating',
+  'how-it-works': 'guide/how-it-works',
+  'how-it-was-built': 'guide/how-it-was-built',
+  parity: 'guide/parity',
+  'stencil-quirks': 'guide/quirks',
+  roadmap: 'guide/roadmap',
+  benchmarks: 'benchmarks',
+  'reference-stencil-v5-compile-pipeline': 'reference/pipeline',
+  'reference-stencil-v5-transformer-catalogue': 'reference/transformers',
+  'reference-project-readmes': 'reference/projects',
+};
+const redirectOldUrls = String.raw`(function(){try{
+var b=${JSON.stringify(base)},l=location,p=l.pathname;
+if(p!==b&&p!==b+'index.html'&&p!==b.slice(0,-1))return;
+var q=new URLSearchParams(l.search).get('path');if(!q)return;
+var d=${JSON.stringify(oldDocs)},m=/^\/docs\/docs-(.+)--docs$/.exec(q),t;
+if(m&&d[m[1]])t=b+d[m[1]];
+else if(m)t=b+'guide/introduction';
+else if(/^\/(story|docs)\//.test(q))t=b+'storybook/?path='+encodeURIComponent(q).replace(/%2F/g,'/');
+if(t)l.replace(t+l.hash);
+}catch(e){}})();`;
+
 export default defineConfig({
   title: 'stencilrs',
   description: 'Stencil v5 components, compiled by Rust. A docs site that is itself compiled by stencilrs.',
   lang: 'en-US',
   cleanUrls: true,
   lastUpdated: false,
+  base,
   outDir: 'dist',
   // Dead links fail the build. The one exemption is the ui-kit Storybook, which `npm run build:all`
   // copies to /storybook/ after the site is built.
   ignoreDeadLinks: [/^\/storybook(\/|$)/],
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
     ['meta', { name: 'theme-color', content: '#c2410c' }],
+    ['script', {}, redirectOldUrls],
   ],
 
   markdown: {
