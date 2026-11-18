@@ -37,7 +37,7 @@ screenshots. If the Chromium Playwright expects is not installed, point `CHROME_
 | `upstream/` | the clone (untrusted data; nothing in it is installed or run) | **no** |
 | `migrated/` | v5 source: `src/`, `stencil.config.ts`, tsconfigs. **#61 adds `vite.config.ts` and `build:stencilrs` against this folder** | **no** |
 | `stencil4/stock/` | upstream `core/` unmodified, for the Stencil 4 build | **no** |
-| `dist-stencil/`, `dist-stencil4/` | build outputs: `dist/` (lazy loader), `components/` (standalone), `css/`, `docs.json` | **no** |
+| `dist-stencil/`, `dist-stencil4/` | build outputs: `dist/` and `loader/` (lazy), `components/` (standalone), `css/`, `docs.json` | **no** |
 
 Both builds are cold (`enableCache: false`), build the same bundles with the same three output targets (lazy
 loader, standalone custom elements, `docs-json`) and write to the same layout, so #65 can time them side by

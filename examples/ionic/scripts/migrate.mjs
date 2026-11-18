@@ -57,6 +57,14 @@ console.log('(full stencil migrate output: logs/migrate.log)\n');
   if (!text.includes('  enableCache: false,\n')) throw new Error('stencil.config.ts: enableCache anchor not found');
   writeFileSync(file, text.replace('  enableCache: false,\n', '  enableCache: false,\n  enableCssOnlyComponents: false,\n'));
 }
+// 4a-ter. config: `stencil migrate` rewrites esmLoaderPath '../loader' to loaderPath '../../loader', which lands
+// outside the build folder (next to package.json). Put the loader beside `dist/`, as the Stencil 4 build does.
+{
+  const file = join(dest, 'stencil.config.ts');
+  const text = readFileSync(file, 'utf8');
+  if (!text.includes("loaderPath: '../../loader'")) throw new Error('stencil.config.ts: loaderPath anchor not found');
+  writeFileSync(file, text.replace("loaderPath: '../../loader'", "loaderPath: '../loader'"));
+}
 // 4a-bis. config: `stencil migrate` turns `extras` into `compat` but leaves `experimentalScopedSlotChanges`, an
 // option v5 no longer has (the behaviour is built in; `compat.lightDomPatches` already defaults to true).
 {
