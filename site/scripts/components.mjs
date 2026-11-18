@@ -104,17 +104,6 @@ function nameDocs(text) {
   return { name: t, docs: '' };
 }
 
-/** Slots: the `@slot` tags, plus the `<slot>`s of the source nobody documented (Stencil lists those too; the default one as "The default slot"). */
-function slotsOf(source, tags) {
-  const out = tags.filter((t) => t.name === 'slot').map((t) => nameDocs(t.text));
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-  for (const m of code.matchAll(/<slot(?:\s+name=["']([^"']*)["'])?[\s/>]/g)) {
-    const name = m[1] ?? '';
-    if (!out.some((s) => s.name === name)) out.push({ name, docs: name === '' ? 'The default slot' : '' });
-  }
-  return out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-}
-
 // --- the .scss `@prop` comments ----------------------------------------------------------------
 
 const scssCache = new Map();
@@ -247,7 +236,8 @@ function componentData(meta, file, diagnostics, docsJson) {
     });
 
   const tags = meta.docs?.tags ?? [];
-  const slots = slotsOf(readFileSync(file, 'utf8'), tags);
+  // analyze() merges the `@slot` tags with the `<slot>`s of render(), as docs-json does.
+  const slots = (meta.slots ?? []).map((x) => ({ name: x.name, docs: x.docs }));
   const parts = tags.filter((t) => t.name === 'part').map((t) => nameDocs(t.text));
 
   // CSS custom properties: `@prop` in the component's JSDoc (none in Ionic's) and in its style files, per mode.
@@ -370,10 +360,10 @@ function diffComponent(meta, comp, dj, diagnostics, source) {
     diff('methods', name, 'docs', normDocs(a.docs?.text), normDocs(d.docs));
   }
 
-  // slots and parts come from the same JSDoc tags
+  // parts come from the JSDoc tags, slots from analyze()
   const tags = meta.docs?.tags ?? [];
   const pick = (name) => tags.filter((t) => t.name === name).map((t) => nameDocs(t.text)).sort((a, b) => (a.name < b.name ? -1 : 1)).map((x) => [x.name, normDocs(x.docs)]);
-  diff('slots', '', 'list', slotsOf(source, tags).map((x) => [x.name, normDocs(x.docs)]), (dj.slots ?? []).map((s) => [s.name, normDocs(s.docs)]));
+  diff('slots', '', 'list', (meta.slots ?? []).map((x) => [x.name, normDocs(x.docs)]), (dj.slots ?? []).map((s) => [s.name, normDocs(s.docs)]));
   diff('parts', '', 'list', pick('part'), (dj.parts ?? []).map((s) => [s.name, normDocs(s.docs)]));
   diff('component', '', 'encapsulation', meta.encapsulation, dj.encapsulation);
   diff('component', '', 'docs', normDocs(meta.docs?.text), normDocs(dj.docs));
