@@ -7,32 +7,35 @@
 
 mod analyze;
 mod cache;
-mod complex_type;
-mod consts;
 pub mod codegen;
 mod compiler_meta;
+mod complex_type;
+mod consts;
 mod default_value;
 mod edits;
 mod eval;
 mod fold_build_flags;
 mod inherit;
 mod jsdoc;
-mod types;
 mod locals;
 pub mod meta;
 mod prop_type;
 mod resolve;
 pub mod scope_css;
 mod sourcemap;
+mod types;
 
 use oxc::allocator::Allocator;
-use oxc::parser::{ParserReturn, Parser};
+use oxc::parser::{Parser, ParserReturn};
 use oxc::span::SourceType;
 use serde::Serialize;
 
 pub use analyze::to_dash_case;
+pub use codegen::{
+    CodegenOptions2 as TranspileOptions, ComponentExport, ComponentMetadata,
+    DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, normalize,
+};
 pub use fold_build_flags::fold_build_flags;
-pub use codegen::{CodegenOptions2 as TranspileOptions, ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, normalize};
 use meta::{ComponentMeta, Diagnostic, Level};
 
 #[derive(Debug, Serialize)]
@@ -54,8 +57,14 @@ pub struct TranspileResult {
     pub base_classes: Vec<String>,
 }
 
-fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (ParserReturn<'a>, Vec<Diagnostic>) {
-    let source_type = SourceType::from_path(file_name).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
+fn parse<'a>(
+    allocator: &'a Allocator,
+    source: &'a str,
+    file_name: &str,
+) -> (ParserReturn<'a>, Vec<Diagnostic>) {
+    let source_type = SourceType::from_path(file_name)
+        .unwrap_or_else(|_| SourceType::tsx())
+        .with_module(true);
     let parsed = Parser::new(allocator, source, source_type).parse();
     let diagnostics = parsed
         .diagnostics
@@ -66,7 +75,12 @@ fn parse<'a>(allocator: &'a Allocator, source: &'a str, file_name: &str) -> (Par
                 .first()
                 .map(|l| (l.offset() as u32, (l.offset() + l.len()) as u32))
                 .unwrap_or((0, 0));
-            Diagnostic { level: Level::Error, message: e.message.to_string(), start, end }
+            Diagnostic {
+                level: Level::Error,
+                message: e.message.to_string(),
+                start,
+                end,
+            }
         })
         .collect();
     (parsed, diagnostics)
@@ -80,40 +94,82 @@ pub fn analyze(source: &str, file_name: &str) -> AnalyzeResult {
 
 /// `analyze`, optionally build-accurate: relative imports followed, lib types known, as a full
 /// `stencil build` sees the component.
-pub fn analyze_with(source: &str, file_name: &str, resolve_imports: bool, complex_types: bool) -> AnalyzeResult {
+pub fn analyze_with(
+    source: &str,
+    file_name: &str,
+    resolve_imports: bool,
+    complex_types: bool,
+) -> AnalyzeResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, file_name);
     let resolver = resolve_imports.then(|| resolve::Resolver::new(file_name, complex_types));
-    let analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), file_name, complex_types);
+    let analysis = analyze::analyze_program(
+        &parsed.program,
+        source,
+        resolver.as_ref(),
+        file_name,
+        complex_types,
+    );
     diagnostics.extend(analysis.diagnostics);
-    AnalyzeResult { components: analysis.components, diagnostics }
+    AnalyzeResult {
+        components: analysis.components,
+        diagnostics,
+    }
 }
 
 /// Analyse one component module and generate its code: `customelement` by default.
 pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     let allocator = Allocator::default();
     let (parsed, mut diagnostics) = parse(&allocator, source, &opts.file);
-    let resolver = opts.resolve_imports.then(|| resolve::Resolver::new(&opts.file, opts.complex_types));
-    let mut analysis = analyze::analyze_program(&parsed.program, source, resolver.as_ref(), &opts.file, opts.complex_types);
+    let resolver = opts
+        .resolve_imports
+        .then(|| resolve::Resolver::new(&opts.file, opts.complex_types));
+    let mut analysis = analyze::analyze_program(
+        &parsed.program,
+        source,
+        resolver.as_ref(),
+        &opts.file,
+        opts.complex_types,
+    );
     // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
     // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.
     if opts.component_metadata == ComponentMetadata::CompilerStatic
         && !analysis.failed
-        && analysis.components.iter().any(|c| c.watchers.iter().any(|w| w.prop_name == "[object Object]"))
+        && analysis
+            .components
+            .iter()
+            .any(|c| c.watchers.iter().any(|w| w.prop_name == "[object Object]"))
     {
         analysis = analyze::Analysis {
             components: Vec::new(),
-            diagnostics: vec![Diagnostic { level: Level::Error, message: analyze::NEGATIVE_NUMBER_ERROR.into(), start: 0, end: 0 }],
+            diagnostics: vec![Diagnostic {
+                level: Level::Error,
+                message: analyze::NEGATIVE_NUMBER_ERROR.into(),
+                start: 0,
+                end: 0,
+            }],
             failed: true,
         };
     }
     diagnostics.extend(analysis.diagnostics);
     // When Stencil throws, `transpileSync` returns the source as it came in.
-    let generated = if analysis.failed { Ok(codegen::Generated { code: source.to_owned(), map: None }) } else { codegen::generate(&parsed.program, source, &analysis.components, opts) };
+    let generated = if analysis.failed {
+        Ok(codegen::Generated {
+            code: source.to_owned(),
+            map: None,
+        })
+    } else {
+        codegen::generate(&parsed.program, source, &analysis.components, opts)
+    };
     let (code, map) = match generated {
         Ok(generated) => (generated.code, generated.map),
         Err(message) => {
-            diagnostics.push(Diagnostic { level: Level::Error, message, start: 0, end: 0 });
+            diagnostics.push(Diagnostic {
+                level: Level::Error,
+                message,
+                start: 0,
+                end: 0,
+            });
             (String::new(), None)
         }
     };
@@ -123,5 +179,11 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
             base_classes.push(file.clone());
         }
     }
-    TranspileResult { code, map, components: analysis.components, diagnostics, base_classes }
+    TranspileResult {
+        code,
+        map,
+        components: analysis.components,
+        diagnostics,
+        base_classes,
+    }
 }

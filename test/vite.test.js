@@ -73,3 +73,56 @@ test('a file stencilrs has not ported falls back to Stencil\'s compiler, loaded 
 test('fallback: false makes an unported file an error', async () => {
   await assert.rejects(run('unported.tsx', { fallback: false }), /not ported yet/);
 });
+
+test('a mode stylesheet of a scoped component is scoped to sc-<tag>-<mode>, the class the runtime sets', async () => {
+  write('moded.tsx', `import { Component, h } from '@stencil/core';
+@Component({ tag: 'cmp-moded', styleUrls: { ios: 'moded.ios.css', md: 'moded.md.css' }, encapsulation: { type: 'scoped' } })
+export class CmpModed { render() { return <div>x</div>; } }
+`);
+  write('moded.ios.css', ':host { display: block; } .a { color: red; }');
+  write('moded.md.css', ':host { display: flex; }');
+  const code = await run('moded.tsx');
+  assert.match(code, /\.sc-cmp-moded-ios-h/);
+  assert.match(code, /\.sc-cmp-moded-md-h/);
+  assert.doesNotMatch(code, /\.sc-cmp-moded-h\b/);
+});
+
+test('a util importing from @stencil/core gets the runtime the components use', async () => {
+  write('mode-util.ts', `import { getMode } from '@stencil/core';\nexport const m = (el: HTMLElement) => getMode(el);\n`);
+  write('uses-util.ts', `import './ported.tsx';\nimport { m } from './mode-util.ts';\nconsole.log(m);\n`);
+  // (the shared `run` externalizes bare '@stencil/core' before any plugin sees it: only its subpaths here)
+  const result = await build({
+    root: project,
+    configFile: false,
+    logLevel: 'silent',
+    plugins: [stencilrs()],
+    build: { write: false, lib: { entry: join(project, 'src', 'uses-util.ts'), formats: ['es'], fileName: 'out' }, rollupOptions: { external: [/^@stencil\/core\//] } },
+  });
+  const code = [result].flat().flatMap((r) => r.output.filter((o) => o.type === 'chunk').map((o) => o.code)).join('\n');
+  assert.match(code, /@stencil\/core\/runtime\/client\/standalone/);
+  assert.doesNotMatch(code, /from ['"]@stencil\/core['"]/);
+});
+
+test('a tsconfig with useDefineForClassFields: false makes @Prop defaults constructor assignments', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'stencilrs-udf-'));
+  try {
+    mkdirSync(join(dir, 'src'));
+    writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({ compilerOptions: { jsx: 'react', jsxFactory: 'h', useDefineForClassFields: false } }));
+    writeFileSync(
+      join(dir, 'src', 'p.tsx'),
+      `import { Component, Prop, h } from '@stencil/core';\n@Component({ tag: 'cmp-p' })\nexport class CmpP { @Prop() kind = 'a'; render() { return <div>{this.kind}</div>; } }\n`,
+    );
+    const result = await build({
+      root: dir,
+      configFile: false,
+      logLevel: 'silent',
+      plugins: [stencilrs()],
+      build: { write: false, lib: { entry: join(dir, 'src', 'p.tsx'), formats: ['es'], fileName: 'out' }, rollupOptions: { external: [/^@stencil\/core/] } },
+    });
+    const code = [result].flat().flatMap((r) => r.output.filter((o) => o.type === 'chunk').map((o) => o.code)).join('\n');
+    assert.match(code, /__registerHost\(\)[\s\S]*this\.kind = "a"/);
+    assert.doesNotMatch(code, /^\s*kind = "a"/m);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

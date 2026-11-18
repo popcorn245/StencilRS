@@ -10,8 +10,8 @@
 //! in Stencil's single-file program, imports are unresolved.
 
 use oxc::ast::ast::{
-    BinaryOperator, Expression, ObjectExpression, ObjectPropertyKind, PropertyKey, TSEnumDeclaration,
-    TSEnumMemberName, TSLiteral, TSType, TSTypeName, UnaryOperator,
+    BinaryOperator, Expression, ObjectExpression, ObjectPropertyKind, PropertyKey,
+    TSEnumDeclaration, TSEnumMemberName, TSLiteral, TSType, TSTypeName, UnaryOperator,
 };
 
 use crate::eval::property_key_name;
@@ -40,7 +40,11 @@ pub fn js_number(n: f64) -> String {
         return "NaN".into();
     }
     if n.is_infinite() {
-        return if n > 0.0 { "Infinity".into() } else { "-Infinity".into() };
+        return if n > 0.0 {
+            "Infinity".into()
+        } else {
+            "-Infinity".into()
+        };
     }
     if n == 0.0 {
         return "0".into();
@@ -74,10 +78,12 @@ fn literal_depth(expr: &Expression, locals: &Locals, depth: u32) -> Option<Lit> 
     match expr {
         Expression::StringLiteral(s) => Some(Lit::Str(s.value.to_string())),
         Expression::NumericLiteral(n) => Some(Lit::Num(n.value)),
-        Expression::UnaryExpression(u) if u.operator == UnaryOperator::UnaryNegation => match &u.argument {
-            Expression::NumericLiteral(n) => Some(Lit::Num(-n.value)),
-            _ => None,
-        },
+        Expression::UnaryExpression(u) if u.operator == UnaryOperator::UnaryNegation => {
+            match &u.argument {
+                Expression::NumericLiteral(n) => Some(Lit::Num(-n.value)),
+                _ => None,
+            }
+        }
         Expression::TemplateLiteral(t) => {
             let mut out = String::new();
             for (i, quasi) in t.quasis.iter().enumerate() {
@@ -99,7 +105,9 @@ fn literal_depth(expr: &Expression, locals: &Locals, depth: u32) -> Option<Lit> 
             }
         }
         Expression::Identifier(id) => name_literal_depth(id.name.as_str(), locals, next),
-        Expression::StaticMemberExpression(m) => member(&m.object, m.property.name.as_str(), locals, next),
+        Expression::StaticMemberExpression(m) => {
+            member(&m.object, m.property.name.as_str(), locals, next)
+        }
         Expression::ComputedMemberExpression(m) => match &m.expression {
             Expression::StringLiteral(key) => member(&m.object, key.value.as_str(), locals, next),
             _ => None,
@@ -134,7 +142,12 @@ pub fn static_member_literals(name: &str, locals: &Locals) -> Vec<(String, Optio
     locals
         .statics
         .get(name)
-        .map(|statics| statics.iter().map(|f| (f.name.clone(), static_literal(f, locals, 0))).collect())
+        .map(|statics| {
+            statics
+                .iter()
+                .map(|f| (f.name.clone(), static_literal(f, locals, 0)))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -151,8 +164,13 @@ fn static_literal(field: &StaticField, locals: &Locals, depth: u32) -> Option<Li
 fn imported_member(object: &Expression, name: &str, locals: &Locals) -> Option<Lit> {
     fn summary(expr: &Expression, locals: &Locals) -> Option<ValueSummary> {
         match expr {
-            Expression::Identifier(id) if !locals.values.contains_key(id.name.as_str()) => locals.imported_value(id.name.as_str()),
-            Expression::StaticMemberExpression(m) => summary(&m.object, locals)?.members.get(m.property.name.as_str()).cloned(),
+            Expression::Identifier(id) if !locals.values.contains_key(id.name.as_str()) => {
+                locals.imported_value(id.name.as_str())
+            }
+            Expression::StaticMemberExpression(m) => summary(&m.object, locals)?
+                .members
+                .get(m.property.name.as_str())
+                .cloned(),
             _ => None,
         }
     }
@@ -187,7 +205,11 @@ fn member(object: &Expression, name: &str, locals: &Locals, depth: u32) -> Optio
 
 /// The object literal an expression names, and whether it is read-only (`as const`, here or
 /// on an enclosing object).
-fn const_object<'e, 'a>(expr: &'e Expression<'a>, locals: &'e Locals<'a, 'e>, depth: u32) -> Option<(&'e ObjectExpression<'a>, bool)> {
+fn const_object<'e, 'a>(
+    expr: &'e Expression<'a>,
+    locals: &'e Locals<'a, 'e>,
+    depth: u32,
+) -> Option<(&'e ObjectExpression<'a>, bool)> {
     if depth > MAX_DEPTH {
         return None;
     }
@@ -203,16 +225,29 @@ fn const_object<'e, 'a>(expr: &'e Expression<'a>, locals: &'e Locals<'a, 'e>, de
         }
         Expression::StaticMemberExpression(m) => {
             let (parent, as_const) = const_object(&m.object, locals, depth + 1)?;
-            let (o, inner) = const_object(object_property(parent, m.property.name.as_str())?, locals, depth + 1)?;
+            let (o, inner) = const_object(
+                object_property(parent, m.property.name.as_str())?,
+                locals,
+                depth + 1,
+            )?;
             Some((o, as_const || inner))
         }
         _ => None,
     }
 }
 
-fn object_property<'e, 'a>(obj: &'e ObjectExpression<'a>, name: &str) -> Option<&'e Expression<'a>> {
+fn object_property<'e, 'a>(
+    obj: &'e ObjectExpression<'a>,
+    name: &str,
+) -> Option<&'e Expression<'a>> {
     obj.properties.iter().rev().find_map(|p| match p {
-        ObjectPropertyKind::ObjectProperty(p) if !p.computed && !p.shorthand && property_key_name(&p.key).as_deref() == Some(name) => Some(&p.value),
+        ObjectPropertyKind::ObjectProperty(p)
+            if !p.computed
+                && !p.shorthand
+                && property_key_name(&p.key).as_deref() == Some(name) =>
+        {
+            Some(&p.value)
+        }
         _ => None,
     })
 }
@@ -223,24 +258,34 @@ pub fn is_as_const(t: &TSType) -> bool {
 
 /// The value of a literal type annotation (`'a'`, `1`, `-1`).
 fn type_literal(t: &TSType) -> Option<Lit> {
-    let TSType::TSLiteralType(l) = t else { return None };
+    let TSType::TSLiteralType(l) = t else {
+        return None;
+    };
     match &l.literal {
         TSLiteral::StringLiteral(s) => Some(Lit::Str(s.value.to_string())),
         TSLiteral::NumericLiteral(n) => Some(Lit::Num(n.value)),
-        TSLiteral::TemplateLiteral(t) if t.expressions.is_empty() => {
-            Some(Lit::Str(t.quasis.iter().filter_map(|q| q.value.cooked.as_ref().map(|c| c.to_string())).collect()))
+        TSLiteral::TemplateLiteral(t) if t.expressions.is_empty() => Some(Lit::Str(
+            t.quasis
+                .iter()
+                .filter_map(|q| q.value.cooked.as_ref().map(|c| c.to_string()))
+                .collect(),
+        )),
+        TSLiteral::UnaryExpression(u) if u.operator == UnaryOperator::UnaryNegation => {
+            match &u.argument {
+                Expression::NumericLiteral(n) => Some(Lit::Num(-n.value)),
+                _ => None,
+            }
         }
-        TSLiteral::UnaryExpression(u) if u.operator == UnaryOperator::UnaryNegation => match &u.argument {
-            Expression::NumericLiteral(n) => Some(Lit::Num(-n.value)),
-            _ => None,
-        },
         _ => None,
     }
 }
 
 /// The value of enum member `name`.
 fn enum_member(e: &TSEnumDeclaration, name: &str, locals: &Locals, depth: u32) -> Option<Lit> {
-    enum_values_depth(e, locals, depth).into_iter().find(|(k, _)| k == name).and_then(|(_, v)| v)
+    enum_values_depth(e, locals, depth)
+        .into_iter()
+        .find(|(k, _)| k == name)
+        .and_then(|(_, v)| v)
 }
 
 /// Every member of an enum with its value: TypeScript's constant enum evaluation (literals,
@@ -250,14 +295,24 @@ pub fn enum_values(e: &TSEnumDeclaration, locals: &Locals) -> Vec<(String, Optio
     enum_values_depth(e, locals, 0)
 }
 
-fn enum_values_depth(e: &TSEnumDeclaration, locals: &Locals, depth: u32) -> Vec<(String, Option<Lit>)> {
+fn enum_values_depth(
+    e: &TSEnumDeclaration,
+    locals: &Locals,
+    depth: u32,
+) -> Vec<(String, Option<Lit>)> {
     let mut values: Vec<(String, Option<Lit>)> = Vec::new();
     let mut next = Some(0.0);
     for m in &e.body.members {
         let key = match &m.id {
             TSEnumMemberName::Identifier(id) => id.name.to_string(),
-            TSEnumMemberName::String(s) | TSEnumMemberName::ComputedString(s) => s.value.to_string(),
-            TSEnumMemberName::ComputedTemplateString(t) => t.quasis.iter().filter_map(|q| q.value.cooked.as_ref().map(|c| c.to_string())).collect(),
+            TSEnumMemberName::String(s) | TSEnumMemberName::ComputedString(s) => {
+                s.value.to_string()
+            }
+            TSEnumMemberName::ComputedTemplateString(t) => t
+                .quasis
+                .iter()
+                .filter_map(|q| q.value.cooked.as_ref().map(|c| c.to_string()))
+                .collect(),
         };
         let value = match &m.initializer {
             Some(init) => enum_expr(init, e, &values, locals, depth + 1),
@@ -272,20 +327,36 @@ fn enum_values_depth(e: &TSEnumDeclaration, locals: &Locals, depth: u32) -> Vec<
     values
 }
 
-fn enum_expr(expr: &Expression, e: &TSEnumDeclaration, earlier: &[(String, Option<Lit>)], locals: &Locals, depth: u32) -> Option<Lit> {
+fn enum_expr(
+    expr: &Expression,
+    e: &TSEnumDeclaration,
+    earlier: &[(String, Option<Lit>)],
+    locals: &Locals,
+    depth: u32,
+) -> Option<Lit> {
     if depth > MAX_DEPTH {
         return None;
     }
     let recurse = |x: &Expression| enum_expr(x, e, earlier, locals, depth + 1);
-    let earlier_value = |name: &str| earlier.iter().rev().find(|(k, _)| k == name).and_then(|(_, v)| v.clone());
+    let earlier_value = |name: &str| {
+        earlier
+            .iter()
+            .rev()
+            .find(|(k, _)| k == name)
+            .and_then(|(_, v)| v.clone())
+    };
     match expr {
-        Expression::Identifier(id) => earlier_value(id.name.as_str()).or_else(|| literal_depth(expr, locals, depth)),
+        Expression::Identifier(id) => {
+            earlier_value(id.name.as_str()).or_else(|| literal_depth(expr, locals, depth))
+        }
         Expression::StaticMemberExpression(m) if matches!(&m.object, Expression::Identifier(o) if o.name == e.id.name) => {
             earlier_value(m.property.name.as_str())
         }
         Expression::ParenthesizedExpression(p) => recurse(&p.expression),
         Expression::UnaryExpression(u) => {
-            let Lit::Num(n) = recurse(&u.argument)? else { return None };
+            let Lit::Num(n) = recurse(&u.argument)? else {
+                return None;
+            };
             Some(Lit::Num(match u.operator {
                 UnaryOperator::UnaryNegation => -n,
                 UnaryOperator::UnaryPlus => n,
@@ -304,14 +375,20 @@ fn enum_expr(expr: &Expression, e: &TSEnumDeclaration, earlier: &[(String, Optio
                     BinaryOperator::Remainder => l % r,
                     BinaryOperator::Exponential => l.powf(r),
                     BinaryOperator::ShiftLeft => to_int32(l).wrapping_shl(to_uint32(r) & 31) as f64,
-                    BinaryOperator::ShiftRight => to_int32(l).wrapping_shr(to_uint32(r) & 31) as f64,
-                    BinaryOperator::ShiftRightZeroFill => to_uint32(l).wrapping_shr(to_uint32(r) & 31) as f64,
+                    BinaryOperator::ShiftRight => {
+                        to_int32(l).wrapping_shr(to_uint32(r) & 31) as f64
+                    }
+                    BinaryOperator::ShiftRightZeroFill => {
+                        to_uint32(l).wrapping_shr(to_uint32(r) & 31) as f64
+                    }
                     BinaryOperator::BitwiseAnd => (to_int32(l) & to_int32(r)) as f64,
                     BinaryOperator::BitwiseOR => (to_int32(l) | to_int32(r)) as f64,
                     BinaryOperator::BitwiseXOR => (to_int32(l) ^ to_int32(r)) as f64,
                     _ => return None,
                 })),
-                (l, r) if b.operator == BinaryOperator::Addition => Some(Lit::Str(l.to_js_string() + &r.to_js_string())),
+                (l, r) if b.operator == BinaryOperator::Addition => {
+                    Some(Lit::Str(l.to_js_string() + &r.to_js_string()))
+                }
                 _ => None,
             }
         }
@@ -340,8 +417,11 @@ pub fn order_like_object_keys<T>(items: &mut [T], key: impl Fn(&T) -> &str) {
 }
 
 fn array_index(key: &str) -> Option<u32> {
-    let canonical = key == "0" || (!key.starts_with('0') && !key.is_empty() && key.bytes().all(|b| b.is_ascii_digit()));
-    key.parse::<u32>().ok().filter(|&i| canonical && i != u32::MAX)
+    let canonical = key == "0"
+        || (!key.starts_with('0') && !key.is_empty() && key.bytes().all(|b| b.is_ascii_digit()));
+    key.parse::<u32>()
+        .ok()
+        .filter(|&i| canonical && i != u32::MAX)
 }
 
 /// A computed member name's source text with its brackets, as `getText()` gives it (`[KEY]`).

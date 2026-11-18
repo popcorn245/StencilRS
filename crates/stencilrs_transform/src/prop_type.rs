@@ -13,9 +13,8 @@
 //!   `Record<…>`, `HTMLElement`, …) are object types, so `unknown`.
 
 use oxc::ast::ast::{
-    Expression, ObjectPropertyKind, PropertyKey, TSEnumDeclaration, TSLiteral,
-    TSSignature, TSType, TSTypeName, TSTypeOperatorOperator, TSTypeQueryExprName, TSTypeReference,
-    UnaryOperator,
+    Expression, ObjectPropertyKind, PropertyKey, TSEnumDeclaration, TSLiteral, TSSignature, TSType,
+    TSTypeName, TSTypeOperatorOperator, TSTypeQueryExprName, TSTypeReference, UnaryOperator,
 };
 use oxc::span::GetSpan;
 
@@ -31,11 +30,36 @@ pub struct Flags {
 }
 
 impl Flags {
-    const ANY: Flags = Flags { any: true, string: false, number: false, boolean: false };
-    const STRING: Flags = Flags { any: false, string: true, number: false, boolean: false };
-    const NUMBER: Flags = Flags { any: false, string: false, number: true, boolean: false };
-    const BOOLEAN: Flags = Flags { any: false, string: false, number: false, boolean: true };
-    const NONE: Flags = Flags { any: false, string: false, number: false, boolean: false };
+    const ANY: Flags = Flags {
+        any: true,
+        string: false,
+        number: false,
+        boolean: false,
+    };
+    const STRING: Flags = Flags {
+        any: false,
+        string: true,
+        number: false,
+        boolean: false,
+    };
+    const NUMBER: Flags = Flags {
+        any: false,
+        string: false,
+        number: true,
+        boolean: false,
+    };
+    const BOOLEAN: Flags = Flags {
+        any: false,
+        string: false,
+        number: false,
+        boolean: true,
+    };
+    const NONE: Flags = Flags {
+        any: false,
+        string: false,
+        number: false,
+        boolean: false,
+    };
 
     fn merge(&mut self, other: Flags) {
         self.any |= other.any;
@@ -77,7 +101,11 @@ pub fn classify_annotation(ty: &TSType, locals: &Locals) -> PropType {
 
 /// A prop with no annotation: its widened initializer type, and how `typeToString` prints it
 /// (`complexType.original`).
-pub fn classify_initializer(init: Option<&Expression>, locals: &Locals, source: &str) -> (PropType, String) {
+pub fn classify_initializer(
+    init: Option<&Expression>,
+    locals: &Locals,
+    source: &str,
+) -> (PropType, String) {
     match init {
         // No annotation and no initializer is an implicit `any`.
         None => (PropType::Any, "any".into()),
@@ -119,7 +147,9 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         Expression::StringLiteral(_) | Expression::TemplateLiteral(_) => named(PropType::String),
         Expression::NumericLiteral(_) => named(PropType::Number),
         Expression::UnaryExpression(u) => match u.operator {
-            UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus | UnaryOperator::BitwiseNot => named(PropType::Number),
+            UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus | UnaryOperator::BitwiseNot => {
+                named(PropType::Number)
+            }
             UnaryOperator::LogicalNot => named(PropType::Boolean),
             UnaryOperator::Typeof => named(PropType::String),
             _ => named(PropType::Any),
@@ -129,14 +159,23 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         // Single-file: without the lib, `Array` is missing and an array literal prints as `{}`.
         Expression::ArrayExpression(_) if !locals.resolving() => (PropType::Unknown, "{}".into()),
         Expression::ArrayExpression(_) => (PropType::Unknown, "any[]".into()),
-        Expression::ObjectExpression(obj) => (PropType::Unknown, print_object_literal(obj, locals, source, depth)),
+        Expression::ObjectExpression(obj) => (
+            PropType::Unknown,
+            print_object_literal(obj, locals, source, depth),
+        ),
         Expression::ParenthesizedExpression(p) => infer(&p.expression, locals, source, depth + 1),
         Expression::TSNonNullExpression(e) => infer(&e.expression, locals, source, depth + 1),
         Expression::TSSatisfiesExpression(e) => infer(&e.expression, locals, source, depth + 1),
-        Expression::TSAsExpression(e) => asserted(&e.type_annotation, &e.expression, locals, source, depth),
-        Expression::TSTypeAssertion(e) => asserted(&e.type_annotation, &e.expression, locals, source, depth),
+        Expression::TSAsExpression(e) => {
+            asserted(&e.type_annotation, &e.expression, locals, source, depth)
+        }
+        Expression::TSTypeAssertion(e) => {
+            asserted(&e.type_annotation, &e.expression, locals, source, depth)
+        }
         Expression::Identifier(id) => match locals.values.get(id.name.as_str()) {
-            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => infer(init, locals, source, depth + 1),
+            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+                infer(init, locals, source, depth + 1)
+            }
             Some(LocalValue::Object | LocalValue::Function(_)) => named(PropType::Unknown),
             Some(LocalValue::Let(None)) => named(PropType::Any),
             None => match locals.imported_value(id.name.as_str()) {
@@ -146,7 +185,13 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
             },
         },
         Expression::StaticMemberExpression(m) => match &m.object {
-            Expression::Identifier(obj) => match member_value(obj.name.as_str(), m.property.name.as_str(), locals, source, depth) {
+            Expression::Identifier(obj) => match member_value(
+                obj.name.as_str(),
+                m.property.name.as_str(),
+                locals,
+                source,
+                depth,
+            ) {
                 Some(v) => v,
                 None => named(PropType::Any),
             },
@@ -154,9 +199,15 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         },
         Expression::CallExpression(call) => match &call.callee {
             Expression::Identifier(f) => match locals.values.get(f.name.as_str()) {
-                Some(LocalValue::Function(Some(ret))) => (classify_annotation(ret, locals), ret.span().source_text(source).to_owned()),
+                Some(LocalValue::Function(Some(ret))) => (
+                    classify_annotation(ret, locals),
+                    ret.span().source_text(source).to_owned(),
+                ),
                 Some(_) => named(PropType::Any),
-                None => match locals.imported_value(f.name.as_str()).and_then(|v| v.returns) {
+                None => match locals
+                    .imported_value(f.name.as_str())
+                    .and_then(|v| v.returns)
+                {
                     Some(r) => r,
                     None => named(PropType::Any),
                 },
@@ -171,16 +222,32 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
 }
 
 /// `OBJ.member` for a same-file `const OBJ = { … }` or an imported one.
-fn member_value(obj: &str, member: &str, locals: &Locals, source: &str, depth: u8) -> Option<(PropType, String)> {
+fn member_value(
+    obj: &str,
+    member: &str,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> Option<(PropType, String)> {
     if let Some(init) = locals.const_init(obj) {
         let (as_const, inner) = strip_as_const(init);
-        let Expression::ObjectExpression(o) = inner else { return None };
+        let Expression::ObjectExpression(o) = inner else {
+            return None;
+        };
         let value = o.properties.iter().rev().find_map(|p| match p {
-            ObjectPropertyKind::ObjectProperty(p) if crate::eval::property_key_name(&p.key).as_deref() == Some(member) => Some(&p.value),
+            ObjectPropertyKind::ObjectProperty(p)
+                if crate::eval::property_key_name(&p.key).as_deref() == Some(member) =>
+            {
+                Some(&p.value)
+            }
             _ => None,
         })?;
         let (t, printed) = infer(value, locals, source, depth + 1);
-        let printed = if as_const && is_literal(value) { value.span().source_text(source).to_owned() } else { printed };
+        let printed = if as_const && is_literal(value) {
+            value.span().source_text(source).to_owned()
+        } else {
+            printed
+        };
         return Some((t, printed));
     }
     let v = locals.imported_value(obj)?.members.get(member)?.clone();
@@ -201,26 +268,53 @@ fn strip_as_const<'x, 'a>(e: &'x Expression<'a>) -> (bool, &'x Expression<'a>) {
 }
 
 fn is_literal(e: &Expression) -> bool {
-    matches!(e, Expression::StringLiteral(_) | Expression::NumericLiteral(_) | Expression::BooleanLiteral(_))
-        || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
+    matches!(
+        e,
+        Expression::StringLiteral(_)
+            | Expression::NumericLiteral(_)
+            | Expression::BooleanLiteral(_)
+    ) || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
 }
 
-fn asserted(ty: &TSType, expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropType, String) {
-    if matches!(ty, TSType::TSTypeReference(r) if matches!(&r.type_name, TSTypeName::IdentifierReference(id) if id.name == "const")) {
-        return if locals.resolving() { infer(expr, locals, source, depth + 1) } else { named(PropType::Any) };
+fn asserted(
+    ty: &TSType,
+    expr: &Expression,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> (PropType, String) {
+    if matches!(ty, TSType::TSTypeReference(r) if matches!(&r.type_name, TSTypeName::IdentifierReference(id) if id.name == "const"))
+    {
+        return if locals.resolving() {
+            infer(expr, locals, source, depth + 1)
+        } else {
+            named(PropType::Any)
+        };
     }
-    (classify_annotation(ty, locals), ty.span().source_text(source).to_owned())
+    (
+        classify_annotation(ty, locals),
+        ty.span().source_text(source).to_owned(),
+    )
 }
 
 /// How TypeScript prints the widened type of an object literal: `{ a: number; b: string; }`.
-fn print_object_literal(obj: &oxc::ast::ast::ObjectExpression, locals: &Locals, source: &str, depth: u8) -> String {
+fn print_object_literal(
+    obj: &oxc::ast::ast::ObjectExpression,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> String {
     if obj.properties.is_empty() {
         return "{}".into();
     }
     let mut parts = Vec::new();
     for prop in &obj.properties {
-        let ObjectPropertyKind::ObjectProperty(p) = prop else { return obj.span.source_text(source).to_owned() };
-        let Some(key) = crate::eval::property_key_name(&p.key) else { return obj.span.source_text(source).to_owned() };
+        let ObjectPropertyKind::ObjectProperty(p) = prop else {
+            return obj.span.source_text(source).to_owned();
+        };
+        let Some(key) = crate::eval::property_key_name(&p.key) else {
+            return obj.span.source_text(source).to_owned();
+        };
         let (_, ty) = infer(&p.value, locals, source, depth + 1);
         parts.push(format!("{key}: {ty};"));
     }
@@ -239,7 +333,11 @@ fn flags_of(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
         TSType::TSLiteralType(lit) => match &lit.literal {
             TSLiteral::StringLiteral(_) | TSLiteral::TemplateLiteral(_) => Flags::STRING,
             TSLiteral::NumericLiteral(_) => Flags::NUMBER,
-            TSLiteral::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)) => Flags::NUMBER,
+            TSLiteral::UnaryExpression(u)
+                if matches!(u.argument, Expression::NumericLiteral(_)) =>
+            {
+                Flags::NUMBER
+            }
             TSLiteral::BooleanLiteral(_) => Flags::BOOLEAN,
             _ => Flags::NONE,
         },
@@ -260,7 +358,9 @@ fn flags_of(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
             TSTypeQueryExprName::IdentifierReference(id) => match id.name.as_str() {
                 "globalThis" => Flags::NONE,
                 name => match locals.values.get(name) {
-                    Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => Flags::from_prop_type(infer(init, locals, "", depth + 1).0),
+                    Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+                        Flags::from_prop_type(infer(init, locals, "", depth + 1).0)
+                    }
                     Some(LocalValue::Object | LocalValue::Function(_)) => Flags::NONE,
                     _ => match locals.imported_value(name).and_then(|v| v.prop_type) {
                         Some(t) => Flags::from_prop_type(t),
@@ -295,34 +395,39 @@ fn keyof_flags(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
     match ty {
         TSType::TSTypeLiteral(lit) => signature_flags(&lit.members),
         TSType::TSTypeReference(r) => match &r.type_name {
-            TSTypeName::IdentifierReference(id) => keyof_identifier(id.name.as_str(), locals, depth),
+            TSTypeName::IdentifierReference(id) => {
+                keyof_identifier(id.name.as_str(), locals, depth)
+            }
             _ => Flags::ANY,
         },
         // `keyof typeof OBJ` for a `const OBJ = { … }`: its keys.
         TSType::TSTypeQuery(q) => match &q.expr_name {
-            TSTypeQueryExprName::IdentifierReference(id) => match locals.const_init(id.name.as_str()) {
-                Some(init) => match strip_as_const(init).1 {
-                    Expression::ObjectExpression(obj) => {
-                        let mut f = Flags::NONE;
-                        for p in &obj.properties {
-                            match p {
-                                ObjectPropertyKind::ObjectProperty(p) => match &p.key {
-                                    PropertyKey::NumericLiteral(_) => f.number = true,
-                                    PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_) => f.string = true,
-                                    _ => f.any = true,
-                                },
-                                ObjectPropertyKind::SpreadProperty(_) => f.any = true,
+            TSTypeQueryExprName::IdentifierReference(id) => {
+                match locals.const_init(id.name.as_str()) {
+                    Some(init) => match strip_as_const(init).1 {
+                        Expression::ObjectExpression(obj) => {
+                            let mut f = Flags::NONE;
+                            for p in &obj.properties {
+                                match p {
+                                    ObjectPropertyKind::ObjectProperty(p) => match &p.key {
+                                        PropertyKey::NumericLiteral(_) => f.number = true,
+                                        PropertyKey::StaticIdentifier(_)
+                                        | PropertyKey::StringLiteral(_) => f.string = true,
+                                        _ => f.any = true,
+                                    },
+                                    ObjectPropertyKind::SpreadProperty(_) => f.any = true,
+                                }
                             }
+                            f
                         }
-                        f
-                    }
-                    _ => Flags::ANY,
-                },
-                None => match locals.imported_value(id.name.as_str()) {
-                    Some(v) if !v.members.is_empty() => Flags::STRING,
-                    _ => Flags::ANY,
-                },
-            },
+                        _ => Flags::ANY,
+                    },
+                    None => match locals.imported_value(id.name.as_str()) {
+                        Some(v) if !v.members.is_empty() => Flags::STRING,
+                        _ => Flags::ANY,
+                    },
+                }
+            }
             _ => Flags::ANY,
         },
         _ => Flags::ANY,
@@ -361,7 +466,9 @@ fn signature_flags(members: &[TSSignature]) -> Flags {
         };
         match key {
             Some(PropertyKey::NumericLiteral(_)) => f.number = true,
-            Some(PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_)) => f.string = true,
+            Some(PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_)) => {
+                f.string = true
+            }
             _ => f.any = true,
         }
     }
@@ -382,7 +489,11 @@ fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
                 Some(_) => Flags::ANY,
                 None => match locals.imported_type(id.name.as_str()) {
                     Some(t) => t.flags,
-                    None if locals.resolving() && !locals.is_unresolved_import(id.name.as_str()) => Flags::NONE,
+                    None if locals.resolving()
+                        && !locals.is_unresolved_import(id.name.as_str()) =>
+                    {
+                        Flags::NONE
+                    }
                     None => Flags::ANY,
                 },
             },
@@ -412,8 +523,14 @@ fn identifier_flags(name: &str, first_arg: Option<&TSType>, locals: &Locals, dep
     // Build-accurate: a lib type.
     match name {
         "Uppercase" | "Lowercase" | "Capitalize" | "Uncapitalize" => Flags::STRING,
-        "PropertyKey" => Flags { string: true, number: true, ..Flags::NONE },
-        "NonNullable" | "Readonly" | "NoInfer" => first_arg.map_or(Flags::NONE, |t| flags_of(t, locals, depth + 1)),
+        "PropertyKey" => Flags {
+            string: true,
+            number: true,
+            ..Flags::NONE
+        },
+        "NonNullable" | "Readonly" | "NoInfer" => {
+            first_arg.map_or(Flags::NONE, |t| flags_of(t, locals, depth + 1))
+        }
         "String" => Flags::STRING,
         "Number" => Flags::NUMBER,
         "Boolean" => Flags::BOOLEAN,

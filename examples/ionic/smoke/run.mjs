@@ -1,9 +1,10 @@
 // Smoke test: load a Stencil build of Ionic core in headless Chrome, in ios and md mode, check that button,
 // card, list, toggle and modal are defined, hydrated and interactive, and save a screenshot of each.
 //
-//   node smoke/run.mjs [stencil|stencil4] [--shots <dir>]
+//   node smoke/run.mjs [stencil|stencil4|stencilrs] [--shots <dir>]
 //
-// stencil = dist-stencil (Stencil v5, default), stencil4 = dist-stencil4 (stock Ionic on Stencil 4).
+// stencil = dist-stencil (Stencil v5, default), stencil4 = dist-stencil4 (stock Ionic on Stencil 4),
+// stencilrs = dist-stencilrs (the Vite plugin build: one module, ionic.js, instead of the lazy loader).
 // Screenshots go to smoke/shots/ unless --shots is given. Exits 1 on any failed check, page error or
 // console error. The page and the build are served from a throwaway local http server.
 import { createServer } from 'node:http';
@@ -13,10 +14,12 @@ import { chromium } from 'playwright';
 import { root } from '../scripts/paths.mjs';
 
 const args = process.argv.slice(2);
-const build = args.find((a) => !a.startsWith('--') && a !== args[args.indexOf('--shots') + 1]) ?? 'stencil';
-const shotsDir = args.includes('--shots') ? args[args.indexOf('--shots') + 1] : join(root, 'smoke', 'shots');
-const buildDir = join(root, build === 'stencil4' ? 'dist-stencil4' : 'dist-stencil');
-if (!existsSync(join(buildDir, 'dist', 'ionic', 'ionic.esm.js'))) {
+const shotsFlag = args.indexOf('--shots');
+const build = args.find((a, i) => !a.startsWith('--') && (shotsFlag < 0 || i !== shotsFlag + 1)) ?? 'stencil';
+const shotsDir = shotsFlag >= 0 ? args[shotsFlag + 1] : join(root, 'smoke', 'shots');
+const buildDir = join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs' }[build] ?? 'dist-stencil');
+const entry = build === 'stencilrs' ? 'ionic.js' : join('dist', 'ionic', 'ionic.esm.js');
+if (!existsSync(join(buildDir, entry))) {
   console.error(`${buildDir} has no build: run npm run build:${build}`);
   process.exit(1);
 }
@@ -34,7 +37,10 @@ const serve = (base, rel, res) => {
 const server = createServer((req, res) => {
   const path = new URL(req.url, 'http://x').pathname;
   if (path.startsWith('/build/')) serve(buildDir, path.slice('/build/'.length), res);
-  else serve(join(root, 'smoke'), path === '/' ? 'index.html' : path.slice(1), res);
+  else if (path === '/' && build === 'stencilrs') {
+    const html = readFileSync(join(root, 'smoke', 'index.html'), 'utf8').replace('/build/dist/ionic/ionic.esm.js', '/build/ionic.js');
+    res.writeHead(200, { 'content-type': 'text/html' }).end(html);
+  } else serve(join(root, 'smoke'), path === '/' ? 'index.html' : path.slice(1), res);
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
