@@ -216,5 +216,6 @@
         "return": "Promise<Branded>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

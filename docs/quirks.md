@@ -193,8 +193,29 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
 - **`typeof` written in a prop's annotation** (`@Prop() x: keyof typeof y`): Stencil adds the
   classes and enums such a query names to `references`, which is not modelled. The same `keyof
   typeof y` behind a local `type` alias works.
+- **A prop typed from a call that returns an alias** (`@Prop({ mutable: true }) mode = getIonMode(this)`
+  where `getIonMode = (ref?: any): Mode`). The runtime flag is ported (string, 1025), but Stencil
+  prints the inferred type with the alias expanded (`"ios" | "md"`) and adds `Mode` to `references`
+  as a `global` one, from a declaration in another file; stencilrs reports the prop's
+  `complexType` as not ported. Ionic: ion-router-outlet `mode`.
 - `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
   parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
+
+## Props typed from their initializer (build-accurate mode)
+
+With `resolveImports`, a prop with no annotation is typed the way the checker infers it, as far as
+the syntax shows it: a literal, a same-file or relatively imported `const`, `this.field` (the
+field's annotation, or the type of its initializer; a `readonly` field keeps its literal type),
+`this.method()` and `instance.method()` with a declared return type (`export const config = new
+Config()` imported from another file, then `config.getNumber(...)`), a function or arrow function
+with a declared return type, and a value imported from a package's declaration file
+(`import { chevronDown } from 'ionicons/icons'`, whose `.d.ts` says `export declare var
+chevronDown: string`). The package is found in the nearest `node_modules` by its `exports`
+`types` entry, `types` / `typings`, or the file itself. Only values are read from a package, its
+types stay unresolved. What stays with Stencil's compiler: a function with no declared return type
+(its return type is inferred from the body), a member read off anything but `this` or an imported
+instance, a getter read through `this`, and a package declaration that is not a plain
+`declare const|var|function`. Those are typed `any` (runtime flag 8), as in single-file mode.
 
 ## Single-file type inference
 

@@ -91,5 +91,6 @@
         "return": "Promise<UIEvent>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

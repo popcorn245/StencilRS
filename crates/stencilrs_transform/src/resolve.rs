@@ -21,10 +21,10 @@ use crate::complex_type::{ExportedType, TypeEnv};
 use crate::consts::{Lit, literal, name_literal, static_member_literals};
 use crate::default_value::initializer_text;
 use crate::eval::property_key_name;
-use crate::locals::{LocalType, LocalValue, Locals};
+use crate::locals::{LocalType, LocalValue, Locals, ThisMember};
 use crate::meta::PropType;
 use crate::prop_type::{
-    Flags, classify_annotation, infer_expression, keyof_name_flags, name_flags,
+    Flags, classify_annotation, function_return, infer_expression, keyof_name_flags, name_flags,
 };
 use crate::types::Registry;
 
@@ -123,6 +123,21 @@ impl Resolver {
         }
         let dir = Path::new(importer).parent()?;
         let path = clean(&resolve_file(&dir.join(specifier))?);
+        self.module_at(path)
+    }
+
+    /// The summary of a package's declaration file (`ionicons/icons` -> `node_modules/ionicons/
+    /// icons/index.d.ts`). Only its values are read: its types stay unresolved, as for any import
+    /// from a package.
+    pub fn package_module(&self, importer: &str, specifier: &str) -> Option<Rc<ModuleSummary>> {
+        if specifier.starts_with('.') || specifier.starts_with('/') {
+            return None;
+        }
+        let path = clean(&resolve_package(Path::new(importer).parent()?, specifier)?);
+        self.module_at(path)
+    }
+
+    fn module_at(&self, path: PathBuf) -> Option<Rc<ModuleSummary>> {
         if let Some(slot) = self.cache.borrow().get(&path) {
             self.merge(&slot.deps, slot.complete);
             return slot.summary.clone();
@@ -257,12 +272,66 @@ fn resolve_file(base: &Path) -> Option<PathBuf> {
         format!("{stem}.tsx"),
         format!("{stem}.d.ts"),
         format!("{stem}/index.ts"),
+        format!("{stem}/index.d.ts"),
         format!("{stem}/index.tsx"),
     ];
     candidates
         .into_iter()
         .map(PathBuf::from)
         .find(|p| p.is_file() && p.extension().is_some_and(|e| e == "ts" || e == "tsx"))
+}
+
+/// The declaration file of `specifier` in the nearest `node_modules` above `from`.
+fn resolve_package(from: &Path, specifier: &str) -> Option<PathBuf> {
+    let mut parts = specifier.split('/');
+    let first = parts.next()?;
+    let name = if first.starts_with('@') {
+        format!("{first}/{}", parts.next()?)
+    } else {
+        first.to_owned()
+    };
+    let rest: Vec<&str> = parts.collect();
+    let sub = if rest.is_empty() {
+        ".".to_owned()
+    } else {
+        format!("./{}", rest.join("/"))
+    };
+    let dir = from
+        .ancestors()
+        .map(|d| d.join("node_modules").join(&name))
+        .find(|d| d.join("package.json").is_file())?;
+    let pkg: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("package.json")).ok()?).ok()?;
+    // `exports["./sub"]` (a string, or a conditions object with `types`).
+    let from_exports = pkg.get("exports").and_then(|e| e.get(&sub)).and_then(|e| {
+        e.as_str().map(str::to_owned).or_else(|| {
+            e.get("types")
+                .or_else(|| e.get("import").and_then(|i| i.get("types")))
+                .and_then(|t| t.as_str())
+                .map(str::to_owned)
+        })
+    });
+    let candidates = from_exports
+        .into_iter()
+        .chain(if rest.is_empty() {
+            ["types", "typings"]
+                .iter()
+                .filter_map(|k| pkg.get(k).and_then(|t| t.as_str()).map(str::to_owned))
+                .collect()
+        } else {
+            vec![]
+        })
+        .map(|p| dir.join(p))
+        .chain([dir.join(&sub)]);
+    candidates.into_iter().find_map(|c| {
+        let c = clean(&c);
+        // A `.js` entry stands for the `.d.ts` beside it.
+        resolve_file(&c).or_else(|| {
+            let s = c.to_string_lossy();
+            let stem = s.rsplit_once('.').map_or(&*s, |(a, _)| a);
+            resolve_file(Path::new(&format!("{stem}.d.ts")))
+        })
+    })
 }
 
 fn type_summary(name: &str, locals: &Locals) -> TypeSummary {
@@ -298,12 +367,38 @@ pub fn value_summary(init: &Expression, locals: &Locals, source: &str) -> ValueS
             members.insert(key, member);
         }
     }
+    // `new Class()`: its methods' written return types.
+    if let Expression::NewExpression(n) = inner
+        && let Expression::Identifier(c) = &n.callee
+        && let Some(class) = locals.members.get(c.name.as_str())
+    {
+        for (name, member) in class {
+            if let ThisMember::Method(Some(ret)) = member {
+                members.insert(
+                    name.clone(),
+                    ValueSummary {
+                        returns: Some((
+                            classify_annotation(ret, locals),
+                            ret.span().source_text(source).to_owned(),
+                        )),
+                        ..ValueSummary::default()
+                    },
+                );
+            }
+        }
+    }
+    let returns = function_return(inner).map(|ret| {
+        (
+            classify_annotation(ret, locals),
+            ret.span().source_text(source).to_owned(),
+        )
+    });
     ValueSummary {
         prop_type: Some(prop_type),
         original,
         default_text: Some(initializer_text(init, locals, source)),
         members,
-        returns: None,
+        returns,
         literal: None,
     }
 }
@@ -372,6 +467,18 @@ fn summarize_local(
         Some(LocalValue::Let(Some(init))) => {
             out.values
                 .insert(exported.to_owned(), value_summary(init, locals, source));
+        }
+        // `export declare const x: string` (a package's .d.ts).
+        Some(LocalValue::Let(None)) if locals.declared.contains_key(name) => {
+            let t = locals.declared[name];
+            out.values.insert(
+                exported.to_owned(),
+                ValueSummary {
+                    prop_type: Some(classify_annotation(t, locals)),
+                    original: t.span().source_text(source).to_owned(),
+                    ..ValueSummary::default()
+                },
+            );
         }
         Some(LocalValue::Function(returns)) => {
             let returns = returns.map(|t| {

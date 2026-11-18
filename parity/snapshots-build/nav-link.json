@@ -264,5 +264,6 @@
         "return": "Promise<boolean>"
       }
     }
-  ]
+  ],
+  "slots": []
 }

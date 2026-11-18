@@ -453,10 +453,12 @@ fn analyze_class(
         deserializers: own.deserializers,
         options: Value::Null,
         docs: ctx.docs(locals, &[doc_start]),
+        slots: Vec::new(),
         does_extend: false,
         base_class_files: Vec::new(),
         class_methods: own.class_methods,
     };
+    cmp.slots = docs_slots(class, &cmp.docs);
     if let Some((tag, encapsulation, style_urls, options)) = &component {
         cmp.options = options.clone();
         cmp.tag_name = tag.clone();
@@ -585,6 +587,7 @@ pub(crate) fn foreign_class_members<'s>(
 }
 
 fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
+    locals.enter_class(class.id.as_ref().map(|id| id.name.as_str()));
     let mut cmp = Members {
         properties: Vec::new(),
         states: Vec::new(),
@@ -1425,6 +1428,88 @@ enum MethodReturn {
     Unknown,
     Void,
     Other,
+}
+
+/// `getDocsSlots`: the `@slot` tags first, then the `<slot>`s of the class's JSX (the default one
+/// documented as "The default slot"), unique by name and sorted by it.
+fn docs_slots(class: &Class, docs: &Docs) -> Vec<SlotDoc> {
+    use oxc::ast::ast::{
+        JSXAttributeItem, JSXAttributeName, JSXAttributeValue, JSXElementName, JSXExpression,
+        JSXOpeningElement,
+    };
+    #[derive(Default)]
+    struct Scan(Vec<String>);
+    impl<'a> Visit<'a> for Scan {
+        fn visit_jsx_opening_element(&mut self, el: &JSXOpeningElement<'a>) {
+            if matches!(&el.name, JSXElementName::Identifier(id) if id.name == "slot") {
+                // `h('slot', { name })`: a name that is not a plain string makes the slot unknown.
+                let mut name: Option<String> = None;
+                let mut dynamic = false;
+                for item in &el.attributes {
+                    let JSXAttributeItem::Attribute(a) = item else {
+                        dynamic = true;
+                        continue;
+                    };
+                    let JSXAttributeName::Identifier(key) = &a.name else {
+                        continue;
+                    };
+                    if key.name != "name" {
+                        continue;
+                    }
+                    let value = match &a.value {
+                        Some(JSXAttributeValue::StringLiteral(s)) => Some(s.value.to_string()),
+                        Some(JSXAttributeValue::ExpressionContainer(c)) => match &c.expression {
+                            JSXExpression::StringLiteral(s) => Some(s.value.to_string()),
+                            JSXExpression::TemplateLiteral(t) if t.expressions.is_empty() => t
+                                .quasis
+                                .first()
+                                .and_then(|q| q.value.cooked.as_ref())
+                                .map(|c| c.to_string()),
+                            _ => None,
+                        },
+                        _ => None,
+                    };
+                    match value {
+                        Some(v) => name = Some(v),
+                        None => dynamic = true,
+                    }
+                }
+                if !dynamic {
+                    self.0.push(name.unwrap_or_default());
+                }
+            }
+            oxc::ast_visit::walk::walk_jsx_opening_element(self, el);
+        }
+    }
+    let mut scan = Scan::default();
+    scan.visit_class_body(&class.body);
+
+    // `getNameText`: `name - text`, from each `@slot` tag that has text.
+    let mut out: Vec<SlotDoc> = Vec::new();
+    let mut push = |name: String, docs: String| {
+        if !out.iter().any(|s| s.name == name) {
+            out.push(SlotDoc { name, docs });
+        }
+    };
+    for tag in docs.tags.iter().filter(|t| t.name == "slot") {
+        let Some(text) = tag.text.as_deref().filter(|t| !t.is_empty()) else {
+            continue;
+        };
+        let spaced = format!(" {text}");
+        let mut parts = spaced.split(" - ");
+        let name = parts.next().unwrap_or_default().trim().to_owned();
+        push(name, parts.collect::<Vec<_>>().join(" - ").trim().to_owned());
+    }
+    for name in scan.0 {
+        let docs = if name.is_empty() {
+            "The default slot".to_owned()
+        } else {
+            String::new()
+        };
+        push(name, docs);
+    }
+    out.sort_by(|a, b| a.name.encode_utf16().cmp(b.name.encode_utf16()));
+    out
 }
 
 /// Whether the function has a `return <expr>` of its own (not in a nested function).

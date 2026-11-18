@@ -226,5 +226,6 @@
         "return": "Promise<\"bubbles\" | \"circles\" | \"lines-small\">"
       }
     }
-  ]
+  ],
+  "slots": []
 }

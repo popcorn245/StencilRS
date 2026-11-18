@@ -480,3 +480,50 @@ fn ionic_shaped_types_resolve_across_files() {
     );
     std::fs::remove_dir_all(&dir).ok();
 }
+
+#[test]
+fn slots_merge_the_jsdoc_tags_with_the_slots_of_the_jsx() {
+    let src = "import { Component, h } from '@stencil/core';\n\
+               /**\n * @slot start - At the start.\n * @slot - Main content.\n */\n\
+               @Component({ tag: 'cmp-s' })\n\
+               export class CmpS {\n\
+                 render() { return <div><slot name=\"start\" /><slot /><slot name=\"b\" /><slot name={this.x} /><slot name=\"a\" /></div>; }\n\
+               }";
+    let result = analyze(src, "cmp-s.tsx");
+    let slots: Vec<_> = result.components[0]
+        .slots
+        .iter()
+        .map(|s| (s.name.as_str(), s.docs.as_str()))
+        .collect();
+    assert_eq!(
+        slots,
+        [
+            ("", "Main content."),
+            ("a", ""),
+            ("b", ""),
+            ("start", "At the start.")
+        ]
+    );
+}
+
+#[test]
+fn a_prop_initialised_from_a_field_of_the_class_takes_the_field_type() {
+    let src = "import { Component, Prop } from '@stencil/core';\n\
+               @Component({ tag: 'cmp-t' })\n\
+               export class CmpT {\n\
+                 private id = `x-${1}`;\n\
+                 private n: number = 1;\n\
+                 @Prop() name = this.id;\n\
+                 @Prop() count = this.n;\n\
+               }";
+    let result = analyze(src, "cmp-t.tsx");
+    let types: Vec<_> = result.components[0]
+        .properties
+        .iter()
+        .map(|p| (p.prop_type, p.complex_type.original.as_str()))
+        .collect();
+    assert_eq!(
+        types,
+        [(PropType::String, "string"), (PropType::Number, "number")]
+    );
+}

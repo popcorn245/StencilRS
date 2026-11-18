@@ -6,7 +6,7 @@ use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
-    ClassElement, Declaration, Expression, ImportDeclarationSpecifier, Program, Statement,
+    ClassElement, Declaration, MethodDefinitionKind, Expression, ImportDeclarationSpecifier, Program, Statement,
     TSEnumDeclaration, TSSignature, TSType, TSTypeParameterDeclaration, VariableDeclarationKind,
 };
 
@@ -46,6 +46,17 @@ pub struct StaticField<'a, 'b> {
     pub init: Option<&'b Expression<'a>>,
 }
 
+/// A member of a class, for `this.member` in an initializer.
+pub enum ThisMember<'a, 'b> {
+    Field {
+        annotation: Option<&'b TSType<'a>>,
+        init: Option<&'b Expression<'a>>,
+        readonly: bool,
+    },
+    /// A method and its written return type.
+    Method(Option<&'b TSType<'a>>),
+}
+
 #[derive(Default)]
 pub struct Locals<'a, 'b> {
     pub types: FxHashMap<&'a str, LocalType<'a, 'b>>,
@@ -61,6 +72,12 @@ pub struct Locals<'a, 'b> {
     pub values: FxHashMap<&'a str, LocalValue<'a, 'b>>,
     /// The written type of each `const` that has one (`const X: 'a' = 'a'`).
     pub const_annotations: FxHashMap<&'a str, &'b TSType<'a>>,
+    /// The written type of each variable that has one and no initializer (`declare const x: string`).
+    pub declared: FxHashMap<&'a str, &'b TSType<'a>>,
+    /// The instance fields and methods of each class declaration, for `this.x` and `new C().m()`.
+    pub members: FxHashMap<&'a str, FxHashMap<String, ThisMember<'a, 'b>>>,
+    /// The class whose members `this` stands for.
+    pub current_class: std::cell::RefCell<Option<String>>,
     /// The static fields of each class declaration.
     pub statics: FxHashMap<&'a str, Vec<StaticField<'a, 'b>>>,
     pub imports: FxHashMap<&'a str, Import<'a>>,
@@ -166,6 +183,47 @@ impl<'a, 'b> Locals<'a, 'b> {
                             })
                             .collect();
                         locals.statics.insert(id.name.as_str(), statics);
+                        let mut members = FxHashMap::default();
+                        for el in &c.body.body {
+                            match el {
+                                ClassElement::PropertyDefinition(p)
+                                    if !p.r#static && !p.computed =>
+                                {
+                                    if let Some(name) = property_key_name(&p.key) {
+                                        members.insert(
+                                            name,
+                                            ThisMember::Field {
+                                                annotation: p
+                                                    .type_annotation
+                                                    .as_ref()
+                                                    .map(|t| &t.type_annotation),
+                                                init: p.value.as_ref(),
+                                                readonly: p.readonly,
+                                            },
+                                        );
+                                    }
+                                }
+                                ClassElement::MethodDefinition(m)
+                                    if !m.r#static
+                                        && !m.computed
+                                        && m.kind == MethodDefinitionKind::Method =>
+                                {
+                                    if let Some(name) = property_key_name(&m.key) {
+                                        members.insert(
+                                            name,
+                                            ThisMember::Method(
+                                                m.value
+                                                    .return_type
+                                                    .as_ref()
+                                                    .map(|t| &t.type_annotation),
+                                            ),
+                                        );
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                        locals.members.insert(id.name.as_str(), members);
                     }
                 }
                 Some(Declaration::FunctionDeclaration(f)) => {
@@ -188,6 +246,11 @@ impl<'a, 'b> Locals<'a, 'b> {
                                 .const_annotations
                                 .insert(name.as_str(), &t.type_annotation);
                         }
+                        if d.init.is_none()
+                            && let Some(t) = &d.type_annotation
+                        {
+                            locals.declared.insert(name.as_str(), &t.type_annotation);
+                        }
                         let value = match (v.kind, &d.init) {
                             (VariableDeclarationKind::Const, Some(init)) => LocalValue::Const(init),
                             (_, init) => LocalValue::Let(init.as_ref()),
@@ -206,6 +269,11 @@ impl<'a, 'b> Locals<'a, 'b> {
         self.resolver = resolver;
         self.file = file.to_owned();
         self
+    }
+
+    /// `this` stands for the members of class `name`.
+    pub fn enter_class(&self, name: Option<&str>) {
+        *self.current_class.borrow_mut() = name.map(str::to_owned);
     }
 
     pub fn resolving(&self) -> bool {
@@ -239,7 +307,11 @@ impl<'a, 'b> Locals<'a, 'b> {
 
     /// The summary of an imported value, when the import resolves.
     pub fn imported_value(&self, name: &str) -> Option<ValueSummary> {
-        let (module, import) = self.imported_module(name)?;
+        let (module, import) = self.imported_module(name).or_else(|| {
+            let resolver = self.resolver?;
+            let import = self.imports.get(name)?;
+            Some((resolver.package_module(&self.file, import.source)?, import))
+        })?;
         module.values.get(&import.imported).cloned()
     }
 

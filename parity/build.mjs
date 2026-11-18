@@ -44,6 +44,7 @@ const fromDocs = (c, base) => ({
   properties: (c.props ?? []).map((p) => ({ name: p.name, flags: propFlags(p), complexType: valueType(p.complexType, base) })),
   events: (c.events ?? []).map((e) => ({ name: e.event, complexType: valueType(e.complexType, base) })),
   methods: (c.methods ?? []).map((m) => ({ name: m.name, complexType: methodType(m.complexType, base) })),
+  slots: (c.slots ?? []).map((s) => ({ name: s.name, docs: s.docs })),
 });
 
 const fromStencilrs = (c) => ({
@@ -54,6 +55,7 @@ const fromStencilrs = (c) => ({
   })),
   events: c.events.map((e) => ({ name: e.name, complexType: valueType(e.complexType, '') })),
   methods: c.methods.map((m) => ({ name: m.name, complexType: methodType(m.complexType, '') })),
+  slots: (c.slots ?? []).map((s) => ({ name: s.name, docs: s.docs })),
 });
 
 const snapshot = async () => {
@@ -62,7 +64,12 @@ const snapshot = async () => {
   const cwd = process.cwd();
   try {
     cpSync(project, dir, { recursive: true });
-    symlinkSync(join(root, 'node_modules'), join(dir, 'node_modules'), 'junction');
+    // The project's own `node_modules` (fixture packages) stays, and the installed ones are linked in beside it.
+    if (existsSync(join(project, 'node_modules'))) {
+      for (const name of readdirSync(join(root, 'node_modules'))) {
+        if (!existsSync(join(dir, 'node_modules', name))) symlinkSync(join(root, 'node_modules', name), join(dir, 'node_modules', name), 'junction');
+      }
+    } else symlinkSync(join(root, 'node_modules'), join(dir, 'node_modules'), 'junction');
     process.chdir(dir);
     const base = process.cwd().replaceAll('\\', '/');
     const loaded = await loadConfig({
@@ -123,6 +130,11 @@ const compare = () => {
           fallbacks.push(`${file} ${m[1]} ${m[2]}: ${m[3]}`);
         } else if (d.message.startsWith('stencilrs:')) failures.push(`${file}: ${d.message}`);
       }
+      // Slots are not typed, so they have no fallback: they must match.
+      members++;
+      const slotDiff = diff(expected.slots ?? [], ours.slots);
+      if (slotDiff.length) failures.push(`${file} slots:\n${slotDiff.map((x) => `    ${x.path}: expected ${JSON.stringify(x.expected)}, got ${JSON.stringify(x.actual)}`).join('\n')}`);
+      else matched++;
       const kinds = { properties: 'prop', events: 'event', methods: 'method' };
       for (const [group, kind] of Object.entries(kinds)) {
         for (const want of expected[group]) {
