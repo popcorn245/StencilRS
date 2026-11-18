@@ -3,6 +3,7 @@ import type { Theme } from 'vitepress';
 
 import DataTable from './components/DataTable.vue';
 import Demo from './components/Demo.vue';
+import IonDemos from './components/IonDemos.vue';
 import Landing from './components/Landing.vue';
 import PipelineFlow from './components/PipelineFlow.vue';
 import When from './components/When.vue';
@@ -13,6 +14,7 @@ const theme: Theme = {
   enhanceApp({ app }) {
     app.component('DataTable', DataTable);
     app.component('Demo', Demo);
+    app.component('IonDemos', IonDemos);
     app.component('Landing', Landing);
     app.component('PipelineFlow', PipelineFlow);
     app.component('When', When);

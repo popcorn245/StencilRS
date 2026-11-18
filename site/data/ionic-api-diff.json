@@ -1,0 +1,858 @@
+{
+  "byComponent": {
+    "ion-accordion": [
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "toggleIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "toggleIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      }
+    ],
+    "ion-back-button": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-badge": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-breadcrumb": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      }
+    ],
+    "ion-breadcrumbs": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-button": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-card": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-card-header": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-card-subtitle": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-card-title": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-checkbox": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-chip": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-content": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-datetime": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      }
+    ],
+    "ion-datetime-button": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-fab-button": [
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "closeIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "closeIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-input": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-input-otp": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-input-password-toggle": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-item": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      },
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "detailIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "detailIcon",
+        "stencil": "string",
+        "stencilrs": "any"
+      }
+    ],
+    "ion-item-divider": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-item-option": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-label": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-list-header": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-menu-button": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-note": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-picker-column": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-picker-column-option": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-progress-bar": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-radio": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-range": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      },
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "name",
+        "stencil": "string",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "name",
+        "stencil": "string",
+        "stencilrs": "any"
+      }
+    ],
+    "ion-router-link": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-router-outlet": [
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "mode",
+        "stencil": "\"ios\" | \"md\"",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "mode",
+        "stencil": "\"ios\" | \"md\"",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.references",
+        "member": "mode",
+        "stencil": [
+          "Mode"
+        ],
+        "stencilrs": []
+      }
+    ],
+    "ion-searchbar": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-segment": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-select": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-spinner": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-tab-bar": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-text": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-textarea": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-title": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-toast": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      },
+      {
+        "area": "props",
+        "field": "complexType.original",
+        "member": "duration",
+        "stencil": "number",
+        "stencilrs": "any"
+      },
+      {
+        "area": "props",
+        "field": "complexType.resolved",
+        "member": "duration",
+        "stencil": "number",
+        "stencilrs": "any"
+      }
+    ],
+    "ion-toggle": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ],
+    "ion-toolbar": [
+      {
+        "area": "props",
+        "field": "attribute",
+        "member": "color",
+        "stencil": "color",
+        "stencilrs": null
+      },
+      {
+        "area": "props",
+        "field": "reflect",
+        "member": "color",
+        "stencil": true,
+        "stencilrs": false
+      }
+    ]
+  },
+  "compared": 94,
+  "componentsWithDifferences": 44,
+  "differences": 95,
+  "notInDocsJson": [
+    {
+      "file": "src/components/select-popover/select-popover.tsx",
+      "reason": "not in Stencil docs-json",
+      "tag": "ion-select-popover"
+    }
+  ],
+  "note": "stencilrs analyze({ resolveImports, complexTypes }) compared with the docs-json of `stencil build` (v5.0.0-beta.25) on the same migrated Ionic source. Every entry is a difference.",
+  "onlyInDocsJson": [],
+  "stencilDocsQuirks": {
+    "count": 16,
+    "items": [
+      {
+        "docs": "@prop --background: Background of the button @prop --background-activated: Background of the button when pressed. Note: ... [ios]",
+        "name": "--overflow",
+        "tag": "ion-button"
+      },
+      {
+        "docs": "@prop --background: Background of the button @prop --background-activated: Background of the button when pressed. Note: ... [md]",
+        "name": "--overflow",
+        "tag": "ion-button"
+      },
+      {
+        "docs": "@prop --background: Background of the card @prop --color: Color of the card [ios]",
+        "name": "--ion-safe-area-left",
+        "tag": "ion-card"
+      },
+      {
+        "docs": "@prop --background: Background of the card @prop --color: Color of the card [md]",
+        "name": "--ion-safe-area-left",
+        "tag": "ion-card"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-input"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-input"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-input-otp"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-input-otp"
+      },
+      {
+        "docs": "@prop --bar-background: Background of the range bar @prop --bar-background-active: Background of the active range bar @p... [ios]",
+        "name": "--knob-handle-size",
+        "tag": "ion-range"
+      },
+      {
+        "docs": "@prop --bar-background: Background of the range bar @prop --bar-background-active: Background of the active range bar @p... [md]",
+        "name": "--knob-handle-size",
+        "tag": "ion-range"
+      },
+      {
+        "docs": "@prop --background: Background of the segment button [ios]",
+        "name": "--ripple-color",
+        "tag": "ion-segment"
+      },
+      {
+        "docs": "@prop --background: Background of the segment button [md]",
+        "name": "--ripple-color",
+        "tag": "ion-segment"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-select"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-select"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-textarea"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-textarea"
+      }
+    ],
+    "note": "docs-json lists a CSS declaration that follows a doc comment as a custom property, with the comment as its docs. Not a stencilrs difference."
+  },
+  "typeFallbacks": 10
+}
