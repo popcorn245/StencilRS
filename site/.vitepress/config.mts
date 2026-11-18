@@ -29,6 +29,9 @@ const isCustomElement = (tag: string) => /^(ion|pop)-/.test(tag);
 const raw = process.env.SITE_BASE || '/';
 const base = `/${raw.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
 
+// Absolute URL of the site root, for og:image (crawlers do not resolve relative ones).
+const siteUrl = (process.env.SITE_URL || 'https://popcorn245.github.io/StencilRS/').replace(/\/*$/, '/');
+
 // Links of the old site, which was the Storybook at the root: `/?path=/docs/docs-<name>--docs` for
 // the docs pages, `/?path=/story/ui-kit-...` and `/?path=/docs/ui-kit-...` for the components.
 // Static hosting has no redirect rules, so this runs from every page's <head> and acts only on the
@@ -79,6 +82,14 @@ export default defineConfig({
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
     ['meta', { name: 'theme-color', content: '#c2410c' }],
+    // The social card (public/img/og.png, 1200x630, drawn from the benchmark data by `npm run snapshots`).
+    ['meta', { property: 'og:image', content: `${siteUrl}img/og.png` }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { property: 'og:title', content: 'stencilrs: Stencil v5 components, compiled by Rust' }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:image', content: `${siteUrl}img/og.png` }],
     ['script', {}, redirectOldUrls],
   ],
 

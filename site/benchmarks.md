@@ -6,7 +6,13 @@ description: "Per-file compile, a production Vite build and a full stencil build
 <script setup>
 import { data } from './data/site.data'
 import { data as ionic } from './data/ionic-bench.data'
+import { data as chartData } from './data/charts.data'
+import { format } from './data/charts'
 const b = data.bench
+const c = chartData.charts
+const bar = (id, who) => c[id].bars.find((x) => x.id === who).median
+const editRs = format('s', bar('ionic-edit-rebuild', 'stencilrs'))
+const editS5 = format('s', bar('ionic-edit-rebuild', 'stencil5'))
 const d = data.derived
 const ms = (v) => `${v.toLocaleString('en-US')} ms`
 const transpile = b.transpile.rows.map((r) => [r.compiler, ms(r.coldMs), ms(r.medianMs), `${r.perFileUs.toLocaleString('en-US')} µs`])
@@ -18,21 +24,11 @@ const io = ionic
 const order = Object.keys(io.rows)
 const sec = (v) => (v == null ? 'n/a' : `${(v / 1000).toFixed(v >= 10000 ? 1 : 2)} s`)
 const msf = (v) => (v == null ? 'n/a' : `${Math.round(v).toLocaleString('en-US')} ms`)
-const mib = (v) => (v == null ? 'n/a' : `${Math.round(v).toLocaleString('en-US')} MiB`)
 const cell = (m, row, f) => {
   const r = io.metrics[m]?.rows[row]
   return r ? `${f(r.median)} (${f(r.min)} to ${f(r.max)})` : 'n/a'
 }
-const ionicTable = (ids, f) => ids.map(([m, name]) => [name, ...order.map((r) => cell(m, r, f))])
 const ionicHead = ['Measurement', ...order.map((r) => io.rows[r])]
-const ionicBuild = ionicTable([['coldBuild', 'Cold build'], ['warmBuild', 'Warm rebuild']], sec)
-const ionicDev = [
-  ...ionicTable([['devStart', 'Dev server start to ion-button'], ['devStartClosure', '... and every module it imports']], sec),
-  ...ionicTable([['editRebuild', 'Edit one component, watch rebuild']], sec),
-  ...ionicTable([['editDevTransform', 'Edit one component, Vite dev re-transform']], msf),
-]
-const ionicCompile = ionicTable([['transpileCold', 'All 95 components, cold pass'], ['transpileWarm', 'All 95 components, warm pass']], msf)
-const ionicMem = ionicTable([['peakRss', 'Cold build, peak'], ['devPeakRss', 'Dev server, peak']], mib)
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`
 const ionicOut = [
   ['Files', ...order.map((r) => io.output[r]?.files ?? 'n/a')],
@@ -40,7 +36,6 @@ const ionicOut = [
   ['Gzip (text files each)', ...order.map((r) => (io.output[r] ? mb(io.output[r].gzipBytes) : 'n/a'))],
   ['JavaScript, raw / gzip', ...order.map((r) => (io.output[r] ? `${mb(io.output[r].js.rawBytes)} / ${mb(io.output[r].js.gzipBytes)}` : 'n/a'))],
 ]
-const nSamples = (m) => Math.max(...Object.values(io.metrics[m]?.rows ?? {}).map((r) => r.n), 0)
 </script>
 
 # Benchmarks
@@ -50,14 +45,20 @@ Two sets of numbers: the ui-kit (a small library, measured on the maintainer's m
 Measured {{ b.date }} on {{ b.machine }}. Stencil {{ b.versions.stencil }} (TypeScript {{ b.versions.typescript }}),
 Vite {{ b.versions.vite }}, oxc {{ b.versions.oxc }}, Rust {{ b.versions.rust }}.
 
-The numbers on this page are read from `storybook/docs/data/benchmarks.json`; charts come later.
+Every chart on this page is drawn when the site is built, from `storybook/docs/data/benchmarks.json` (the ui-kit) and `site/data/benchmarks-ionic.json` (Ionic), and each has its data table under it. Bars are medians, whiskers are min to max where the data has them, and lower is better in all of them.
 
 ## Compile: per file
 
 {{ b.transpile.what }}: {{ b.transpile.files }} files ({{ b.transpile.kib }} KiB), the parity corpus.
 Same inputs, same output contract, so this is the compiler alone.
 
+<div class="chart-grid one"><BenchChart :chart="c['uikit-transpile']" /></div>
+
+<details class="chart-table"><summary>Table: cold, warm median and per file, all four rows</summary>
+
 <DataTable :head="['Compiler', 'Cold', 'Warm median', 'Per file']" :rows="transpile" highlight="stencilrs" />
+
+</details>
 
 **stencilrs: {{ b.transpile.speedup }} faster.** Source maps are on in the headline rows for both
 compilers (each writes them by default, as `@stencil/unplugin` asks); the no-map rows are for
@@ -68,7 +69,13 @@ reference. `node parity/bench.mjs` times both compilers both ways.
 {{ b.viteBuild.what }}. Everything else in the build is identical: Rolldown bundling, CSS,
 minification. Only the component compiler changes.
 
+<div class="chart-grid one"><BenchChart :chart="c['uikit-vite-build']" /></div>
+
+<details class="chart-table"><summary>Table: first build and warm median</summary>
+
 <DataTable :head="['Compiler', 'First build', 'Warm median']" :rows="vite" highlight="stencilrs" />
+
+</details>
 
 **stencilrs: {{ b.viteBuild.speedup }} faster**, end to end, source maps on.
 
@@ -80,7 +87,13 @@ bundler) is replaced with stencilrs' `transpile()` for the standalone and lazy b
 (its default; Stencil keeps its own config default): {{ sb.standalone.stencilrs }} and {{ sb.lazy.stencilrs }} files
 respectively, {{ sb.standalone.fallback + sb.lazy.fallback }} falling back to Stencil.
 
+<div class="chart-grid one"><BenchChart :chart="c['uikit-stencil-build']" /></div>
+
+<details class="chart-table"><summary>Table: build finished and wall time</summary>
+
 <DataTable :head="['Compiler', 'Build finished', 'Wall (incl. CLI start)']" :rows="full" highlight="stencilrs" />
+
+</details>
 
 **With stencilrs: {{ b.stencilBuild.speedup }} faster.** The gain is modest on purpose: only the component transform changes.
 Stencil still runs its type-checked TypeScript pass over every file, processes the CSS, bundles the three
@@ -128,28 +141,46 @@ largest open-source Stencil code base, so it is the fairest single test: the sam
 | {{ ionic.rows.stencil }} | `stencil build` of the same source migrated to Stencil {{ ionic.versions.stencil5 }} |
 | {{ ionic.rows.stencilrs }} | `vite build` of that migrated source with `@popcorn245/stencilrs/vite` (Vite {{ ionic.versions.vite }}) |
 
-Median of {{ ionic.runs }} runs, with min to max in brackets. Every raw sample is in
+Bars are the median of {{ ionic.runs }} runs, whiskers the min to max. Every raw sample is in
 `site/data/benchmarks-ionic.json`, measured {{ ionic.startedAt.slice(0, 10) }} on {{ ionic.machine.os }}, Node {{ ionic.machine.node }},
 stencilrs `{{ ionic.versions.stencilrs.git.slice(0, 9) }}`.
 
 ### Builds
 
-<DataTable :head="ionicHead" :rows="ionicBuild" highlight="stencilrs" />
+<div class="chart-grid">
+<BenchChart :chart="c['ionic-cold-build']" />
+<BenchChart :chart="c['ionic-warm-build']" />
+</div>
 
 ### Dev server and watch
 
-<DataTable :head="ionicHead" :rows="ionicDev" highlight="stencilrs" />
+<div class="chart-grid">
+<BenchChart :chart="c['ionic-dev-start']" />
+<BenchChart :chart="c['ionic-edit-rebuild']">
+<p><b>stencilrs is slower here:</b> {{ editRs }} against Stencil 5's {{ editS5 }}. Its watch build recompiles every stylesheet on each edit
+(<a href="#where-stencilrs-spends-its-time">why</a>); tracked in <a href="https://github.com/popcorn245/StencilRS/issues/79" target="_blank" rel="noreferrer">issue #79</a>.</p>
+</BenchChart>
+</div>
+
+Not charted: the dev server also needs every module `ion-button` imports before a page can show it (stencilrs {{ format('s', ionic.metrics.devStartClosure.rows.stencilrs.median) }},
+Stencil 5 {{ format('s', ionic.metrics.devStartClosure.rows.stencil.median) }}), and the Vite dev server re-transforms an edited component in {{ format('ms', ionic.metrics.editDevTransform.rows.stencilrs.median) }}.
 
 ### Compiling the 95 component files, nothing else
 
-<DataTable :head="ionicHead" :rows="ionicCompile" highlight="stencilrs" />
+<div class="chart-grid">
+<BenchChart :chart="c['ionic-transpile-cold']" />
+<BenchChart :chart="c['ionic-transpile-warm']" />
+</div>
 
 The compiler alone: stencilrs `transpile` against Stencil's `transpileSync` (version 4 on the stock source, 5 on the migrated one),
 source maps on, one process, single-threaded.
 
 ### Peak memory
 
-<DataTable :head="ionicHead" :rows="ionicMem" highlight="stencilrs" />
+<div class="chart-grid">
+<BenchChart :chart="c['ionic-peak-rss']" />
+<BenchChart :chart="c['ionic-dev-rss']" />
+</div>
 
 ### Output size
 
