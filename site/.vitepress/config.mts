@@ -41,8 +41,8 @@ var b=${JSON.stringify(base)},l=location,p=l.pathname;
 if(p!==b&&p!==b+'index.html'&&p!==b.slice(0,-1))return;
 var q=new URLSearchParams(l.search).get('path');if(!q)return;
 var d=${JSON.stringify(oldDocs)},m=/^\/docs\/docs-(.+)--docs$/.exec(q),t;
-if(m&&d[m[1]])t=b+d[m[1]];
-else if(m)t=b+'guide/introduction';
+if(m&&d[m[1]])t=b+d[m[1]]+'.html';
+else if(m)t=b+'guide/introduction.html';
 else if(/^\/(story|docs)\//.test(q))t=b+'storybook/?path='+encodeURIComponent(q).replace(/%2F/g,'/');
 if(t)l.replace(t+l.hash);
 }catch(e){}})();`;
@@ -51,7 +51,9 @@ export default defineConfig({
   title: 'stencilrs',
   description: 'Stencil v5 components, compiled by Rust. A docs site that is itself compiled by stencilrs.',
   lang: 'en-US',
-  cleanUrls: true,
+  // Off: Caddy's file_server (stencilrs.popcorn245.com) does not map /page to /page.html, so
+  // clean URLs would 404 on a reload or a shared link. Links carry .html and work on any host.
+  cleanUrls: false,
   lastUpdated: false,
   base,
   outDir: 'dist',

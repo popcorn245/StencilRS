@@ -82,7 +82,7 @@ jobs:
         run: |
           set -eu
           CADDY_IP=$(getent hosts caddy | awk '{print $1}')
-          for path in / /guide/introduction /story/ /storybook/index.html /storybook/iframe.html; do
+          for path in / /guide/introduction.html /story/ /storybook/index.html /storybook/iframe.html; do
             code=$(curl -s -o /dev/null -w '%{http_code}' --resolve "$SITE_HOST:443:$CADDY_IP" "https://$SITE_HOST$path")
             echo "$code https://$SITE_HOST$path"
             [ "$code" = 200 ] || exit 1
