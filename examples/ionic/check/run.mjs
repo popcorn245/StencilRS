@@ -294,6 +294,33 @@ for (const mode of ['ios', 'md']) {
   if (!differing && JSON.stringify(hx) === JSON.stringify(hy)) console.log(`  ok   ${mode}: ${tags.length} components render the same (DOM, scope ids, size); ${sameCss} of ${tags.length} component stylesheets are identical CSS text (${known.length} listed differences), ${hx.length} <head> stylesheets`);
 }
 
+// ---- 4. attributes drive props ----------------------------------------------------------------------------------
+// `color` is `Color = LiteralUnion<PredefinedColors, string>` (a generic alias with an intersection): its runtime type
+// is `string`, so the attribute is observed and reflected. Compiled as `unknown` ([16]) it was neither (#75).
+console.log('\n== attributes drive props (ion-button color), both builds');
+for (const name of Object.keys(BUILDS)) {
+  const page = await browser.newPage();
+  await page.goto(`${origin}/mount/${name}`);
+  const r = await page.evaluate(async () => {
+    await customElements.whenDefined('ion-button');
+    const el = document.createElement('ion-button');
+    el.setAttribute('color', 'danger');
+    document.body.append(el);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const first = { prop: el.color, cls: el.classList.contains('ion-color-danger') };
+    el.setAttribute('color', 'success');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const changed = { prop: el.color, danger: el.classList.contains('ion-color-danger'), success: el.classList.contains('ion-color-success') };
+    el.color = 'warning';
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return { first, changed, reflected: el.getAttribute('color'), warning: el.classList.contains('ion-color-warning') };
+  });
+  const ok = r.first.prop === 'danger' && r.first.cls && r.changed.prop === 'success' && !r.changed.danger && r.changed.success && r.reflected === 'warning' && r.warning;
+  if (ok) console.log(`  ok   ${name}: <ion-button color="danger"> gets ion-color-danger; the attribute is observed on change and the property is reflected`);
+  else fail(`${name}: ion-button color attribute: ${JSON.stringify(r)}`);
+  await page.close();
+}
+
 await browser.close();
 server.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');

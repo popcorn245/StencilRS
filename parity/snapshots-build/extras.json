@@ -3,6 +3,13 @@
   "properties": [
     {
       "name": "holder",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Holder",
         "resolved": "Holder<number> | undefined",
@@ -18,6 +25,13 @@
     },
     {
       "name": "holders",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Holder[]",
         "resolved": "Holder<number>[]",
@@ -33,6 +47,13 @@
     },
     {
       "name": "keys",
+      "flags": {
+        "attribute": "keys",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Keys",
         "resolved": "\"a\" | \"b-c\" | \"d\" | undefined",
@@ -46,6 +67,13 @@
     },
     {
       "name": "numbers",
+      "flags": {
+        "attribute": "numbers",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "LiteralUnion<1 | 2, number>",
         "resolved": "1 | 2 | number & Record<never, never> | undefined",
@@ -61,6 +89,13 @@
     },
     {
       "name": "pair",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Pair",
         "resolved": "Pair<string, string> | undefined",
@@ -76,6 +111,13 @@
     },
     {
       "name": "pairOf",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Pair<number>",
         "resolved": "Pair<number, number> | undefined",
@@ -91,6 +133,13 @@
     },
     {
       "name": "size",
+      "flags": {
+        "attribute": "size",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SizeName",
         "resolved": "\"extra-large\" | \"medium\" | \"small\" | undefined",
@@ -104,6 +153,13 @@
     },
     {
       "name": "sizes",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SizeName[]",
         "resolved": "(\"extra-large\" | \"medium\" | \"small\")[]",
