@@ -1,0 +1,207 @@
+---
+title: "Writing components"
+description: "What stencilrs supports: the Stencil v5 component API, inheritance, forms and serializers."
+---
+
+# Writing components
+
+Components are ordinary **Stencil v5** components. If it compiles with Stencil v5, it should compile
+with stencilrs to the same output; where stencilrs hasn't ported a feature yet, the Vite plugin hands
+that file to Stencil's compiler instead (see [Vite plugin](/guide/vite-plugin)).
+
+```tsx
+import { Component, Event, EventEmitter, Host, Method, Prop, State, Watch } from '@stencil/core';
+
+@Component({
+  tag: 'pop-counter',
+  styleUrl: 'pop-counter.css',
+  encapsulation: { type: 'shadow' },
+})
+export class PopCounter {
+  /** Text shown before the count. */
+  @Prop() label: string = 'Count';
+  @Prop() step: number = 1;
+  @State() count = 0;
+  @Event() countChanged: EventEmitter<number>;
+
+  @Method()
+  async reset(): Promise<void> {
+    this.count = 0;
+  }
+
+  @Watch('count')
+  onCount(next: number) {
+    this.countChanged.emit(next);
+  }
+
+  render() {
+    return (
+      <Host>
+        <span>{this.label}</span>
+        <output>{this.count}</output>
+        <button onClick={() => (this.count += this.step)}>+{this.step}</button>
+      </Host>
+    );
+  }
+}
+```
+
+## Supported
+
+| Feature | Notes |
+|---|---|
+| `@Component` | `tag`, `styleUrl`, `styleUrls` (array), `styles` (string), `encapsulation: { type: 'shadow' \| 'scoped' \| 'none', mode, delegatesFocus, slotAssignment, clonable, serializable, patches }`, `assetsDirs` |
+| `@Prop` | `reflect`, `mutable`, `attribute`; getters / setters; `!` (required) and `?` (optional); type classification and attribute names exactly as Stencil computes them |
+| `@State`, `@Element`, `@Method`, `@Event` (`eventName`, `bubbles`, `cancelable`, `composed`) | |
+| `@Watch`, `@Listen` (`target`, `capture`, `passive`) | Several per method |
+| Constants | `@Watch(KEYS.open)`, `@Listen(Events.Focus)`, `resolveVar(NAME)`, `@Prop() [NAME]`: any `const`, `as const` object property, enum member or `static readonly` field, in the same module or (through the Vite plugin) imported |
+| `@AttachInternals` (`formAssociated`, `states`) | Form-associated components and custom states; see below |
+| `@PropSerialize`, `@AttrDeserialize` | Custom prop ↔ attribute translation; see below |
+| `extends`, `Mixin(...)` | Inheritance and mixins; see below |
+| Lifecycle | `connectedCallback`, `componentWillLoad`, `componentDidLoad`, `componentWillRender`, `componentDidRender`, `componentShouldUpdate`, `componentWillUpdate`, `componentDidUpdate`, `disconnectedCallback` |
+| JSX | Classic (`import { h }`, `h()` calls) or the automatic runtime (`@stencil/core/jsx-runtime`); `<Host>`, fragments, automatic `key` insertion like Stencil |
+| Styles | `.css`, `.scss` (and anything `@stencil/unplugin` preprocesses), shadow or scoped |
+| TypeScript | Everything oxc strips; enums are emitted the way TypeScript emits them |
+| Imports | Aliased decorator imports (`import { Prop as P }`), other modules, packages |
+
+## Inheritance and mixins
+
+A component can extend a base class, or compose mixin factories with `Mixin(...)`. Stencil
+decorators on the base class or in the mixin work as if they were on the component: stencilrs
+merges them in, parents first, and the component's own members win (a prop the component
+redeclares, or redeclares as a state, replaces the inherited one).
+
+```tsx
+// src/shared/pressable.ts: no @Component on a base class
+export class Pressable {
+  @Prop({ reflect: true }) disabled = false;
+  @State() pressCount = 0;
+  @Event() pressed: EventEmitter<number>;
+  protected press = () => { if (!this.disabled) this.pressed.emit(++this.pressCount); };
+}
+
+// src/components/pop-press-button/pop-press-button.tsx
+@Component({ tag: 'pop-press-button', encapsulation: { type: 'shadow' } })
+export class PopPressButton extends Pressable {
+  @Prop() label = 'Press me';
+  render() {
+    return <button disabled={this.disabled} onClick={this.press}>{this.label} ({this.pressCount})</button>;
+  }
+}
+```
+
+```tsx
+// A mixin factory returns a class literal that extends its argument.
+export const withTone = <B extends MixedInCtor>(Base: B) => {
+  class WithTone extends Base {
+    @Prop({ reflect: true, mutable: true }) tone: 'red' | 'blue' = 'red';
+  }
+  return WithTone;
+};
+
+@Component({ tag: 'pop-tone-chip' })
+export class PopToneChip extends Mixin(withTone) { /* … */ }
+```
+
+The starter has both (`pop-press-button`, `pop-tone-chip`). The rules are Stencil's:
+
+- The parent is found in the same file or through a **relative import**, following one barrel
+  re-export (`export { Base } from './base'`). A parent from a package isn't read, so nothing is
+  inherited from it; Stencil warns when an imported name can't be found.
+- A mixin factory has to return a **class literal** (`(Base) => class extends Base {}` or
+  `(Base) => { class X extends Base {} return X; }`). Returning an existing class by reference
+  isn't recognised (Stencil warns).
+- `@Element()` is **not** inherited: declare it on the component.
+- `Mixin` must be imported under that name.
+
+The Vite plugin compiles the files your ancestors live in as **base classes**, as
+`@stencil/unplugin` does: a class that extends nothing gets `extends HTMLElement`, so the
+chain ends in a real element.
+
+## Forms and serializers
+
+`@AttachInternals()` gives the component its
+[`ElementInternals`](https://developer.mozilla.org/docs/Web/API/ElementInternals) and makes it
+**form-associated**: it joins its `<form>`, and `internals.setFormValue(...)` is what the form
+submits. `formAssociated: false` keeps the internals (for ARIA, custom states) without the form.
+`states` declares [custom states](https://developer.mozilla.org/docs/Web/API/CustomStateSet)
+for `:state(...)` selectors; `true` ones start on.
+
+`@PropSerialize(prop)` turns a prop's value into its attribute text; `@AttrDeserialize(prop)`
+turns attribute text into the prop's value. With them a prop of any type can have an attribute:
+a serializer makes the prop reflect (unless `reflect: false`), a deserializer gives it an
+attribute.
+
+```tsx
+@Component({ tag: 'pop-date-field', encapsulation: { type: 'shadow' } })
+export class PopDateField {
+  @AttachInternals() internals: ElementInternals;
+
+  @Prop() name = '';
+  @Prop({ mutable: true }) value?: Date;
+
+  @PropSerialize('value')
+  valueToAttr(value?: Date) {
+    return value ? value.toISOString().slice(0, 10) : null; // value="2026-10-15"
+  }
+
+  @AttrDeserialize('value')
+  valueFromAttr(value: string | null) {
+    return value ? new Date(`${value}T00:00:00Z`) : undefined;
+  }
+
+  @Watch('value')
+  syncForm() {
+    this.internals.setFormValue(this.valueToAttr(this.value));
+  }
+
+  componentWillLoad() {
+    this.syncForm();
+  }
+  // render() { ... }
+}
+```
+
+The starter's `pop-date-field` is this component, with tests: the serializers in happy-dom, the
+form association in Chrome (happy-dom has no `ElementInternals`).
+
+Through `@stencil/unplugin`, Stencil drops every serializer (see the Quirks page); stencilrs keeps
+them, as a full `stencil build` does.
+
+## Falls back to Stencil's compiler
+
+Anything stencilrs hasn't ported compiles through Stencil's own compiler, per file, automatically.
+These used to be on that list and no longer are:
+
+- per-mode `styleUrls` (`{ ios: …, md: … }`, [#25](https://github.com/popcorn245/StencilRS/pull/25));
+- inline `styles` on **scoped** components, through a Rust port of Stencil's `scopeCss` ([#24](https://github.com/popcorn245/StencilRS/pull/24));
+- component `globalStyle` / `globalStyleUrl` ([#26](https://github.com/popcorn245/StencilRS/pull/26)).
+
+Run with `verbose: true` to see which files, if any, fall back.
+
+## How props become attributes
+
+stencilrs follows Stencil exactly, so these are worth knowing when you write components:
+
+- **Prop types decide attributes.** `string`, `number`, `boolean` and `any` props get an attribute;
+  object, array and other types (`unknown` to Stencil) don't, so set them as properties
+  (`el.items = [...]`).
+- **Attribute names are `toDashCase(name)`**, which puts a dash before every capital *and every
+  digit*: `firstName` → `first-name`, `draw2Url` → `draw-2-url`.
+- **Booleans follow HTML in v5**: `show-header="false"` is `true` (the attribute is present). Turn a
+  boolean prop off by setting the property or omitting the attribute.
+- **Imported types count.** `@Prop() size: Size` where `Size = 'sm' | 'lg'` is imported is a
+  string prop. Stencil's single-file compiler can't see imports and makes it `any`; stencilrs
+  follows the import, like a full `stencil build` (the plugin's default, `resolveImports`).
+
+## Where to put components
+
+Anywhere Vite can see them; one component per module is the Stencil convention (the module's only
+export should be the component class, or Stencil v5 reports an error). Import the module to
+register the element. A library entry that re-exports every component is a good pattern:
+
+```ts
+// src/index.ts
+export { PopCounter } from './components/pop-counter/pop-counter';
+export { PopGreeting } from './components/pop-greeting/pop-greeting';
+```

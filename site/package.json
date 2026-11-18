@@ -1,0 +1,22 @@
+{
+  "name": "stencilrs-site",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The stencilrs docs site: VitePress, with every live component compiled by stencilrs",
+  "scripts": {
+    "dev": "vitepress dev . --port 5180",
+    "build": "vitepress build .",
+    "preview": "vitepress preview . --port 4180",
+    "build:storybook": "npm --prefix ../examples/ui-kit ci --ignore-scripts && npm --prefix ../examples/starter ci --ignore-scripts && npm --prefix ../storybook ci --ignore-scripts && STORYBOOK_BASE_PATH=/storybook/ npm --prefix ../storybook run build",
+    "build:all": "npm run build && npm run build:storybook && node scripts/copy-storybook.mjs"
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:..",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "vite": "8.3.4",
+    "vitepress": "2.0.0-alpha.21",
+    "vue": "3.5.45"
+  }
+}
