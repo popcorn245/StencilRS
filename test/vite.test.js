@@ -87,6 +87,24 @@ export class CmpModed { render() { return <div>x</div>; } }
   assert.doesNotMatch(code, /\.sc-cmp-moded-h\b/);
 });
 
+test('component CSS: Stencil\'s autoprefix targets by default, `css` options to change them', async () => {
+  write('styled.tsx', `import { Component, h } from '@stencil/core';
+@Component({ tag: 'cmp-styled', styleUrl: 'styled.css', encapsulation: { type: 'shadow' } })
+export class CmpStyled { render() { return <div>x</div>; } }
+`);
+  write('styled.css', ':host { backdrop-filter: blur(2px); font-weight: bold; background: none; }');
+  const out = async (css) => (await run('styled.tsx', css ? { css } : {})).match(/:host[^`"]*/)?.[0] ?? '';
+  const stencil = await out();
+  assert.match(stencil, /-webkit-backdrop-filter/, 'prefixed for the targets of `stencil build`');
+  assert.match(stencil, /font-weight:\s*bold/, 'values as authored');
+  assert.match(stencil, /background:\s*none/);
+  assert.doesNotMatch(stencil, /\\n/, 'whitespace compacted');
+  const legacy = await out({ targets: false, minify: true });
+  assert.doesNotMatch(legacy, /-webkit-backdrop-filter/);
+  assert.match(legacy, /font-weight:\s*700/, 'lightningcss minify');
+  assert.match(await out({ targets: ['safari 13'] }), /-webkit-backdrop-filter/);
+});
+
 test('a util importing from @stencil/core gets the runtime the components use', async () => {
   write('mode-util.ts', `import { getMode } from '@stencil/core';\nexport const m = (el: HTMLElement) => getMode(el);\n`);
   write('uses-util.ts', `import './ported.tsx';\nimport { m } from './mode-util.ts';\nconsole.log(m);\n`);

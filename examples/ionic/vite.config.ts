@@ -16,6 +16,8 @@ import stencilrs from '@popcorn245/stencilrs/vite';
 import * as sass from 'sass';
 import { defineConfig, type Plugin } from 'vite';
 
+// Ionic's Sass still uses `@import`, global built-ins and other deprecated features (about 2,000 lines of warnings per build).
+const silenceDeprecations = ['import', 'global-builtin', 'color-functions', 'if-function'] as const;
 const here = fileURLToPath(new URL('.', import.meta.url));
 const src = join(here, 'migrated/src');
 const walk = (d: string): string[] =>
@@ -52,7 +54,7 @@ const globalCss = (): Plugin => ({
   name: 'ionic-global-css',
   generateBundle() {
     for (const file of walk(join(src, 'css')).filter((f) => f.endsWith('.scss'))) {
-      const { css: code } = sass.compile(file, { style: 'compressed', silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function'] });
+      const { css: code } = sass.compile(file, { style: 'compressed', silenceDeprecations: [...silenceDeprecations] });
       this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: code + '\n' });
     }
   },
@@ -69,7 +71,7 @@ export default defineConfig({
       { find: /^@global\//, replacement: `${join(src, 'global')}/` },
     ],
   },
-  plugins: [stencilrs({ verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
+  plugins: [stencilrs({ css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
   build: {
     outDir: join(here, 'dist-stencilrs'),
     emptyOutDir: true,

@@ -5,6 +5,11 @@
 // Every stylesheet import the ui-kit's and the starter's components compile to, plus each one
 // under every encapsulation and mode, goes through both plugins' `resolveId` and `load`, with
 // dev and production settings. The virtual ids and the generated modules must be identical.
+//
+// stencilrs' CSS defaults follow `stencil build` (autoprefix for Stencil's browser targets, values as authored),
+// which @stencil/unplugin does not do (no targets, lightningcss' minify): the comparison runs stencilrs with
+// `css: { targets: false, minify: <build> }`, lightningcss exactly as unplugin calls it. A second run with the
+// defaults only reports how many modules the defaults change.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,9 +59,10 @@ const ctx = { addWatchFile() {}, error: (e) => { throw new Error(String(e)); }, 
 let failures = 0;
 for (const dev of [false, true]) {
   const command = dev ? 'serve' : 'build';
-  const mine = stencilrs({ dev })[0];
+  const mine = stencilrs({ dev, css: { targets: false, minify: !dev } })[0];
+  const defaults = stencilrs({ dev })[0];
   const theirs = [stencilVite({ dev })].flat().find((p) => p.name === '@stencil/unplugin');
-  for (const p of [mine, theirs]) p.configResolved?.({ command, root: here });
+  for (const p of [mine, defaults, theirs]) p.configResolved?.({ command, root: here });
   const run = async (p, file, spec) => {
     const id = await hook(p, 'resolveId').call(ctx, spec, file);
     const loaded = id && (await hook(p, 'load').call(ctx, id));
@@ -64,6 +70,8 @@ for (const dev of [false, true]) {
   };
   let n = 0;
   let bytes = 0;
+  let changed = 0;
+  let defaultBytes = 0;
   for (const [file, spec] of cases.values()) {
     const [a, b] = [await run(mine, file, spec), await run(theirs, file, spec)];
     // The one deliberate difference: a mode's scoped stylesheet is `sc-<tag>-<mode>`, the class the runtime puts on
@@ -74,6 +82,9 @@ for (const dev of [false, true]) {
       a.code = a.code.replaceAll(`sc-${params.get('tag')}-${params.get('mode')}`, `sc-${params.get('tag')}`);
     }
     n++;
+    const d = await run(defaults, file, spec);
+    defaultBytes += d.code?.length ?? 0;
+    if (d.code !== a.code) changed++;
     bytes += b.code?.length ?? 0;
     if (a.id !== b.id || a.code !== b.code || a.code === null) {
       failures++;
@@ -81,7 +92,7 @@ for (const dev of [false, true]) {
       if (verbose) console.log(`  stencilrs : ${JSON.stringify(a).slice(0, 300)}\n  unplugin  : ${JSON.stringify(b).slice(0, 300)}`);
     }
   }
-  console.log(`${command}: ${n} stylesheet modules (${(bytes / 1024).toFixed(0)} KB) compared`);
+  console.log(`${command}: ${n} stylesheet modules (${(bytes / 1024).toFixed(0)} KB) compared; with stencilrs' defaults (Stencil's targets, values as authored) ${changed} differ from them, ${(defaultBytes / 1024).toFixed(0)} KB`);
 }
 if (failures) {
   console.error(`${failures} difference(s)`);

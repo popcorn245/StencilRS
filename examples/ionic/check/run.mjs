@@ -7,9 +7,7 @@
 // 3. Every component of docs.json (94 tags), the internal ones (ion-select-popover), and ion-icon mounted in both modes in each build: defined,
 //    hydrated, shadow root exactly where the encapsulation says (shadow / scoped / none), no console error
 //    or page error, and the same rendered result in both builds (host and shadow DOM, size, the scope ids
-//    in the styles). The CSS text itself is not compared: `stencil build` and the Vite pipeline run lightningcss
-//    differently (targets, minifier), so `:dir(rtl)`, prefixes and shorthands are spelled differently; it is
-//    only counted.
+//    in the styles), and the same CSS text (whitespace aside; CSS_DIFFERENCES lists the two exceptions and why).
 // Exits 1 on the first kind of failure that is found (all failures of that step are printed).
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -118,10 +116,8 @@ console.log('\n== screenshots, stencil vs stencilrs');
       return { n, max, total: x.width * x.height };
     }, [a, b]);
     if (diff.size) fail(`${shot}: sizes differ ${diff.size.join(' ')}`);
-    // Edge anti-aliasing may differ by a few levels (lightningcss turns `translate3d(x, 0, 0)` into `translate(x)` in
-    // the Vite pipeline, which drops the compositing layer): tolerated below 0.01% of the pixels and 8 levels.
-    else if (diff.n > diff.total / 10000 || diff.max > 8) fail(`${shot}: ${diff.n} of ${diff.total} pixels differ, by up to ${diff.max} levels`);
-    else if (diff.n) console.log(`  ok   ${shot}: ${diff.n} of ${diff.total} pixels differ, by up to ${diff.max} levels (anti-aliasing)`);
+    // Pixel for pixel: the stylesheets are the same CSS (a lowered `translate3d(x, 0, 0)` once cost the ios toggle its compositing layer).
+    else if (diff.n) fail(`${shot}: ${diff.n} of ${diff.total} pixels differ, by up to ${diff.max} levels`);
     else console.log(`  ok   ${shot}: identical (${diff.total} pixels)`);
   }
   await page.close();
@@ -147,6 +143,12 @@ const diagnostics = (m) => Object.fromEntries(tags.map((t) => [t, m.results[t].e
 const squash = (css) => css.replace(/\s*([,:;{}()])\s*/g, '$1').replace(/;}/g, '}');
 // The scope ids a stylesheet uses (`sc-ion-label-ios-h`, ...): a mismatch with the classes on the element
 // means the scoped rules never apply.
+// Component stylesheets that are not the same CSS text in both builds, and why (everything else must be identical:
+// the plugin autoprefixes for the same browsers as `stencil build` and keeps lightningcss' values, vite-css.js).
+const CSS_DIFFERENCES = {
+  'ion-icon': `not this plugin's CSS: stencilrs uses ionicons' prebuilt ion-icon.js, with the stylesheet ionicons shipped; \`stencil build\` compiles ion-icon from source and orders its declarations differently`,
+  'md:ion-select': `selector written twice in select.md.scss's Sass output (':host(.select-fill-outline) .label-text-wrapper, :host(.select-fill-outline) .label-text-wrapper'): Stencil's own minifier drops the duplicate, lightningcss without minify keeps it`,
+};
 const scopeIds = (css) => [...new Set(css.match(/sc-[a-z0-9-]+/g) ?? [])].sort().join(' ');
 // Class lists in markup are sets: the order a class is added in can depend on timing, and ion-datetime's wheels
 // mark the active option (`option-active`) a frame or two after they are laid out.
@@ -250,10 +252,17 @@ for (const mode of ['ios', 'md']) {
   const b = all[`stencilrs/${mode}`];
   let differing = 0;
   let sameCss = 0;
+  const known = [];
   for (const tag of tags) {
     const x = a.states[tag];
     const y = b.states[tag];
     if (squash(x.styles) === squash(y.styles)) sameCss++;
+    else if (!CSS_DIFFERENCES[`${mode}:${tag}`] && !CSS_DIFFERENCES[tag]) {
+      const [p, q] = [squash(x.styles), squash(y.styles)];
+      let i = 0;
+      while (i < p.length && p[i] === q[i]) i++;
+      fail(`${mode} ${tag}: stylesheet text differs, first at ${i}\n        stencil   ...${p.slice(Math.max(0, i - 60), i + 100)}\n        stencilrs ...${q.slice(Math.max(0, i - 60), i + 100)}`);
+    } else known.push(`${mode} ${tag}: ${CSS_DIFFERENCES[`${mode}:${tag}`] ?? CSS_DIFFERENCES[tag]}`);
     for (const st of [x, y]) {
       st.scopeIds = scopeIds(st.styles);
       st.styles = undefined;
@@ -281,7 +290,8 @@ for (const mode of ['ios', 'md']) {
     for (const h of hx.filter((v) => !hy.includes(v))) console.log(`      only in stencil:   ${clip(h, 200)}`);
     for (const h of hy.filter((v) => !hx.includes(v))) console.log(`      only in stencilrs: ${clip(h, 200)}`);
   }
-  if (!differing && JSON.stringify(hx) === JSON.stringify(hy)) console.log(`  ok   ${mode}: ${tags.length} components render the same (DOM, scope ids, size); ${sameCss} of ${tags.length} component stylesheets are identical CSS text, ${hx.length} <head> stylesheets`);
+  for (const k of known) console.log(`       known: ${k}`);
+  if (!differing && JSON.stringify(hx) === JSON.stringify(hy)) console.log(`  ok   ${mode}: ${tags.length} components render the same (DOM, scope ids, size); ${sameCss} of ${tags.length} component stylesheets are identical CSS text (${known.length} listed differences), ${hx.length} <head> stylesheets`);
 }
 
 await browser.close();
