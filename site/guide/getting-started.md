@@ -1,0 +1,121 @@
+---
+title: "Getting started"
+description: "Install stencilrs, add the Vite plugin, or start from the starter project."
+---
+
+# Getting started
+
+## Requirements
+
+- **Node 22** or newer.
+- **Stencil v5** packages in your project: `@stencil/core` and `@stencil/unplugin` at
+  `5.0.0-beta.25`, and **Vite 8**.
+
+Prebuilt binaries cover Linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and Windows x64, so no
+Rust toolchain is needed. On anything else, [build from source](#build-from-source).
+
+## Use it in a Vite project
+
+```sh
+npm install --save-dev @popcorn245/stencilrs vite@8 \
+  @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25
+```
+
+```ts
+// vite.config.ts
+import stencilrs from '@popcorn245/stencilrs/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [stencilrs()],
+});
+```
+
+```json
+// tsconfig.json (the parts that matter)
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@stencil/core"
+  }
+}
+```
+
+Then import a component module anywhere: importing it registers its custom element.
+
+```ts
+// main.ts
+import './components/my-counter/my-counter';
+```
+
+```html
+<my-counter label="Clicks"></my-counter>
+```
+
+## Or start from the starter
+
+`examples/starter` is a ready project: a dev server with hot reload, a component generator,
+tests in happy-dom and in headless Chrome, and app and library builds.
+
+```sh
+cd examples/starter
+npm install
+npm run dev               # http://localhost:5173, edit a component and it updates in place
+npm run new pop-card      # scaffold src/components/pop-card/ (component, CSS, test, story)
+npm test                  # Vitest + happy-dom
+npm run test:browser      # the same tests in headless Chrome
+npm run build             # the demo app → dist/
+npm run build:lib         # dist/lib/components.js, one ES module registering every component
+```
+
+## Build from source
+
+Needs **Rust** (stable). On Windows the MSVC toolchain (`rustup` default) links with the Visual
+Studio Build Tools.
+
+```sh
+git clone https://github.com/popcorn245/StencilRS.git
+cd StencilRS
+npm install
+npm run build:native   # stencilrs.<platform>.node beside index.js, preferred over the prebuilt one
+npm test               # Rust tests + the Node binding test
+```
+
+`npm run build:native` fails with `EBUSY` if a running dev server (Vite, Vitest, Storybook) still
+has the old binary loaded: stop it and run the command again. To use your build in another
+project, install it by path: `npm install --save-dev ../path/to/StencilRS`.
+
+## Run this site
+
+This site is VitePress with the stencilrs Vite plugin in its config, so every live component on it
+is compiled by stencilrs as the page loads. The component library's Storybook is still built
+alongside it.
+
+```sh
+cd site
+npm install
+npm run dev               # http://localhost:5180
+npm run build             # static site → site/dist
+npm run build:all         # the site plus the Storybook, served under /storybook/
+```
+
+The Storybook on its own (`storybook/`): `npm run storybook` on `http://localhost:6007`,
+`npm run build` for a static build in `storybook/dist`.
+
+## Repository map
+
+| Path | What |
+|---|---|
+| `crates/stencilrs_transform` | The compiler (Rust): analysis, prop typing, code generation. |
+| `crates/stencilrs_napi` | The Node binding (napi-rs). |
+| `index.js`, `vite.js` | The JS API and the Vite plugin. |
+| `parity/` | Golden output from real Stencil v5 and the comparison harness. |
+| `examples/starter` | Template project. |
+| `examples/ui-kit` | The 136-component library on Stencil v5, `stencil build`, spec suite, checks. |
+| `site/` | This site (VitePress). |
+| `storybook/` | The ui-kit and starter Storybook. |
+| `docs/` | Design notes (pipeline map, transformer catalogue, quirks). |

@@ -1,0 +1,90 @@
+---
+title: "Vite plugin"
+description: "Options, what the plugin does to each file, hot reload, Vitest."
+---
+
+# Vite plugin
+
+```ts
+import stencilrs from '@popcorn245/stencilrs/vite';
+
+export default defineConfig({
+  plugins: [stencilrs({ /* options */ })],
+});
+```
+
+`stencilrs()` returns one plugin: stencilrs' own compiler. It compiles component files, serves
+their stylesheets and folds the build flags itself. `@stencil/unplugin` (Stencil v5's official
+bundler plugin) is loaded only when something needs it: a file stencilrs falls back on, the `docs`
+and `types` options, `include` / `exclude`, or a virtual global stylesheet, so a cold build
+doesn't pay for loading TypeScript ([#52](https://github.com/popcorn245/StencilRS/pull/52)).
+[What unplugin does, and where each part went](/reference/vite-plugin) is in the reference.
+
+## Options
+
+| Option | Default | What |
+|---|---|---|
+| `resolveImports` | `true` | Compute component metadata the way a full `stencil build` does: follow relative imports for prop types and defaults, know lib types (`Date`, `Record<…>`, …). `false` gives exactly what Stencil's single-file `transpileSync` (and so `@stencil/unplugin`) produces. |
+| `fallback` | `true` | When a file uses a feature stencilrs hasn't ported, let Stencil's compiler handle that file. `false` makes it a build error instead. |
+| `verbose` | `false` | Log which files fell back, and a count at the end of a build. |
+| *anything else* | | Passed to `@stencil/unplugin` (`docs`, `types`, `stencilConfig`, `dev`, `include`, `exclude`, …). |
+
+## What the plugin does to each file
+
+1. Skips anything that isn't a `.ts` / `.tsx` file with Stencil decorators, and `node_modules`.
+2. Picks the JSX mode from `tsconfig.json` (`jsx: react` → classic `h`; `react-jsx` → the automatic
+   runtime), or, without one, from whether the file imports `h`.
+3. Compiles the file with stencilrs (`transpile()`), in build-accurate mode by default.
+4. Diagnostics: errors fail the build (as with Stencil), warnings are logged; a `stencilrs:` error
+   means "not ported yet" and triggers the fallback.
+5. Adds what `@stencil/unplugin` adds around compiled output: dev build flags
+   (`hotModuleReplacement`, `isDev`), `vdomSignals` when the file imports `@stencil/core/signals`,
+   the component class export, and the HMR snippet in dev.
+6. Marks the file so unplugin doesn't transform it again.
+7. For a component that extends something, remembers the files its ancestors were read from
+   (`baseClasses` in the result) and watches them.
+
+In production builds it also folds `Build.isBrowser` / `Build.isServer`, as unplugin does.
+
+### Base classes
+
+An import of a file an ancestor lives in resolves to a virtual module (`\0stencilrs-base:<path>`),
+which the plugin compiles with `transformAsBaseClass`: a class that extends nothing gets
+`extends HTMLElement`, decorated classes get a constructor calling `super()`, and the Stencil
+decorators go. That is what `@stencil/unplugin` does with its `\0stencil-base:` modules, so the
+chain under a component ends in a real element. A base-class file that uses something stencilrs
+hasn't ported goes through Stencil's `transpileSync` instead.
+
+## Hot reload
+
+On a change to a component file the plugin sends Stencil's `stencil:hmr` event for that tag. The
+element re-imports its module and swaps the class in place, so component state survives. CSS
+changes go through unplugin's own HMR.
+
+## Vitest
+
+The same plugin works in `vitest.config.ts`. It adds the native binary to Vitest's module cache key
+(`configureVitest`), so rebuilding stencilrs invalidates cached transforms.
+
+```ts
+import stencilrs from '@popcorn245/stencilrs/vite';
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  plugins: [stencilrs()],
+  test: { environment: 'jsdom' },
+});
+```
+
+For Stencil's `newSpecPage()`-style tests, `@stencil/unplugin`'s `stencilSpecPage()` compiles
+components in a different mode that stencilrs doesn't produce yet; use it directly for those.
+
+## Storybook
+
+Add the plugin in `.storybook/main.ts` with `viteFinal`, as the repository's Storybook does:
+
+```ts
+async viteFinal(config) {
+  return mergeConfig(config, { plugins: [stencilrs()] });
+}
+```

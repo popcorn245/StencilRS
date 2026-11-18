@@ -1,0 +1,16 @@
+{
+  "note": "Numbers that are not in storybook/docs/data/benchmarks.json. Each entry says where it comes from.",
+  "parity": { "passed": 222, "total": 222, "what": "fixtures, metadata, diagnostics and code, in each of five outputs", "source": "README.md; PR #52 ci run" },
+  "buildParity": { "passed": 136, "total": 136, "what": "ui-kit components with the same metadata as a full stencil build", "source": "README.md" },
+  "specs": { "passed": 874, "total": 874, "what": "ui-kit spec tests, Stencil v5 and stencilrs both, no test differs", "source": "README.md" },
+  "coldStart": {
+    "build": { "beforeMs": 1908, "afterMs": 964, "what": "cold ui-kit vite build, fresh process, median of 7" },
+    "dev": { "beforeMs": 1153, "afterMs": 370, "what": "dev server, process start to first component response, median of 5" },
+    "source": "https://github.com/popcorn245/StencilRS/pull/52"
+  },
+  "ionic": { "version": "9.0.12", "components": 95, "complexTypeClean": 37, "source": "https://github.com/popcorn245/StencilRS/issues/62" },
+  "releases": [
+    { "tag": "v0.1.0", "date": "2026-10-19" },
+    { "tag": "v0.2.0", "date": "2026-10-20" }
+  ]
+}

@@ -1,0 +1,66 @@
+---
+title: "Parity and verification"
+description: "How 'same output as Stencil' is checked, four ways."
+---
+
+# Parity and verification
+
+"Same output as Stencil" is checked four ways, all runnable from the repo.
+
+## 1. Per-file parity with `transpileSync`: `parity/`
+
+Real Stencil v5 compiles every fixture with `transpileSync`, exactly as `@stencil/unplugin` calls it,
+and the output is committed as golden snapshots. stencilrs (single-file mode) runs on the same
+files.
+
+```sh
+cd parity
+npm install
+npm run snapshot   # regenerate snapshots/ from Stencil v5
+npm run compare    # stencilrs vs the snapshots (--verbose for every diff)
+```
+
+| Compared | How | Result |
+|---|---|---|
+| Metadata | Stencil's `ComponentCompilerMeta` projected to stencilrs' fields, exact | 216 / 216 |
+| Diagnostics | level + full message text, order-independent | 216 / 216 |
+| Code | both reprinted by oxc's printer (comments dropped), exact | 187 / 187 that compile (module: same; lazy: 182 / 182, the other 5 fall back to Stencil) |
+| Source maps | valid, and scored: mapped identifiers that land on the same identifier | 97.7% (Stencil 94.3%) |
+
+The corpus is 59 feature fixtures (one Stencil feature each, including error cases), 15
+inheritance and mixin fixtures, and the 136 ui-kit components. The inheritance fixtures compile
+the way `@stencil/unplugin` runs them: components with a `resolveImport` callback, and the
+files under `inheritance/bases/` with `transformAsBaseClass`.
+
+## 2. Against a full `stencil build`: `check-build.mjs`
+
+The full build type-checks the whole program, so its metadata is the ground truth. Its
+`collection` output carries every component's metadata as static getters; `check-build.mjs`
+compares them with stencilrs in build-accurate mode, field by field.
+
+```sh
+cd examples/ui-kit
+npm run build            # stencil build: 0 errors, 0 warnings
+node check-build.mjs     # 136 / 136 identical
+```
+
+## 3. Behaviour: the spec suite on both compilers
+
+The ui-kit's 874 specs mount the real compiled elements. Run with each compiler and diff test by
+test:
+
+```sh
+npm run test:stencil && npm test && npm run compare
+# Stencil v5:  874/874 · stencilrs: 874/874 · no test differs
+```
+
+## 4. Coverage: which files stencilrs compiles itself
+
+```sh
+node coverage.mjs        # stencilrs compiles 136 component files; 0 fall back to Stencil
+```
+
+## Unit tests
+
+`npm test` at the repo root runs the Rust tests (analysis rules, codegen shape) and the Node binding
+test.
