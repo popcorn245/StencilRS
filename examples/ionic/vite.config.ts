@@ -71,7 +71,7 @@ export default defineConfig({
   },
   plugins: [stencilrs({ verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
   build: {
-    outDir: join(here, 'dist-stencilrs'),
+    outDir: process.env.IONIC_OUT_DIR ?? join(here, 'dist-stencilrs'),
     emptyOutDir: true,
     minify: true,
     lib: { entry, formats: ['es'], fileName: 'ionic' },

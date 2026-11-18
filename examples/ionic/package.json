@@ -12,6 +12,7 @@
     "build:stencil4": "node scripts/build.mjs stencil4",
     "smoke": "node smoke/run.mjs",
     "check": "node check/run.mjs",
+    "bench": "node bench.mjs",
     "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke"
   },
   "devDependencies": {

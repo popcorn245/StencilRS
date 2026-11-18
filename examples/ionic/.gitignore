@@ -10,3 +10,4 @@ logs/
 smoke/shots/
 .lib/
 dist-stencilrs/
+.bench/

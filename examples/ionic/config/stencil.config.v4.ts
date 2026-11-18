@@ -7,7 +7,7 @@
 //     api.txt generator are gone (they need packages outside core/ and are not what is measured)
 //   - `testing` (Jest) is gone: the specs and e2e tests are not copied
 //   - `IONIC_OUT_DIR` (set by scripts/build.mjs) redirects the outputs next to the harness
-//   - `enableCache` is off, so every build is a cold build and benchmarks are comparable
+//   - `enableCache` is off unless IONIC_STENCIL_CACHE=1 (npm run bench's warm rows), so every build is a cold build
 // Everything else (bundles, plugins, extras, global script, preamble) is upstream's.
 import type { Config } from '@stencil/core';
 import { sass } from '@stencil/sass';
@@ -83,9 +83,11 @@ export const config: Config = {
       file: relative(process.cwd(), `${out}/docs.json`),
     },
   ],
+  // `stencil build --dev --watch --serve` (npm run bench) serves the build folder, not src/
+  devServer: { root: out, openBrowser: false },
   preamble: '(C) Ionic http://ionicframework.com - MIT License',
   globalScript: 'src/global/ionic-global.ts',
-  enableCache: false,
+  enableCache: process.env.IONIC_STENCIL_CACHE === '1',
   transformAliasedImportPaths: true,
   extras: {
     experimentalSlotFixes: true,
