@@ -10,8 +10,8 @@ use std::path::{Component, Path, PathBuf};
 
 use oxc::allocator::Allocator;
 use oxc::ast::ast::{
-    Argument, ArrowFunctionBody, Class, Declaration, ExportDefaultDeclarationKind, Expression, Function,
-    ImportDeclarationSpecifier, Program, Statement, VariableDeclaration,
+    Argument, ArrowFunctionBody, Class, Declaration, ExportDefaultDeclarationKind, Expression,
+    Function, ImportDeclarationSpecifier, Program, Statement, VariableDeclaration,
 };
 use oxc::parser::Parser;
 use oxc::span::{SourceType, Span};
@@ -39,7 +39,13 @@ pub struct Found {
 
 /// Every ancestor of `class` (in `module`), read with `resolver` in build-accurate mode.
 pub fn ancestors(class: &Class, module: Module, resolver: Option<&Resolver>) -> Found {
-    let mut walk = Walk { found: Found::default(), visited: Vec::new(), seen: Vec::new(), root: class.span, resolver };
+    let mut walk = Walk {
+        found: Found::default(),
+        visited: Vec::new(),
+        seen: Vec::new(),
+        root: class.span,
+        resolver,
+    };
     walk.ancestors_of(class, module);
     walk.found
 }
@@ -47,7 +53,10 @@ pub fn ancestors(class: &Class, module: Module, resolver: Option<&Resolver>) -> 
 /// `deDupeMembers` then concatenation: the parent's members the class doesn't redeclare,
 /// followed by the class's own.
 pub fn prepend<T>(parent: Vec<T>, own: Vec<T>, key: impl Fn(&T) -> String) -> Vec<T> {
-    let mut merged: Vec<T> = parent.into_iter().filter(|p| !own.iter().any(|o| key(o) == key(p))).collect();
+    let mut merged: Vec<T> = parent
+        .into_iter()
+        .filter(|p| !own.iter().any(|o| key(o) == key(p)))
+        .collect();
     merged.extend(own);
     merged
 }
@@ -91,7 +100,13 @@ impl Walk<'_> {
             return;
         }
         self.seen.push(id);
-        self.found.members.push(foreign_class_members(class, module.program, module.source, module.file, self.resolver));
+        self.found.members.push(foreign_class_members(
+            class,
+            module.program,
+            module.source,
+            module.file,
+            self.resolver,
+        ));
         if keep_looking {
             self.ancestors_of(class, module);
         }
@@ -100,17 +115,27 @@ impl Walk<'_> {
     /// A parent imported from another module (`findImportOrigin`, then the module, then
     /// `findDeclarationOrReExport`).
     fn imported(&mut self, parent: &str, module: Module) {
-        let Some((specifier, _)) = import_origin(module.program, parent) else { return };
-        let Some(path) = self.resolve(&specifier, module.file) else { return };
+        let Some((specifier, _)) = import_origin(module.program, parent) else {
+            return;
+        };
+        let Some(path) = self.resolve(&specifier, module.file) else {
+            return;
+        };
         let key = format!("{path}::{parent}");
         if self.visited.contains(&key) {
             return;
         }
         self.visited.push(key);
-        let Some(source) = std::fs::read_to_string(&path).ok() else { return };
+        let Some(source) = std::fs::read_to_string(&path).ok() else {
+            return;
+        };
         let allocator = Allocator::default();
         let program = parse(&allocator, &source, &path);
-        let here = Module { program: &program, source: &source, file: &path };
+        let here = Module {
+            program: &program,
+            source: &source,
+            file: &path,
+        };
 
         if let Some(decl) = find_statement(&program, parent) {
             return self.take(decl, parent, here);
@@ -122,7 +147,15 @@ impl Walk<'_> {
                     let allocator = Allocator::default();
                     let program = parse(&allocator, &source, &path);
                     if let Some(decl) = find_statement(&program, &local) {
-                        return self.take(decl, parent, Module { program: &program, source: &source, file: &path });
+                        return self.take(
+                            decl,
+                            parent,
+                            Module {
+                                program: &program,
+                                source: &source,
+                                file: &path,
+                            },
+                        );
                     }
                 }
             }
@@ -142,12 +175,19 @@ impl Walk<'_> {
     }
 
     fn warn(&mut self, message: String) {
-        self.found.warnings.push(Diagnostic { level: Level::Warn, message, start: self.root.start, end: self.root.end });
+        self.found.warnings.push(Diagnostic {
+            level: Level::Warn,
+            message,
+            start: self.root.start,
+            end: self.root.end,
+        });
     }
 }
 
 fn parse<'a>(allocator: &'a Allocator, source: &'a str, path: &str) -> Program<'a> {
-    let source_type = SourceType::from_path(path).unwrap_or_else(|_| SourceType::tsx()).with_module(true);
+    let source_type = SourceType::from_path(path)
+        .unwrap_or_else(|_| SourceType::tsx())
+        .with_module(true);
     Parser::new(allocator, source, source_type).parse().program
 }
 
@@ -156,14 +196,15 @@ fn extends_names(class: &Class) -> Vec<String> {
     match &class.heritage {
         Some(h) => match &h.expression {
             Expression::Identifier(id) => vec![id.name.to_string()],
-            Expression::CallExpression(call) if matches!(&call.callee, Expression::Identifier(id) if id.name == "Mixin") => call
-                .arguments
-                .iter()
-                .filter_map(|a| match a {
-                    Argument::Identifier(id) => Some(id.name.to_string()),
-                    _ => None,
-                })
-                .collect(),
+            Expression::CallExpression(call) if matches!(&call.callee, Expression::Identifier(id) if id.name == "Mixin") => {
+                call.arguments
+                    .iter()
+                    .filter_map(|a| match a {
+                        Argument::Identifier(id) => Some(id.name.to_string()),
+                        _ => None,
+                    })
+                    .collect()
+            }
             _ => Vec::new(),
         },
         None => Vec::new(),
@@ -179,10 +220,24 @@ enum Decl<'p, 'a> {
 }
 
 fn named<'p, 'a>(stmt: &'p Statement<'a>, name: &str) -> Option<Decl<'p, 'a>> {
-    let class = |c: &'p Class<'a>| c.id.as_ref().is_some_and(|id| id.name == name).then_some(Decl::Class(c));
-    let function = |f: &'p Function<'a>| f.id.as_ref().is_some_and(|id| id.name == name).then_some(Decl::Function(f));
+    let class = |c: &'p Class<'a>| {
+        c.id.as_ref()
+            .is_some_and(|id| id.name == name)
+            .then_some(Decl::Class(c))
+    };
+    let function = |f: &'p Function<'a>| {
+        f.id.as_ref()
+            .is_some_and(|id| id.name == name)
+            .then_some(Decl::Function(f))
+    };
     let variable = |v: &'p VariableDeclaration<'a>| {
-        v.declarations.iter().any(|d| d.id.get_binding_identifier().is_some_and(|id| id.name == name)).then_some(Decl::Variable(v))
+        v.declarations
+            .iter()
+            .any(|d| {
+                d.id.get_binding_identifier()
+                    .is_some_and(|id| id.name == name)
+            })
+            .then_some(Decl::Variable(v))
     };
     match stmt {
         Statement::ClassDeclaration(c) => class(c),
@@ -210,8 +265,12 @@ fn find_statement<'p, 'a>(program: &'p Program<'a>, name: &str) -> Option<Decl<'
         return Some(decl);
     }
     for stmt in &program.body {
-        let Statement::ExportNamedDeclaration(e) = stmt else { continue };
-        let Some(s) = e.specifiers.iter().find(|s| s.exported.name() == name) else { continue };
+        let Statement::ExportNamedDeclaration(e) = stmt else {
+            continue;
+        };
+        let Some(s) = e.specifiers.iter().find(|s| s.exported.name() == name) else {
+            continue;
+        };
         let real = s.local.name();
         if real != name {
             return program.body.iter().find_map(|s| named(s, real.as_str()));
@@ -223,14 +282,19 @@ fn find_statement<'p, 'a>(program: &'p Program<'a>, name: &str) -> Option<Decl<'
 /// `findImportOrigin`: the module `name` is imported from, and its name there.
 fn import_origin(program: &Program, name: &str) -> Option<(String, String)> {
     for stmt in &program.body {
-        let Statement::ImportDeclaration(import) = stmt else { continue };
+        let Statement::ImportDeclaration(import) = stmt else {
+            continue;
+        };
         for spec in import.specifiers.iter().flatten() {
             match spec {
                 ImportDeclarationSpecifier::ImportDefaultSpecifier(s) if s.local.name == name => {
                     return Some((import.source.value.to_string(), "default".into()));
                 }
                 ImportDeclarationSpecifier::ImportSpecifier(s) if s.local.name == name => {
-                    return Some((import.source.value.to_string(), s.imported.name().to_string()));
+                    return Some((
+                        import.source.value.to_string(),
+                        s.imported.name().to_string(),
+                    ));
                 }
                 _ => {}
             }
@@ -247,7 +311,9 @@ fn re_export(program: &Program, name: &str) -> Option<(String, String)> {
             Statement::ExportNamedDeclaration(e) => (&e.specifiers, None),
             _ => continue,
         };
-        let Some(s) = specifiers.iter().find(|s| s.exported.name() == name) else { continue };
+        let Some(s) = specifiers.iter().find(|s| s.exported.name() == name) else {
+            continue;
+        };
         let local = s.local.name().to_string();
         match source {
             Some(source) => return Some((source.value.to_string(), local)),
@@ -271,18 +337,22 @@ fn class_in_factory<'p, 'a>(decl: Decl<'p, 'a>) -> Option<&'p Class<'a>> {
         Decl::Variable(v) => v.declarations.iter().find_map(|d| match d.init.as_ref()? {
             Expression::ArrowFunctionExpression(arrow) => match &arrow.body {
                 ArrowFunctionBody::ClassExpression(c) => Some(&**c),
-                ArrowFunctionBody::FunctionBody(body) => body.statements.iter().find_map(|s| match s {
+                ArrowFunctionBody::FunctionBody(body) => {
+                    body.statements.iter().find_map(|s| match s {
                         Statement::ClassDeclaration(c) => Some(&**c),
                         Statement::ReturnStatement(r) => match r.argument.as_ref()? {
                             Expression::ClassExpression(c) => Some(&**c),
                             _ => None,
                         },
-                    _ => None,
-                }),
+                        _ => None,
+                    })
+                }
                 _ => None,
             },
             Expression::ClassExpression(c) => Some(&**c),
-            Expression::FunctionExpression(f) => f.body.as_ref().and_then(|b| first_class(&b.statements)),
+            Expression::FunctionExpression(f) => {
+                f.body.as_ref().and_then(|b| first_class(&b.statements))
+            }
             _ => None,
         }),
     }
@@ -296,10 +366,12 @@ fn first_class<'p, 'a>(statements: &'p [Statement<'a>]) -> Option<&'p Class<'a>>
             Expression::ClassExpression(c) => Some(&**c),
             _ => None,
         },
-        Statement::VariableDeclaration(v) => v.declarations.iter().find_map(|d| match d.init.as_ref()? {
-            Expression::ClassExpression(c) => Some(&**c),
-            _ => None,
-        }),
+        Statement::VariableDeclaration(v) => {
+            v.declarations.iter().find_map(|d| match d.init.as_ref()? {
+                Expression::ClassExpression(c) => Some(&**c),
+                _ => None,
+            })
+        }
         Statement::BlockStatement(b) => first_class(&b.body),
         Statement::IfStatement(i) => first_class(std::slice::from_ref(&i.consequent)),
         _ => None,
@@ -310,7 +382,9 @@ fn first_class<'p, 'a>(statements: &'p [Statement<'a>]) -> Option<&'p Class<'a>>
 /// then with `.tsx`, `.ts`, `.js`, then `.js` → `.ts` / `.tsx`. Absolute and `/`-separated.
 pub fn resolve_specifier(specifier: &str, importer: &str) -> Option<String> {
     let dir = Path::new(importer).parent()?;
-    let base = normalize(&dir.join(specifier)).to_string_lossy().replace('\\', "/");
+    let base = normalize(&dir.join(specifier))
+        .to_string_lossy()
+        .replace('\\', "/");
     let mut candidates = vec![base.clone()];
     candidates.extend([".tsx", ".ts", ".js"].map(|ext| format!("{base}{ext}")));
     if let Some(stem) = base.strip_suffix(".js") {
@@ -347,6 +421,9 @@ mod tests {
 
     #[test]
     fn normalize_resolves_dots() {
-        assert_eq!(normalize(Path::new("/x/y/../z/./w.ts")), Path::new("/x/z/w.ts"));
+        assert_eq!(
+            normalize(Path::new("/x/y/../z/./w.ts")),
+            Path::new("/x/z/w.ts")
+        );
     }
 }

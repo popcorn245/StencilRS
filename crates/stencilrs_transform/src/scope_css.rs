@@ -37,8 +37,14 @@ const BLOCK_OPEN: &str = "{%BLOCK%";
 fn is_js_ws(c: char) -> bool {
     matches!(
         c,
-        '\t' | '\n' | '\x0B' | '\x0C' | '\r' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'..='\u{200A}'
-            | '\u{2028}' | '\u{2029}' | '\u{202F}' | '\u{205F}' | '\u{3000}' | '\u{FEFF}'
+        '\t' | '\n' | '\x0B' | '\x0C' | '\r' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
     )
 }
 
@@ -87,14 +93,23 @@ fn re(pattern: &str) -> Regex {
         }
     }
     // JS has no backtracking limit; a whole stylesheet is one haystack, so lift fancy-regex's.
-    fancy_regex::RegexBuilder::new(&out).backtrack_limit(usize::MAX).build().unwrap_or_else(|e| panic!("bad pattern {out}: {e}"))
+    fancy_regex::RegexBuilder::new(&out)
+        .backtrack_limit(usize::MAX)
+        .build()
+        .unwrap_or_else(|e| panic!("bad pattern {out}: {e}"))
 }
 
 /// An ASCII-only case-insensitive literal (JS's `i` flag without `u` never folds `ſ` to `s`).
 fn ci(literal: &str) -> String {
     literal
         .chars()
-        .map(|c| if c.is_ascii_alphabetic() { format!("[{}{}]", c.to_ascii_lowercase(), c.to_ascii_uppercase()) } else { c.to_string() })
+        .map(|c| {
+            if c.is_ascii_alphabetic() {
+                format!("[{}{}]", c.to_ascii_lowercase(), c.to_ascii_uppercase())
+            } else {
+                c.to_string()
+            }
+        })
         .collect()
 }
 
@@ -111,7 +126,12 @@ fn escape(text: &str) -> String {
 }
 
 /// JS `str.replace(re, fn)`: every match when `all`, else the first.
-fn replace(re: &Regex, hay: &str, all: bool, mut f: impl FnMut(&Captures) -> Result<String>) -> Result<String> {
+fn replace(
+    re: &Regex,
+    hay: &str,
+    all: bool,
+    mut f: impl FnMut(&Captures) -> Result<String>,
+) -> Result<String> {
     let mut out = String::with_capacity(hay.len());
     let mut last = 0;
     for caps in re.captures_iter(hay) {
@@ -128,7 +148,11 @@ fn replace(re: &Regex, hay: &str, all: bool, mut f: impl FnMut(&Captures) -> Res
     Ok(out)
 }
 
-fn replace_all(re: &Regex, hay: &str, f: impl FnMut(&Captures) -> Result<String>) -> Result<String> {
+fn replace_all(
+    re: &Regex,
+    hay: &str,
+    f: impl FnMut(&Captures) -> Result<String>,
+) -> Result<String> {
     replace(re, hay, true, f)
 }
 
@@ -168,7 +192,12 @@ fn substitute(replacement: &str, hay: &str, start: usize, end: usize) -> String 
 /// JS `str.replace(needle, replacement)` with a string needle: the first occurrence only.
 fn replace_first_str(hay: &str, needle: &str, replacement: &str) -> String {
     match hay.find(needle) {
-        Some(i) => format!("{}{}{}", &hay[..i], substitute(replacement, hay, i, i + needle.len()), &hay[i + needle.len()..]),
+        Some(i) => format!(
+            "{}{}{}",
+            &hay[..i],
+            substitute(replacement, hay, i, i + needle.len()),
+            &hay[i + needle.len()..]
+        ),
         None => hay.to_string(),
     }
 }
@@ -195,7 +224,8 @@ fn split_ws(s: &str) -> Vec<&str> {
     out
 }
 
-static PART_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| re(r#"(\[\s*part~=\s*("[^"]*"|'[^']*')\s*\])"#));
+static PART_ATTR_RE: LazyLock<Regex> =
+    LazyLock::new(|| re(r#"(\[\s*part~=\s*("[^"]*"|'[^']*')\s*\])"#));
 static ATTR_RE: LazyLock<Regex> = LazyLock::new(|| re(r"(\[[^\]]*\])"));
 static NTH_RE: LazyLock<Regex> = LazyLock::new(|| re(r"(:nth-[-A-Za-z0-9_]+)(\([^)]+\))"));
 static PART_PH_RE: LazyLock<Regex> = LazyLock::new(|| re(r"__part-([0-9]+)__"));
@@ -228,13 +258,21 @@ fn safe_selector(selector: &str) -> Result<SafeSelector> {
             Ok(format!("{}__ph-{}__", group(c, 1), placeholders.len() - 1))
         })?;
     }
-    Ok(SafeSelector { content: selector, placeholders })
+    Ok(SafeSelector {
+        content: selector,
+        placeholders,
+    })
 }
 
 fn restore_safe_selector(placeholders: &[String], content: &str) -> Result<String> {
     // `placeholders[+index]` is `undefined` for a stray `__ph-9__` in the source.
     let lookup = |c: &Captures| {
-        Ok(group(c, 1).parse::<usize>().ok().and_then(|i| placeholders.get(i)).map_or("undefined", |s| s.as_str()).to_string())
+        Ok(group(c, 1)
+            .parse::<usize>()
+            .ok()
+            .and_then(|i| placeholders.get(i))
+            .map_or("undefined", |s| s.as_str())
+            .to_string())
     };
     let mut content = content.to_string();
     if content.contains("__part-") {
@@ -248,13 +286,18 @@ fn restore_safe_selector(placeholders: &[String], content: &str) -> Result<Strin
 
 /// `(-shadowcsshost)(?:\((...)\))?([^,{]*)` and its siblings, with the `gim` flags.
 fn colon_rule_re(polyfill: &str) -> Regex {
-    re(&format!(r"({})(?:\(((?:\([^)(]*\)|[^)(]*)+?)\))?([^,{{]*)", ci(polyfill)))
+    re(&format!(
+        r"({})(?:\(((?:\([^)(]*\)|[^)(]*)+?)\))?([^,{{]*)",
+        ci(polyfill)
+    ))
 }
 
 static CSS_COLON_HOST_RE: LazyLock<Regex> = LazyLock::new(|| colon_rule_re(POLYFILL_HOST));
-static CSS_COLON_HOST_CONTEXT_RE: LazyLock<Regex> = LazyLock::new(|| colon_rule_re(POLYFILL_HOST_CONTEXT));
+static CSS_COLON_HOST_CONTEXT_RE: LazyLock<Regex> =
+    LazyLock::new(|| colon_rule_re(POLYFILL_HOST_CONTEXT));
 static CSS_COLON_SLOTTED_RE: LazyLock<Regex> = LazyLock::new(|| colon_rule_re(POLYFILL_SLOTTED));
-static POLYFILL_HOST_NO_COMBINATOR_RE: LazyLock<Regex> = LazyLock::new(|| re(r"-shadowcsshost-no-combinator([^\s]*)"));
+static POLYFILL_HOST_NO_COMBINATOR_RE: LazyLock<Regex> =
+    LazyLock::new(|| re(r"-shadowcsshost-no-combinator([^\s]*)"));
 static POLYFILL_HOST_RE: LazyLock<Regex> = LazyLock::new(|| re(&ci(POLYFILL_HOST)));
 static SAFE_PART_RE: LazyLock<Regex> = LazyLock::new(|| re(r"__part-([0-9]+)__"));
 
@@ -285,9 +328,11 @@ fn replace_selector(css: &str, selector: &str, polyfill: &str) -> String {
     out
 }
 
-static SUPPORTS_SELECTOR_RE: LazyLock<Regex> = LazyLock::new(|| re(r"@supports\s+selector\s*\(\s*([^)]*)\s*\)"));
+static SUPPORTS_SELECTOR_RE: LazyLock<Regex> =
+    LazyLock::new(|| re(r"@supports\s+selector\s*\(\s*([^)]*)\s*\)"));
 static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| re(r"/\*\s*(?s:.)*?\*/"));
-static COMMENT_WITH_HASH_RE: LazyLock<Regex> = LazyLock::new(|| re(r"/\*\s*#\s*source(Mapping)?URL=(?s:.)+?\*/"));
+static COMMENT_WITH_HASH_RE: LazyLock<Regex> =
+    LazyLock::new(|| re(r"/\*\s*#\s*source(Mapping)?URL=(?s:.)+?\*/"));
 static IS_ATTR_RE: LazyLock<Regex> = LazyLock::new(|| re(r"\[is=([^\]]*)\]"));
 static STAR_RE: LazyLock<Regex> = LazyLock::new(|| re(r">\s*\*\s+([^{, ]+)"));
 static PART_SELECTOR_RE: LazyLock<Regex> =
@@ -301,7 +346,9 @@ struct Rule {
 
 /// Recursing into `undefined` content throws a TypeError in Stencil.
 fn block(content: &Option<String>) -> Result<&str> {
-    content.as_deref().ok_or_else(|| ScopeCssError("stray %BLOCK% in the stylesheet".into()))
+    content
+        .as_deref()
+        .ok_or_else(|| ScopeCssError("stray %BLOCK% in the stylesheet".into()))
 }
 
 /// The next match of `/(\s*)([^;{}]+?)(\s*)((?:\{%BLOCK%\}?\s*;?)|(?:\s*;))/g` at or after `from`:
@@ -354,9 +401,19 @@ fn process_rules(input: &str, mut callback: impl FnMut(Rule) -> Result<Rule>) ->
             suffix = &suffix[BLOCK_OPEN.len()..];
             content_prefix = "{";
         }
-        let rule = callback(Rule { selector: escaped[g1..g2].to_string(), content })?;
+        let rule = callback(Rule {
+            selector: escaped[g1..g2].to_string(),
+            content,
+        })?;
         let content = rule.content.as_deref().unwrap_or("undefined");
-        for piece in [&escaped[start..g1], &rule.selector, &escaped[g2..g3], content_prefix, content, suffix] {
+        for piece in [
+            &escaped[start..g1],
+            &rule.selector,
+            &escaped[g2..g3],
+            content_prefix,
+            content,
+            suffix,
+        ] {
             out.push_str(piece);
         }
         last = end;
@@ -415,7 +472,10 @@ fn insert_polyfill_host_in_css_text(css: &str) -> Result<String> {
     let css = if css.contains("@supports") {
         replace_all(&SUPPORTS_SELECTOR_RE, css, |c| {
             supports_blocks.push(group(c, 1).to_string());
-            Ok(format!("@supports selector(__supports_{}__)", supports_blocks.len() - 1))
+            Ok(format!(
+                "@supports selector(__supports_{}__)",
+                supports_blocks.len() - 1
+            ))
         })?
     } else {
         css.to_string()
@@ -429,7 +489,12 @@ fn insert_polyfill_host_in_css_text(css: &str) -> Result<String> {
     Ok(css)
 }
 
-fn convert_colon_rule(css: &str, polyfill: &str, re: &Regex, part_replacer: fn(&str, &str, &str) -> String) -> Result<String> {
+fn convert_colon_rule(
+    css: &str,
+    polyfill: &str,
+    re: &Regex,
+    part_replacer: fn(&str, &str, &str) -> String,
+) -> Result<String> {
     if !contains_ci(css, polyfill) {
         return Ok(css.to_string());
     }
@@ -485,10 +550,18 @@ fn convert_colon_slotted(css: &str, slot_scope_id: &str) -> Result<(String, Vec<
         let prefix_start = css[..offset].rfind(['}', ',']).map_or(0, |i| i + 1);
         let prefix_selector = &css[prefix_start..offset];
         let org_selector = trim(&format!("{prefix_selector}{slotted_selector}")).to_string();
-        let added_selector = trim(&format!("{}{}", trim_end(prefix_selector), trim(&slotted_selector))).to_string();
+        let added_selector = trim(&format!(
+            "{}{}",
+            trim_end(prefix_selector),
+            trim(&slotted_selector)
+        ))
+        .to_string();
         if org_selector != added_selector {
             let updated_selector = format!("{added_selector}, {org_selector}");
-            selectors.push(SlottedSelector { org_selector, updated_selector });
+            selectors.push(SlottedSelector {
+                org_selector,
+                updated_selector,
+            });
         }
         Ok(slotted_selector)
     })?;
@@ -514,7 +587,12 @@ enum ScopeMatcher {
 impl ScopeMatcher {
     fn new(scope_selector: &str) -> Self {
         if !scope_selector.contains(|c: char| "*+?^${}()|\\".contains(c)) {
-            return Self::Literal(scope_selector.chars().map(|c| (c != '.').then_some(c)).collect());
+            return Self::Literal(
+                scope_selector
+                    .chars()
+                    .map(|c| (c != '.').then_some(c))
+                    .collect(),
+            );
         }
         let scope_selector = scope_selector.replace('[', "\\[").replace(']', "\\]");
         // The JS `m` flag: `^` and `$` also match at JS's line terminators.
@@ -529,10 +607,18 @@ impl ScopeMatcher {
             Self::Literal(pattern) => pattern,
         };
         // `^(SCOPE)([>\s~+[.,{:][\s\S]*)?$` at the start of any line.
-        let line_starts = std::iter::once(0).chain(selector.char_indices().filter(|&(_, c)| is_line_terminator(c)).map(|(i, c)| i + c.len_utf8()));
+        let line_starts = std::iter::once(0).chain(
+            selector
+                .char_indices()
+                .filter(|&(_, c)| is_line_terminator(c))
+                .map(|(i, c)| i + c.len_utf8()),
+        );
         Ok(line_starts.into_iter().any(|start| {
             let mut rest = selector[start..].chars();
-            let scoped = pattern.iter().all(|p| rest.next().is_some_and(|c| p.map_or(!is_line_terminator(c), |p| p == c)));
+            let scoped = pattern.iter().all(|p| {
+                rest.next()
+                    .is_some_and(|c| p.map_or(!is_line_terminator(c), |p| p == c))
+            });
             scoped
                 && match rest.next() {
                     None => true,
@@ -570,7 +656,12 @@ fn contains_ci(s: &str, literal: &str) -> bool {
     // The polyfill names all start with `-`, which has no other case: find that first.
     let (first, rest) = literal.split_at(1);
     debug_assert!(!first.as_bytes()[0].is_ascii_alphabetic());
-    s.match_indices(first.chars().next().unwrap()).any(|(i, _)| s.as_bytes().get(i + 1..i + literal.len()).is_some_and(|w| w.eq_ignore_ascii_case(rest.as_bytes())))
+    s.match_indices(first.chars().next().unwrap())
+        .any(|(i, _)| {
+            s.as_bytes()
+                .get(i + 1..i + literal.len())
+                .is_some_and(|w| w.eq_ignore_ascii_case(rest.as_bytes()))
+        })
 }
 
 /// Does the text contain `-shadowcsshost`, ASCII case-insensitively (`POLYFILL_HOST_RE`)?
@@ -607,11 +698,19 @@ fn inject_scoping_selector(selector: &str, scoping_selector: &str) -> String {
     format!("{}{scoping_selector}{}", &selector[..at], &selector[at..])
 }
 
-fn apply_simple_selector_scope(selector: &str, scope_selector: &str, host_selector: &str) -> Result<String> {
+fn apply_simple_selector_scope(
+    selector: &str,
+    scope_selector: &str,
+    host_selector: &str,
+) -> Result<String> {
     if has_polyfill_host(selector) {
         let replace_by = format!(".{host_selector}");
-        let selector = replace(&POLYFILL_HOST_NO_COMBINATOR_RE, selector, false, |m| Ok(inject_scoping_selector(group(m, 1), &replace_by)))?;
-        return replace_all(&POLYFILL_HOST_RE, &selector, |_| Ok(format!("{replace_by} ")));
+        let selector = replace(&POLYFILL_HOST_NO_COMBINATOR_RE, selector, false, |m| {
+            Ok(inject_scoping_selector(group(m, 1), &replace_by))
+        })?;
+        return replace_all(&POLYFILL_HOST_RE, &selector, |_| {
+            Ok(format!("{replace_by} "))
+        });
     }
     Ok(format!("{scope_selector} {selector}"))
 }
@@ -659,7 +758,11 @@ fn combinators(selector: &str) -> Vec<(usize, &str, usize)> {
     out
 }
 
-fn apply_strict_selector_scope(selector: &str, scope_selector: &str, host_selector: &str) -> Result<String> {
+fn apply_strict_selector_scope(
+    selector: &str,
+    scope_selector: &str,
+    host_selector: &str,
+) -> Result<String> {
     let scope_selector = if scope_selector.contains("[is=") {
         replace_all(&IS_ATTR_RE, scope_selector, |m| Ok(group(m, 1).to_string()))?
     } else {
@@ -678,7 +781,11 @@ fn apply_strict_selector_scope(selector: &str, scope_selector: &str, host_select
         if has_no_combinator && p.contains(POLYFILL_HOST_NO_COMBINATOR) {
             scoped_p = apply_simple_selector_scope(p, &scope_selector, host_selector)?;
         } else {
-            let t = if has_polyfill_host(p) { replace_all(&POLYFILL_HOST_RE, p, |_| Ok(String::new()))? } else { p.to_string() };
+            let t = if has_polyfill_host(p) {
+                replace_all(&POLYFILL_HOST_RE, p, |_| Ok(String::new()))?
+            } else {
+                p.to_string()
+            };
             if !t.is_empty() {
                 scoped_p = inject_scoping_selector(&t, &class_name);
             }
@@ -690,8 +797,13 @@ fn apply_strict_selector_scope(selector: &str, scope_selector: &str, host_select
     let mut should_scope = !has_no_combinator;
     for (sep_start, separator, sep_end) in combinators(selector) {
         let part = trim(&selector[start..sep_start]);
-        should_scope = should_scope || (has_no_combinator && part.contains(POLYFILL_HOST_NO_COMBINATOR));
-        let scoped_part = if should_scope { scope_selector_part(part)? } else { part.to_string() };
+        should_scope =
+            should_scope || (has_no_combinator && part.contains(POLYFILL_HOST_NO_COMBINATOR));
+        let scoped_part = if should_scope {
+            scope_selector_part(part)?
+        } else {
+            part.to_string()
+        };
         scoped_selector.push_str(&scoped_part);
         scoped_selector.push(' ');
         scoped_selector.push_str(separator);
@@ -699,12 +811,23 @@ fn apply_strict_selector_scope(selector: &str, scope_selector: &str, host_select
         start = sep_end;
     }
     let part = &selector[start..];
-    should_scope = !(part.contains("__part-") && is_match(&SAFE_PART_RE, part)?) && (should_scope || (has_no_combinator && part.contains(POLYFILL_HOST_NO_COMBINATOR)));
-    scoped_selector.push_str(&if should_scope { scope_selector_part(part)? } else { part.to_string() });
+    should_scope = !(part.contains("__part-") && is_match(&SAFE_PART_RE, part)?)
+        && (should_scope || (has_no_combinator && part.contains(POLYFILL_HOST_NO_COMBINATOR)));
+    scoped_selector.push_str(&if should_scope {
+        scope_selector_part(part)?
+    } else {
+        part.to_string()
+    });
     restore_safe_selector(&safe.placeholders, &scoped_selector)
 }
 
-fn scope_selector(selector: &str, scope_matcher: &ScopeMatcher, scope_selector_text: &str, host_selector: &str, slot_selector: &str) -> Result<String> {
+fn scope_selector(
+    selector: &str,
+    scope_matcher: &ScopeMatcher,
+    scope_selector_text: &str,
+    host_selector: &str,
+    slot_selector: &str,
+) -> Result<String> {
     let slot_class = format!(".{slot_selector}");
     let parts = selector
         .split(',')
@@ -712,7 +835,12 @@ fn scope_selector(selector: &str, scope_matcher: &ScopeMatcher, scope_selector_t
             if !slot_selector.is_empty() && shallow_part.contains(&slot_class) {
                 Ok(trim(shallow_part).to_string())
             } else if !scope_matcher.test(shallow_part)? {
-                Ok(trim(&apply_strict_selector_scope(shallow_part, scope_selector_text, host_selector)?).to_string())
+                Ok(trim(&apply_strict_selector_scope(
+                    shallow_part,
+                    scope_selector_text,
+                    host_selector,
+                )?)
+                .to_string())
             } else {
                 Ok(trim(shallow_part).to_string())
             }
@@ -722,17 +850,44 @@ fn scope_selector(selector: &str, scope_matcher: &ScopeMatcher, scope_selector_t
 }
 
 fn is_scopable_at_rule(selector: &str) -> bool {
-    ["@media", "@supports", "@page", "@document", "@layer", "@container"].iter().any(|p| selector.starts_with(p))
+    [
+        "@media",
+        "@supports",
+        "@page",
+        "@document",
+        "@layer",
+        "@container",
+    ]
+    .iter()
+    .any(|p| selector.starts_with(p))
 }
 
-fn scope_selectors(css: &str, scope_matcher: &ScopeMatcher, scope_selector_text: &str, host_selector: &str, slot_selector: &str) -> Result<String> {
+fn scope_selectors(
+    css: &str,
+    scope_matcher: &ScopeMatcher,
+    scope_selector_text: &str,
+    host_selector: &str,
+    slot_selector: &str,
+) -> Result<String> {
     process_rules(css, |rule| {
         let mut selector = rule.selector.clone();
         let mut content = rule.content;
         if !rule.selector.starts_with('@') {
-            selector = scope_selector(&rule.selector, scope_matcher, scope_selector_text, host_selector, slot_selector)?;
+            selector = scope_selector(
+                &rule.selector,
+                scope_matcher,
+                scope_selector_text,
+                host_selector,
+                slot_selector,
+            )?;
         } else if is_scopable_at_rule(&rule.selector) {
-            content = Some(scope_selectors(block(&content)?, scope_matcher, scope_selector_text, host_selector, slot_selector)?);
+            content = Some(scope_selectors(
+                block(&content)?,
+                scope_matcher,
+                scope_selector_text,
+                host_selector,
+                slot_selector,
+            )?);
         }
         let selector = trim(&collapse_ws(&selector)).to_string();
         Ok(Rule { selector, content })
@@ -743,17 +898,42 @@ fn replace_shadow_css_host(css: &str, host_scope_id: &str) -> String {
     css.replace(POLYFILL_HOST_NO_COMBINATOR, &format!(".{host_scope_id}"))
 }
 
-fn scope_css_text(css: &str, scope_id: &str, host_scope_id: &str, slot_scope_id: &str) -> Result<(String, Vec<SlottedSelector>)> {
+fn scope_css_text(
+    css: &str,
+    scope_id: &str,
+    host_scope_id: &str,
+    slot_scope_id: &str,
+) -> Result<(String, Vec<SlottedSelector>)> {
     let css = insert_polyfill_host_in_css_text(css)?;
-    let css = convert_colon_rule(&css, POLYFILL_HOST, &CSS_COLON_HOST_RE, colon_host_part_replacer)?;
-    let css = convert_colon_rule(&css, POLYFILL_HOST_CONTEXT, &CSS_COLON_HOST_CONTEXT_RE, colon_host_context_part_replacer)?;
+    let css = convert_colon_rule(
+        &css,
+        POLYFILL_HOST,
+        &CSS_COLON_HOST_RE,
+        colon_host_part_replacer,
+    )?;
+    let css = convert_colon_rule(
+        &css,
+        POLYFILL_HOST_CONTEXT,
+        &CSS_COLON_HOST_CONTEXT_RE,
+        colon_host_context_part_replacer,
+    )?;
     let (css, slotted) = convert_colon_slotted(&css, slot_scope_id)?;
     let mut css = convert_shadow_dom_selectors(&css);
     if !scope_id.is_empty() {
-        css = scope_selectors(&css, &ScopeMatcher::new(scope_id), scope_id, host_scope_id, slot_scope_id)?;
+        css = scope_selectors(
+            &css,
+            &ScopeMatcher::new(scope_id),
+            scope_id,
+            host_scope_id,
+            slot_scope_id,
+        )?;
     }
     let css = replace_shadow_css_host(&css, host_scope_id);
-    let css = if css.contains('*') { replace_all(&STAR_RE, &css, |m| Ok(format!(" {} ", group(m, 1))))? } else { css };
+    let css = if css.contains('*') {
+        replace_all(&STAR_RE, &css, |m| Ok(format!(" {} ", group(m, 1))))?
+    } else {
+        css
+    };
     let slotted = slotted
         .into_iter()
         .map(|s| SlottedSelector {
@@ -801,19 +981,30 @@ fn expand_part_selectors(css: &str) -> Result<String> {
 
 /// Stencil's `scopeCss(cssText, scopeId, commentOriginalSelector)`. The compiler passes
 /// `false`; the runtime passes `true` for shadow components it has to scope instead.
-pub fn scope_css(css: &str, scope_id: &str, comment_original_selector: bool) -> std::result::Result<String, ScopeCssError> {
+pub fn scope_css(
+    css: &str,
+    scope_id: &str,
+    comment_original_selector: bool,
+) -> std::result::Result<String, ScopeCssError> {
     let host_scope_id = format!("{scope_id}-h");
     let slot_scope_id = format!("{scope_id}-s");
     let has_comment = css.contains("/*");
     let comments_with_hash: Vec<&str> = if has_comment {
         COMMENT_WITH_HASH_RE
             .find_iter(css)
-            .map(|m| m.map(|m| m.as_str()).map_err(|e| ScopeCssError(e.to_string())))
+            .map(|m| {
+                m.map(|m| m.as_str())
+                    .map_err(|e| ScopeCssError(e.to_string()))
+            })
             .collect::<Result<_>>()?
     } else {
         Vec::new()
     };
-    let mut css = if has_comment { replace_all(&COMMENT_RE, css, |_| Ok(String::new()))? } else { css.to_string() };
+    let mut css = if has_comment {
+        replace_all(&COMMENT_RE, css, |_| Ok(String::new()))?
+    } else {
+        css.to_string()
+    };
     let mut org_selectors: Vec<(String, String)> = Vec::new();
     if comment_original_selector {
         fn comment_selectors(input: &str, org: &mut Vec<(String, String)>) -> Result<String> {
@@ -831,7 +1022,10 @@ pub fn scope_css(css: &str, scope_id: &str, comment_original_selector: bool) -> 
         css = comment_selectors(&css, &mut org_selectors)?;
     }
     let (scoped, slotted) = scope_css_text(&css, scope_id, &host_scope_id, &slot_scope_id)?;
-    let mut css = std::iter::once(scoped.as_str()).chain(comments_with_hash).collect::<Vec<_>>().join("\n");
+    let mut css = std::iter::once(scoped.as_str())
+        .chain(comments_with_hash)
+        .collect::<Vec<_>>()
+        .join("\n");
     for (placeholder, comment) in &org_selectors {
         css = replace_first_str(&css, placeholder, comment);
     }
@@ -840,7 +1034,12 @@ pub fn scope_css(css: &str, scope_id: &str, comment_original_selector: bool) -> 
         let hay = css.clone();
         css = replace_all(&re, &hay, |m| {
             let whole = m.get(0).unwrap();
-            Ok(substitute(&s.updated_selector, &hay, whole.start(), whole.end()))
+            Ok(substitute(
+                &s.updated_selector,
+                &hay,
+                whole.start(),
+                whole.end(),
+            ))
         })?;
     }
     expand_part_selectors(&css)

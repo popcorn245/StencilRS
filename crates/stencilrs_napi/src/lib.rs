@@ -4,7 +4,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use napi::bindgen_prelude::{AsyncTask, Env, Task};
 use napi_derive::napi;
-use stencilrs_transform::{ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH, TranspileOptions};
+use stencilrs_transform::{
+    ComponentExport, ComponentMetadata, DEFAULT_CORE_IMPORT_PATH, Jsx, SSR_CORE_IMPORT_PATH,
+    TranspileOptions,
+};
 
 #[cfg(not(all(target_os = "linux", target_arch = "aarch64")))]
 #[global_allocator]
@@ -20,8 +23,18 @@ fn to_js<T: serde::Serialize>(value: T) -> napi::Result<String> {
 /// `resolve_imports`: build-accurate metadata (relative imports followed, lib types known).
 #[napi]
 /// `complex_types`: a type `complexType` cannot be computed for is reported as not ported.
-pub fn analyze(source: String, file_name: String, resolve_imports: Option<bool>, complex_types: Option<bool>) -> napi::Result<String> {
-    to_js(stencilrs_transform::analyze_with(&source, &file_name, resolve_imports.unwrap_or(false), complex_types.unwrap_or(false)))
+pub fn analyze(
+    source: String,
+    file_name: String,
+    resolve_imports: Option<bool>,
+    complex_types: Option<bool>,
+) -> napi::Result<String> {
+    to_js(stencilrs_transform::analyze_with(
+        &source,
+        &file_name,
+        resolve_imports.unwrap_or(false),
+        complex_types.unwrap_or(false),
+    ))
 }
 
 #[napi(object)]
@@ -45,6 +58,11 @@ pub struct JsTranspileOptions {
     /// Compile the file as base classes for components to extend (Stencil's
     /// `transformAsBaseClass`). Default false.
     pub transform_as_base_class: Option<bool>,
+    /// TypeScript's `useDefineForClassFields`. Default true. False: field initializers become
+    /// assignments in the constructor, after the host is registered (what Stencil emits for a
+    /// project whose tsconfig says `useDefineForClassFields: false`), and fields without an
+    /// initializer are dropped.
+    pub use_define_for_class_fields: Option<bool>,
     /// The output to generate, as Stencil's `componentExport`: `"customelement"` (default),
     /// `"module"`, `"lazy"` (the lazy-loading `loader-bundle` shape, `null` in Stencil) or `"ssr"`
     /// (the hydrate / server-side rendering shape).
@@ -61,9 +79,18 @@ impl JsTranspileOptions {
     fn into_options(self) -> napi::Result<TranspileOptions> {
         let jsx = match self.jsx.as_deref() {
             Some("classic") => Jsx::Classic,
-            _ => Jsx::Automatic { import_source: self.jsx_import_source.unwrap_or_else(|| "@stencil/core".into()) },
+            _ => Jsx::Automatic {
+                import_source: self
+                    .jsx_import_source
+                    .unwrap_or_else(|| "@stencil/core".into()),
+            },
         };
-        let component_export = match self.component_export.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        let component_export = match self
+            .component_export
+            .as_deref()
+            .map(|e| e.trim().to_lowercase())
+            .as_deref()
+        {
             None | Some("customelement") => ComponentExport::CustomElement,
             Some("module") => ComponentExport::Module,
             Some("lazy") => ComponentExport::Lazy,
@@ -74,11 +101,18 @@ impl JsTranspileOptions {
                 )));
             }
         };
-        let component_metadata = match self.component_metadata.as_deref().map(|e| e.trim().to_lowercase()).as_deref() {
+        let component_metadata = match self
+            .component_metadata
+            .as_deref()
+            .map(|e| e.trim().to_lowercase())
+            .as_deref()
+        {
             None | Some("") => ComponentMetadata::None,
             Some("compilerstatic") => ComponentMetadata::CompilerStatic,
             Some(other) => {
-                return Err(napi::Error::from_reason(format!("unknown componentMetadata {other:?}: expected \"compilerstatic\"")));
+                return Err(napi::Error::from_reason(format!(
+                    "unknown componentMetadata {other:?}: expected \"compilerstatic\""
+                )));
             }
         };
         Ok(TranspileOptions {
@@ -87,13 +121,19 @@ impl JsTranspileOptions {
             emit_styles: self.emit_styles.unwrap_or(true),
             file: self.file,
             core_import_path: self.core_import_path.unwrap_or_else(|| {
-                if component_export == ComponentExport::Ssr { SSR_CORE_IMPORT_PATH } else { DEFAULT_CORE_IMPORT_PATH }.into()
+                if component_export == ComponentExport::Ssr {
+                    SSR_CORE_IMPORT_PATH
+                } else {
+                    DEFAULT_CORE_IMPORT_PATH
+                }
+                .into()
             }),
             jsx,
             resolve_imports: self.resolve_imports.unwrap_or(false),
             complex_types: self.complex_types.unwrap_or(false),
             source_map: self.source_map.unwrap_or(true),
             transform_as_base_class: self.transform_as_base_class.unwrap_or(false),
+            use_define_for_class_fields: self.use_define_for_class_fields.unwrap_or(true),
         })
     }
 }
@@ -102,7 +142,10 @@ impl JsTranspileOptions {
 /// `{ code, map, components, diagnostics, baseClasses }`.
 #[napi]
 pub fn transpile(source: String, options: JsTranspileOptions) -> napi::Result<String> {
-    to_js(stencilrs_transform::transpile(&source, &options.into_options()?))
+    to_js(stencilrs_transform::transpile(
+        &source,
+        &options.into_options()?,
+    ))
 }
 
 /// `transpileAsync`: the work of `transpile` on the libuv thread pool, the result as a JSON string.
@@ -116,7 +159,8 @@ impl Task for TranspileTask {
     type JsValue = String;
 
     fn compute(&mut self) -> napi::Result<String> {
-        serde_json::to_string(&stencilrs_transform::transpile(&self.source, &self.options)).map_err(|e| napi::Error::from_reason(e.to_string()))
+        serde_json::to_string(&stencilrs_transform::transpile(&self.source, &self.options))
+            .map_err(|e| napi::Error::from_reason(e.to_string()))
     }
 
     fn resolve(&mut self, _env: Env, output: String) -> napi::Result<String> {
@@ -126,8 +170,14 @@ impl Task for TranspileTask {
 
 /// `transpile` off the calling thread: a promise of the same result, as a JSON string.
 #[napi]
-pub fn transpile_async(source: String, options: JsTranspileOptions) -> napi::Result<AsyncTask<TranspileTask>> {
-    Ok(AsyncTask::new(TranspileTask { source, options: options.into_options()? }))
+pub fn transpile_async(
+    source: String,
+    options: JsTranspileOptions,
+) -> napi::Result<AsyncTask<TranspileTask>> {
+    Ok(AsyncTask::new(TranspileTask {
+        source,
+        options: options.into_options()?,
+    }))
 }
 
 #[napi(object)]
@@ -168,7 +218,10 @@ impl Task for TranspileManyTask {
     fn compute(&mut self) -> napi::Result<String> {
         let jobs = &self.jobs;
         let next = AtomicUsize::new(0);
-        let threads = std::thread::available_parallelism().map_or(1, |n| n.get()).min(jobs.len()).max(1);
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(jobs.len())
+            .max(1);
         let mut done: Vec<(usize, String)> = Vec::with_capacity(jobs.len());
         std::thread::scope(|scope| {
             let workers: Vec<_> = (0..threads)
@@ -194,7 +247,13 @@ impl Task for TranspileManyTask {
             }
         });
         done.sort_unstable_by_key(|(i, _)| *i);
-        Ok(format!("[{}]", done.into_iter().map(|(_, json)| json).collect::<Vec<_>>().join(",")))
+        Ok(format!(
+            "[{}]",
+            done.into_iter()
+                .map(|(_, json)| json)
+                .collect::<Vec<_>>()
+                .join(",")
+        ))
     }
 
     fn resolve(&mut self, _env: Env, output: String) -> napi::Result<String> {
@@ -208,7 +267,10 @@ impl Task for TranspileManyTask {
 pub fn transpile_many(files: Vec<JsTranspileInput>) -> AsyncTask<TranspileManyTask> {
     let jobs = files
         .into_iter()
-        .map(|f| ManyJob { source: f.source, options: f.options.into_options().map_err(|e| e.reason.to_string()) })
+        .map(|f| ManyJob {
+            source: f.source,
+            options: f.options.into_options().map_err(|e| e.reason.to_string()),
+        })
         .collect();
     AsyncTask::new(TranspileManyTask { jobs })
 }
@@ -221,15 +283,31 @@ pub fn normalize(code: String) -> napi::Result<String> {
 
 /// Stencil's `scopeCss`: CSS rewritten for a `scoped` component with scope id `scopeId`.
 #[napi]
-pub fn scope_css(css: String, scope_id: String, comment_original_selector: Option<bool>) -> napi::Result<String> {
-    stencilrs_transform::scope_css::scope_css(&css, &scope_id, comment_original_selector.unwrap_or(false))
-        .map_err(|e| napi::Error::from_reason(e.0))
+pub fn scope_css(
+    css: String,
+    scope_id: String,
+    comment_original_selector: Option<bool>,
+) -> napi::Result<String> {
+    stencilrs_transform::scope_css::scope_css(
+        &css,
+        &scope_id,
+        comment_original_selector.unwrap_or(false),
+    )
+    .map_err(|e| napi::Error::from_reason(e.0))
 }
 
 /// Stencil's `foldBuildFlags`: `Build.<flag>` reads (`Build` imported from `@stencil/core`) replaced
 /// by the boolean literals in `flags`, padded to the original length. `null` when nothing folded.
 #[napi]
-pub fn fold_build_flags(code: String, file_name: String, flags: serde_json::Value) -> Option<String> {
-    let flags = flags.as_object()?.iter().filter_map(|(k, v)| v.as_bool().map(|b| (k.clone(), b))).collect();
+pub fn fold_build_flags(
+    code: String,
+    file_name: String,
+    flags: serde_json::Value,
+) -> Option<String> {
+    let flags = flags
+        .as_object()?
+        .iter()
+        .filter_map(|(k, v)| v.as_bool().map(|b| (k.clone(), b)))
+        .collect();
     stencilrs_transform::fold_build_flags(&code, &file_name, &flags)
 }

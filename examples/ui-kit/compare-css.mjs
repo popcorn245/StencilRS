@@ -66,6 +66,13 @@ for (const dev of [false, true]) {
   let bytes = 0;
   for (const [file, spec] of cases.values()) {
     const [a, b] = [await run(mine, file, spec), await run(theirs, file, spec)];
+    // The one deliberate difference: a mode's scoped stylesheet is `sc-<tag>-<mode>`, the class the runtime puts on
+    // the host (getScopeId(tag, mode)); unplugin scopes every mode to `sc-<tag>`, which never matches. Compare as
+    // if stencilrs had done the same.
+    const params = new URLSearchParams(spec.split('?')[1]);
+    if (params.get('encapsulation') === 'scoped' && params.get('mode') && a.code) {
+      a.code = a.code.replaceAll(`sc-${params.get('tag')}-${params.get('mode')}`, `sc-${params.get('tag')}`);
+    }
     n++;
     bytes += b.code?.length ?? 0;
     if (a.id !== b.id || a.code !== b.code || a.code === null) {

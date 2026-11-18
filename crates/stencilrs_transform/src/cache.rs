@@ -7,8 +7,8 @@
 //! Only owned, plain data is cached (never oxc ASTs or `Rc`s). Each cache is bounded; at the
 //! limit it is emptied, which costs a re-read, never a wrong answer.
 
-use std::collections::HashMap;
 use rustc_hash::FxHashMap;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::SystemTime;
@@ -28,7 +28,10 @@ pub struct Stamp {
 /// The stamp of a regular file, or `None` when there is none (missing, or not a file).
 pub fn stamp(path: &Path) -> Option<Stamp> {
     let meta = std::fs::metadata(path).ok().filter(|m| m.is_file())?;
-    Some(Stamp { mtime: meta.modified().ok(), len: meta.len() })
+    Some(Stamp {
+        mtime: meta.modified().ok(),
+        len: meta.len(),
+    })
 }
 
 /// A file a cached result was derived from. `stamp: None` records that the file was absent,
@@ -42,7 +45,10 @@ pub struct Dep {
 impl Dep {
     /// The file as it is now.
     pub fn of(path: &Path) -> Dep {
-        Dep { path: path.to_owned(), stamp: stamp(path) }
+        Dep {
+            path: path.to_owned(),
+            stamp: stamp(path),
+        }
     }
 }
 
@@ -51,7 +57,9 @@ fn fresh(deps: &[Dep]) -> bool {
 }
 
 fn lock<K, V>(map: &'static OnceLock<Mutex<HashMap<K, V>>>) -> MutexGuard<'static, HashMap<K, V>> {
-    map.get_or_init(Mutex::default).lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    map.get_or_init(Mutex::default)
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// The exports of a module, shared between calls.
@@ -113,5 +121,11 @@ pub fn store_tsconfig(dir: &Path, strict: bool, deps: Vec<Dep>) {
     if tsconfigs.len() >= MAX_TSCONFIGS {
         tsconfigs.clear();
     }
-    tsconfigs.insert(dir.to_owned(), TsconfigEntry { strict, deps: Arc::new(deps) });
+    tsconfigs.insert(
+        dir.to_owned(),
+        TsconfigEntry {
+            strict,
+            deps: Arc::new(deps),
+        },
+    );
 }

@@ -14,8 +14,9 @@ use std::collections::{HashMap, HashSet};
 use fancy_regex::Regex;
 use oxc::allocator::Allocator;
 use oxc::ast::ast::{
-    AssignmentExpression, AssignmentTarget, BindingIdentifier, ChainElement, ComputedMemberExpression, Expression,
-    ImportDeclarationSpecifier, ImportOrExportKind, SimpleAssignmentTarget, Statement, StaticMemberExpression, TSInterfaceDeclaration,
+    AssignmentExpression, AssignmentTarget, BindingIdentifier, ChainElement,
+    ComputedMemberExpression, Expression, ImportDeclarationSpecifier, ImportOrExportKind,
+    SimpleAssignmentTarget, Statement, StaticMemberExpression, TSInterfaceDeclaration,
     TSTypeAliasDeclaration, TSTypeParameter, UnaryExpression, UnaryOperator, UpdateExpression,
 };
 use oxc::ast_visit::{Visit, walk};
@@ -24,10 +25,15 @@ use oxc::span::{SourceType, Span};
 
 /// Stencil's cheap pre-check; also decides the oddities (`import D, { Build }` is never folded).
 const BUILD_IMPORT: &str = r#"\bimport\s*\{[^}]*\bBuild\b[^}]*\}\s*from\s*['"]@stencil/core"#;
-const STENCIL_CORE_IMPORT: &str = r"^@stencil/core(?:/runtime(?:/(?:client(?:/(?:standalone|lazy))?|server))?)?$";
+const STENCIL_CORE_IMPORT: &str =
+    r"^@stencil/core(?:/runtime(?:/(?:client(?:/(?:standalone|lazy))?|server))?)?$";
 
 /// Fold the flags in `flags` (name to value). `None` when nothing was folded.
-pub fn fold_build_flags(code: &str, file_name: &str, flags: &HashMap<String, bool>) -> Option<String> {
+pub fn fold_build_flags(
+    code: &str,
+    file_name: &str,
+    flags: &HashMap<String, bool>,
+) -> Option<String> {
     let build_import = Regex::new(BUILD_IMPORT).ok()?;
     if !build_import.is_match(code).unwrap_or(false) {
         return None;
@@ -39,8 +45,12 @@ pub fn fold_build_flags(code: &str, file_name: &str, flags: &HashMap<String, boo
     let mut specifiers = HashSet::new(); // start of each `Build` import's local name
     let mut locals = HashSet::new();
     for stmt in &parsed.program.body {
-        let Statement::ImportDeclaration(import) = stmt else { continue };
-        if import.import_kind == ImportOrExportKind::Type || !core.is_match(import.source.value.as_str()).unwrap_or(false) {
+        let Statement::ImportDeclaration(import) = stmt else {
+            continue;
+        };
+        if import.import_kind == ImportOrExportKind::Type
+            || !core.is_match(import.source.value.as_str()).unwrap_or(false)
+        {
             continue;
         }
         for spec in import.specifiers.iter().flatten() {
@@ -57,10 +67,22 @@ pub fn fold_build_flags(code: &str, file_name: &str, flags: &HashMap<String, boo
         return None;
     }
 
-    let mut folder = Folder { flags, locals, specifiers, unsafe_locals: HashSet::new(), reads: Vec::new(), writes: HashSet::new(), skip_binding: false };
+    let mut folder = Folder {
+        flags,
+        locals,
+        specifiers,
+        unsafe_locals: HashSet::new(),
+        reads: Vec::new(),
+        writes: HashSet::new(),
+        skip_binding: false,
+    };
     folder.visit_program(&parsed.program);
     let unsafe_locals = folder.unsafe_locals;
-    let mut reads: Vec<_> = folder.reads.into_iter().filter(|r| !unsafe_locals.contains(&r.local)).collect();
+    let mut reads: Vec<_> = folder
+        .reads
+        .into_iter()
+        .filter(|r| !unsafe_locals.contains(&r.local))
+        .collect();
     if reads.is_empty() {
         return None;
     }
@@ -69,12 +91,26 @@ pub fn fold_build_flags(code: &str, file_name: &str, flags: &HashMap<String, boo
     let mut out = code.to_string();
     for Read { span, value, .. } in reads {
         let original = &code[span.start as usize..span.end as usize];
-        let (head, tail) = original.find(['\r', '\n']).map_or((original, ""), |i| original.split_at(i));
+        let (head, tail) = original
+            .find(['\r', '\n'])
+            .map_or((original, ""), |i| original.split_at(i));
         let text = value.to_string();
         let pad = head.encode_utf16().count().saturating_sub(text.len());
         // JS pads and blanks by UTF-16 code unit.
-        let blank: String = tail.chars().flat_map(|c| if c == '\r' || c == '\n' { vec![c] } else { vec![' '; c.len_utf16()] }).collect();
-        out.replace_range(span.start as usize..span.end as usize, &format!("{text}{}{blank}", " ".repeat(pad)));
+        let blank: String = tail
+            .chars()
+            .flat_map(|c| {
+                if c == '\r' || c == '\n' {
+                    vec![c]
+                } else {
+                    vec![' '; c.len_utf16()]
+                }
+            })
+            .collect();
+        out.replace_range(
+            span.start as usize..span.end as usize,
+            &format!("{text}{}{blank}", " ".repeat(pad)),
+        );
     }
     Some(out)
 }
@@ -112,7 +148,9 @@ struct Folder<'f> {
 
 impl Folder<'_> {
     fn access(&mut self, object: &Expression, flag: &str, span: Span) {
-        let Expression::Identifier(id) = object else { return };
+        let Expression::Identifier(id) = object else {
+            return;
+        };
         let name = id.name.as_str();
         if !self.locals.contains(name) {
             return;
@@ -120,7 +158,11 @@ impl Folder<'_> {
         if self.writes.contains(&span) {
             self.unsafe_locals.insert(name.to_string());
         } else if let Some(&value) = self.flags.get(flag) {
-            self.reads.push(Read { local: name.to_string(), span, value });
+            self.reads.push(Read {
+                local: name.to_string(),
+                span,
+                value,
+            });
         }
     }
 }
@@ -197,7 +239,9 @@ impl<'a> Visit<'a> for Folder<'_> {
     fn visit_computed_member_expression(&mut self, it: &ComputedMemberExpression<'a>) {
         let flag = match &it.expression {
             Expression::StringLiteral(s) => Some(s.value.to_string()),
-            Expression::TemplateLiteral(t) if t.expressions.is_empty() && t.quasis.len() == 1 => t.quasis[0].value.cooked.as_ref().map(|c| c.to_string()),
+            Expression::TemplateLiteral(t) if t.expressions.is_empty() && t.quasis.len() == 1 => {
+                t.quasis[0].value.cooked.as_ref().map(|c| c.to_string())
+            }
             _ => None,
         };
         if let Some(flag) = flag {

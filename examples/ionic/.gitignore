@@ -8,3 +8,5 @@ stencil4/stock/
 stencil4/node_modules/
 logs/
 smoke/shots/
+.lib/
+dist-stencilrs/

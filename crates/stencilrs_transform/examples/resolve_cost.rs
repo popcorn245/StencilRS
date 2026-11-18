@@ -21,11 +21,31 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn main() {
     let mut files = Vec::new();
-    walk(Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/ui-kit/src")), &mut files);
+    walk(
+        Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../examples/ui-kit/src"
+        )),
+        &mut files,
+    );
     files.sort();
-    let sources: Vec<(String, String)> =
-        files.iter().map(|p| (p.to_string_lossy().replace('\\', "/"), std::fs::read_to_string(p).unwrap())).collect();
-    for (resolve_imports, complex_types) in [(false, false), (true, false), (false, false), (true, false), (true, true), (true, true)] {
+    let sources: Vec<(String, String)> = files
+        .iter()
+        .map(|p| {
+            (
+                p.to_string_lossy().replace('\\', "/"),
+                std::fs::read_to_string(p).unwrap(),
+            )
+        })
+        .collect();
+    for (resolve_imports, complex_types) in [
+        (false, false),
+        (true, false),
+        (false, false),
+        (true, false),
+        (true, true),
+        (true, true),
+    ] {
         let mut times = Vec::new();
         for pass in 0..15 {
             let t = Instant::now();
@@ -33,11 +53,14 @@ fn main() {
                 let opts = TranspileOptions {
                     file: file.clone(),
                     core_import_path: DEFAULT_CORE_IMPORT_PATH.into(),
-                    jsx: Jsx::Automatic { import_source: "@stencil/core".into() },
+                    jsx: Jsx::Automatic {
+                        import_source: "@stencil/core".into(),
+                    },
                     resolve_imports,
                     complex_types,
                     source_map: false,
                     transform_as_base_class: false,
+                    use_define_for_class_fields: true,
                     component_export: Default::default(),
                     component_metadata: Default::default(),
                     emit_styles: true,
