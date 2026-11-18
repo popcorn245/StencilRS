@@ -54,8 +54,9 @@ console.log('(full stencil migrate output: logs/migrate.log)\n');
 {
   const file = join(dest, 'stencil.config.ts');
   const text = readFileSync(file, 'utf8');
-  if (!text.includes('  enableCache: false,\n')) throw new Error('stencil.config.ts: enableCache anchor not found');
-  writeFileSync(file, text.replace('  enableCache: false,\n', '  enableCache: false,\n  enableCssOnlyComponents: false,\n'));
+  const anchor = /^  enableCache: .*,\n/m;
+  if (!anchor.test(text)) throw new Error('stencil.config.ts: enableCache anchor not found');
+  writeFileSync(file, text.replace(anchor, (line) => `${line}  enableCssOnlyComponents: false,\n`));
 }
 // 4a-ter. config: `stencil migrate` rewrites esmLoaderPath '../loader' to loaderPath '../../loader', which lands
 // outside the build folder (next to package.json). Put the loader beside `dist/`, as the Stencil 4 build does.
