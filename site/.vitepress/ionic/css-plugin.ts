@@ -5,8 +5,9 @@
 // such as `::slotted(*) ion-button` (a pseudo-element followed by a selector): Stencil's own build
 // drops them, but the plugin's lightningcss call has no `errorRecovery` (nor has @stencil/unplugin's), so the
 // first one fails the build. This plugin runs first, gives lightningcss `errorRecovery` and Sass a quiet
-// logger (Ionic's `@import`-based Sass prints ~30,000 lines of deprecations), and does the same otherwise:
-// same Sass, same scoped CSS from stencilrs' scopeCss.
+// logger (Ionic's `@import`-based Sass prints ~30,000 lines of deprecations), and scopes the styles of a
+// component with per-mode stylesheets to the mode's own scope id (`sc-ion-alert-md`); otherwise the same: same Sass,
+// same scoped CSS from stencilrs' scopeCss.
 import { existsSync, readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,7 +24,7 @@ function parse(id: string) {
   const q = rest.indexOf('?');
   const stem = q === -1 ? rest : rest.slice(0, q);
   const params = new URLSearchParams(q === -1 ? '' : rest.slice(q + 1));
-  return { file: `${stem}.${decodeURIComponent(params.get('__ext') ?? 'css')}`, tag: params.get('tag') ?? '', encapsulation: params.get('encapsulation') ?? 'none' };
+  return { file: `${stem}.${decodeURIComponent(params.get('__ext') ?? 'css')}`, tag: params.get('tag') ?? '', mode: params.get('mode') ?? '', encapsulation: params.get('encapsulation') ?? 'none' };
 }
 
 export function ionicCss(): any {
@@ -36,7 +37,7 @@ export function ionicCss(): any {
     },
     load(this: any, id: string) {
       if (!id.startsWith(PREFIX)) return null;
-      const { file, tag, encapsulation } = parse(id);
+      const { file, tag, mode, encapsulation } = parse(id);
       // only Ionic's own styles; the starter's go through the plugin as before
       if (!file.includes('/examples/ionic/')) return null;
       if (!existsSync(file)) return { code: 'export default () => ""', moduleSideEffects: false };
@@ -52,7 +53,9 @@ export function ionicCss(): any {
       }
       this.addWatchFile(file);
       css = transform({ filename: file, code: Buffer.from(css), minify, errorRecovery: true }).code.toString();
-      if (encapsulation === 'scoped' && tag) css = scopeCss(css, `sc-${tag}`, false);
+      // Stencil's getScopeId(tag, mode): `sc-ion-alert-md`, which is what the runtime puts on the elements. The plugin's own
+      // loader scopes to `sc-ion-alert` for every mode, so a scoped component with per-mode styles matches nothing (a finding).
+      if (encapsulation === 'scoped' && tag) css = scopeCss(css, `sc-${tag}${mode ? `-${mode}` : ''}`, false);
       return { code: `export default () => ${JSON.stringify(css)};` };
     },
   };

@@ -3,7 +3,7 @@
 // site build gets it the way examples/ionic does: `npm run fetch && npm run migrate`.
 // Run as a script (`node scripts/ionic-source.mjs`, the site's `prepare:ionic`) or import ensureIonic().
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, symlinkSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 export const ionicDir = fileURLToPath(new URL('../../examples/ionic', import.meta.url)).replace(/[\\/]$/, '');
@@ -11,16 +11,6 @@ export const migrated = `${ionicDir}/migrated`;
 export const docsJsonFile = `${ionicDir}/dist-stencil/docs.json`;
 
 const run = (...args) => execFileSync('npm', ['--prefix', ionicDir, ...args], { stdio: 'inherit' });
-
-// The Vite plugin hands a file it cannot compile to @stencil/unplugin, which `import('sass')`es from where
-// the stencilrs package lives (this repository's root), not from the site. Make that resolve.
-function linkSassForFallback() {
-  const root = fileURLToPath(new URL('../../node_modules', import.meta.url)).replace(/[\\/]$/, '');
-  const siteSass = fileURLToPath(new URL('../node_modules/sass', import.meta.url));
-  const link = `${root}/sass`;
-  const present = (p) => { try { lstatSync(p); return true; } catch { return false; } };
-  if (existsSync(root) && existsSync(siteSass) && !present(link)) symlinkSync(siteSass, link, 'dir');
-}
 
 export function ensureIonic({ docsJson = false } = {}) {
   const t0 = performance.now();
@@ -31,7 +21,6 @@ export function ensureIonic({ docsJson = false } = {}) {
   if (!existsSync(`${migrated}/stencil.config.ts`)) { run('run', 'migrate'); did = true; }
   // Stencil's own docs-json is only the reference of `gen:components`, never of the site build.
   if (docsJson && !existsSync(docsJsonFile)) { run('run', 'build:stencil'); did = true; }
-  linkSassForFallback();
   if (did) console.log(`ionic-source: prepared examples/ionic in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
   return did;
 }

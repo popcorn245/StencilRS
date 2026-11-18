@@ -104,21 +104,11 @@ export default defineConfig({
   vite: {
     // The stencilrs plugin is in VitePress's own Vite config: every component in the pages is
     // compiled by it, in dev and in the build.
-    plugins: [ionicCss(), stencilrs({ verbose: true })],
-    // stencilrs hands Vite finished JavaScript for a component file, which Vite's own TypeScript transform
-    // (oxc) then sees as well, with the nearest tsconfig. Ionic's says `useDefineForClassFields: false`, and
-    // oxc obeys it by moving the fields' initializers up to right after `super()`, before `__registerHost()`:
-    // every prop's default is lost. One tsconfig (site/tsconfig.json) for every file keeps class fields as they are.
-    tsconfig: fileURLToPath(new URL('../tsconfig.json', import.meta.url)),
+    plugins: [ionicCss(), stencilrs({ verbose: true, buildFlags: { hydrateClientSide: false } })],
     css: { preprocessorOptions: { scss: { silenceDeprecations: ['import', 'global-builtin', 'color-functions', 'if-function', 'slash-div'], quietDeps: true } } },
     resolve: {
       dedupe: ['@stencil/core', 'vue'],
       alias: [
-        // The components are compiled against Stencil's standalone runtime (stencilrs rewrites their own
-        // `@stencil/core` import). Ionic's other modules (`getMode`, `setMode`, `forceUpdate`, `writeTask`,
-        // ...) import `@stencil/core` itself, which is a second copy of the runtime, with its own mode
-        // resolver and task queue: send them to the same one (a finding; Stencil's build does this itself).
-        { find: /^@stencil\/core$/, replacement: '@stencil/core/runtime/client/standalone' },
         { find: /^@utils\//, replacement: `${ionicSrc}utils/` },
         { find: /^@global\//, replacement: `${ionicSrc}global/` },
         { find: /^src\//, replacement: ionicSrc },

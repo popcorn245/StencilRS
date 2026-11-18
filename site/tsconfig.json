@@ -5,7 +5,7 @@
     "jsxImportSource": "@stencil/core",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "useDefineForClassFields": true,
+    "useDefineForClassFields": false,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true

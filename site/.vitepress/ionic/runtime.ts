@@ -8,8 +8,6 @@ import {
 } from 'ionicons/icons';
 import { defineCustomElement as defineIcon } from 'ionicons/components/ion-icon.js';
 
-import { BUILD } from '@stencil/core/app-data';
-
 import sources from '../../data/ionic-sources.json';
 
 // Ionic's global stylesheet: its color variables, the `.ion-color-*` / `.ion-page` classes and the
@@ -18,24 +16,22 @@ import sources from '../../data/ionic-sources.json';
 import '../../../examples/ionic/migrated/src/css/core.scss';
 import './ionic.css';
 
-// Ionic's components have one stylesheet per mode (`styleUrls: { ios, md }`). Stencil's runtime picks a mode's
-// sheet only when `BUILD.mode` is on, which a `stencil build` sets from the components and the Vite plugin
-// does not (finding): without it a component with mode styles gets none.
-BUILD.mode = true;
-
 export type Mode = 'ios' | 'md';
 
 const lazy = import.meta.glob('../../../examples/ionic/migrated/src/components/*/*.tsx') as Record<string, () => Promise<unknown>>;
 const base = '../../../examples/ionic/migrated/';
 const loading = new Map<string, Promise<unknown>>();
 let ready: Promise<void> | undefined;
+let init: ((config?: Record<string, unknown>) => void) | undefined;
+const config = (mode: Mode) => ({ mode, animated: !matchMedia('(prefers-reduced-motion: reduce)').matches });
 
 /** Ionic's `initialize()` (its global script), the icons, once. Sets <html mode> and the ios / md class. */
 export function setupIonic(mode: Mode) {
   ready ??= (async () => {
     const { initialize } = await import('../../../examples/ionic/migrated/src/global/ionic-global');
+    init = initialize;
     document.documentElement.setAttribute('mode', mode);
-    initialize({ mode, animated: !matchMedia('(prefers-reduced-motion: reduce)').matches });
+    initialize(config(mode));
     addIcons({ add, alarm, albums, arrowBack, arrowForward, call, camera, chevronForward, close, heart, home, informationCircle, mail, menu, notifications, person, search, settings, share, star, trash });
     // ion-icon is Ionicons' own package (a prebuilt Stencil component), not Ionic core.
     defineIcon();
@@ -49,8 +45,9 @@ export function applyMode(mode: Mode) {
   html.setAttribute('mode', mode);
   html.classList.remove('ios', 'md');
   html.classList.add(mode);
-  const ionic = (window as any).Ionic;
-  if (ionic?.config?.set) { ionic.config.set('mode', mode); ionic.mode = mode; }
+  // Ionic's own `initialize()` again: it keeps the default mode in a variable of its own, which a component with a
+  // single stylesheet (no per-mode `$modeName$`; ion-content, ion-modal's content) reads for its `md` / `ios` class.
+  init?.(config(mode));
 }
 
 /** The tags and everything they render, as far as the source names it. */
