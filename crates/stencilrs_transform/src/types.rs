@@ -107,6 +107,8 @@ pub enum K {
     Anon(Anon),
     /// A type parameter of an imported generic alias, before substitution.
     Param(usize),
+    /// A type parameter of the method being described (`T` in `m<T>(x: T)`) and its type id.
+    TypeParam(String, u32),
 }
 
 #[derive(Debug)]
@@ -115,6 +117,9 @@ pub struct Alias {
     pub args: Vec<Ty>,
     /// The type id the alias's type was given when the checker created it.
     pub id: u32,
+    /// The names of the alias's type parameters, which the checker prints for an alias written
+    /// without type arguments (`parseDocsType` reads them off the declared type).
+    pub declared: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -214,6 +219,7 @@ impl Ty {
             K::Enum(e) => e.base_id + e.members.len() as u32,
             K::Ref { id, .. } => *id,
             K::Anon(a) => a.id,
+            K::TypeParam(_, id) => *id,
             // A union's id is the one its alias type was created with; the others are flattened away.
             K::Array(_, id) => *id,
             K::Union(_, alias, _) => alias.as_ref().map_or(u32::MAX, |a| a.id),
@@ -241,10 +247,29 @@ impl Ty {
         matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Intersection(_)))
     }
 
-    fn is_function(&self) -> bool {
-        matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Function(_)))
+    /// An intersection the printer writes out (`A & B`) rather than by the alias it carries.
+    fn prints_as_intersection(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if a.alias.is_none() && matches!(a.shape, Shape::Intersection(_)))
     }
 
+    /// A function type the printer writes out, not one it names by its alias.
+    fn is_function(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if a.alias.is_none() && matches!(a.shape, Shape::Function(_)))
+    }
+
+
+    /// What an alias with type parameters, all of them defaulted, is when it is written without
+    /// type arguments through an import: an object type the checker prints as the alias alone
+    /// (`id` is the type id of its definition). `None` when the definition is not an object type.
+    pub fn without_arguments(&self, fresh_id: u32) -> Option<Ty> {
+        match &*self.0 {
+            K::Anon(Anon { alias: Some(alias), shape, .. }) if !matches!(shape, Shape::Opaque) => {
+                let alias = Rc::new(Alias { name: alias.name.clone(), args: Vec::new(), id: alias.id, declared: alias.declared.clone() });
+                Some(Ty::new(K::Anon(Anon { id: fresh_id, shape: Shape::Opaque, alias: Some(alias) })))
+            }
+            _ => None,
+        }
+    }
 
     /// The type as the alias it was written as, unless it already is one.
     pub fn with_alias(&self, alias: Rc<Alias>) -> Ty {
@@ -499,7 +524,7 @@ impl Printer {
             },
             K::Array(el, _) => {
                 let inner = self.print(el, false)?;
-                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1) || el.is_function() || el.is_intersection() { format!("({inner})[]") } else { format!("{inner}[]") }
+                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1) || el.is_function() || el.prints_as_intersection() { format!("({inner})[]") } else { format!("{inner}[]") }
             }
             K::Ref { name, args, .. } | K::Unresolved { name, args } => {
                 self.names.push(name.clone());
@@ -510,6 +535,7 @@ impl Printer {
                 _ => self.shape(&a.shape)?,
             },
             K::Param(_) => return unsupported("an unresolved type parameter"),
+            K::TypeParam(name, _) => name.clone(),
         })
     }
 
@@ -567,7 +593,8 @@ impl Printer {
         let mut parts = Vec::new();
         for m in &formatted {
             let p = self.print(m, false)?;
-            parts.push(if m.is_function() { format!("({p})") } else { p });
+            // The printer parenthesizes a function or an intersection among a union's members.
+            parts.push(if m.is_function() || (m.prints_as_intersection() && formatted.len() > 1) { format!("({p})") } else { p });
         }
         Ok(parts.join(" | "))
     }
@@ -675,9 +702,6 @@ fn parse_docs_type(ty: &Ty, parts: &mut BTreeSet<String>) -> Res<()> {
             }
         }
         K::Array(el, _) => {
-            if el.is_intersection() {
-                return unsupported("an array of an intersection type");
-            }
             let mut inner = BTreeSet::new();
             parse_docs_type(el, &mut inner)?;
             let has_true = inner.remove("true");
@@ -691,6 +715,13 @@ fn parse_docs_type(ty: &Ty, parts: &mut BTreeSet<String>) -> Res<()> {
         K::Anon(Anon { alias: Some(alias), .. }) if !alias.args.is_empty() => {
             for arg in &alias.args {
                 parse_docs_type(arg, parts)?;
+            }
+        }
+        // An alias written without type arguments: `aliasTypeArguments` is empty, so the checker
+        // reads the declared type, whose alias arguments are the type parameters themselves.
+        K::Anon(Anon { alias: Some(alias), .. }) if !alias.declared.is_empty() && matches!(&*ty.0, K::Anon(Anon { shape: Shape::Opaque, .. })) => {
+            for name in &alias.declared {
+                parts.insert(name.clone());
             }
         }
         K::Unresolved { args, .. } if !args.is_empty() => {
@@ -864,7 +895,7 @@ impl Subst<'_> {
     }
 
     fn alias(&self, alias: &Option<Rc<Alias>>) -> Option<Rc<Alias>> {
-        alias.as_ref().map(|a| Rc::new(Alias { name: a.name.clone(), args: a.args.iter().map(|t| self.apply(t)).collect(), id: self.reg.fresh() }))
+        alias.as_ref().map(|a| Rc::new(Alias { name: a.name.clone(), args: a.args.iter().map(|t| self.apply(t)).collect(), id: self.reg.fresh(), declared: a.declared.clone() }))
     }
 
     fn sig(&self, s: &Sig) -> Sig {

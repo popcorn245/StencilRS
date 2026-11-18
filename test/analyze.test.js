@@ -74,7 +74,7 @@ test('analyze resolves complexType when asked and leaves what it cannot to Stenc
   assert.equal(keys.complexType.resolved, '');
   assert.deepEqual(
     diagnostics.map((d) => d.message),
-    ['stencilrs: the type of prop `keys` (`keyof`, `readonly` or `unique symbol`) is not ported yet.'],
+    ['stencilrs: the type of prop `keys` (`keyof` of this type) is not ported yet.'],
   );
   // Off by default, so the Vite plugin does not fall back for it.
   assert.deepEqual(analyze(source, 'cmp-a.tsx').diagnostics, []);

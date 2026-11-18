@@ -153,6 +153,21 @@ impl Resolver {
         summary
     }
 
+    /// Makes what a module has declared so far visible to the modules it leads back to (an import
+    /// cycle), instead of nothing.
+    fn publish(&self, path: &Path, file: &str, out: &Collected) {
+        let mut cache = self.cache.borrow_mut();
+        if let Some(slot) = cache.get_mut(&clean(path)) {
+            let partial = ModuleSummary {
+                file: file.to_owned(),
+                types: Arc::new(out.types.clone()),
+                values: Arc::new(out.values.clone()),
+                defs: out.defs.clone(),
+            };
+            slot.summary = Some(Rc::new(partial));
+        }
+    }
+
     /// The module being read depends on `deps` too.
     fn merge(&self, deps: &[Dep], complete: bool) {
         if let Some(frame) = self.frames.borrow_mut().last_mut() {
@@ -173,7 +188,7 @@ impl Resolver {
         let file = path.to_string_lossy().replace('\\', "/");
         let locals = Locals::collect(&parsed.program).with_resolver(Some(self), &file);
         let env = TypeEnv::new(&locals, &self.registry, self.strict, &file);
-        Some(summarize_program(&parsed.program, &locals, &env, &source, self, &file))
+        Some(summarize_program(&parsed.program, &locals, &env, &source, self, &file, path))
     }
 }
 
@@ -284,10 +299,29 @@ fn summarize_local(name: &str, exported: &str, locals: &Locals, env: &TypeEnv, s
     }
 }
 
-fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: &str, resolver: &Resolver, file: &str) -> ModuleSummary {
+fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: &str, resolver: &Resolver, file: &str, path: &Path) -> ModuleSummary {
     let mut out = Collected::default();
     let defs = resolver.defs;
+    // What the module declares comes first, then what it re-exports: reading a re-exported module
+    // can lead back here (an `interface.ts` that re-exports the files that import it), and those
+    // imports find the declarations made so far.
+    let mut published = false;
+    for pass in 0..2 {
+        if pass == 1 && !published {
+            resolver.publish(path, file, &out);
+            published = true;
+        }
+        summarize_statements(program, locals, env, source, resolver, file, &mut out, defs, pass == 1);
+    }
+    ModuleSummary { file: file.to_owned(), types: Arc::new(out.types), values: Arc::new(out.values), defs: out.defs }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn summarize_statements(program: &Program, locals: &Locals, env: &TypeEnv, source: &str, resolver: &Resolver, file: &str, out: &mut Collected, defs: bool, reexports: bool) {
     for stmt in &program.body {
+        if matches!(stmt, Statement::ExportFromDeclaration(_) | Statement::ExportAllDeclaration(_)) != reexports {
+            continue;
+        }
         match stmt {
             Statement::ExportDeclaration(e) => {
                 let names: Vec<&str> = match &e.declaration {
@@ -300,12 +334,12 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
                     _ => vec![],
                 };
                 for n in names {
-                    summarize_local(n, n, locals, env, source, &mut out, defs);
+                    summarize_local(n, n, locals, env, source, out, defs);
                 }
             }
             Statement::ExportNamedDeclaration(e) => {
                 for s in &e.specifiers {
-                    summarize_local(s.local.name().as_str(), s.exported.name().as_str(), locals, env, source, &mut out, defs);
+                    summarize_local(s.local.name().as_str(), s.exported.name().as_str(), locals, env, source, out, defs);
                 }
             }
             Statement::ExportFromDeclaration(e) => {
@@ -340,7 +374,6 @@ fn summarize_program(program: &Program, locals: &Locals, env: &TypeEnv, source: 
             _ => {}
         }
     }
-    ModuleSummary { file: file.to_owned(), types: Arc::new(out.types), values: Arc::new(out.values), defs: out.defs }
 }
 
 /// `a/./b/../c` → `a/c`, without touching the file system.
