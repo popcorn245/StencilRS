@@ -131,13 +131,12 @@ chromium`; without one it skips the browser steps, `IONIC_REQUIRE_BROWSER=1` mak
 
 1. no file fell back to Stencil's compiler (reads `logs/stencilrs.log`);
 2. `smoke/run.mjs` on `dist-stencil` and `dist-stencilrs` (button, card, list, toggle, modal; ios and md);
-3. the four smoke screenshots of the two builds, pixel by pixel (identical in md; 14 and 32 pixels of an
-   820 x 1000 page differ by at most 4 levels in ios: edge anti-aliasing of the toggle, see below);
+3. the four smoke screenshots of the two builds, pixel by pixel (identical);
 4. every tag of `docs.json` plus `ion-select-popover` (internal) and `ion-icon`, mounted in both modes in each build: defined, hydrated, a shadow root
    exactly where the encapsulation says (shadow, scoped, none), scoped components carry their `sc-*` class,
    no console error or page error (Ionic's own "must be used inside ion-content" style diagnostics for a bare
    element are expected, and must be the same in both builds);
-5. the two builds against each other: same host and shadow DOM, same size, same scope ids in the styles.
+5. the two builds against each other: same host and shadow DOM, same size, same scope ids in the styles, and the same CSS text in every component stylesheet but the two listed in `CSS_DIFFERENCES`.
 
 ### What stencilrs got wrong on Ionic, and what changed
 
@@ -152,8 +151,14 @@ Found by this build, fixed on this branch (each has a test):
 | `import('sass')` and the other CSS packages resolved from the plugin's own folder, not the project's: a `file:` / linked install found none | imported from the project first |
 | The runtime's `BUILD` defaults have `hydrateClientSide: true`, so scoped hosts got an extra `sc-<tag>-<mode>` class | new plugin option `buildFlags`: this build sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate target |
 
-Not fixed, by design (they are the Vite pipeline's lightningcss without the browser targets `stencil build` gives
-it, and the same as `@stencil/unplugin`): about 30 of the 96 component stylesheets differ in CSS text: `:dir(rtl)`
-without Stencil's `:lang()` fallbacks, `-webkit-` prefixes, `background: none` as `0 0`, `bold` as `700`,
-`(min-width: 576px)` as `(width >= 576px)`, and `translate3d(x, 0, 0)` as `translate(x)`, which drops the
-compositing layer and is why the ios toggle's edges differ by a few levels.
+CSS text (issue #72): the Vite path used to lower CSS through lightningcss without browser targets and with its own
+minify, so 30 to 31 of the 96 component stylesheets differed from `stencil build` (`:dir(rtl)` without Stencil's
+`:lang()` fallbacks, no `-webkit-` prefixes, `background: none` as `0 0`, `bold` as `700`, `(min-width: 576px)` as
+`(width >= 576px)`, `translate3d(x, 0, 0)` as `translate(x)`, which dropped the compositing layer and is why the ios
+toggle's edges differed by a few levels). The plugin's `css` option now defaults to Stencil's autoprefix targets and
+a whitespace-only minify. `check` compares the CSS text and the screenshots strictly: the screenshots are identical
+pixel for pixel, and all but two stylesheets are identical CSS text. The two (`CSS_DIFFERENCES` in `check/run.mjs`):
+`ion-icon` (ionicons' prebuilt component, not this plugin's CSS) and the md `ion-select` (a selector Sass writes
+twice, which Stencil's own minifier deduplicates). The Sass deprecations are silenced with the plugin's
+`css.sass.silenceDeprecations` (`vite.config.ts`); `scripts/build.mjs` still filters them for the two
+`stencil build` targets, whose Sass plugin cannot be configured from here.
