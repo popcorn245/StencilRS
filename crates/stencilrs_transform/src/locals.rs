@@ -51,6 +51,11 @@ pub struct Locals<'a, 'b> {
     pub types: FxHashMap<&'a str, LocalType<'a, 'b>>,
     /// The type parameters of each generic type alias.
     pub alias_params: FxHashMap<&'a str, Vec<&'a str>>,
+    /// The default type of each parameter of a generic type alias (`U = string`).
+    pub alias_defaults: FxHashMap<&'a str, Vec<Option<&'b TSType<'a>>>>,
+    /// Type parameters bound while a generic alias is evaluated, innermost last: the flags of
+    /// the type argument each parameter stands for.
+    pub bindings: std::cell::RefCell<Vec<(String, crate::prop_type::Flags)>>,
     /// The type parameters of each generic interface and class, with their defaults.
     pub decl_params: FxHashMap<&'a str, &'b TSTypeParameterDeclaration<'a>>,
     pub values: FxHashMap<&'a str, LocalValue<'a, 'b>>,
@@ -105,6 +110,10 @@ impl<'a, 'b> Locals<'a, 'b> {
                         locals.alias_params.insert(
                             t.id.name.as_str(),
                             params.params.iter().map(|p| p.name.name.as_str()).collect(),
+                        );
+                        locals.alias_defaults.insert(
+                            t.id.name.as_str(),
+                            params.params.iter().map(|p| p.default.as_ref()).collect(),
                         );
                     }
                 }

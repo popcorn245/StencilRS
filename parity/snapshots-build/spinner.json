@@ -3,6 +3,13 @@
   "properties": [
     {
       "name": "fromAlias",
+      "flags": {
+        "attribute": "from-alias",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Names | null",
         "resolved": "\"a\" | \"b\" | null | undefined",
@@ -16,6 +23,13 @@
     },
     {
       "name": "fromConst",
+      "flags": {
+        "attribute": "from-const",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "keyof typeof spinners",
         "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | undefined",
@@ -24,6 +38,13 @@
     },
     {
       "name": "inArray",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SpinnerTypes[]",
         "resolved": "(\"bubbles\" | \"circles\" | \"lines-small\")[]",
@@ -37,6 +58,13 @@
     },
     {
       "name": "list",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "readonly string[]",
         "resolved": "string[] | undefined",
@@ -45,6 +73,13 @@
     },
     {
       "name": "literal",
+      "flags": {
+        "attribute": "literal",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "keyof { 'a-b': 1; c(): void }",
         "resolved": "\"a-b\" | \"c\" | undefined",
@@ -53,6 +88,13 @@
     },
     {
       "name": "name",
+      "flags": {
+        "attribute": "name",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SpinnerTypes",
         "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | undefined",
@@ -66,6 +108,13 @@
     },
     {
       "name": "names",
+      "flags": {
+        "attribute": "names",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Names",
         "resolved": "\"a\" | \"b\" | undefined",
@@ -79,6 +128,13 @@
     },
     {
       "name": "pair",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "readonly [string, number]",
         "resolved": "readonly [string, number] | undefined",
@@ -87,6 +143,13 @@
     },
     {
       "name": "pulling",
+      "flags": {
+        "attribute": "pulling",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SpinnerTypes | string | null",
         "resolved": "null | string | undefined",
@@ -100,6 +163,13 @@
     },
     {
       "name": "spinner",
+      "flags": {
+        "attribute": "spinner",
+        "reflect": false,
+        "mutable": true,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "SpinnerTypes | null",
         "resolved": "\"bubbles\" | \"circles\" | \"lines-small\" | null | undefined",

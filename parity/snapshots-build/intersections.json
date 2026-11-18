@@ -3,6 +3,13 @@
   "properties": [
     {
       "name": "both",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Both",
         "resolved": "Box & { a: number; } | undefined",
@@ -16,6 +23,13 @@
     },
     {
       "name": "bothGeneric",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Array<Both>",
         "resolved": "Box & { a: number; }[] | undefined",
@@ -33,6 +47,13 @@
     },
     {
       "name": "bothList",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Both[]",
         "resolved": "Box & { a: number; }[]",
@@ -46,6 +67,13 @@
     },
     {
       "name": "branded",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Branded",
         "resolved": "string & { __brand: 1; } | undefined",
@@ -59,6 +87,13 @@
     },
     {
       "name": "colorList",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "(Color | undefined)[]",
         "resolved": "(\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined)[]",
@@ -74,6 +109,13 @@
     },
     {
       "name": "colorOrBranded",
+      "flags": {
+        "attribute": "color-or-branded",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Color | Branded",
         "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | string & { __brand: 1; } | undefined",
@@ -93,6 +135,13 @@
     },
     {
       "name": "inline",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Box & { a: number } & { b: string }",
         "resolved": "Box & { a: number; } & { b: string; } | undefined",
