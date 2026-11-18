@@ -7,7 +7,7 @@
 // `transpileSync` (every other suite) sees one file with no lib.d.ts, so a type from another
 // file, `Function`, `Record<K, V>` or `Promise<T>` is `any` there. This builds
 // `fixtures/build/` as a project (the docs-json output target) and snapshots every member's
-// `complexType` (`original`, `resolved`, `references`; for a method the signature, parameters
+// runtime flags (attribute, reflect, mutable, optional, required) and `complexType` (`original`, `resolved`, `references`; for a method the signature, parameters
 // and return type). stencilrs must print the same text, or report a `stencilrs:` error for the
 // member (the cue to compile with Stencil); those members are counted apart and left out of the
 // comparison, as in `compare.mjs`.
@@ -37,14 +37,21 @@ const refs = (references, base) =>
 const valueType = (t, base) => ({ original: t.original, resolved: t.resolved, references: refs(t.references, base) });
 const methodType = (t, base) => ({ signature: t.signature, parameters: t.parameters, references: refs(t.references, base), return: t.return });
 
+/** What decides a prop's member flags and attribute: its attribute, reflection and modifiers. */
+const propFlags = (p) => ({ attribute: p.attr ?? null, reflect: !!p.reflectToAttr, mutable: !!p.mutable, optional: !!p.optional, required: !!p.required });
+
 const fromDocs = (c, base) => ({
-  properties: (c.props ?? []).map((p) => ({ name: p.name, complexType: valueType(p.complexType, base) })),
+  properties: (c.props ?? []).map((p) => ({ name: p.name, flags: propFlags(p), complexType: valueType(p.complexType, base) })),
   events: (c.events ?? []).map((e) => ({ name: e.event, complexType: valueType(e.complexType, base) })),
   methods: (c.methods ?? []).map((m) => ({ name: m.name, complexType: methodType(m.complexType, base) })),
 });
 
 const fromStencilrs = (c) => ({
-  properties: c.properties.map((p) => ({ name: p.name, complexType: valueType(p.complexType, '') })),
+  properties: c.properties.map((p) => ({
+    name: p.name,
+    flags: propFlags({ attr: p.attribute, reflectToAttr: p.reflect, mutable: p.mutable, optional: p.optional, required: p.required }),
+    complexType: valueType(p.complexType, ''),
+  })),
   events: c.events.map((e) => ({ name: e.name, complexType: valueType(e.complexType, '') })),
   methods: c.methods.map((m) => ({ name: m.name, complexType: methodType(m.complexType, '') })),
 });
@@ -122,7 +129,7 @@ const compare = () => {
           members++;
           if (fell.has(`${kind}:${want.name}`)) continue;
           const got = ours[group].find((m) => m.name === want.name);
-          const d = diff(want.complexType, got?.complexType);
+          const d = [...diff(want.complexType, got?.complexType), ...(want.flags ? diff(want.flags, got?.flags, 'flags') : [])];
           if (!d.length) matched++;
           else failures.push(`${file} ${kind} ${want.name}:\n${d.map((x) => `    ${x.path}: expected ${JSON.stringify(x.expected)}, got ${JSON.stringify(x.actual)}`).join('\n')}`);
         }

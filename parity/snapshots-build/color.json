@@ -2,7 +2,54 @@
   "tag": "build-color",
   "properties": [
     {
+      "name": "boxed",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Box<string>",
+        "resolved": "string | undefined",
+        "references": {
+          "Box": {
+            "location": "global",
+            "id": "global::Box"
+          }
+        }
+      }
+    },
+    {
+      "name": "brand",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "string & Record<never, never>",
+        "resolved": "string & Record<never, never> | undefined",
+        "references": {
+          "Record": {
+            "location": "global",
+            "id": "global::Record"
+          }
+        }
+      }
+    },
+    {
       "name": "color",
+      "flags": {
+        "attribute": "color",
+        "reflect": true,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Color",
         "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined",
@@ -18,6 +65,13 @@
     },
     {
       "name": "colors",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Color[]",
         "resolved": "(\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never>)[]",
@@ -32,7 +86,54 @@
       }
     },
     {
+      "name": "idNumber",
+      "flags": {
+        "attribute": "id-number",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Id<number>",
+        "resolved": "number | undefined",
+        "references": {
+          "Id": {
+            "location": "global",
+            "id": "global::Id"
+          }
+        }
+      }
+    },
+    {
+      "name": "idPair",
+      "flags": {
+        "attribute": "id-pair",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Id<number | string>",
+        "resolved": "number | string | undefined",
+        "references": {
+          "Id": {
+            "location": "global",
+            "id": "global::Id"
+          }
+        }
+      }
+    },
+    {
       "name": "mode",
+      "flags": {
+        "attribute": "mode",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Mode",
         "resolved": "\"ios\" | \"md\" | undefined",
@@ -47,7 +148,34 @@
       }
     },
     {
+      "name": "openColor",
+      "flags": {
+        "attribute": "open-color",
+        "reflect": true,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Open<'a' | 'b'>",
+        "resolved": "\"a\" | \"b\" | string & Record<never, never> | undefined",
+        "references": {
+          "Open": {
+            "location": "global",
+            "id": "global::Open"
+          }
+        }
+      }
+    },
+    {
       "name": "required",
+      "flags": {
+        "attribute": "required",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
       "complexType": {
         "original": "Color",
         "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never>",
@@ -63,6 +191,13 @@
     },
     {
       "name": "role",
+      "flags": {
+        "attribute": "role",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "LiteralUnion<'cancel' | 'destructive', string>",
         "resolved": "\"cancel\" | \"destructive\" | string & Record<never, never> | undefined",

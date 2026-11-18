@@ -120,7 +120,7 @@ pub fn infer_expression(e: &Expression, locals: &Locals, source: &str) -> (PropT
 
 /// Flags of a type name as it resolves from this module (alias, enum, interface, import, lib).
 pub fn name_flags(name: &str, locals: &Locals) -> Flags {
-    identifier_flags(name, None, locals, 0)
+    identifier_flags(name, &[], locals, 0)
 }
 
 /// Flags of `keyof <name>`.
@@ -478,8 +478,8 @@ fn signature_flags(members: &[TSSignature]) -> Flags {
 fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
     match &r.type_name {
         TSTypeName::IdentifierReference(id) => {
-            let first_arg = r.type_arguments.as_ref().and_then(|a| a.params.first());
-            identifier_flags(id.name.as_str(), first_arg, locals, depth)
+            let args = r.type_arguments.as_ref().map_or(&[][..], |a| &a.params[..]);
+            identifier_flags(id.name.as_str(), args, locals, depth)
         }
         // `Mode.Default`: a member of a local or imported enum has that enum's kind.
         TSTypeName::QualifiedName(q) => match &q.left {
@@ -503,12 +503,17 @@ fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
     }
 }
 
-fn identifier_flags(name: &str, first_arg: Option<&TSType>, locals: &Locals, depth: u8) -> Flags {
+fn identifier_flags(name: &str, args: &[TSType], locals: &Locals, depth: u8) -> Flags {
     if depth > MAX_DEPTH {
         return Flags::ANY;
     }
+    let first_arg = args.first();
+    // A type parameter of the generic alias being evaluated stands for its type argument.
+    if let Some((_, f)) = locals.bindings.borrow().iter().rev().find(|(n, _)| n == name) {
+        return *f;
+    }
     match locals.types.get(name) {
-        Some(LocalType::Alias(ty)) => return flags_of(ty, locals, depth + 1),
+        Some(LocalType::Alias(ty)) => return alias_flags(name, ty, args, locals, depth),
         Some(LocalType::Enum(decl)) => return enum_flags(decl),
         Some(LocalType::Interface(_) | LocalType::Class(_)) => return Flags::NONE,
         None => {}
@@ -536,6 +541,41 @@ fn identifier_flags(name: &str, first_arg: Option<&TSType>, locals: &Locals, dep
         "Boolean" => Flags::BOOLEAN,
         _ => Flags::NONE,
     }
+}
+
+/// A (possibly generic) type alias applied to `args`: its body with each type parameter bound
+/// to the flags of its argument, or of its default when the argument is omitted.
+fn alias_flags(name: &str, body: &TSType, args: &[TSType], locals: &Locals, depth: u8) -> Flags {
+    let Some(params) = locals.alias_params.get(name) else {
+        return flags_of(body, locals, depth + 1);
+    };
+    let defaults = locals.alias_defaults.get(name);
+    // Arguments are evaluated in the caller's scope, before the alias's parameters are bound.
+    let mut bound: Vec<(String, Flags)> = Vec::new();
+    for (i, param) in params.iter().enumerate() {
+        let flags = match args.get(i) {
+            Some(arg) => flags_of(arg, locals, depth + 1),
+            None => {
+                let default = defaults.and_then(|d| d.get(i).copied().flatten());
+                match default {
+                    Some(d) => {
+                        let n = locals.bindings.borrow().len();
+                        locals.bindings.borrow_mut().extend(bound.iter().cloned());
+                        let f = flags_of(d, locals, depth + 1);
+                        locals.bindings.borrow_mut().truncate(n);
+                        f
+                    }
+                    None => Flags::ANY,
+                }
+            }
+        };
+        bound.push(((*param).to_owned(), flags));
+    }
+    let n = locals.bindings.borrow().len();
+    locals.bindings.borrow_mut().extend(bound);
+    let f = flags_of(body, locals, depth + 1);
+    locals.bindings.borrow_mut().truncate(n);
+    f
 }
 
 fn enum_flags(decl: &TSEnumDeclaration) -> Flags {

@@ -3,6 +3,13 @@
   "properties": [
     {
       "name": "component",
+      "flags": {
+        "attribute": "component",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "ComponentRef",
         "resolved": "Function | HTMLElement | null | string | undefined",
@@ -18,6 +25,13 @@
     },
     {
       "name": "componentProps",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "ComponentProps",
         "resolved": "T | undefined",
@@ -33,6 +47,13 @@
     },
     {
       "name": "custom",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "CustomEvent",
         "resolved": "CustomEvent<any> | undefined",
@@ -46,6 +67,13 @@
     },
     {
       "name": "customOf",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "CustomEvent<string>",
         "resolved": "CustomEvent<string> | undefined",
@@ -59,6 +87,13 @@
     },
     {
       "name": "detail",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "OverlayEventDetail",
         "resolved": "OverlayEventDetail<any> | undefined",
@@ -74,6 +109,13 @@
     },
     {
       "name": "detailOf",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "OverlayEventDetail<string>",
         "resolved": "OverlayEventDetail<string> | undefined",
@@ -89,6 +131,13 @@
     },
     {
       "name": "handler",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "Function",
         "resolved": "Function | undefined",
@@ -102,6 +151,13 @@
     },
     {
       "name": "refs",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "ComponentRef[]",
         "resolved": "(Function | HTMLElement | null | string)[]",
@@ -117,6 +173,13 @@
     },
     {
       "name": "typed",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
       "complexType": {
         "original": "ComponentProps<string>",
         "resolved": "string | undefined",
