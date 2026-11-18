@@ -51,6 +51,14 @@ const paths = [
     </section>
 
     <section class="band">
+      <h2>Ionic, built three ways</h2>
+      <p>
+        The same Ionic Framework source through Stencil 4, Stencil 5 and stencilrs. Lower is better in every chart.
+      </p>
+      <IonicHeadline />
+    </section>
+
+    <section class="band">
       <h2>Where it sits</h2>
       <p>
         Stencil's TypeScript transform layer is the slow part, so that is the part stencilrs replaces. The runtime and the
