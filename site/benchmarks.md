@@ -19,6 +19,8 @@ const transpile = b.transpile.rows.map((r) => [r.compiler, ms(r.coldMs), ms(r.me
 const vite = b.viteBuild.rows.map((r) => [r.compiler, ms(r.firstMs), ms(r.warmMedianMs)])
 const full = b.stencilBuild.rows.map((r) => [r.compiler, ms(r.buildFinishedMedianMs), ms(r.wallMedianMs)])
 const sb = b.stencilBuild.stencilrsFiles
+const range = (r) => (r ? `${r[0].toLocaleString('en-US')} to ${r[1].toLocaleString('en-US')} ms` : '')
+const coldRows = (b.coldBuild?.rows ?? []).map((r, i) => [r.compiler, ms(r.wallMedianMs), range(r.wallSpreadMs), b.coldDev ? ms(b.coldDev.rows[i].firstResponseMedianMs) : 'n/a', b.coldDev ? range(b.coldDev.rows[i].firstResponseSpreadMs) : ''])
 
 const io = ionic
 const order = Object.keys(io.rows)
@@ -100,11 +102,36 @@ Stencil still runs its type-checked TypeScript pass over every file, processes t
 output targets and writes docs-json, and those dominate the build. This is a benchmark patch of a
 throwaway copy of `@stencil/core` (`examples/ui-kit/bench-stencil-build.mjs`), not something stencilrs ships.
 
-## Cold start
+## Cold start: a fresh process
 
-A fresh process, ui-kit, before and after the cold-start work in
-[PR #52](https://github.com/popcorn245/StencilRS/pull/52) (numbers from that PR, measured on a shared box, not in
-the data file above):
+The warm numbers above load the compiler once and time the rest. A real start pays for the load too: TypeScript
+for Stencil, the native module for stencilrs. These rows spawn a new `node` for every sample, with Vite's cache
+emptied first, and alternate the two compilers (`examples/ui-kit/bench-cold.mjs`).
+
+<div v-if="b.coldBuild?.preview || b.coldDev?.preview" class="warning custom-block"><p class="custom-block-title">Preview numbers</p>
+<p>Measured on {{ (b.coldBuild ?? b.coldDev).machine }} (load average {{ (b.coldBuild ?? b.coldDev).loadavgAtStart.join(' / ') }} at the start){{ (b.coldBuild ?? b.coldDev).note ? `: ${(b.coldBuild ?? b.coldDev).note}` : '' }}.
+Expect noise: read the min to max ranges, not just the medians. A run on the reference Windows machine replaces them.</p></div>
+
+<div class="chart-grid">
+<BenchChart v-if="c['uikit-cold-build']" :chart="c['uikit-cold-build']" />
+<BenchChart v-if="c['uikit-cold-dev']" :chart="c['uikit-cold-dev']" />
+</div>
+
+<details v-if="b.coldBuild" class="chart-table"><summary>Table: cold build and dev server, every row</summary>
+
+<DataTable :head="['Compiler', 'Cold build (wall)', 'Min to max', 'Dev: first response', 'Min to max']" :rows="coldRows" highlight="stencilrs" />
+
+</details>
+
+<p v-if="b.coldBuild"><b>Cold build: stencilrs {{ d.uikitColdBuildRatio }} faster</b> ({{ d.uikitColdBuildStencilrs }} against {{ d.uikitColdBuildStencil }}); <b v-if="b.coldDev">dev server to first response: {{ d.uikitColdDevRatio }} faster</b> ({{ d.uikitColdDevStencilrs }} against {{ d.uikitColdDevStencil }}).</p>
+
+The same measurement on Ionic's core, with Stencil 4 as a third row, is [below](#ionic-one-source-three-compilers).
+
+### Before and after the cold-start work
+
+stencilrs itself, before and after the cold-start work in
+[PR #52](https://github.com/popcorn245/StencilRS/pull/52) (numbers from that PR, measured on a shared box; the
+rows above compare it with Stencil):
 
 <DataTable
   :head="['Measurement', 'Before', 'After']"

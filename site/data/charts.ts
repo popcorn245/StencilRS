@@ -112,11 +112,14 @@ export function uikitCharts(b: any): Record<string, Chart> {
   const t = b.transpile.rows;
   const v = b.viteBuild.rows;
   const s = b.stencilBuild.rows;
-  const bar = (id: Compiler, full: string, median: number): Bar => ({ id, label: SHORT[id], full, median });
-  const mk = (id: string, title: string, display: Display, bars: Bar[], what: string): Chart => ({
-    id, title, display, bars, what, meta, headline: headline(bars, 'time', 'stencil5'),
+  const bar = (id: Compiler, full: string, median: number, extra: Partial<Bar> = {}): Bar => ({ id, label: SHORT[id], full, median, ...extra });
+  const mk = (id: string, title: string, display: Display, bars: Bar[], what: string, cold?: any): Chart => ({
+    id, title, display, bars, what, headline: headline(bars, 'time', 'stencil5'),
+    // Cold rows carry their own machine (and the preview flag) because they can be measured apart from the warm ones.
+    meta: cold ? `${cold.machine}; measured ${cold.date}; median of ${cold.runs} runs` : meta,
+    ...(cold?.preview ? { status: 'Preview' } : {}),
   });
-  return {
+  const charts: Record<string, Chart> = {
     'uikit-transpile': mk('uikit-transpile', 'Compile one file', 'ms',
       [bar('stencilrs', t[2].compiler, t[2].perFileUs / 1000), bar('stencil5', t[0].compiler, t[0].perFileUs / 1000)],
       `${b.transpile.files} files (${b.transpile.kib} KiB) of the ui-kit, one process, single-threaded, source maps on; per-file mean of the median run.`),
@@ -127,4 +130,15 @@ export function uikitCharts(b: any): Record<string, Chart> {
       [bar('stencilrs', s[1].compiler, s[1].buildFinishedMedianMs), bar('stencil5', s[0].compiler, s[0].buildFinishedMedianMs)],
       'Stencil v5 CLI and config for both rows; stencilrs replaces only the per-bundle component transform. Build finished, median of 5.'),
   };
+  const coldBars = (e: any, field: string, spread: string) =>
+    e.rows.map((r: any, i: number) => bar(i === 0 ? 'stencilrs' : 'stencil5', r.compiler, r[field], { min: r[spread][0], max: r[spread][1], n: e.runs }));
+  if (b.coldBuild) {
+    charts['uikit-cold-build'] = mk('uikit-cold-build', 'Cold build: a fresh vite build', 's', coldBars(b.coldBuild, 'wallMedianMs', 'wallSpreadMs'),
+      'A new node process builds all the ui-kit components as one library; loading Vite and the compiler is inside the time (TypeScript for Stencil, the native module for stencilrs).', b.coldBuild);
+  }
+  if (b.coldDev) {
+    charts['uikit-cold-dev'] = mk('uikit-cold-dev', 'Cold dev server: first response', 'ms', coldBars(b.coldDev, 'firstResponseMedianMs', 'firstResponseSpreadMs'),
+      'A new node process starts the Vite dev server and asks for one component module, until the 200 arrives; module load is inside the time.', b.coldDev);
+  }
+  return charts;
 }

@@ -13,10 +13,30 @@
     "files": 222,
     "kib": 1125,
     "rows": [
-      { "compiler": "Stencil v5 transpileSync (source maps, as @stencil/unplugin runs it)", "coldMs": 3609, "medianMs": 2390, "perFileUs": 10767 },
-      { "compiler": "Stencil v5 transpileSync (no source maps)", "coldMs": 2235, "medianMs": 2222, "perFileUs": 10008 },
-      { "compiler": "stencilrs transpile (source maps, the default)", "coldMs": 113, "medianMs": 108, "perFileUs": 488 },
-      { "compiler": "stencilrs transpile (no source maps)", "coldMs": 89, "medianMs": 89, "perFileUs": 402 }
+      {
+        "compiler": "Stencil v5 transpileSync (source maps, as @stencil/unplugin runs it)",
+        "coldMs": 3609,
+        "medianMs": 2390,
+        "perFileUs": 10767
+      },
+      {
+        "compiler": "Stencil v5 transpileSync (no source maps)",
+        "coldMs": 2235,
+        "medianMs": 2222,
+        "perFileUs": 10008
+      },
+      {
+        "compiler": "stencilrs transpile (source maps, the default)",
+        "coldMs": 113,
+        "medianMs": 108,
+        "perFileUs": 488
+      },
+      {
+        "compiler": "stencilrs transpile (no source maps)",
+        "coldMs": 89,
+        "medianMs": 89,
+        "perFileUs": 402
+      }
     ],
     "speedup": "22× with source maps, 25× without"
   },
@@ -24,8 +44,16 @@
     "what": "Production vite build of all 137 ui-kit components as one library (examples/ui-kit/bench-build.mjs, 3 rounds; median of 3 runs)",
     "components": 137,
     "rows": [
-      { "compiler": "Stencil v5 (@stencil/unplugin)", "firstMs": 3890, "warmMedianMs": 2955 },
-      { "compiler": "stencilrs (@popcorn245/stencilrs/vite)", "firstMs": 1167, "warmMedianMs": 1002 }
+      {
+        "compiler": "Stencil v5 (@stencil/unplugin)",
+        "firstMs": 3890,
+        "warmMedianMs": 2955
+      },
+      {
+        "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
+        "firstMs": 1167,
+        "warmMedianMs": 1002
+      }
     ],
     "speedup": "2.9× warm, 3.3× first build"
   },
@@ -33,13 +61,113 @@
     "what": "Full `stencil build` of the ui-kit (type-check, loader-bundle, standalone, www, docs-json), 5 runs, medians",
     "ms": 12810,
     "rows": [
-      { "compiler": "Stencil v5", "wallMedianMs": 19171, "buildFinishedMedianMs": 12810 },
-      { "compiler": "stencilrs (component transforms swapped into Stencil v5)", "wallMedianMs": 17851, "buildFinishedMedianMs": 11440 }
+      {
+        "compiler": "Stencil v5",
+        "wallMedianMs": 19171,
+        "buildFinishedMedianMs": 12810
+      },
+      {
+        "compiler": "stencilrs (component transforms swapped into Stencil v5)",
+        "wallMedianMs": 17851,
+        "buildFinishedMedianMs": 11440
+      }
     ],
     "speedup": "1.12× build finished, 1.07× wall",
     "stencilrsFiles": {
-      "standalone": { "stencilrs": 136, "fallback": 0 },
-      "lazy": { "stencilrs": 136, "fallback": 0 }
+      "standalone": {
+        "stencilrs": 136,
+        "fallback": 0
+      },
+      "lazy": {
+        "stencilrs": 136,
+        "fallback": 0
+      }
     }
+  },
+  "coldBuild": {
+    "date": "2026-11-19",
+    "preview": true,
+    "machine": "Intel Xeon Processor @ 2.10GHz, 4 logical cores, 16 GB, Linux 6.18.44-fc-v653 (linux-x64), Node 22.23.5",
+    "loadavgAtStart": [
+      2.27,
+      1.93,
+      0.86
+    ],
+    "note": "cloud container, shared and noisy",
+    "what": "Fresh-process production vite build of all 137 ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 3 runs, alternating, Vite cache cleared each run; median, min-max)",
+    "runs": 3,
+    "rows": [
+      {
+        "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
+        "wallMedianMs": 765,
+        "buildEndMedianMs": 750,
+        "wallSpreadMs": [
+          589,
+          795
+        ],
+        "wallRunsMs": [
+          589,
+          795,
+          765
+        ]
+      },
+      {
+        "compiler": "Stencil v5 (@stencil/unplugin)",
+        "wallMedianMs": 4592,
+        "buildEndMedianMs": 4567,
+        "wallSpreadMs": [
+          4292,
+          4964
+        ],
+        "wallRunsMs": [
+          4292,
+          4964,
+          4592
+        ]
+      }
+    ],
+    "speedup": "6.0× wall, 6.1× to build end"
+  },
+  "coldDev": {
+    "date": "2026-11-19",
+    "preview": true,
+    "machine": "Intel Xeon Processor @ 2.10GHz, 4 logical cores, 16 GB, Linux 6.18.44-fc-v653 (linux-x64), Node 22.23.5",
+    "loadavgAtStart": [
+      2.27,
+      1.93,
+      0.86
+    ],
+    "note": "cloud container, shared and noisy",
+    "what": "Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 3 runs, alternating, Vite cache cleared each run; median, min-max)",
+    "runs": 3,
+    "rows": [
+      {
+        "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
+        "firstResponseMedianMs": 293,
+        "firstResponseSpreadMs": [
+          283,
+          295
+        ],
+        "firstResponseRunsMs": [
+          295,
+          293,
+          283
+        ]
+      },
+      {
+        "compiler": "Stencil v5 (@stencil/unplugin)",
+        "firstResponseMedianMs": 966,
+        "firstResponseSpreadMs": [
+          965,
+          1050
+        ],
+        "firstResponseRunsMs": [
+          1050,
+          965,
+          966
+        ]
+      }
+    ],
+    "speedup": "3.3×"
   }
 }
