@@ -21,6 +21,7 @@ if (!['stencil', 'stencil4', 'stencilrs'].includes(target)) {
 const v5 = target !== 'stencil4';
 const outDir = join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs' }[target]);
 let cwd;
+// Each CLI is its JS entry run with node (not the node_modules/.bin shim, a .cmd on Windows that spawn cannot run).
 let bin;
 
 if (v5) {
@@ -29,7 +30,7 @@ if (v5) {
     console.error('migrated/ is missing: run `npm run fetch && npm run migrate` first');
     process.exit(1);
   }
-  bin = join(root, 'node_modules', '.bin', target === 'stencilrs' ? 'vite' : 'stencil');
+  bin = join(root, 'node_modules', ...(target === 'stencilrs' ? ['vite', 'bin', 'vite.js'] : ['@stencil', 'cli', 'bin', 'stencil.mjs']));
   rmSync(join(cwd, 'dist'), { recursive: true, force: true });
 } else {
   const tools = join(root, 'stencil4');
@@ -37,15 +38,15 @@ if (v5) {
     console.error('upstream/ is missing: run `npm run fetch` first');
     process.exit(1);
   }
-  if (!existsSync(join(tools, 'node_modules', '.bin', 'stencil'))) {
+  if (!existsSync(join(tools, 'node_modules', '@stencil', 'core', 'bin', 'stencil'))) {
     console.log('installing the Stencil 4 toolchain (stencil4/)...');
-    execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: tools, stdio: 'inherit' });
+    execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: tools, stdio: 'inherit', shell: process.platform === 'win32' });
   }
   // The stock source is upstream's core/ unchanged (no codemod); only the config is swapped for the trimmed one.
   cwd = join(tools, 'stock');
   console.log(`copied ${copyCore(cwd)} entries from upstream/core into stencil4/stock/`);
   copyFileSync(join(root, 'config', 'stencil.config.v4.ts'), join(cwd, 'stencil.config.ts'));
-  bin = join(tools, 'node_modules', '.bin', 'stencil');
+  bin = join(tools, 'node_modules', '@stencil', 'core', 'bin', 'stencil'); // v4: the CLI is in @stencil/core
   // minimal package.json (as in migrate.mjs) so Stencil 4 does not warn about upstream's publishing fields
   const upstream = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8'));
   writeFileSync(
@@ -72,7 +73,7 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(join(root, 'logs'), { recursive: true });
 const log = createWriteStream(join(root, 'logs', `${target}.log`));
 const started = performance.now();
-const child = spawn(bin, target === 'stencilrs' ? ['build', '--config', join(root, 'vite.config.ts')] : ['build'], { cwd: target === 'stencilrs' ? root : cwd, env: { ...process.env, IONIC_OUT_DIR: outDir, FORCE_COLOR: '0' } });
+const child = spawn(process.execPath, [bin, ...(target === 'stencilrs' ? ['build', '--config', join(root, 'vite.config.ts')] : ['build'])], { cwd: target === 'stencilrs' ? root : cwd, env: { ...process.env, IONIC_OUT_DIR: outDir, FORCE_COLOR: '0' } });
 
 let noisy = false;
 const filter = (chunk) => {
@@ -97,8 +98,8 @@ child.on('exit', (code) => {
     console.log(`${target}: ${summary.replace("[stencilrs] ", '')} -> ${outDir}`);
   } else if (code === 0) {
     // Ionic's global stylesheets (css/core.css, ...) are a separate Sass build in upstream (`npm run css.sass`)
-    const sass = join(v5 ? root : join(root, 'stencil4'), 'node_modules', '.bin', 'sass');
-    execFileSync(sass, ['--quiet', '--no-source-map', '--style', 'compressed', `${join(cwd, 'src', 'css')}:${join(outDir, 'css')}`]);
+    const sass = join(v5 ? root : join(root, 'stencil4'), 'node_modules', 'sass', 'sass.js');
+    execFileSync(process.execPath, [sass, '--quiet', '--no-source-map', '--style', 'compressed', `${join(cwd, 'src', 'css')}:${join(outDir, 'css')}`]);
     const docs = JSON.parse(readFileSync(join(outDir, 'docs.json'), 'utf8'));
     console.log(`${target}: ${docs.components.length} components in docs.json -> ${outDir}`);
   }

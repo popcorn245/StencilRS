@@ -21,11 +21,13 @@ console.log(`copied ${copied} entries from upstream/core into migrated/`);
 copyFileSync(join(root, 'config', 'stencil.config.v4.ts'), join(dest, 'stencil.config.ts'));
 
 // --- step 3: stencil migrate -------------------------------------------------------------------
-const stencil = join(root, 'node_modules', '.bin', 'stencil');
+// the CLI's JS entry through node, not node_modules/.bin/stencil: the .bin shim is a shell script on POSIX and a
+// .cmd on Windows, which execFileSync cannot run without a shell
+const stencil = join(root, 'node_modules', '@stencil', 'cli', 'bin', 'stencil.mjs');
 mkdirSync(join(root, 'logs'), { recursive: true });
 let migrateOut;
 try {
-  migrateOut = execFileSync(stencil, ['migrate'], { cwd: dest, encoding: 'utf8' });
+  migrateOut = execFileSync(process.execPath, [stencil, 'migrate'], { cwd: dest, encoding: 'utf8' });
 } catch (err) {
   console.error(`stencil migrate exited with ${err.status}:\n${err.stdout ?? ''}${err.stderr ?? ''}`);
   process.exit(1);

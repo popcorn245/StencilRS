@@ -40,7 +40,7 @@ const ionicOut = [
 
 # Benchmarks
 
-Two sets of numbers: the ui-kit (a small library, measured on the maintainer's machine) and [Ionic](#ionic-one-source-three-compilers) (94 components, a preview from a shared container).
+Two sets of numbers: the ui-kit (a small library, measured on the maintainer's machine) and [Ionic](#ionic-one-source-three-compilers) (94 components, measured on a quiet desktop).
 
 Measured {{ b.date }} on {{ b.machine }}. Stencil {{ b.versions.stencil }} (TypeScript {{ b.versions.typescript }}),
 Vite {{ b.versions.vite }}, oxc {{ b.versions.oxc }}, Rust {{ b.versions.rust }}.
@@ -126,10 +126,13 @@ the data file above):
 
 ## Ionic: one source, three compilers
 
-<div class="warning custom-block"><p class="custom-block-title">{{ ionic.preview ? 'Preview numbers' : 'Numbers' }}</p>
+<div :class="[ionic.preview ? 'warning' : 'info', 'custom-block']"><p class="custom-block-title">{{ ionic.preview ? 'Preview numbers' : 'Numbers' }}</p>
 <p v-if="ionic.preview">These were measured in a shared cloud container ({{ ionic.machine.cpu }}, {{ ionic.machine.logicalCores }} logical cores,
 {{ ionic.machine.ramGiB }} GB) while other jobs ran on it (load average {{ ionic.machine.loadavgAtStart.join(' / ') }} when the run started). Expect noise: read the
-min to max ranges, not just the medians. The final run on a quiet machine replaces them.</p></div>
+min to max ranges, not just the medians. The final run on a quiet machine replaces them.</p>
+<p v-else>Measured on {{ ionic.machine.description }} ({{ ionic.machine.cpu }}, {{ ionic.machine.logicalCores }} logical cores,
+{{ ionic.machine.ramGiB }} GB, {{ ionic.machine.os }}, Node {{ ionic.machine.node }}). Run note: {{ ionic.note }}. Medians of {{ ionic.runs }} runs;
+the whiskers show min to max.</p></div>
 
 [Ionic Framework](https://github.com/ionic-team/ionic-framework)'s `core` ({{ ionic.versions.ionic.tag }}, 94 components, per-mode Sass) is the
 largest open-source Stencil code base, so it is the fairest single test: the same source built three ways
@@ -207,6 +210,9 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
 - **Per-file transform.** `examples/ionic/bench/transpile-worker.mjs`, a fresh process per sample. The first of {{ ionic.runs }} passes over all files
   is the cold one, the rest are warm (median of the later passes).
 - **Peak memory.** Resident memory of the whole process tree (build workers included), sampled every 250 ms; a short spike can be missed.
+  On Windows there is no `ps`, so the harness reads each process's working set through CIM instead, and memory comes from a separate
+  {{ ionic.runs }}-run pass of the cold-build and dev steps (the sampler adds load, so that pass's timings are not used). A reused process id can
+  briefly pull an unrelated process into a sample: one Stencil sample in each of the two Stencil rows reads about 8 GB; the median is unaffected.
 - Rows are interleaved within each run, so drift on the machine hits all of them.
 
 ### What is not here
@@ -215,19 +221,19 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
   Stencil's bundler for the ui-kit's single stylesheet per component and its `ui-kit` paths; Ionic has per-mode (iOS / Material) styles, a global script
   and aliased imports, and the swap's glue would need to be checked against all of them before its numbers meant anything. The UI-kit result above
   (about 1.1x) says what that row would show anyway: only the component transform changes, and it is a small part of a Stencil build.
-- **The final numbers.** These were measured on a shared box. The quiet-machine run on the maintainer's machine will replace them.
 
 ### Where stencilrs spends its time
 
-Two paths in the stencilrs row are slow, and both are Sass, not the compiler:
+One path in the stencilrs row is still slower than Stencil v5, and it is not the compiler:
 
-- **The watch rebuild is not incremental.** After one line of `button.tsx` changes, `vite build --watch` takes about as long as the
-  Stencil 4 rebuild and several times longer than Stencil v5's incremental rebuild (about 0.6 s), because it recompiles every stylesheet
-  again. Replaying the Sass calls alone (the 218 per-mode component `.scss` files, then the 12 global ones) costs about 2.9 s and 0.7 s on this box, which
-  accounts for nearly all of the 3.5 s. The plugin does not cache a stylesheet whose inputs did not change, and the harness's global `css/` step
-  runs on every rebuild. The Vite dev server does not have the problem: it transforms only the module that was requested, again in tens of milliseconds.
-- **A cold build is mostly Sass too.** Of about 4.2 s, the same replay puts about 3.6 s in Sass (`sass` is JavaScript, single-threaded here), so the
-  compile of 95 files (about 70 ms, see the per-file table) and the bundling are the smaller part. This is why the whole build is about 6x faster than
+- **The watch rebuild redoes the whole bundle.** After one line of `button.tsx` changes, `vite build --watch` takes about 1.4 s:
+  less than half of Stencil 4's rebuild (about 3.4 s), but about twice Stencil v5's incremental rebuild (about 0.6 s). Component and
+  global stylesheets are cached since [#81](https://github.com/popcorn245/StencilRS/issues/81) (a stylesheet is compiled again only when it
+  or a file Sass loaded for it changed), so what is left is Rollup rebuilding and writing every output chunk
+  ([#79](https://github.com/popcorn245/StencilRS/issues/79)). The Vite dev server does not have the problem: it transforms only the module
+  that was requested, in about 66 ms.
+- **A cold build is mostly Sass.** `sass` is JavaScript and single-threaded here, and a cold build compiles every stylesheet, so the
+  compile of 95 files (about 53 ms, see the per-file table) and the bundling are the smaller part. This is why the whole build is about 8x faster than
   `stencil build`, not as many times faster as the compile step alone.
 - **Warm builds do not help any row.** Stencil v5's `.stencil` cache saves nothing measurable on a rebuild in a fresh process
   (its warm median is not below the cold one), and Vite keeps nothing between processes. Only watch mode and the dev server are incremental.
