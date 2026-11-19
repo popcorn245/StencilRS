@@ -28,6 +28,16 @@ export default defineLoader({
       viteStencilMs: v[0].warmMedianMs,
       viteStencilrsMs: v[1].warmMedianMs,
       fullBuild: `${ratio(s[0].buildFinishedMedianMs, s[1].buildFinishedMedianMs).toFixed(2)}×`,
+      ...(bench.coldBuild && {
+        uikitColdBuildStencilrs: sec(bench.coldBuild.rows[0].wallMedianMs),
+        uikitColdBuildStencil: sec(bench.coldBuild.rows[1].wallMedianMs),
+        uikitColdBuildRatio: x(ratio(bench.coldBuild.rows[1].wallMedianMs, bench.coldBuild.rows[0].wallMedianMs)),
+      }),
+      ...(bench.coldDev && {
+        uikitColdDevStencilrs: `${bench.coldDev.rows[0].firstResponseMedianMs} ms`,
+        uikitColdDevStencil: `${bench.coldDev.rows[1].firstResponseMedianMs} ms`,
+        uikitColdDevRatio: x(ratio(bench.coldDev.rows[1].firstResponseMedianMs, bench.coldDev.rows[0].firstResponseMedianMs)),
+      }),
       coldBuildBefore: sec(stats.coldStart.build.beforeMs),
       coldBuildAfter: sec(stats.coldStart.build.afterMs),
       devBefore: sec(stats.coldStart.dev.beforeMs),

@@ -34,6 +34,20 @@ The specs were written against jsdom, so 68 of 872 fail with either compiler (mo
 | Spec suite in headless Chrome (`npm run test:browser`) | 863 / 874 (the 11 mock browser APIs only jsdom lets a test replace) |
 | Files stencilrs compiles itself | 136 / 136 (no fallback to Stencil) |
 
+## Benchmark: cold start
+
+```sh
+node bench-cold.mjs 10 --write                              # official: fresh node per run, 10 runs each
+node bench-cold.mjs 3 --write --preview --note "shared box"  # a noisy machine: marks the rows as a preview
+```
+
+A fresh `node` process per sample (Vite's cache emptied first, stencilrs and Stencil alternating) for a
+`vite build` of the whole ui-kit and for the dev server's time to the first component response, module
+load included. `--write` stores the `coldBuild` and `coldDev` rows, with the machine, in
+`storybook/docs/data/benchmarks.json`; the Benchmarks page and `test/bench-data.test.js` (which ties the
+README headline to the data) follow. Works on Windows and Linux; every run has a timeout and its process
+tree is killed.
+
 ## Benchmark: `stencil build` with stencilrs swapped in
 
 ```sh
