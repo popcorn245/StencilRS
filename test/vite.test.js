@@ -183,3 +183,40 @@ export class CmpToned { render() { return <div>x</div>; } }
   write('_tone.scss', '$t: blue;');
   assert.match(await run('toned.tsx'), /color:\s*(?:blue|#00f)/);
 });
+
+test('a rebuild reuses what an unchanged component compiled to, until its source or a file it read changes', async () => {
+  const dir = join(project, 'memo');
+  mkdirSync(dir, { recursive: true });
+  const typesFile = join(dir, 'types.ts');
+  const cmpFile = join(dir, 'memo-cmp.tsx');
+  writeFileSync(typesFile, `export type Size = 'small' | 'large';\n`);
+  const source = `import { Component, Prop, h } from '@stencil/core';
+import { Size } from './types';
+@Component({ tag: 'memo-cmp' })
+export class MemoCmp {
+  @Prop() size: Size = 'small';
+  render() { return <div>{this.size}</div>; }
+}
+`;
+  writeFileSync(cmpFile, source);
+  const [plugin] = stencilrs();
+  plugin.configResolved({ command: 'build', root: project, plugins: [] });
+  const ctx = { addWatchFile() {}, warn() {}, error: (m) => assert.fail(m), info() {}, resolve: async () => null };
+  const compile = async (code = source) => {
+    await plugin.buildStart.call(ctx);
+    return plugin.transform.call(ctx, code, cmpFile, {});
+  };
+  const first = await compile();
+  assert.ok(first.code.includes('memo-cmp'));
+  assert.equal(await compile(), first, 'nothing changed: the same result');
+  const second = await compile(source.replace('<div>', '<section>').replace('</div>', '</section>'));
+  assert.notEqual(second, first);
+  assert.ok(second.code.includes('section'));
+  // The file the metadata came from changes (new size, new mtime): the component compiles again.
+  await new Promise((r) => setTimeout(r, 20));
+  writeFileSync(typesFile, `export type Size = 1 | 2;\n`);
+  const third = await compile(source);
+  assert.notEqual(third, first);
+  assert.notEqual(third.code, first.code, 'the metadata follows the edited type');
+  assert.equal(await compile(source), third, 'and is kept again');
+});

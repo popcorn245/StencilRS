@@ -12,7 +12,7 @@
 // does the work. Global stylesheets (`globalStyle`, `stencil-component-globals`) and `docs`
 // are not component styles: they stay with @stencil/unplugin.
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -88,14 +88,26 @@ const sha = (...parts) => {
   for (const p of parts) h.update(String(p)).update('\0');
   return h.digest('hex');
 };
-const fileHash = (f) => {
+// What a file's content hashed to, by its stat: a shared Sass partial that 190 stylesheets depend on is read and hashed
+// once, not once per stylesheet per rebuild. A file stamped (mtime, size) as when it was hashed is not read again, unless
+// it was modified within the last 2 s (git's "racy" case: a later edit of the same size could keep the mtime).
+const hashByStamp = new Map();
+const hashNow = (f) => {
+  const st = statSync(f, { bigint: true, throwIfNoEntry: false });
+  if (!st?.isFile()) return 'missing'; // a dependency that vanished: differs from any recorded hash, so the stylesheet recompiles (and reports it)
+  const stamp = `${st.mtimeNs}:${st.size}`;
+  const known = hashByStamp.get(f);
+  if (known?.stamp === stamp) return known.hash;
+  let hash;
   try {
-    return createHash('sha1').update(readFileSync(f)).digest('hex');
+    hash = createHash('sha1').update(readFileSync(f)).digest('hex');
   } catch {
-    return 'missing'; // a dependency that vanished: differs from any recorded hash, so the stylesheet recompiles (and reports it)
+    return 'missing';
   }
+  if (Date.now() - Number(st.mtimeNs / 1000000n) > 2000) hashByStamp.set(f, { stamp, hash });
+  else hashByStamp.delete(f);
+  return hash;
 };
-const depsCurrent = (depHashes) => depHashes.every(([f, h]) => fileHash(f) === h);
 
 /** `node_modules/.cache/stencilrs/sass` of the nearest node_modules above the working directory, or null. */
 const diskCacheDir = () => {
@@ -136,6 +148,15 @@ export function createCssPipeline(options = {}) {
   })();
   const memCache = cacheOption !== false;
   const diskCache = cacheOption === true && sassOptionsKey !== null ? diskCacheDir() : null;
+  // Within one build a file is looked at once (`newBuild`); null until the plugin says a build starts (a dev server never does).
+  let hashesOfBuild = null;
+  const fileHash = (f) => {
+    if (!hashesOfBuild) return hashNow(f);
+    let hash = hashesOfBuild.get(f);
+    if (hash === undefined) hashesOfBuild.set(f, (hash = hashNow(f)));
+    return hash;
+  };
+  const depsCurrent = (depHashes) => depHashes.every(([f, h]) => fileHash(f) === h);
   const sassMemo = new Map(); // key -> { css, deps, depHashes }
   const outputMemo = new Map(); // key -> { code, deps }
   let targets; // lightningcss' targets, resolved once
@@ -233,7 +254,7 @@ export function createCssPipeline(options = {}) {
    * @stencil/unplugin's `loadStencilCss`.
    * @returns `{ code, deps }`, or null to leave the stylesheet to @stencil/unplugin
    */
-  return async function load(id, isDev) {
+  const load = async function load(id, isDev) {
     const { file, tag, encapsulation, mode } = parseStencilCssId(id);
     if (!existsSync(file)) return { code: 'export default () => ""', deps: [] };
     const ext = extname(file).slice(1);
@@ -290,4 +311,9 @@ export function createCssPipeline(options = {}) {
     if (outKey) outputMemo.set(outKey, out);
     return out;
   };
+  /** A build starts: what a file hashed to is remembered until the next one. */
+  load.newBuild = () => {
+    hashesOfBuild = new Map();
+  };
+  return load;
 }

@@ -55,6 +55,22 @@ const resolveSpecifier = (specifier, importer) => {
   return found ? found.replaceAll('\\', '/') : null;
 };
 
+/**
+ * Whether every file a transpile read (`result.deps`: imported modules and tsconfigs, each with the
+ * `<mtime ns>:<size>` stamp the native side saw, or null for a file that was absent) is as it was.
+ * `stamps` memoises the stat calls of one build.
+ */
+const depsFresh = (deps, stamps) =>
+  deps.every(([path, was]) => {
+    let now = stamps.get(path);
+    if (now === undefined) {
+      const st = statSync(path, { bigint: true, throwIfNoEntry: false });
+      now = st?.isFile() ? `${st.mtimeNs}:${st.size}` : null;
+      stamps.set(path, now);
+    }
+    return now === was;
+  });
+
 /** tsconfig `jsx`, or @stencil/unplugin's heuristic: classic `h` when the file imports it. */
 const jsxFor = (code, tsconfigJsx) => {
   if (tsconfigJsx?.jsx === 'react') return { jsx: 'classic' };
@@ -147,6 +163,15 @@ export function stencilrs(options = {}) {
   // its default.
   let useDefineForClassFields = true;
   const fileToTag = new Map();
+  // A watch rebuild runs `transform` for every module again, changed or not (Rolldown and Rollup both do).
+  // What a component compiled to is kept, keyed by module id, and reused while the module's exact source and
+  // every file the compile read (`resolveImports`: imported modules, tsconfigs) are unchanged. Only clean results
+  // are kept (no diagnostics, not the fallback), so a reused one has nothing to replay but the result.
+  const memo = new Map();
+  // `fs.stat` results of the current build, for `depsFresh`.
+  let stamps = new Map();
+  const runtimeByDir = new Map();
+  let buildStamps = false; // a dev server has no build boundary to reset them at
   const counts = { stencilrs: 0, stencil: 0 };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
@@ -202,6 +227,7 @@ export function stencilrs(options = {}) {
       fallbackPlugin.remember('resolved', config);
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
+      buildStamps = config.command === 'build';
       root = config.root;
       tsconfigJsx = readTsconfigJsx(root);
       // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
@@ -217,6 +243,9 @@ export function stencilrs(options = {}) {
     },
 
     async buildStart() {
+      stamps = new Map();
+      if (buildStamps) loadCss?.newBuild();
+      runtimeByDir.clear();
       if (fallbackPlugin.loaded) return void (await fallbackPlugin.call('buildStart', this, {}));
       // Stylesheets that import the virtual global stylesheets need them written before the build.
       if (needsUnplugin || projectUsesVirtualGlobalImports(root)) await fallbackPlugin.ensure(this);
@@ -248,6 +277,19 @@ export function stencilrs(options = {}) {
         if (code.includes('Build')) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
       } else if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
+      }
+
+      const memoKey = `${id}\0${transformOpts?.ssr ? 1 : 0}`;
+      const kept = memo.get(memoKey);
+      if (kept && kept.source === original && depsFresh(kept.deps, buildStamps ? stamps : new Map())) {
+        counts.stencilrs++;
+        handled.add(file);
+        for (const base of kept.baseClasses) {
+          baseClasses.add(base);
+          this.addWatchFile(base);
+        }
+        fileToTag.set(file, kept.tagName);
+        return kept.result;
       }
 
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
@@ -297,7 +339,10 @@ export function stencilrs(options = {}) {
         out += `\nexport { ${componentClassName} };`;
       }
       if (isDev && !ssr) out += hmrSnippet(tagName, componentClassName);
-      return { code: out, map };
+      const value = { code: out, map };
+      if (result.diagnostics.length || !result.deps) memo.delete(memoKey);
+      else memo.set(memoKey, { source: original, deps: result.deps, baseClasses: result.baseClasses, tagName, result: value });
+      return value;
     },
 
     // An import of a file an ancestor lives in gets its base-class compilation instead
@@ -311,7 +356,10 @@ export function stencilrs(options = {}) {
       // entry is a separate, minimal client whose mode resolver, task queue and vdom state the components
       // never see (`stencil build` rewrites these imports the same way).
       if (id === '@stencil/core' && importer && !specPage && !ssr && !importer.startsWith('\0')) {
-        return this.resolve(RUNTIME_ID, importer, { skipSelf: true });
+        // The same answer for every file of a folder: asked once per folder and build.
+        const dir = dirname(importer);
+        if (!runtimeByDir.has(dir)) runtimeByDir.set(dir, this.resolve(RUNTIME_ID, importer, { skipSelf: true }));
+        return runtimeByDir.get(dir);
       }
       if (importer) {
         if (serveCss) {

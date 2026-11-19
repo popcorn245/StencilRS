@@ -43,6 +43,21 @@ pub struct Dep {
 }
 
 impl Dep {
+    /// The file as a build tool can compare it later: its path and a stamp string
+    /// (`<mtime in ns>:<size>`, as `fs.statSync(path, { bigint: true })` reports them), or `None`
+    /// when the file was absent.
+    pub fn report(&self) -> (String, Option<String>) {
+        let stamp = self.stamp.map(|s| {
+            let ns = s
+                .mtime
+                .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map(|d| d.as_nanos().to_string())
+                .unwrap_or_else(|| "none".into());
+            format!("{ns}:{}", s.len)
+        });
+        (self.path.to_string_lossy().replace('\\', "/"), stamp)
+    }
+
     /// The file as it is now.
     pub fn of(path: &Path) -> Dep {
         Dep {
@@ -107,16 +122,16 @@ struct TsconfigEntry {
 static TSCONFIGS: OnceLock<Mutex<HashMap<PathBuf, TsconfigEntry>>> = OnceLock::new();
 
 /// `strictNullChecks` for files in `dir`, if the tsconfigs it came from have not changed.
-pub fn tsconfig(dir: &Path) -> Option<bool> {
+pub fn tsconfig(dir: &Path) -> Option<(bool, Arc<Vec<Dep>>)> {
     let entry = lock(&TSCONFIGS).get(dir)?.clone();
     if fresh(&entry.deps) {
-        return Some(entry.strict);
+        return Some((entry.strict, entry.deps));
     }
     lock(&TSCONFIGS).remove(dir);
     None
 }
 
-pub fn store_tsconfig(dir: &Path, strict: bool, deps: Vec<Dep>) {
+pub fn store_tsconfig(dir: &Path, strict: bool, deps: Arc<Vec<Dep>>) {
     let mut tsconfigs = lock(&TSCONFIGS);
     if tsconfigs.len() >= MAX_TSCONFIGS {
         tsconfigs.clear();
@@ -125,7 +140,7 @@ pub fn store_tsconfig(dir: &Path, strict: bool, deps: Vec<Dep>) {
         dir.to_owned(),
         TsconfigEntry {
             strict,
-            deps: Arc::new(deps),
+            deps,
         },
     );
 }
