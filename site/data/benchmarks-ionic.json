@@ -1,21 +1,31 @@
 {
   "schema": 1,
   "complete": true,
-  "preview": true,
-  "note": "Preview from a shared, noisy cloud container (other agents' builds ran at the same time); not the quiet-machine run.",
-  "startedAt": "2026-11-18T09:47:13.027Z",
-  "finishedAt": "2026-11-18T10:19:33.492Z",
+  "preview": false,
+  "note": "Popcorn-Tower, quiet: ~4% CPU idle load, 46 of 64 GB RAM free, Steam/Edge closed, WSL idle",
+  "startedAt": "2026-11-19T20:37:19.238Z",
+  "finishedAt": "2026-11-19T21:06:52.247Z",
   "runs": 10,
-  "steps": ["cold", "warm", "dev", "edit", "transpile"],
+  "steps": [
+    "cold",
+    "warm",
+    "dev",
+    "edit",
+    "transpile"
+  ],
   "machine": {
-    "description": "cloud container (shared)",
-    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
-    "logicalCores": 4,
-    "ramGiB": 16,
-    "os": "Linux 6.18.44-fc-v595",
-    "platform": "linux-x64",
-    "node": "22.23.5",
-    "loadavgAtStart": [4.25, 6.51, 4.71]
+    "description": "Popcorn-Tower, a quiet Windows 11 desktop",
+    "cpu": "Intel(R) Core(TM) i9-10850K CPU @ 3.60GHz",
+    "logicalCores": 20,
+    "ramGiB": 64,
+    "os": "Windows 11 Pro",
+    "platform": "win32-x64",
+    "node": "26.12.1",
+    "loadavgAtStart": [
+      0,
+      0,
+      0
+    ]
   },
   "versions": {
     "stencil4": "4.45.4",
@@ -26,7 +36,7 @@
     "sass": "1.99.0",
     "stencilrs": {
       "package": "0.0.0-development",
-      "git": "fa9055b3b893b4f4585726138f4cbc560e9e3b41",
+      "git": "7dd2fdf579dd6c095fc697b68ec064072de6cda3",
       "dirty": true
     },
     "ionic": {
@@ -47,24 +57,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 27062.5,
-          "min": 26034,
-          "max": 28033,
-          "samples": [27923, 26786, 26034, 26639, 27482, 26910, 28033, 27047, 27254, 27078]
+          "median": 22643,
+          "min": 22567,
+          "max": 26789,
+          "samples": [
+            22906,
+            22640,
+            22614,
+            22646,
+            22878,
+            22665,
+            22567,
+            22581,
+            22607,
+            26789
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 24141,
-          "min": 23352,
-          "max": 24722,
-          "samples": [23762, 24692, 23352, 24136, 24722, 24640, 24146, 23874, 23511, 24232]
+          "median": 21727,
+          "min": 21578,
+          "max": 24886,
+          "samples": [
+            23819,
+            21605,
+            21590,
+            22540,
+            21824,
+            21630,
+            21616,
+            21578,
+            23054,
+            24886
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 4203.5,
-          "min": 4071,
-          "max": 4358,
-          "samples": [4166, 4241, 4088, 4358, 4259, 4071, 4299, 4150, 4138, 4339]
+          "median": 2593.5,
+          "min": 2570,
+          "max": 2882,
+          "samples": [
+            2601,
+            2570,
+            2590,
+            2601,
+            2579,
+            2597,
+            2575,
+            2574,
+            2882,
+            2872
+          ]
         }
       }
     },
@@ -75,45 +118,100 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 732.5,
-          "min": 660,
-          "max": 766,
-          "samples": [668, 747, 721, 688, 766, 660, 752, 762, 715, 744]
+          "median": 682.5,
+          "min": 645,
+          "max": 804,
+          "samples": [
+            669,
+            686,
+            684,
+            680,
+            645,
+            681,
+            692,
+            685,
+            653,
+            804
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 737.5,
-          "min": 682,
-          "max": 805,
-          "samples": [682, 781, 705, 805, 805, 773, 751, 712, 702, 724]
+          "median": 674.5,
+          "min": 645,
+          "max": 788,
+          "samples": [
+            716,
+            674,
+            645,
+            672,
+            675,
+            653,
+            685,
+            646,
+            788,
+            782
+          ]
         }
       }
     },
     "peakRss": {
       "title": "Peak memory, cold build",
       "unit": "MiB",
-      "what": "sum of the RSS of the whole process tree (workers included), peak of samples every 250 ms",
+      "what": "sum of the RSS of the whole process tree (workers included), peak of samples every 250 ms. Windows: working set of the process tree via CIM, measured in a separate N=10 pass of the same step (its timings are not used: the sampler adds load).",
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 1994,
-          "min": 1826,
-          "max": 2069,
-          "samples": [1994, 1826, 1867, 1994, 2012, 2069, 1884, 1998, 1966, 2055]
+          "median": 2841.5,
+          "min": 2779,
+          "max": 8023,
+          "samples": [
+            8023,
+            2965,
+            2779,
+            2800,
+            2814,
+            2869,
+            2794,
+            2781,
+            3042,
+            2960
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 1996,
-          "min": 1934,
-          "max": 2029,
-          "samples": [2018, 1992, 1934, 2020, 2029, 1993, 2018, 1999, 1986, 1978]
+          "median": 2598.5,
+          "min": 2516,
+          "max": 7865,
+          "samples": [
+            2582,
+            2593,
+            2607,
+            7668,
+            2600,
+            7865,
+            2597,
+            2542,
+            2605,
+            2516
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 559.5,
-          "min": 539,
-          "max": 584,
-          "samples": [551, 561, 539, 544, 563, 557, 571, 584, 565, 558]
+          "median": 365,
+          "min": 361,
+          "max": 371,
+          "samples": [
+            364,
+            368,
+            364,
+            366,
+            371,
+            363,
+            368,
+            362,
+            361,
+            366
+          ]
         }
       }
     },
@@ -124,24 +222,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 26090.5,
-          "min": 24893,
-          "max": 32020,
-          "samples": [25335, 26701, 26118, 26063, 25647, 24893, 26306, 26022, 32020, 31835]
+          "median": 22422.5,
+          "min": 20942,
+          "max": 24661,
+          "samples": [
+            23734,
+            20942,
+            20994,
+            21004,
+            21022,
+            21111,
+            24440,
+            24529,
+            24460,
+            24661
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 28521.5,
-          "min": 26093,
-          "max": 35199,
-          "samples": [28836, 28171, 26501, 29776, 26377, 29548, 28207, 30943, 35199, 26093]
+          "median": 23113,
+          "min": 21430,
+          "max": 24952,
+          "samples": [
+            21553,
+            21430,
+            21688,
+            21580,
+            21596,
+            24538,
+            24624,
+            24904,
+            24822,
+            24952
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 4996,
-          "min": 4192,
-          "max": 6497,
-          "samples": [5180, 4930, 5016, 4976, 4597, 4783, 5068, 5891, 6497, 4192]
+          "median": 2735.5,
+          "min": 2583,
+          "max": 2909,
+          "samples": [
+            2602,
+            2602,
+            2583,
+            2612,
+            2604,
+            2872,
+            2859,
+            2861,
+            2909,
+            2891
+          ]
         }
       }
     },
@@ -152,24 +283,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 14943,
-          "min": 13846,
-          "max": 20065,
-          "samples": [14944, 13846, 20065, 14044, 15485, 14942, 15410, 15513, 14501, 14037]
+          "median": 14597.5,
+          "min": 14413,
+          "max": 14686,
+          "samples": [
+            14686,
+            14605,
+            14639,
+            14430,
+            14677,
+            14489,
+            14548,
+            14590,
+            14637,
+            14413
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 12599,
-          "min": 11210,
-          "max": 15544,
-          "samples": [13050, 11210, 12299, 12893, 13009, 15544, 12305, 12180, 11418, 14035]
+          "median": 11921.5,
+          "min": 11796,
+          "max": 12014,
+          "samples": [
+            11826,
+            11921,
+            11938,
+            11922,
+            11981,
+            11884,
+            11889,
+            12014,
+            11989,
+            11796
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 654.5,
-          "min": 620,
-          "max": 1066,
-          "samples": [657, 1066, 633, 665, 645, 620, 669, 652, 629, 732]
+          "median": 1087.5,
+          "min": 1034,
+          "max": 2719,
+          "samples": [
+            1085,
+            2425,
+            2553,
+            2719,
+            1042,
+            1091,
+            1034,
+            1090,
+            1046,
+            1037
+          ]
         }
       }
     },
@@ -180,24 +344,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 14962.5,
-          "min": 13865,
-          "max": 20095,
-          "samples": [14964, 13865, 20095, 14067, 15503, 14961, 15433, 15531, 14529, 14054]
+          "median": 14616.5,
+          "min": 14429,
+          "max": 14704,
+          "samples": [
+            14704,
+            14627,
+            14656,
+            14463,
+            14693,
+            14507,
+            14569,
+            14606,
+            14667,
+            14429
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 12619,
-          "min": 11249,
-          "max": 15563,
-          "samples": [13073, 11249, 12311, 12922, 13026, 15563, 12316, 12194, 11435, 14073]
+          "median": 11932,
+          "min": 11809,
+          "max": 12028,
+          "samples": [
+            11841,
+            11925,
+            11952,
+            11939,
+            11985,
+            11888,
+            11902,
+            12028,
+            12006,
+            11809
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 1302,
-          "min": 1187,
-          "max": 1443,
-          "samples": [1307, 1404, 1312, 1346, 1260, 1187, 1297, 1289, 1214, 1443]
+          "median": 4025.5,
+          "min": 3880,
+          "max": 4316,
+          "samples": [
+            4316,
+            4022,
+            3973,
+            4023,
+            4028,
+            4127,
+            3925,
+            4040,
+            4137,
+            3880
+          ]
         }
       }
     },
@@ -211,49 +408,115 @@
           "median": 7,
           "min": 7,
           "max": 7,
-          "samples": [7, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+          "samples": [
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 8,
-          "min": 8,
-          "max": 8,
-          "samples": [8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
+          "median": 7.5,
+          "min": 1,
+          "max": 9,
+          "samples": [
+            9,
+            1,
+            9,
+            7,
+            1,
+            1,
+            9,
+            9,
+            7,
+            8
+          ]
         },
         "stencilrs": {
           "n": 10,
           "median": 23,
           "min": 23,
           "max": 23,
-          "samples": [23, 23, 23, 23, 23, 23, 23, 23, 23, 23]
+          "samples": [
+            23,
+            23,
+            23,
+            23,
+            23,
+            23,
+            23,
+            23,
+            23,
+            23
+          ]
         }
       }
     },
     "devPeakRss": {
       "title": "Peak memory, dev server",
       "unit": "MiB",
-      "what": "from start through the edit",
+      "what": "from start through the edit. Windows: working set of the process tree via CIM, measured in a separate N=10 pass of the same step (its timings are not used: the sampler adds load).",
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 1681,
-          "min": 1455,
-          "max": 1691,
-          "samples": [1690, 1657, 1690, 1691, 1682, 1680, 1455, 1643, 1683, 1665]
+          "median": 2438.5,
+          "min": 2339,
+          "max": 2491,
+          "samples": [
+            2423,
+            2431,
+            2471,
+            2339,
+            2434,
+            2461,
+            2400,
+            2443,
+            2491,
+            2475
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 1669,
-          "min": 1542,
-          "max": 1690,
-          "samples": [1672, 1674, 1671, 1542, 1655, 1682, 1664, 1667, 1666, 1690]
+          "median": 2237.5,
+          "min": 2230,
+          "max": 2302,
+          "samples": [
+            2252,
+            2230,
+            2235,
+            2242,
+            2238,
+            2237,
+            2238,
+            2235,
+            2231,
+            2302
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 333.5,
-          "min": 330,
-          "max": 341,
-          "samples": [340, 332, 333, 337, 333, 332, 341, 334, 339, 330]
+          "median": 257,
+          "min": 254,
+          "max": 279,
+          "samples": [
+            260,
+            256,
+            259,
+            279,
+            257,
+            256,
+            254,
+            257,
+            257,
+            256
+          ]
         }
       }
     },
@@ -264,24 +527,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 3668,
-          "min": 3321,
-          "max": 5155,
-          "samples": [3898, 3321, 5155, 3507, 3709, 3380, 3809, 3840, 3546, 3627]
+          "median": 3412,
+          "min": 3354,
+          "max": 3554,
+          "samples": [
+            3413,
+            3407,
+            3376,
+            3381,
+            3437,
+            3411,
+            3554,
+            3354,
+            3419,
+            3445
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 602,
-          "min": 590,
-          "max": 840,
-          "samples": [597, 595, 638, 590, 602, 727, 613, 601, 602, 840]
+          "median": 626,
+          "min": 603,
+          "max": 682,
+          "samples": [
+            625,
+            682,
+            643,
+            608,
+            635,
+            627,
+            603,
+            631,
+            621,
+            612
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 3478,
-          "min": 3315,
-          "max": 4365,
-          "samples": [3327, 4365, 3379, 3518, 3474, 3482, 3682, 3315, 3424, 4049]
+          "median": 1423.5,
+          "min": 1391,
+          "max": 1438,
+          "samples": [
+            1415,
+            1424,
+            1430,
+            1423,
+            1431,
+            1422,
+            1436,
+            1438,
+            1391,
+            1396
+          ]
         }
       }
     },
@@ -292,24 +588,57 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 3460,
-          "min": 3200,
-          "max": 4830,
-          "samples": [3550, 3200, 4830, 3390, 3600, 3270, 3540, 3530, 3300, 3280]
+          "median": 3085,
+          "min": 3030,
+          "max": 3210,
+          "samples": [
+            3090,
+            3100,
+            3040,
+            3030,
+            3100,
+            3070,
+            3210,
+            3030,
+            3080,
+            3100
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 570,
-          "min": 561,
-          "max": 802,
-          "samples": [568, 561, 604, 561, 564, 698, 584, 566, 572, 802]
+          "median": 594.5,
+          "min": 573,
+          "max": 651,
+          "samples": [
+            593,
+            651,
+            612,
+            575,
+            604,
+            596,
+            573,
+            600,
+            589,
+            582
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 3471.5,
-          "min": 3310,
-          "max": 4361,
-          "samples": [3320, 4361, 3373, 3511, 3469, 3474, 3677, 3310, 3419, 4045]
+          "median": 1419.5,
+          "min": 1388,
+          "max": 1434,
+          "samples": [
+            1410,
+            1420,
+            1425,
+            1419,
+            1426,
+            1418,
+            1432,
+            1434,
+            1388,
+            1391
+          ]
         }
       }
     },
@@ -320,10 +649,21 @@
       "rows": {
         "stencilrs": {
           "n": 10,
-          "median": 49,
-          "min": 20,
-          "max": 80,
-          "samples": [45, 54, 50, 80, 43, 55, 47, 57, 48, 20]
+          "median": 66,
+          "min": 63,
+          "max": 69,
+          "samples": [
+            67,
+            66,
+            66,
+            69,
+            69,
+            64,
+            66,
+            65,
+            64,
+            63
+          ]
         }
       }
     },
@@ -332,31 +672,82 @@
       "unit": "ms",
       "what": "first pass over every @Component file in a fresh process (stencilrs transpile, Stencil transpileSync), source maps on",
       "corpus": {
-        "stencil4": { "files": 95, "kib": 1044, "compilerVersion": "4.45.4", "errorDiagnostics": 0, "outKib": 1133 },
-        "stencil": { "files": 95, "kib": 1046, "compilerVersion": "5.0.0-beta.25", "errorDiagnostics": 34, "outKib": 1120 },
-        "stencilrs": { "files": 95, "kib": 1046, "compilerVersion": "0.0.0-development", "errorDiagnostics": 40, "outKib": 825 }
+        "stencil4": {
+          "files": 95,
+          "kib": 1044,
+          "compilerVersion": "4.45.4",
+          "errorDiagnostics": 0,
+          "outKib": 1133
+        },
+        "stencil": {
+          "files": 95,
+          "kib": 1046,
+          "compilerVersion": "5.0.0-beta.25",
+          "errorDiagnostics": 34,
+          "outKib": 1120
+        },
+        "stencilrs": {
+          "files": 95,
+          "kib": 1046,
+          "compilerVersion": "0.0.0-development",
+          "errorDiagnostics": 40,
+          "outKib": 825
+        }
       },
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 2671,
-          "min": 2324,
-          "max": 3753,
-          "samples": [3753, 3569, 2725, 2469, 2445, 2617, 2514, 3333, 2972, 2324]
+          "median": 2369,
+          "min": 2349,
+          "max": 2395,
+          "samples": [
+            2383,
+            2395,
+            2388,
+            2367,
+            2388,
+            2366,
+            2349,
+            2368,
+            2369,
+            2369
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 2867,
-          "min": 2625,
-          "max": 4096,
-          "samples": [4096, 4076, 2805, 2680, 2827, 2692, 2907, 3565, 3398, 2625]
+          "median": 2711.5,
+          "min": 2688,
+          "max": 2823,
+          "samples": [
+            2755,
+            2722,
+            2823,
+            2688,
+            2718,
+            2705,
+            2699,
+            2696,
+            2704,
+            2799
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 77,
-          "min": 71,
-          "max": 99,
-          "samples": [77, 77, 76, 99, 77, 71, 76, 73, 97, 79]
+          "median": 53,
+          "min": 52,
+          "max": 57,
+          "samples": [
+            53,
+            53,
+            57,
+            55,
+            53,
+            53,
+            52,
+            53,
+            53,
+            53
+          ]
         }
       }
     },
@@ -367,36 +758,69 @@
       "rows": {
         "stencil4": {
           "n": 10,
-          "median": 1581,
-          "min": 1487,
-          "max": 1839,
-          "samples": [1839, 1706, 1627, 1487, 1520, 1568, 1559, 1594, 1777, 1562]
+          "median": 1550,
+          "min": 1532,
+          "max": 1578,
+          "samples": [
+            1555,
+            1541,
+            1558,
+            1532,
+            1546,
+            1547,
+            1551,
+            1563,
+            1578,
+            1549
+          ]
         },
         "stencil": {
           "n": 10,
-          "median": 1774.5,
-          "min": 1631,
-          "max": 2071,
-          "samples": [2071, 1686, 1631, 1726, 1765, 1789, 1844, 1880, 1784, 1720]
+          "median": 1844,
+          "min": 1807,
+          "max": 1923,
+          "samples": [
+            1844,
+            1830,
+            1899,
+            1821,
+            1846,
+            1844,
+            1807,
+            1821,
+            1849,
+            1923
+          ]
         },
         "stencilrs": {
           "n": 10,
-          "median": 65,
-          "min": 57,
-          "max": 71,
-          "samples": [66, 64, 67, 57, 70, 63, 62, 58, 71, 66]
+          "median": 49,
+          "min": 49,
+          "max": 50,
+          "samples": [
+            49,
+            49,
+            50,
+            49,
+            49,
+            49,
+            49,
+            49,
+            49,
+            50
+          ]
         }
       }
     }
   },
   "output": {
     "stencil4": {
-      "files": 2643,
-      "rawBytes": 14257701,
-      "gzipBytes": 3661431,
+      "files": 2691,
+      "rawBytes": 14439017,
+      "gzipBytes": 3717456,
       "js": {
-        "rawBytes": 9559566,
-        "gzipBytes": 2235091
+        "rawBytes": 9740882,
+        "gzipBytes": 2291117
       },
       "css": {
         "rawBytes": 1542711,
@@ -404,16 +828,16 @@
       },
       "other": {
         "rawBytes": 3155424,
-        "gzipBytes": 1156100
+        "gzipBytes": 1156099
       }
     },
     "stencil": {
-      "files": 499,
-      "rawBytes": 5487004,
-      "gzipBytes": 1203749,
+      "files": 508,
+      "rawBytes": 5605370,
+      "gzipBytes": 1239348,
       "js": {
-        "rawBytes": 4046581,
-        "gzipBytes": 1041896
+        "rawBytes": 4164947,
+        "gzipBytes": 1077495
       },
       "css": {
         "rawBytes": 166801,
@@ -426,11 +850,11 @@
     },
     "stencilrs": {
       "files": 42,
-      "rawBytes": 1373033,
-      "gzipBytes": 281819,
+      "rawBytes": 1408723,
+      "gzipBytes": 284490,
       "js": {
-        "rawBytes": 1206232,
-        "gzipBytes": 253211
+        "rawBytes": 1241922,
+        "gzipBytes": 255882
       },
       "css": {
         "rawBytes": 166801,
@@ -442,5 +866,17 @@
       }
     }
   },
-  "errors": []
+  "errors": [],
+  "memoryPasses": {
+    "cold": {
+      "startedAt": "2026-11-19T21:10:42.976Z",
+      "finishedAt": "2026-11-19T21:20:19.951Z",
+      "errors": []
+    },
+    "dev": {
+      "startedAt": "2026-11-19T21:20:36.285Z",
+      "finishedAt": "2026-11-19T21:28:49.823Z",
+      "errors": []
+    }
+  }
 }

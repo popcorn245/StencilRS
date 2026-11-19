@@ -141,12 +141,41 @@ process.on('exit', cleanup);
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => (cleanup(), process.exit(130)));
 process.on('uncaughtException', (e) => (console.error(e), cleanup(), process.exit(1)));
 
-// Peak RSS of a process tree: sum over descendants of `pid`, sampled with ps (not available on Windows).
+// Windows has no ps: one long-lived PowerShell answers each request line with "pid ppid workingSetKiB" lines
+// for every process, then "END". Requests are queued, so concurrent samplers share it.
+let winPs = null;
+const winQueue = [];
+const winProcs = () =>
+  new Promise((ok) => {
+    if (!winPs) {
+      const script = '$ErrorActionPreference="SilentlyContinue"; while ($null -ne ($l = [Console]::In.ReadLine())) { Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId) $([int64]($_.WorkingSetSize / 1024))" }; "END" }';
+      winPs = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+      winPs.unref();
+      winPs.stdout.unref?.();
+      winPs.stdin.unref?.();
+      let buf = '';
+      winPs.stdout.on('data', (c) => {
+        buf += c.toString();
+        let i;
+        while ((i = buf.indexOf('END')) !== -1) {
+          const out = buf.slice(0, i);
+          buf = buf.slice(i + 3).replace(/^\s+/, '');
+          winQueue.shift()?.(out);
+        }
+      });
+      winPs.on('exit', () => { winPs = null; for (const q of winQueue.splice(0)) q(null); });
+      process.on('exit', () => { try { winPs?.kill(); } catch {} });
+    }
+    if (winQueue.length > 2) return ok(null); // the sampler is behind; skip this tick
+    winQueue.push(ok);
+    winPs.stdin.write('x\n');
+  });
+
+// Peak RSS of a process tree: sum over descendants of `pid`, sampled with ps (Windows: working set via CIM).
 const sampleRss = (pid) =>
   new Promise((ok) => {
-    if (WIN) return ok(null);
-    execFile('ps', ['-A', '-o', 'pid=,ppid=,rss='], { maxBuffer: 1 << 24 }, (err, out) => {
-      if (err) return ok(null);
+    const parse = (out) => {
+      if (out == null) return ok(null);
       const kids = new Map();
       const rss = new Map();
       for (const line of out.trim().split('\n')) {
@@ -156,13 +185,18 @@ const sampleRss = (pid) =>
       }
       let total = 0;
       const stack = [pid];
+      const seen = new Set(); // Windows reuses pids, so a stale ppid can make a cycle
       while (stack.length) {
         const p = stack.pop();
+        if (seen.has(p)) continue;
+        seen.add(p);
         total += rss.get(p) ?? 0;
         stack.push(...(kids.get(p) ?? []));
       }
       ok(total);
-    });
+    };
+    if (WIN) return winProcs().then(parse);
+    execFile('ps', ['-A', '-o', 'pid=,ppid=,rss='], { maxBuffer: 1 << 24 }, (err, out) => parse(err ? null : out));
   });
 
 /** A running child with its interesting log lines (time-stamped), its output tail and its peak RSS (KiB). */
@@ -552,7 +586,8 @@ const run1 = (cmd, args) =>
 
 // ------------------------------------------------------------------------------------------ preparation
 const prepare = async () => {
-  const sh = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit', shell: WIN });
+  // only npm needs a shell on Windows (npm.cmd); with shell: true an unquoted node path under C:Program Files breaks
+  const sh = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit', shell: WIN && cmd === 'npm' });
   if (!existsSync(join(root, 'node_modules/.bin'))) sh('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund']);
   if (!existsSync(join(root, 'upstream/core/src'))) sh(process.execPath, ['scripts/fetch.mjs']);
   const migratedConfig = join(root, 'migrated/stencil.config.ts');

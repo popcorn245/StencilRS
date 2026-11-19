@@ -14,10 +14,10 @@ Stencil v5**: about **22× faster per file** and **2.9× faster** for a producti
 You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
 own runtime (`@stencil/core`) runs them in the browser.
 
-[![Ionic Framework's core built three ways: cold build, dev server start and per-file transform, stencilrs against Stencil 5 and Stencil 4 (a preview run)](site/public/img/chart-ionic-headline.png)](https://popcorn245.github.io/StencilRS/benchmarks.html)
+[![Ionic Framework's core built three ways: cold build, dev server start and per-file transform, stencilrs against Stencil 5 and Stencil 4](site/public/img/chart-ionic-headline.png)](https://popcorn245.github.io/StencilRS/benchmarks.html)
 
-Ionic's core, built three ways (lower is better; bars are medians, whiskers min to max; a preview run from a shared
-container). Every measure, including the one where stencilrs is slower today (watch rebuild,
+Ionic's core, built three ways (lower is better; bars are medians of 10 runs, whiskers min to max; measured on a quiet
+Windows 11 desktop, i9-10850K, 64 GB). Every measure, including the one where stencilrs is slower today (watch rebuild,
 [#79](https://github.com/popcorn245/StencilRS/issues/79)), is a chart on the
 [Benchmarks page](https://popcorn245.github.io/StencilRS/benchmarks.html), drawn from the data files.
 
