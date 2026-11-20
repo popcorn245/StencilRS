@@ -99,20 +99,39 @@ pub struct Resolver {
     pub registry: Rc<Registry>,
     /// `strictNullChecks` in the tsconfig that governs the file being analysed.
     pub strict: bool,
+    /// The tsconfigs `strict` came from.
+    tsconfig_deps: Arc<Vec<Dep>>,
+    /// Every file the modules read at the top level came from (what the call's result depends on).
+    top_deps: RefCell<Vec<Dep>>,
 }
 
 impl Resolver {
     /// A resolver for the program that contains `file`. `defs`: whether the exported types'
     /// definitions are needed (`complexType`).
     pub fn new(file: &str, defs: bool) -> Self {
+        let (strict, tsconfig_deps) = strict_null_checks(file);
         Resolver {
             cache: RefCell::default(),
             frames: RefCell::default(),
             depth: Cell::new(0),
             defs,
             registry: Rc::default(),
-            strict: strict_null_checks(file),
+            strict,
+            tsconfig_deps,
+            top_deps: RefCell::default(),
         }
+    }
+
+    /// Every file this resolver's answers came from: the modules read and the tsconfigs looked at.
+    /// A result computed with it is valid while none of them changes.
+    pub fn deps(&self) -> Vec<Dep> {
+        let mut out: Vec<Dep> = self.tsconfig_deps.as_ref().clone();
+        for d in self.top_deps.borrow().iter() {
+            if !out.iter().any(|o| o.path == d.path) {
+                out.push(d.clone());
+            }
+        }
+        out
     }
 
     /// The summary of the module `specifier` imported from `importer`, if it is a relative
@@ -237,6 +256,13 @@ impl Resolver {
                 }
             }
             frame.complete &= complete;
+        } else {
+            let mut top = self.top_deps.borrow_mut();
+            for d in deps {
+                if !top.iter().any(|f| f.path == d.path) {
+                    top.push(d.clone());
+                }
+            }
         }
     }
 
@@ -676,15 +702,15 @@ fn clean(path: &Path) -> PathBuf {
 /// Whether the tsconfig that governs `file` turns on `strictNullChecks` (directly or through
 /// `strict`), following `extends` through relative paths. Cached per folder, and read again
 /// when any tsconfig it looked at (or looked for) changes.
-fn strict_null_checks(file: &str) -> bool {
+fn strict_null_checks(file: &str) -> (bool, Arc<Vec<Dep>>) {
     let abs = std::env::current_dir()
         .map(|c| c.join(file))
         .unwrap_or_else(|_| PathBuf::from(file));
     let Some(start) = abs.parent() else {
-        return false;
+        return (false, Arc::default());
     };
-    if let Some(strict) = cache::tsconfig(start) {
-        return strict;
+    if let Some(hit) = cache::tsconfig(start) {
+        return hit;
     }
     let mut deps = Vec::new();
     let mut strict = false;
@@ -700,8 +726,9 @@ fn strict_null_checks(file: &str) -> bool {
         }
         dir = d.parent();
     }
-    cache::store_tsconfig(start, strict, deps);
-    strict
+    let deps = Arc::new(deps);
+    cache::store_tsconfig(start, strict, deps.clone());
+    (strict, deps)
 }
 
 fn tsconfig_strict(path: &Path, depth: u8, deps: &mut Vec<Dep>) -> Option<bool> {
