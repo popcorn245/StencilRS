@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# The CI build, in order: the compiler, parity with Stencil v5, the components, the Storybook.
+# The CI build, in order: the compiler, parity with Stencil v5, the components, the site (which
+# includes the ui-kit Storybook).
 # The Forgejo workflow (.forgejo/workflows/deploy.yml) runs this, and so can you, in the same
 # image:
 #
 #   docker run --rm -v "$PWD":/src -w /src node:22-bookworm bash scripts/ci.sh
 #
-# Output: storybook/dist (the static Storybook the workflow publishes).
+# Output: site/dist (the static site the workflow publishes; the Storybook is at site/dist/storybook).
+# SITE_BASE (default /) is the path the site is served under, e.g. /StencilRS/ on GitHub Pages.
 set -euo pipefail
 
 step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
@@ -28,11 +30,12 @@ npm ci
 npm run build:native
 npm test
 
-step "Parity with Stencil v5: output on every fixture, source maps, then scoped CSS"
+step "Parity with Stencil v5: output on every fixture, source maps, then scoped CSS, then foldBuildFlags"
 npm --prefix parity ci
 npm run parity
 npm run parity:sourcemaps
 npm run parity:scope-css
+npm run parity:fold-build-flags
 
 step "Components: starter (tests in happy-dom, then the library build)"
 npm --prefix examples/starter ci
@@ -47,14 +50,31 @@ npm --prefix examples/ui-kit test
 npm --prefix examples/ui-kit run test:spec-page:stencil || true
 npm --prefix examples/ui-kit run test:spec-page || true
 npm --prefix examples/ui-kit run compare:spec-page
+# Component CSS through the Vite plugin: byte for byte what @stencil/unplugin makes.
+npm --prefix examples/ui-kit run compare:css
 npm --prefix examples/ui-kit run build:stencilrs
+# ... and it never loads TypeScript or Stencil's compiler: both load only for a file stencilrs falls back on.
+npm --prefix examples/ui-kit run check:no-typescript
+# The dev server: component and stylesheet served, HMR, virtual global stylesheets, still no TypeScript.
+npm --prefix examples/ui-kit run check:dev-server
+
+step "Components: Ionic core (v9, 94 components) through stencilrs, against stencil build, in Chromium"
+# The upstream clone is cached outside the workspace (restored when it is at the pinned tag), and the browser
+# checks skip themselves when no Chromium is installed (IONIC_REQUIRE_BROWSER=1 to demand one).
+export IONIC_UPSTREAM_CACHE="${IONIC_UPSTREAM_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/stencilrs/ionic-framework}"
+npm --prefix examples/ionic ci --ignore-scripts
+npm --prefix examples/ionic run fetch
+npm --prefix examples/ionic run migrate
+npm --prefix examples/ionic run build:stencil
+npm --prefix examples/ionic run build:stencilrs
+npm --prefix examples/ionic run check
 
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr
 
-step "Storybook"
-npm --prefix storybook ci
-npm --prefix storybook run build
+step "Site: VitePress (dead links fail it), then the ui-kit Storybook under /storybook/ (base ${SITE_BASE:-/})"
+npm --prefix site ci
+npm --prefix site run build:all
 
-step "Done: storybook/dist"
-du -sh storybook/dist
+step "Done: site/dist"
+du -sh site/dist

@@ -1,0 +1,208 @@
+{
+  "tag": "build-inferred-props",
+  "properties": [
+    {
+      "name": "anything",
+      "flags": {
+        "attribute": "anything",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "any",
+        "resolved": "any",
+        "references": {}
+      }
+    },
+    {
+      "name": "caption",
+      "flags": {
+        "attribute": "caption",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "string",
+        "resolved": "string",
+        "references": {}
+      }
+    },
+    {
+      "name": "computed",
+      "flags": {
+        "attribute": "computed",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      }
+    },
+    {
+      "name": "duration",
+      "flags": {
+        "attribute": "duration",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      }
+    },
+    {
+      "name": "enabled",
+      "flags": {
+        "attribute": "enabled",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "boolean",
+        "resolved": "boolean",
+        "references": {}
+      }
+    },
+    {
+      "name": "icon",
+      "flags": {
+        "attribute": "icon",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "string",
+        "resolved": "string",
+        "references": {}
+      }
+    },
+    {
+      "name": "iconSize",
+      "flags": {
+        "attribute": "icon-size",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      }
+    },
+    {
+      "name": "label",
+      "flags": {
+        "attribute": "label",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "string",
+        "resolved": "string",
+        "references": {}
+      }
+    },
+    {
+      "name": "loose",
+      "flags": {
+        "attribute": "loose",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "boolean",
+        "resolved": "boolean",
+        "references": {}
+      }
+    },
+    {
+      "name": "mode",
+      "flags": {
+        "attribute": "mode",
+        "reflect": false,
+        "mutable": true,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "\"ios\" | \"md\"",
+        "resolved": "\"ios\" | \"md\"",
+        "references": {
+          "Mode": {
+            "location": "global",
+            "id": "global::Mode"
+          }
+        }
+      }
+    },
+    {
+      "name": "name",
+      "flags": {
+        "attribute": "name",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "string",
+        "resolved": "string",
+        "references": {}
+      }
+    },
+    {
+      "name": "release",
+      "flags": {
+        "attribute": "release",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "string",
+        "resolved": "string",
+        "references": {}
+      }
+    },
+    {
+      "name": "total",
+      "flags": {
+        "attribute": "total",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "number",
+        "resolved": "number",
+        "references": {}
+      }
+    }
+  ],
+  "events": [],
+  "methods": [],
+  "slots": []
+}

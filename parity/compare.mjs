@@ -65,7 +65,8 @@ const fromStencil = (c) => ({
   docs: docs(c.docs),
 });
 
-const fromStencilrs = (c) => ({
+// `slots` is stencilrs' own (docs-json's `slots`, for `analyze()`); `transpileSync`'s data has no such field.
+const fromStencilrs = ({ slots: _slots, ...c }) => ({
   ...c,
   properties: c.properties.map((p) => ({ ...p, attribute: nul(p.attribute), defaultValue: nul(p.defaultValue) })),
   listeners: c.listeners.map((l) => ({ ...l, target: nul(l.target) })),

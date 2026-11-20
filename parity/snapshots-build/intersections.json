@@ -1,0 +1,221 @@
+{
+  "tag": "build-intersections",
+  "properties": [
+    {
+      "name": "both",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Both",
+        "resolved": "Box & { a: number; } | undefined",
+        "references": {
+          "Both": {
+            "location": "global",
+            "id": "global::Both"
+          }
+        }
+      }
+    },
+    {
+      "name": "bothGeneric",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Array<Both>",
+        "resolved": "Box & { a: number; }[] | undefined",
+        "references": {
+          "Array": {
+            "location": "global",
+            "id": "global::Array"
+          },
+          "Both": {
+            "location": "global",
+            "id": "global::Both"
+          }
+        }
+      }
+    },
+    {
+      "name": "bothList",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Both[]",
+        "resolved": "Box & { a: number; }[]",
+        "references": {
+          "Both": {
+            "location": "global",
+            "id": "global::Both"
+          }
+        }
+      }
+    },
+    {
+      "name": "branded",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Branded",
+        "resolved": "string & { __brand: 1; } | undefined",
+        "references": {
+          "Branded": {
+            "location": "global",
+            "id": "global::Branded"
+          }
+        }
+      }
+    },
+    {
+      "name": "colorList",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "(Color | undefined)[]",
+        "resolved": "(\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | undefined)[]",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          }
+        }
+      }
+    },
+    {
+      "name": "colorOrBranded",
+      "flags": {
+        "attribute": "color-or-branded",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Color | Branded",
+        "resolved": "\"danger\" | \"dark\" | \"light\" | \"medium\" | \"primary\" | \"secondary\" | \"success\" | \"tertiary\" | \"warning\" | string & Record<never, never> | string & { __brand: 1; } | undefined",
+        "references": {
+          "Color": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Color",
+            "referenceLocation": "Color"
+          },
+          "Branded": {
+            "location": "global",
+            "id": "global::Branded"
+          }
+        }
+      }
+    },
+    {
+      "name": "inline",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Box & { a: number } & { b: string }",
+        "resolved": "Box & { a: number; } & { b: string; } | undefined",
+        "references": {
+          "Box": {
+            "location": "global",
+            "id": "global::Box"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "bothChange",
+      "complexType": {
+        "original": "Both",
+        "resolved": "Box & { a: number; }",
+        "references": {
+          "Both": {
+            "location": "global",
+            "id": "global::Both"
+          }
+        }
+      }
+    },
+    {
+      "name": "brandedChange",
+      "complexType": {
+        "original": "Branded[]",
+        "resolved": "string & { __brand: 1; }[]",
+        "references": {
+          "Branded": {
+            "location": "global",
+            "id": "global::Branded"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "takes",
+      "complexType": {
+        "signature": "(value: Both, other?: Branded) => Promise<Branded>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "Box & { a: number; }",
+            "docs": ""
+          },
+          {
+            "name": "other",
+            "type": "Branded | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Branded": {
+            "location": "global",
+            "id": "global::Branded"
+          },
+          "Both": {
+            "location": "global",
+            "id": "global::Both"
+          }
+        },
+        "return": "Promise<Branded>"
+      }
+    }
+  ],
+  "slots": []
+}

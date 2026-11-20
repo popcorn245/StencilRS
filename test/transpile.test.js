@@ -37,3 +37,39 @@ test("componentMetadata: 'compilerstatic' adds COMPILER_META, and style: null dr
   assert.doesNotMatch(transpile(source, options).code, /COMPILER_META/);
   assert.throws(() => transpile(source, { ...options, componentMetadata: 'bogus' }), /unknown componentMetadata/);
 });
+
+test('foldBuildFlags folds Build flags imported from @stencil/core, padded to the original length', async () => {
+  const { foldBuildFlags } = await import('../index.js');
+  const code = "import { Build } from '@stencil/core';\nif (Build.isServer) a(); else b(Build.isBrowser);";
+  assert.equal(
+    foldBuildFlags(code, 'a.ts', { isBrowser: true, isServer: false }),
+    "import { Build } from '@stencil/core';\nif (false         ) a(); else b(true           );",
+  );
+  assert.equal(foldBuildFlags(code, 'a.ts', {}), null);
+  assert.equal(foldBuildFlags('const Build = {}; Build.isServer', 'a.ts', { isServer: true }), null);
+});
+
+test('useDefineForClassFields: false assigns field initializers in the constructor, after the host is registered', () => {
+  const src = `import { Component, Prop, State, Element, h } from '@stencil/core';
+@Component({ tag: 'cmp-f', encapsulation: { type: 'shadow' } })
+export class CmpF {
+  @Element() el!: HTMLElement;
+  @Prop({ mutable: true }) mode = 'md';
+  @State() count?: number;
+  private timer: number | undefined;
+  handler = () => this.mode;
+  static tag = 'cmp-f';
+  render() { return <div />; }
+}`;
+  const code = transpile(src, { ...options, useDefineForClassFields: false }).code;
+  const ctor = code.slice(code.indexOf('constructor('), code.indexOf('get el()'));
+  // registerHost, attachShadow, then the initializers in declaration order
+  assert.match(ctor, /__registerHost\(\)[\s\S]*__attachShadow\(\)[\s\S]*this\.mode = "md";[\s\S]*this\.handler = \(\) => this\.mode;/);
+  // no class field is left to shadow the prototype's accessors, with or without an initializer
+  assert.doesNotMatch(code, /^\s*(mode|count|timer|handler)\b[^(]*[=;]/m);
+  assert.match(code, /static tag = "cmp-f"/); // statics are not instance fields
+  // the default (TypeScript's at ES2022): fields stay fields
+  const dflt = transpile(src, options).code;
+  assert.match(dflt, /^\s*mode = "md";/m);
+  assert.doesNotMatch(dflt, /this\.mode = "md"/);
+});

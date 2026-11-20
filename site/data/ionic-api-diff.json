@@ -1,0 +1,102 @@
+{
+  "byComponent": {},
+  "compared": 94,
+  "componentsWithDifferences": 0,
+  "differences": 0,
+  "notInDocsJson": [
+    {
+      "file": "src/components/select-popover/select-popover.tsx",
+      "reason": "not in Stencil docs-json",
+      "tag": "ion-select-popover"
+    }
+  ],
+  "note": "stencilrs analyze({ resolveImports, complexTypes }) compared with the docs-json of `stencil build` (v5.0.0-beta.25) on the same migrated Ionic source. Every entry is a difference.",
+  "onlyInDocsJson": [],
+  "stencilDocsQuirks": {
+    "count": 16,
+    "items": [
+      {
+        "docs": "@prop --background: Background of the button @prop --background-activated: Background of the button when pressed. Note: ... [ios]",
+        "name": "--overflow",
+        "tag": "ion-button"
+      },
+      {
+        "docs": "@prop --background: Background of the button @prop --background-activated: Background of the button when pressed. Note: ... [md]",
+        "name": "--overflow",
+        "tag": "ion-button"
+      },
+      {
+        "docs": "@prop --background: Background of the card @prop --color: Color of the card [ios]",
+        "name": "--ion-safe-area-left",
+        "tag": "ion-card"
+      },
+      {
+        "docs": "@prop --background: Background of the card @prop --color: Color of the card [md]",
+        "name": "--ion-safe-area-left",
+        "tag": "ion-card"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-input"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-input"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-input-otp"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-input-otp"
+      },
+      {
+        "docs": "@prop --bar-background: Background of the range bar @prop --bar-background-active: Background of the active range bar @p... [ios]",
+        "name": "--knob-handle-size",
+        "tag": "ion-range"
+      },
+      {
+        "docs": "@prop --bar-background: Background of the range bar @prop --bar-background-active: Background of the active range bar @p... [md]",
+        "name": "--knob-handle-size",
+        "tag": "ion-range"
+      },
+      {
+        "docs": "@prop --background: Background of the segment button [ios]",
+        "name": "--ripple-color",
+        "tag": "ion-segment"
+      },
+      {
+        "docs": "@prop --background: Background of the segment button [md]",
+        "name": "--ripple-color",
+        "tag": "ion-segment"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-select"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-select"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [ios]",
+        "name": "--highlight-color",
+        "tag": "ion-textarea"
+      },
+      {
+        "docs": "This is a private API that is used to switch out the highlight color based on the state of the component without having ... [md]",
+        "name": "--highlight-color",
+        "tag": "ion-textarea"
+      }
+    ],
+    "note": "docs-json lists a CSS declaration that follows a doc comment as a custom property, with the comment as its docs. Not a stencilrs difference."
+  },
+  "typeFallbacks": 11
+}

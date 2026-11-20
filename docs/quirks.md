@@ -143,6 +143,80 @@ The scoped-CSS shim (`src/utils/shadow-css.ts`), reproduced by `scope_css.rs` an
 - A literal `__ph-N__` in a selector becomes `undefined`, as does a literal `%BLOCK%` in a
   rule's body (or Stencil throws, inside a scopable at-rule).
 
+## 16. An alias written without type arguments prints as its type parameters
+
+`parseDocsType` (`transform-utils.ts`) takes a type with an `aliasSymbol` apart through
+`aliasTypeArguments`. For a generic alias that is **imported** and written without arguments
+(`import type { ComponentProps } from './interface'`, `@Prop() props: ComponentProps`, with
+`type ComponentProps<T = null> = { [key: string]: any }`), `getTypeFromTypeAliasReference` gives
+the instantiation an empty `aliasTypeArguments` list. `parseDocsType` then reads the *declared*
+type, whose alias arguments are the type parameters themselves, and `resolved` is `T`
+(`T | undefined` when optional), not the object type. Written with arguments it is the arguments
+(`ComponentProps<string>` resolves to `string`). Ionic's `ComponentProps` is used this way by
+nav, nav-link, popover and modal. Fixture: `parity/fixtures/build/src/components/nav-link.tsx`.
+
+## 17. `keyof` carries no alias, and generic types fill in their defaults
+
+- `type SpinnerTypes = keyof typeof spinners` is a union built by `getIndexType`, which does not
+  give it the alias: a method taking `SpinnerTypes` prints the keys
+  (`which: "bubbles" | "circles"`), not the name. Fixture: `build/src/components/spinner.tsx`.
+- `Detail` written for `interface Detail<T = any>` prints as `Detail<any>` everywhere the checker
+  prints it (`resolved`, a method's `return`), but as `Detail` in the signature, which reuses the
+  annotation. Same for the lib's `CustomEvent` (`CustomEvent<any>`). Fixture: `build/src/components/extras.tsx`.
+- A method's own type parameters are printed in front of the signature as written
+  (`<T extends 'b' | 'a' = 'b'>(pick?: T) => ...`, quotes aside), not in the checker's order.
+- An `async @Method()` with no return annotation, in a full program, has the inferred return type
+  `Promise<void>` and Stencil reads its references from that type node: `references` starts with
+  `Promise`. (In single-file mode `Promise` does not resolve and there is none, quirk 1.)
+
+## 18. What `complexType` still leaves to Stencil
+
+stencilrs reproduces `complexType` from the syntax. These cases need the type checker, so
+`analyze` / `transpile` report `stencilrs: the type of ... is not ported yet` for the member and
+the caller compiles with Stencil. None can be reproduced without the whole program, and
+`parity/build.mjs` checks that the ones it can reproduce match a real build:
+
+- **A return type inferred from the body** (`getProgress() { return Promise.resolve(this.progress) }`,
+  `async addRipple() { return new Promise<() => void>(...) }`). It is the type of an expression
+  and of the class's fields; `async f() { return true }` is `Promise<boolean>` only because the
+  checker widens it. Ionic: refresher, ripple-effect, router, accordion-group.
+- **A union the checker orders by when it first met its members**, printed whole: a method
+  parameter or return type is `string | Function | HTMLElement | null` for
+  `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on
+  which files the program checked first (literal types and lib interfaces exist before the file
+  that mentions them). Props are unaffected: Stencil sorts their parts as text. Ionic:
+  `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)`, `setRoot(root: ComponentRef)`.
+- **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
+  `src/components.d.ts`, which Stencil writes, so the source tree does not have them.
+- **An intersection with a union** (`{ date: string } & DatetimeHighlightStyle` where the style is
+  a union): the checker distributes it into a new union with synthesized members.
+- **`typeof` written in a prop's annotation** (`@Prop() x: keyof typeof y`): Stencil adds the
+  classes and enums such a query names to `references`, which is not modelled. The same `keyof
+  typeof y` behind a local `type` alias works.
+- **A prop typed from a call that returns an alias** (`@Prop({ mutable: true }) mode = getIonMode(this)`
+  where `getIonMode = (ref?: any): Mode`). The runtime flag is ported (string, 1025), but Stencil
+  prints the inferred type with the alias expanded (`"ios" | "md"`) and adds `Mode` to `references`
+  as a `global` one, from a declaration in another file; stencilrs reports the prop's
+  `complexType` as not ported. Ionic: ion-router-outlet `mode`.
+- `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
+  parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
+
+## Props typed from their initializer (build-accurate mode)
+
+With `resolveImports`, a prop with no annotation is typed the way the checker infers it, as far as
+the syntax shows it: a literal, a same-file or relatively imported `const`, `this.field` (the
+field's annotation, or the type of its initializer; a `readonly` field keeps its literal type),
+`this.method()` and `instance.method()` with a declared return type (`export const config = new
+Config()` imported from another file, then `config.getNumber(...)`), a function or arrow function
+with a declared return type, and a value imported from a package's declaration file
+(`import { chevronDown } from 'ionicons/icons'`, whose `.d.ts` says `export declare var
+chevronDown: string`). The package is found in the nearest `node_modules` by its `exports`
+`types` entry, `types` / `typings`, or the file itself. Only values are read from a package, its
+types stay unresolved. What stays with Stencil's compiler: a function with no declared return type
+(its return type is inferred from the body), a member read off anything but `this` or an imported
+instance, a getter read through `this`, and a package declaration that is not a plain
+`declare const|var|function`. Those are typed `any` (runtime flag 8), as in single-file mode.
+
 ## Single-file type inference
 
 Not bugs, but worth knowing when reading parity results: in single-file mode every imported

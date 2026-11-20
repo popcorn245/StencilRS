@@ -2,32 +2,39 @@ import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
+import { bindingName, isMusl, platformKey, unsupportedPlatformError } from './binding.js';
+
 const require = createRequire(import.meta.url);
 
 // The binary for this platform: a local `npm run build:native` first, then the prebuilt package
 // npm installed as an optional dependency.
-const platform = {
-  'linux-x64': 'linux-x64-gnu',
-  'linux-arm64': 'linux-arm64-gnu',
-  'darwin-x64': 'darwin-x64',
-  'darwin-arm64': 'darwin-arm64',
-  'win32-x64': 'win32-x64-msvc',
-}[`${process.platform}-${process.arch}`];
+const musl = isMusl();
+const platform = bindingName(process.platform, process.arch, musl);
+if (!platform) throw unsupportedPlatformError(process.platform, process.arch, musl);
 
 const nativePath = (() => {
   const local = fileURLToPath(new URL(`./stencilrs.${platform}.node`, import.meta.url));
-  if (platform && existsSync(local)) return local;
+  if (existsSync(local)) return local;
   try {
     return require.resolve(`@popcorn245/stencilrs-${platform}`);
-  } catch {
+  } catch (cause) {
     throw new Error(
-      `stencilrs has no prebuilt binary for ${process.platform}-${process.arch}` +
-        (platform ? ` (is @popcorn245/stencilrs-${platform} installed? npm skips it with --no-optional)` : '') +
-        '. Build it from source with Rust: npm run build:native',
+      `stencilrs: the binary for ${platformKey(process.platform, process.arch, musl)} is not installed ` +
+        `(@popcorn245/stencilrs-${platform}; npm skips it with --no-optional or --omit=optional). ` +
+        'Reinstall with optional dependencies, or build it from source with Rust: npm run build:native',
+      { cause },
     );
   }
 })();
-const native = require(nativePath);
+// `analyze` and `transpile` return their result as one JSON string, parsed here: much cheaper
+// than napi building the JS objects property by property.
+const native = (() => {
+  try {
+    return require(nativePath);
+  } catch (cause) {
+    throw new Error(`stencilrs: cannot load the ${platform} binary at ${nativePath}: ${cause.message}`, { cause });
+  }
+})();
 
 /** Changes whenever the native binary does: for build caches keyed on plugin output. */
 export const buildId = (() => {
@@ -46,7 +53,7 @@ export const buildId = (() => {
  * @returns {{ components: object[], diagnostics: object[] }}
  */
 export const analyze = (source, fileName, options = {}) =>
-  native.analyze(source, fileName, options.resolveImports ?? false, options.complexTypes ?? false);
+  JSON.parse(native.analyze(source, fileName, options.resolveImports ?? false, options.complexTypes ?? false));
 
 /**
  * Generate a component module, what Stencil's transpileSync emits.
@@ -67,18 +74,45 @@ export const analyze = (source, fileName, options = {}) =>
  * resolve without the type checker is an error starting `stencilrs:`, the cue to use Stencil.
  * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean }} options
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean, useDefineForClassFields?: boolean }} options
  * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
  */
-export const transpile = (source, options) => {
+export const transpile = (source, options) => JSON.parse(native.transpile(source, nativeOptions(options)));
+
+/** The options as the native binding names them (Stencil's `null` and `style: null` spellings). */
+function nativeOptions(options) {
   const { style, componentMetadata, ...rest } = options;
-  return native.transpile(source, {
+  return {
     ...rest,
     ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
     ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
     ...(style === null ? { emitStyles: false } : {}),
-  });
-};
+  };
+}
+
+/**
+ * `transpile` on the libuv thread pool, off the main thread: a promise of exactly what
+ * `transpile` returns. Many calls in flight run in parallel (the pool has 4 threads unless
+ * `UV_THREADPOOL_SIZE` says otherwise), which is what a bundler's `transform` hook does. Options
+ * that `transpile` would throw on reject the promise.
+ * @param {string} source module source (TS/TSX)
+ * @param {Parameters<typeof transpile>[1]} options as for `transpile`
+ * @returns {Promise<ReturnType<typeof transpile>>}
+ */
+export const transpileAsync = async (source, options) => JSON.parse(await native.transpileAsync(source, nativeOptions(options)));
+
+/**
+ * `transpile` for many files at once, in parallel on one thread per core, results in input
+ * order. Each file stands alone: one that fails does not fail the others. A file with a syntax
+ * or analysis error has it in its `diagnostics`, as with `transpile`; where `transpile` would
+ * throw (options it does not accept) the entry is `{ error: string }` instead of a result.
+ * @param {{ source: string, options: Parameters<typeof transpile>[1] }[]} files
+ * @returns {Promise<(ReturnType<typeof transpile> | { error: string })[]>}
+ */
+export const transpileMany = async (files) =>
+  JSON.parse(await native.transpileMany(files.map(({ source, options }) => ({ source, options: nativeOptions(options) })))).map((r) =>
+    'error' in r ? { error: r.error } : r.result,
+  );
 
 /** Reprint JavaScript through one printer, comments dropped, to compare outputs. */
 export const normalize = (code) => native.normalize(code);
@@ -91,3 +125,17 @@ export const normalize = (code) => native.normalize(code);
  * @returns {string}
  */
 export const scopeCss = (css, scopeId, commentOriginalSelector = false) => native.scopeCss(css, scopeId, commentOriginalSelector);
+
+/**
+ * Stencil's `foldBuildFlags`: replace `Build.<flag>` reads, where `Build` is a named import from
+ * `@stencil/core`, with the boolean literals in `flags`, so a bundler can drop the gated branches.
+ * Each replacement is padded to the original length, so a source map for `code` stays valid.
+ * Flags left out of `flags` are not folded.
+ * @param {string} code JS or TS source
+ * @param {string} fileName picks the parser (`.tsx`, `.ts`, `.jsx`, else JavaScript)
+ * @param {Record<string, boolean>} flags e.g. `{ isBrowser: true, isServer: false }`
+ * @returns {string | null} the folded code, or null if nothing was folded
+ */
+export const foldBuildFlags = (code, fileName, flags) => native.foldBuildFlags(code, fileName, flags);
+
+export { generateTypes } from './vite-types.js';

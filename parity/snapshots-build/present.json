@@ -1,0 +1,96 @@
+{
+  "tag": "build-present",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "present",
+      "complexType": {
+        "signature": "(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent) => Promise<void>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "CustomEvent<any> | MouseEvent | TouchEvent | PointerEvent | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "MouseEvent": {
+            "location": "global",
+            "id": "global::MouseEvent"
+          },
+          "TouchEvent": {
+            "location": "global",
+            "id": "global::TouchEvent"
+          },
+          "PointerEvent": {
+            "location": "global",
+            "id": "global::PointerEvent"
+          },
+          "CustomEvent": {
+            "location": "global",
+            "id": "global::CustomEvent"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "setFocus",
+      "complexType": {
+        "signature": "(ev?: globalThis.Event) => Promise<void>",
+        "parameters": [
+          {
+            "name": "ev",
+            "type": "Event | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "globalThis": {
+            "location": "global",
+            "id": "global::globalThis"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "single",
+      "complexType": {
+        "signature": "(event?: MouseEvent) => Promise<UIEvent>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "MouseEvent | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "UIEvent": {
+            "location": "global",
+            "id": "global::UIEvent"
+          },
+          "MouseEvent": {
+            "location": "global",
+            "id": "global::MouseEvent"
+          }
+        },
+        "return": "Promise<UIEvent>"
+      }
+    }
+  ],
+  "slots": []
+}

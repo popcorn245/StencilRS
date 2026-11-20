@@ -1,0 +1,29 @@
+{
+  "name": "stencilrs-site",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The stencilrs docs site: VitePress, with every live component compiled by stencilrs",
+  "scripts": {
+    "prepare:ionic": "node scripts/ionic-source.mjs",
+    "gen:components": "node scripts/components.mjs",
+    "check:components": "node scripts/components.mjs --check",
+    "dev": "npm run prepare:ionic && vitepress dev . --port 5180",
+    "build": "npm run prepare:ionic && vitepress build .",
+    "preview": "vitepress preview . --port 4180",
+    "snapshots": "node scripts/snapshots.mjs",
+    "build:storybook": "npm --prefix ../examples/ui-kit ci --ignore-scripts && npm --prefix ../examples/starter ci --ignore-scripts && npm --prefix ../storybook ci --ignore-scripts && STORYBOOK_BASE_PATH=${SITE_BASE:-/}storybook/ npm --prefix ../storybook run build",
+    "build:all": "npm run build && npm run build:storybook && node scripts/copy-storybook.mjs"
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:..",
+    "@stencil/core": "5.0.0-beta.25",
+    "@stencil/unplugin": "5.0.0-beta.25",
+    "ionicons": "8.1.0",
+    "playwright": "1.63.0",
+    "sass": "1.99.0",
+    "vite": "8.3.4",
+    "vitepress": "2.0.0-alpha.21",
+    "vue": "3.5.45"
+  }
+}

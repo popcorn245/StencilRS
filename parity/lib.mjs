@@ -61,10 +61,18 @@ const walk = (dir) =>
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
 
+/**
+ * `fixtures/build/` is one small project (an `interface.d.ts`, components that import from it),
+ * built by Stencil as a whole and compared by `build.mjs`: the single-file transpile every other
+ * suite goes through has no lib.d.ts and no second file, so it cannot show how imported and global
+ * types resolve.
+ */
+export const BUILD_SUITE = 'build';
+
 /** Every fixture as { suite, rel, file, id }, sorted; `id` is the forward-slash path under fixtures/. */
 export const listFixtures = (suiteFilter) =>
   readdirSync(fixturesDir)
-    .filter((suite) => !suiteFilter || suite === suiteFilter)
+    .filter((suite) => (suiteFilter ? suite === suiteFilter : suite !== BUILD_SUITE))
     .flatMap((suite) =>
       walk(join(fixturesDir, suite))
         .filter((f) => f.endsWith('.tsx') || f.endsWith('.ts'))

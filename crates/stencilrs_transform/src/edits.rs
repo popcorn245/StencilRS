@@ -1,5 +1,7 @@
 //! Span-based text edits over the original source (a tiny magic-string).
 
+use std::cell::Cell;
+
 pub struct Edits<'s> {
     source: &'s str,
     /// (start, end, replacement, insertion order). Insertions have start == end.
@@ -8,7 +10,10 @@ pub struct Edits<'s> {
 
 impl<'s> Edits<'s> {
     pub fn new(source: &'s str) -> Self {
-        Self { source, edits: Vec::new() }
+        Self {
+            source,
+            edits: Vec::new(),
+        }
     }
 
     pub fn replace(&mut self, start: u32, end: u32, text: impl Into<String>) {
@@ -28,7 +33,11 @@ impl<'s> Edits<'s> {
     /// Replacements must not overlap; insertions at the same offset keep their order, and come
     /// before a replacement that starts there.
     pub fn apply_mapped(mut self) -> (String, OffsetMap) {
-        self.edits.sort_by(|a, b| a.0.cmp(&b.0).then((a.1 > a.0).cmp(&(b.1 > b.0))).then(a.3.cmp(&b.3)));
+        self.edits.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then((a.1 > a.0).cmp(&(b.1 > b.0)))
+                .then(a.3.cmp(&b.3))
+        });
         let mut out = String::with_capacity(self.source.len() + 256);
         let mut segments = Vec::new();
         let mut pos = 0usize;
@@ -42,12 +51,25 @@ impl<'s> Edits<'s> {
                 push(&mut out, &mut segments, text, None);
             } else {
                 push(&mut out, &mut segments, &self.source[pos..start], Some(pos));
-                push_replacement(&mut out, &mut segments, text, &self.source[start..end], start);
+                push_replacement(
+                    &mut out,
+                    &mut segments,
+                    text,
+                    &self.source[start..end],
+                    start,
+                );
             }
             pos = pos.max(end);
         }
         push(&mut out, &mut segments, &self.source[pos..], Some(pos));
-        (out, OffsetMap { segments, source_len: self.source.len() as u32 })
+        (
+            out,
+            OffsetMap {
+                segments,
+                source_len: self.source.len() as u32,
+                last: Cell::new(0),
+            },
+        )
     }
 }
 
@@ -57,7 +79,11 @@ fn push(out: &mut String, segments: &mut Vec<Segment>, text: &str, from: Option<
     }
     let start = out.len() as u32;
     out.push_str(text);
-    segments.push(Segment { start, end: out.len() as u32, from: from.map(|f| f as u32) });
+    segments.push(Segment {
+        start,
+        end: out.len() as u32,
+        from: from.map(|f| f as u32),
+    });
 }
 
 /// Write the text of an edit that replaced `replaced` (at `at` in the source). Identifiers the
@@ -65,11 +91,21 @@ fn push(out: &mut String, segments: &mut Vec<Segment>, text: &str, from: Option<
 /// rewritten import) map to where they were written: the next occurrence after the previous
 /// match, else the first (`X` and `class` swap places above). The rest is new code, with no
 /// source position.
-fn push_replacement(out: &mut String, segments: &mut Vec<Segment>, text: &str, replaced: &str, at: usize) {
+fn push_replacement(
+    out: &mut String,
+    segments: &mut Vec<Segment>,
+    text: &str,
+    replaced: &str,
+    at: usize,
+) {
     let mut written = 0; // in `text`
     let mut searched = 0; // in `replaced`, past the last match
     for (i, ident) in identifiers(text) {
-        let Some(found) = find_identifier(replaced, ident, searched).or_else(|| find_identifier(replaced, ident, 0)) else { continue };
+        let Some(found) = find_identifier(replaced, ident, searched)
+            .or_else(|| find_identifier(replaced, ident, 0))
+        else {
+            continue;
+        };
         push(out, segments, &text[written..i], None);
         push(out, segments, ident, Some(at + found));
         written = i + ident.len();
@@ -132,13 +168,28 @@ struct Segment {
 pub struct OffsetMap {
     segments: Vec<Segment>,
     source_len: u32,
+    /// The segment found last, to start the next lookup from (offsets come in near each other).
+    last: Cell<usize>,
 }
 
 impl OffsetMap {
     /// Copied text maps to itself. Text an edit wrote has no original (`None`): like
     /// TypeScript's synthesized nodes, generated code stays unmapped.
     pub fn to_original(&self, offset: u32) -> Option<u32> {
-        let i = self.segments.partition_point(|s| s.end <= offset);
+        let hit = |i: usize| {
+            self.segments
+                .get(i)
+                .is_some_and(|s| s.start <= offset && offset < s.end)
+        };
+        let last = self.last.get();
+        let i = if hit(last) {
+            last
+        } else if hit(last + 1) {
+            last + 1
+        } else {
+            self.segments.partition_point(|s| s.end <= offset)
+        };
+        self.last.set(i);
         match self.segments.get(i) {
             Some(s) => s.from.map(|from| from + (offset - s.start)),
             None => Some(self.source_len),
@@ -154,18 +205,31 @@ mod tests {
     fn replacements_keep_their_identifiers_mapped() {
         let source = "@Cmp({ tag: 'x-foo' })\nexport class Foo {}\n";
         let mut ed = Edits::new(source);
-        ed.replace(0, source.find(" {}").unwrap() as u32, "const Foo = class extends HTMLElement");
+        ed.replace(
+            0,
+            source.find(" {}").unwrap() as u32,
+            "const Foo = class extends HTMLElement",
+        );
         ed.insert(source.len() as u32, "define(Foo);\n");
         let (out, map) = ed.apply_mapped();
         let at = |s: &str| out.find(s).unwrap() as u32;
         // Kept from the replaced text: the class name and `class`.
-        assert_eq!(map.to_original(at("Foo =")), Some(source.find("Foo").unwrap() as u32));
-        assert_eq!(map.to_original(at("class ext")), Some(source.find("class").unwrap() as u32));
+        assert_eq!(
+            map.to_original(at("Foo =")),
+            Some(source.find("Foo").unwrap() as u32)
+        );
+        assert_eq!(
+            map.to_original(at("class ext")),
+            Some(source.find("class").unwrap() as u32)
+        );
         // New code: no source position.
         assert_eq!(map.to_original(at("const")), None);
         assert_eq!(map.to_original(at("HTMLElement")), None);
         assert_eq!(map.to_original(at("define")), None);
         // Copied text maps to itself.
-        assert_eq!(map.to_original(at(" {}")), Some(source.find(" {}").unwrap() as u32));
+        assert_eq!(
+            map.to_original(at(" {}")),
+            Some(source.find(" {}").unwrap() as u32)
+        );
     }
 }

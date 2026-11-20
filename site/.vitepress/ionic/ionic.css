@@ -1,0 +1,6 @@
+/* What Ionic's core.scss sets on <body> (its background and text color) is not for this site's page. */
+html body {
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+}

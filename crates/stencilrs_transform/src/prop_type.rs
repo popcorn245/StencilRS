@@ -13,13 +13,12 @@
 //!   `Record<…>`, `HTMLElement`, …) are object types, so `unknown`.
 
 use oxc::ast::ast::{
-    Expression, ObjectPropertyKind, PropertyKey, TSEnumDeclaration, TSLiteral,
-    TSSignature, TSType, TSTypeName, TSTypeOperatorOperator, TSTypeQueryExprName, TSTypeReference,
-    UnaryOperator,
+    Expression, ObjectPropertyKind, PropertyKey, TSEnumDeclaration, TSLiteral, TSSignature, TSType,
+    TSTypeName, TSTypeOperatorOperator, TSTypeQueryExprName, TSTypeReference, UnaryOperator,
 };
 use oxc::span::GetSpan;
 
-use crate::locals::{LocalType, LocalValue, Locals};
+use crate::locals::{LocalType, LocalValue, Locals, ThisMember};
 use crate::meta::PropType;
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -31,11 +30,36 @@ pub struct Flags {
 }
 
 impl Flags {
-    const ANY: Flags = Flags { any: true, string: false, number: false, boolean: false };
-    const STRING: Flags = Flags { any: false, string: true, number: false, boolean: false };
-    const NUMBER: Flags = Flags { any: false, string: false, number: true, boolean: false };
-    const BOOLEAN: Flags = Flags { any: false, string: false, number: false, boolean: true };
-    const NONE: Flags = Flags { any: false, string: false, number: false, boolean: false };
+    const ANY: Flags = Flags {
+        any: true,
+        string: false,
+        number: false,
+        boolean: false,
+    };
+    const STRING: Flags = Flags {
+        any: false,
+        string: true,
+        number: false,
+        boolean: false,
+    };
+    const NUMBER: Flags = Flags {
+        any: false,
+        string: false,
+        number: true,
+        boolean: false,
+    };
+    const BOOLEAN: Flags = Flags {
+        any: false,
+        string: false,
+        number: false,
+        boolean: true,
+    };
+    const NONE: Flags = Flags {
+        any: false,
+        string: false,
+        number: false,
+        boolean: false,
+    };
 
     fn merge(&mut self, other: Flags) {
         self.any |= other.any;
@@ -77,7 +101,11 @@ pub fn classify_annotation(ty: &TSType, locals: &Locals) -> PropType {
 
 /// A prop with no annotation: its widened initializer type, and how `typeToString` prints it
 /// (`complexType.original`).
-pub fn classify_initializer(init: Option<&Expression>, locals: &Locals, source: &str) -> (PropType, String) {
+pub fn classify_initializer(
+    init: Option<&Expression>,
+    locals: &Locals,
+    source: &str,
+) -> (PropType, String) {
     match init {
         // No annotation and no initializer is an implicit `any`.
         None => (PropType::Any, "any".into()),
@@ -92,7 +120,7 @@ pub fn infer_expression(e: &Expression, locals: &Locals, source: &str) -> (PropT
 
 /// Flags of a type name as it resolves from this module (alias, enum, interface, import, lib).
 pub fn name_flags(name: &str, locals: &Locals) -> Flags {
-    identifier_flags(name, None, locals, 0)
+    identifier_flags(name, &[], locals, 0)
 }
 
 /// Flags of `keyof <name>`.
@@ -119,7 +147,9 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         Expression::StringLiteral(_) | Expression::TemplateLiteral(_) => named(PropType::String),
         Expression::NumericLiteral(_) => named(PropType::Number),
         Expression::UnaryExpression(u) => match u.operator {
-            UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus | UnaryOperator::BitwiseNot => named(PropType::Number),
+            UnaryOperator::UnaryNegation | UnaryOperator::UnaryPlus | UnaryOperator::BitwiseNot => {
+                named(PropType::Number)
+            }
             UnaryOperator::LogicalNot => named(PropType::Boolean),
             UnaryOperator::Typeof => named(PropType::String),
             _ => named(PropType::Any),
@@ -129,16 +159,31 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         // Single-file: without the lib, `Array` is missing and an array literal prints as `{}`.
         Expression::ArrayExpression(_) if !locals.resolving() => (PropType::Unknown, "{}".into()),
         Expression::ArrayExpression(_) => (PropType::Unknown, "any[]".into()),
-        Expression::ObjectExpression(obj) => (PropType::Unknown, print_object_literal(obj, locals, source, depth)),
+        Expression::ObjectExpression(obj) => (
+            PropType::Unknown,
+            print_object_literal(obj, locals, source, depth),
+        ),
         Expression::ParenthesizedExpression(p) => infer(&p.expression, locals, source, depth + 1),
         Expression::TSNonNullExpression(e) => infer(&e.expression, locals, source, depth + 1),
         Expression::TSSatisfiesExpression(e) => infer(&e.expression, locals, source, depth + 1),
-        Expression::TSAsExpression(e) => asserted(&e.type_annotation, &e.expression, locals, source, depth),
-        Expression::TSTypeAssertion(e) => asserted(&e.type_annotation, &e.expression, locals, source, depth),
+        Expression::TSAsExpression(e) => {
+            asserted(&e.type_annotation, &e.expression, locals, source, depth)
+        }
+        Expression::TSTypeAssertion(e) => {
+            asserted(&e.type_annotation, &e.expression, locals, source, depth)
+        }
         Expression::Identifier(id) => match locals.values.get(id.name.as_str()) {
-            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => infer(init, locals, source, depth + 1),
+            Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+                infer(init, locals, source, depth + 1)
+            }
             Some(LocalValue::Object | LocalValue::Function(_)) => named(PropType::Unknown),
-            Some(LocalValue::Let(None)) => named(PropType::Any),
+            Some(LocalValue::Let(None)) => match locals.declared.get(id.name.as_str()) {
+                Some(t) => (
+                    classify_annotation(t, locals),
+                    t.span().source_text(source).to_owned(),
+                ),
+                None => named(PropType::Any),
+            },
             None => match locals.imported_value(id.name.as_str()) {
                 Some(v) if v.prop_type.is_some() => (v.prop_type.unwrap(), v.original),
                 // Unresolved names, imports and `undefined` (widened to `any`).
@@ -146,7 +191,16 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
             },
         },
         Expression::StaticMemberExpression(m) => match &m.object {
-            Expression::Identifier(obj) => match member_value(obj.name.as_str(), m.property.name.as_str(), locals, source, depth) {
+            Expression::ThisExpression(_) => {
+                this_field(m.property.name.as_str(), locals, source, depth)
+            }
+            Expression::Identifier(obj) => match member_value(
+                obj.name.as_str(),
+                m.property.name.as_str(),
+                locals,
+                source,
+                depth,
+            ) {
                 Some(v) => v,
                 None => named(PropType::Any),
             },
@@ -154,33 +208,154 @@ fn infer(expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropTy
         },
         Expression::CallExpression(call) => match &call.callee {
             Expression::Identifier(f) => match locals.values.get(f.name.as_str()) {
-                Some(LocalValue::Function(Some(ret))) => (classify_annotation(ret, locals), ret.span().source_text(source).to_owned()),
+                Some(LocalValue::Function(Some(ret))) => (
+                    classify_annotation(ret, locals),
+                    ret.span().source_text(source).to_owned(),
+                ),
+                Some(LocalValue::Const(init)) => match function_return(init) {
+                    Some(ret) => (
+                        classify_annotation(ret, locals),
+                        ret.span().source_text(source).to_owned(),
+                    ),
+                    None => named(PropType::Any),
+                },
                 Some(_) => named(PropType::Any),
-                None => match locals.imported_value(f.name.as_str()).and_then(|v| v.returns) {
+                None => match locals
+                    .imported_value(f.name.as_str())
+                    .and_then(|v| v.returns)
+                {
                     Some(r) => r,
                     None => named(PropType::Any),
                 },
             },
+            Expression::StaticMemberExpression(m) => call_of_member(m, locals, source),
             _ => named(PropType::Any),
         },
-        // Build-accurate: `new X()` is an object.
-        Expression::NewExpression(_) if locals.resolving() => named(PropType::Unknown),
+        // Build-accurate: `new X()` is an object, printed by its class (`Config`).
+        Expression::NewExpression(n) if locals.resolving() => match &n.callee {
+            Expression::Identifier(c) if !locals.decl_params.contains_key(c.name.as_str()) => {
+                (PropType::Unknown, c.name.to_string())
+            }
+            _ => named(PropType::Unknown),
+        },
         // Everything else depends on types the single-file program cannot see.
         _ => named(PropType::Any),
     }
 }
 
+/// The written return type of an arrow function or function expression.
+pub fn function_return<'x, 'a>(e: &'x Expression<'a>) -> Option<&'x TSType<'a>> {
+    match e {
+        Expression::ArrowFunctionExpression(f) => {
+            f.return_type.as_ref().map(|t| &t.type_annotation)
+        }
+        Expression::FunctionExpression(f) => f.return_type.as_ref().map(|t| &t.type_annotation),
+        Expression::ParenthesizedExpression(p) => function_return(&p.expression),
+        _ => None,
+    }
+}
+
+/// `this.field`: the field's written type, or the type of its initializer.
+fn this_field(name: &str, locals: &Locals, source: &str, depth: u8) -> (PropType, String) {
+    let class = locals.current_class.borrow().clone();
+    let Some(ThisMember::Field {
+        annotation,
+        init,
+        readonly,
+    }) = class
+        .as_deref()
+        .and_then(|c| locals.members.get(c))
+        .and_then(|m| m.get(name))
+    else {
+        return named(PropType::Any);
+    };
+    match (annotation, init) {
+        (Some(t), _) => (
+            classify_annotation(t, locals),
+            t.span().source_text(source).to_owned(),
+        ),
+        (None, Some(init)) => {
+            let (t, printed) = infer(init, locals, source, depth + 1);
+            // A `readonly` field keeps its literal type.
+            if *readonly && let Some(lit) = literal_type_text(init, source) {
+                (t, lit)
+            } else {
+                (t, printed)
+            }
+        }
+        (None, None) => named(PropType::Any),
+    }
+}
+
+/// How TypeScript prints the literal type of a literal expression.
+fn literal_type_text(e: &Expression, source: &str) -> Option<String> {
+    match e {
+        Expression::StringLiteral(s) => Some(format!("\"{}\"", s.value)),
+        Expression::NumericLiteral(_) | Expression::BooleanLiteral(_) => {
+            Some(e.span().source_text(source).to_owned())
+        }
+        _ => None,
+    }
+}
+
+/// `obj.method(…)`: the written return type of a method of an imported `const obj = new Class()`,
+/// or of `this.method(…)`.
+fn call_of_member(
+    m: &oxc::ast::ast::StaticMemberExpression,
+    locals: &Locals,
+    source: &str,
+) -> (PropType, String) {
+    match &m.object {
+        Expression::Identifier(obj) => locals
+            .imported_value(obj.name.as_str())
+            .and_then(|v| v.members.get(m.property.name.as_str()).cloned())
+            .and_then(|v| v.returns)
+            .unwrap_or_else(|| named(PropType::Any)),
+        Expression::ThisExpression(_) => {
+            let class = locals.current_class.borrow().clone();
+            match class
+                .as_deref()
+                .and_then(|c| locals.members.get(c))
+                .and_then(|members| members.get(m.property.name.as_str()))
+            {
+                Some(ThisMember::Method(Some(ret))) => (
+                    classify_annotation(ret, locals),
+                    ret.span().source_text(source).to_owned(),
+                ),
+                _ => named(PropType::Any),
+            }
+        }
+        _ => named(PropType::Any),
+    }
+}
+
 /// `OBJ.member` for a same-file `const OBJ = { … }` or an imported one.
-fn member_value(obj: &str, member: &str, locals: &Locals, source: &str, depth: u8) -> Option<(PropType, String)> {
+fn member_value(
+    obj: &str,
+    member: &str,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> Option<(PropType, String)> {
     if let Some(init) = locals.const_init(obj) {
         let (as_const, inner) = strip_as_const(init);
-        let Expression::ObjectExpression(o) = inner else { return None };
+        let Expression::ObjectExpression(o) = inner else {
+            return None;
+        };
         let value = o.properties.iter().rev().find_map(|p| match p {
-            ObjectPropertyKind::ObjectProperty(p) if crate::eval::property_key_name(&p.key).as_deref() == Some(member) => Some(&p.value),
+            ObjectPropertyKind::ObjectProperty(p)
+                if crate::eval::property_key_name(&p.key).as_deref() == Some(member) =>
+            {
+                Some(&p.value)
+            }
             _ => None,
         })?;
         let (t, printed) = infer(value, locals, source, depth + 1);
-        let printed = if as_const && is_literal(value) { value.span().source_text(source).to_owned() } else { printed };
+        let printed = if as_const && is_literal(value) {
+            value.span().source_text(source).to_owned()
+        } else {
+            printed
+        };
         return Some((t, printed));
     }
     let v = locals.imported_value(obj)?.members.get(member)?.clone();
@@ -201,26 +376,53 @@ fn strip_as_const<'x, 'a>(e: &'x Expression<'a>) -> (bool, &'x Expression<'a>) {
 }
 
 fn is_literal(e: &Expression) -> bool {
-    matches!(e, Expression::StringLiteral(_) | Expression::NumericLiteral(_) | Expression::BooleanLiteral(_))
-        || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
+    matches!(
+        e,
+        Expression::StringLiteral(_)
+            | Expression::NumericLiteral(_)
+            | Expression::BooleanLiteral(_)
+    ) || matches!(e, Expression::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)))
 }
 
-fn asserted(ty: &TSType, expr: &Expression, locals: &Locals, source: &str, depth: u8) -> (PropType, String) {
-    if matches!(ty, TSType::TSTypeReference(r) if matches!(&r.type_name, TSTypeName::IdentifierReference(id) if id.name == "const")) {
-        return if locals.resolving() { infer(expr, locals, source, depth + 1) } else { named(PropType::Any) };
+fn asserted(
+    ty: &TSType,
+    expr: &Expression,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> (PropType, String) {
+    if matches!(ty, TSType::TSTypeReference(r) if matches!(&r.type_name, TSTypeName::IdentifierReference(id) if id.name == "const"))
+    {
+        return if locals.resolving() {
+            infer(expr, locals, source, depth + 1)
+        } else {
+            named(PropType::Any)
+        };
     }
-    (classify_annotation(ty, locals), ty.span().source_text(source).to_owned())
+    (
+        classify_annotation(ty, locals),
+        ty.span().source_text(source).to_owned(),
+    )
 }
 
 /// How TypeScript prints the widened type of an object literal: `{ a: number; b: string; }`.
-fn print_object_literal(obj: &oxc::ast::ast::ObjectExpression, locals: &Locals, source: &str, depth: u8) -> String {
+fn print_object_literal(
+    obj: &oxc::ast::ast::ObjectExpression,
+    locals: &Locals,
+    source: &str,
+    depth: u8,
+) -> String {
     if obj.properties.is_empty() {
         return "{}".into();
     }
     let mut parts = Vec::new();
     for prop in &obj.properties {
-        let ObjectPropertyKind::ObjectProperty(p) = prop else { return obj.span.source_text(source).to_owned() };
-        let Some(key) = crate::eval::property_key_name(&p.key) else { return obj.span.source_text(source).to_owned() };
+        let ObjectPropertyKind::ObjectProperty(p) = prop else {
+            return obj.span.source_text(source).to_owned();
+        };
+        let Some(key) = crate::eval::property_key_name(&p.key) else {
+            return obj.span.source_text(source).to_owned();
+        };
         let (_, ty) = infer(&p.value, locals, source, depth + 1);
         parts.push(format!("{key}: {ty};"));
     }
@@ -239,7 +441,11 @@ fn flags_of(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
         TSType::TSLiteralType(lit) => match &lit.literal {
             TSLiteral::StringLiteral(_) | TSLiteral::TemplateLiteral(_) => Flags::STRING,
             TSLiteral::NumericLiteral(_) => Flags::NUMBER,
-            TSLiteral::UnaryExpression(u) if matches!(u.argument, Expression::NumericLiteral(_)) => Flags::NUMBER,
+            TSLiteral::UnaryExpression(u)
+                if matches!(u.argument, Expression::NumericLiteral(_)) =>
+            {
+                Flags::NUMBER
+            }
             TSLiteral::BooleanLiteral(_) => Flags::BOOLEAN,
             _ => Flags::NONE,
         },
@@ -260,7 +466,9 @@ fn flags_of(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
             TSTypeQueryExprName::IdentifierReference(id) => match id.name.as_str() {
                 "globalThis" => Flags::NONE,
                 name => match locals.values.get(name) {
-                    Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => Flags::from_prop_type(infer(init, locals, "", depth + 1).0),
+                    Some(LocalValue::Const(init)) | Some(LocalValue::Let(Some(init))) => {
+                        Flags::from_prop_type(infer(init, locals, "", depth + 1).0)
+                    }
                     Some(LocalValue::Object | LocalValue::Function(_)) => Flags::NONE,
                     _ => match locals.imported_value(name).and_then(|v| v.prop_type) {
                         Some(t) => Flags::from_prop_type(t),
@@ -295,34 +503,39 @@ fn keyof_flags(ty: &TSType, locals: &Locals, depth: u8) -> Flags {
     match ty {
         TSType::TSTypeLiteral(lit) => signature_flags(&lit.members),
         TSType::TSTypeReference(r) => match &r.type_name {
-            TSTypeName::IdentifierReference(id) => keyof_identifier(id.name.as_str(), locals, depth),
+            TSTypeName::IdentifierReference(id) => {
+                keyof_identifier(id.name.as_str(), locals, depth)
+            }
             _ => Flags::ANY,
         },
         // `keyof typeof OBJ` for a `const OBJ = { … }`: its keys.
         TSType::TSTypeQuery(q) => match &q.expr_name {
-            TSTypeQueryExprName::IdentifierReference(id) => match locals.const_init(id.name.as_str()) {
-                Some(init) => match strip_as_const(init).1 {
-                    Expression::ObjectExpression(obj) => {
-                        let mut f = Flags::NONE;
-                        for p in &obj.properties {
-                            match p {
-                                ObjectPropertyKind::ObjectProperty(p) => match &p.key {
-                                    PropertyKey::NumericLiteral(_) => f.number = true,
-                                    PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_) => f.string = true,
-                                    _ => f.any = true,
-                                },
-                                ObjectPropertyKind::SpreadProperty(_) => f.any = true,
+            TSTypeQueryExprName::IdentifierReference(id) => {
+                match locals.const_init(id.name.as_str()) {
+                    Some(init) => match strip_as_const(init).1 {
+                        Expression::ObjectExpression(obj) => {
+                            let mut f = Flags::NONE;
+                            for p in &obj.properties {
+                                match p {
+                                    ObjectPropertyKind::ObjectProperty(p) => match &p.key {
+                                        PropertyKey::NumericLiteral(_) => f.number = true,
+                                        PropertyKey::StaticIdentifier(_)
+                                        | PropertyKey::StringLiteral(_) => f.string = true,
+                                        _ => f.any = true,
+                                    },
+                                    ObjectPropertyKind::SpreadProperty(_) => f.any = true,
+                                }
                             }
+                            f
                         }
-                        f
-                    }
-                    _ => Flags::ANY,
-                },
-                None => match locals.imported_value(id.name.as_str()) {
-                    Some(v) if !v.members.is_empty() => Flags::STRING,
-                    _ => Flags::ANY,
-                },
-            },
+                        _ => Flags::ANY,
+                    },
+                    None => match locals.imported_value(id.name.as_str()) {
+                        Some(v) if !v.members.is_empty() => Flags::STRING,
+                        _ => Flags::ANY,
+                    },
+                }
+            }
             _ => Flags::ANY,
         },
         _ => Flags::ANY,
@@ -361,7 +574,9 @@ fn signature_flags(members: &[TSSignature]) -> Flags {
         };
         match key {
             Some(PropertyKey::NumericLiteral(_)) => f.number = true,
-            Some(PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_)) => f.string = true,
+            Some(PropertyKey::StaticIdentifier(_) | PropertyKey::StringLiteral(_)) => {
+                f.string = true
+            }
             _ => f.any = true,
         }
     }
@@ -371,8 +586,8 @@ fn signature_flags(members: &[TSSignature]) -> Flags {
 fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
     match &r.type_name {
         TSTypeName::IdentifierReference(id) => {
-            let first_arg = r.type_arguments.as_ref().and_then(|a| a.params.first());
-            identifier_flags(id.name.as_str(), first_arg, locals, depth)
+            let args = r.type_arguments.as_ref().map_or(&[][..], |a| &a.params[..]);
+            identifier_flags(id.name.as_str(), args, locals, depth)
         }
         // `Mode.Default`: a member of a local or imported enum has that enum's kind.
         TSTypeName::QualifiedName(q) => match &q.left {
@@ -382,7 +597,11 @@ fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
                 Some(_) => Flags::ANY,
                 None => match locals.imported_type(id.name.as_str()) {
                     Some(t) => t.flags,
-                    None if locals.resolving() && !locals.is_unresolved_import(id.name.as_str()) => Flags::NONE,
+                    None if locals.resolving()
+                        && !locals.is_unresolved_import(id.name.as_str()) =>
+                    {
+                        Flags::NONE
+                    }
                     None => Flags::ANY,
                 },
             },
@@ -392,12 +611,17 @@ fn reference_flags(r: &TSTypeReference, locals: &Locals, depth: u8) -> Flags {
     }
 }
 
-fn identifier_flags(name: &str, first_arg: Option<&TSType>, locals: &Locals, depth: u8) -> Flags {
+fn identifier_flags(name: &str, args: &[TSType], locals: &Locals, depth: u8) -> Flags {
     if depth > MAX_DEPTH {
         return Flags::ANY;
     }
+    let first_arg = args.first();
+    // A type parameter of the generic alias being evaluated stands for its type argument.
+    if let Some((_, f)) = locals.bindings.borrow().iter().rev().find(|(n, _)| n == name) {
+        return *f;
+    }
     match locals.types.get(name) {
-        Some(LocalType::Alias(ty)) => return flags_of(ty, locals, depth + 1),
+        Some(LocalType::Alias(ty)) => return alias_flags(name, ty, args, locals, depth),
         Some(LocalType::Enum(decl)) => return enum_flags(decl),
         Some(LocalType::Interface(_) | LocalType::Class(_)) => return Flags::NONE,
         None => {}
@@ -412,13 +636,54 @@ fn identifier_flags(name: &str, first_arg: Option<&TSType>, locals: &Locals, dep
     // Build-accurate: a lib type.
     match name {
         "Uppercase" | "Lowercase" | "Capitalize" | "Uncapitalize" => Flags::STRING,
-        "PropertyKey" => Flags { string: true, number: true, ..Flags::NONE },
-        "NonNullable" | "Readonly" | "NoInfer" => first_arg.map_or(Flags::NONE, |t| flags_of(t, locals, depth + 1)),
+        "PropertyKey" => Flags {
+            string: true,
+            number: true,
+            ..Flags::NONE
+        },
+        "NonNullable" | "Readonly" | "NoInfer" => {
+            first_arg.map_or(Flags::NONE, |t| flags_of(t, locals, depth + 1))
+        }
         "String" => Flags::STRING,
         "Number" => Flags::NUMBER,
         "Boolean" => Flags::BOOLEAN,
         _ => Flags::NONE,
     }
+}
+
+/// A (possibly generic) type alias applied to `args`: its body with each type parameter bound
+/// to the flags of its argument, or of its default when the argument is omitted.
+fn alias_flags(name: &str, body: &TSType, args: &[TSType], locals: &Locals, depth: u8) -> Flags {
+    let Some(params) = locals.alias_params.get(name) else {
+        return flags_of(body, locals, depth + 1);
+    };
+    let defaults = locals.alias_defaults.get(name);
+    // Arguments are evaluated in the caller's scope, before the alias's parameters are bound.
+    let mut bound: Vec<(String, Flags)> = Vec::new();
+    for (i, param) in params.iter().enumerate() {
+        let flags = match args.get(i) {
+            Some(arg) => flags_of(arg, locals, depth + 1),
+            None => {
+                let default = defaults.and_then(|d| d.get(i).copied().flatten());
+                match default {
+                    Some(d) => {
+                        let n = locals.bindings.borrow().len();
+                        locals.bindings.borrow_mut().extend(bound.iter().cloned());
+                        let f = flags_of(d, locals, depth + 1);
+                        locals.bindings.borrow_mut().truncate(n);
+                        f
+                    }
+                    None => Flags::ANY,
+                }
+            }
+        };
+        bound.push(((*param).to_owned(), flags));
+    }
+    let n = locals.bindings.borrow().len();
+    locals.bindings.borrow_mut().extend(bound);
+    let f = flags_of(body, locals, depth + 1);
+    locals.bindings.borrow_mut().truncate(n);
+    f
 }
 
 fn enum_flags(decl: &TSEnumDeclaration) -> Flags {

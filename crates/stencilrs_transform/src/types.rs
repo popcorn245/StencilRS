@@ -7,8 +7,9 @@
 //! A type the model does not cover is reported as [`Unsupported`], and the caller flags the
 //! member for Stencil's own compiler instead of guessing.
 
+use rustc_hash::FxHashMap;
 use std::cell::{Cell, RefCell};
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
@@ -43,7 +44,7 @@ const FIRST_ID: u32 = 100;
 #[derive(Default)]
 pub struct Registry {
     next: Cell<u32>,
-    interned: RefCell<HashMap<String, u32>>,
+    interned: RefCell<FxHashMap<String, u32>>,
 }
 
 impl Registry {
@@ -100,12 +101,21 @@ pub enum K {
     /// `T[]` and `Array<T>`, with its type id.
     Array(Ty, u32),
     /// An interface, class or lib object type, printed by name.
-    Ref { name: String, args: Vec<Ty>, id: u32 },
+    Ref {
+        name: String,
+        args: Vec<Ty>,
+        id: u32,
+    },
     /// A name the program cannot resolve: `any`, printed by its written name.
-    Unresolved { name: String, args: Vec<Ty> },
+    Unresolved {
+        name: String,
+        args: Vec<Ty>,
+    },
     Anon(Anon),
     /// A type parameter of an imported generic alias, before substitution.
     Param(usize),
+    /// A type parameter of the method being described (`T` in `m<T>(x: T)`) and its type id.
+    TypeParam(String, u32),
 }
 
 #[derive(Debug)]
@@ -114,6 +124,9 @@ pub struct Alias {
     pub args: Vec<Ty>,
     /// The type id the alias's type was given when the checker created it.
     pub id: u32,
+    /// The names of the alias's type parameters, which the checker prints for an alias written
+    /// without type arguments (`parseDocsType` reads them off the declared type).
+    pub declared: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -132,6 +145,8 @@ pub enum Shape {
     Text(String),
     /// A lib mapped type (`Record<K, V>`): always printed by its alias.
     Opaque,
+    /// `A & B`: the members in the order written, flattened and without repeats.
+    Intersection(Vec<Ty>),
 }
 
 #[derive(Debug)]
@@ -211,6 +226,7 @@ impl Ty {
             K::Enum(e) => e.base_id + e.members.len() as u32,
             K::Ref { id, .. } => *id,
             K::Anon(a) => a.id,
+            K::TypeParam(_, id) => *id,
             // A union's id is the one its alias type was created with; the others are flattened away.
             K::Array(_, id) => *id,
             K::Union(_, alias, _) => alias.as_ref().map_or(u32::MAX, |a| a.id),
@@ -220,10 +236,19 @@ impl Ty {
     /// Identity for caches and de-duplication.
     pub fn key(&self) -> String {
         match &*self.0 {
-            K::Union(ms, _, _) => format!("u[{}]", ms.iter().map(Ty::key).collect::<Vec<_>>().join(",")),
+            K::Union(ms, _, _) => format!(
+                "u[{}]",
+                ms.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+            ),
             K::Array(t, _) => format!("a[{}]", t.key()),
-            K::Ref { name, args, id } => format!("r{id}:{name}<{}>", args.iter().map(Ty::key).collect::<Vec<_>>().join(",")),
-            K::Unresolved { name, args } => format!("x:{name}<{}>", args.iter().map(Ty::key).collect::<Vec<_>>().join(",")),
+            K::Ref { name, args, id } => format!(
+                "r{id}:{name}<{}>",
+                args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+            ),
+            K::Unresolved { name, args } => format!(
+                "x:{name}<{}>",
+                args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+            ),
             K::Enum(e) => format!("e{}", e.base_id),
             K::Param(i) => format!("p{i}"),
             _ => format!("t{}", self.id()),
@@ -234,16 +259,57 @@ impl Ty {
         matches!(&*self.0, K::Any | K::Unresolved { .. })
     }
 
-    fn is_function(&self) -> bool {
-        matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Function(_)))
+    pub fn is_intersection(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if matches!(a.shape, Shape::Intersection(_)))
     }
 
+    /// An intersection the printer writes out (`A & B`) rather than by the alias it carries.
+    fn prints_as_intersection(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if a.alias.is_none() && matches!(a.shape, Shape::Intersection(_)))
+    }
+
+    /// A function type the printer writes out, not one it names by its alias.
+    fn is_function(&self) -> bool {
+        matches!(&*self.0, K::Anon(a) if a.alias.is_none() && matches!(a.shape, Shape::Function(_)))
+    }
+
+    /// What an alias with type parameters, all of them defaulted, is when it is written without
+    /// type arguments through an import: an object type the checker prints as the alias alone
+    /// (`id` is the type id of its definition). `None` when the definition is not an object type.
+    pub fn without_arguments(&self, fresh_id: u32) -> Option<Ty> {
+        match &*self.0 {
+            K::Anon(Anon {
+                alias: Some(alias),
+                shape,
+                ..
+            }) if !matches!(shape, Shape::Opaque) => {
+                let alias = Rc::new(Alias {
+                    name: alias.name.clone(),
+                    args: Vec::new(),
+                    id: alias.id,
+                    declared: alias.declared.clone(),
+                });
+                Some(Ty::new(K::Anon(Anon {
+                    id: fresh_id,
+                    shape: Shape::Opaque,
+                    alias: Some(alias),
+                })))
+            }
+            _ => None,
+        }
+    }
 
     /// The type as the alias it was written as, unless it already is one.
     pub fn with_alias(&self, alias: Rc<Alias>) -> Ty {
         match &*self.0 {
-            K::Union(ms, None, origin) => Ty::new(K::Union(ms.clone(), Some(alias), origin.clone())),
-            K::Anon(a) if a.alias.is_none() => Ty::new(K::Anon(Anon { id: a.id, shape: clone_shape(&a.shape), alias: Some(alias) })),
+            K::Union(ms, None, origin) => {
+                Ty::new(K::Union(ms.clone(), Some(alias), origin.clone()))
+            }
+            K::Anon(a) if a.alias.is_none() => Ty::new(K::Anon(Anon {
+                id: a.id,
+                shape: clone_shape(&a.shape),
+                alias: Some(alias),
+            })),
             _ => self.clone(),
         }
     }
@@ -251,7 +317,16 @@ impl Ty {
 
 fn clone_sig(s: &Sig) -> Sig {
     Sig {
-        params: s.params.iter().map(|p| Param { name: p.name.clone(), optional: p.optional, rest: p.rest, ty: p.ty.clone() }).collect(),
+        params: s
+            .params
+            .iter()
+            .map(|p| Param {
+                name: p.name.clone(),
+                optional: p.optional,
+                rest: p.rest,
+                ty: p.ty.clone(),
+            })
+            .collect(),
         ret: s.ret.clone(),
     }
 }
@@ -267,16 +342,30 @@ fn clone_shape(s: &Shape) -> Shape {
                     kind: match &m.kind {
                         MemberKind::Prop(t) => MemberKind::Prop(t.clone()),
                         MemberKind::Method(s) => MemberKind::Method(clone_sig(s)),
-                        MemberKind::Index { param, key, value } => MemberKind::Index { param: param.clone(), key: key.clone(), value: value.clone() },
+                        MemberKind::Index { param, key, value } => MemberKind::Index {
+                            param: param.clone(),
+                            key: key.clone(),
+                            value: value.clone(),
+                        },
                         MemberKind::Call(s) => MemberKind::Call(clone_sig(s)),
                     },
                 })
                 .collect(),
         ),
         Shape::Function(s) => Shape::Function(clone_sig(s)),
-        Shape::Tuple(es) => Shape::Tuple(es.iter().map(|e| TupleElem { label: e.label.clone(), ty: e.ty.clone(), optional: e.optional, rest: e.rest }).collect()),
+        Shape::Tuple(es) => Shape::Tuple(
+            es.iter()
+                .map(|e| TupleElem {
+                    label: e.label.clone(),
+                    ty: e.ty.clone(),
+                    optional: e.optional,
+                    rest: e.rest,
+                })
+                .collect(),
+        ),
         Shape::Text(t) => Shape::Text(t.clone()),
         Shape::Opaque => Shape::Opaque,
+        Shape::Intersection(ms) => Shape::Intersection(ms.clone()),
     }
 }
 
@@ -317,7 +406,9 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
     for t in &types {
         match &*t.0 {
             K::Union(ms, _, _) => flat.extend(ms.iter().cloned()),
-            K::Enum(e) => flat.extend((0..e.members.len()).map(|i| Ty::new(K::EnumLit(e.clone(), i)))),
+            K::Enum(e) => {
+                flat.extend((0..e.members.len()).map(|i| Ty::new(K::EnumLit(e.clone(), i))))
+            }
             _ => flat.push(t.clone()),
         }
     }
@@ -332,7 +423,9 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
     if !strict {
         let has_null = flat.iter().any(|t| matches!(&*t.0, K::Null));
         let has_undefined = flat.iter().any(|t| matches!(&*t.0, K::Undefined));
-        let others = flat.iter().any(|t| !matches!(&*t.0, K::Null | K::Undefined));
+        let others = flat
+            .iter()
+            .any(|t| !matches!(&*t.0, K::Null | K::Undefined));
         if others {
             flat.retain(|t| !matches!(&*t.0, K::Null | K::Undefined));
         } else if has_null {
@@ -379,7 +472,16 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
         if alias.is_none() && named.len() == 1 && reduced.is_empty() {
             return named.remove(0);
         }
-        let named_members: usize = named.iter().map(|u| if let K::Union(ms, _, _) = &*u.0 { ms.len() } else { 0 }).sum();
+        let named_members: usize = named
+            .iter()
+            .map(|u| {
+                if let K::Union(ms, _, _) = &*u.0 {
+                    ms.len()
+                } else {
+                    0
+                }
+            })
+            .sum();
         if !named.is_empty() && named_members + reduced.len() == flat.len() {
             let mut parts = reduced;
             parts.extend(named);
@@ -392,7 +494,11 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
 
 /// `boolean`.
 pub fn boolean() -> Ty {
-    Ty::new(K::Union(vec![Ty::new(K::False), Ty::new(K::True)], None, None))
+    Ty::new(K::Union(
+        vec![Ty::new(K::False), Ty::new(K::True)],
+        None,
+        None,
+    ))
 }
 
 /// `"text"` the way the printer writes a string literal type (`escapeNonAsciiString`).
@@ -442,12 +548,19 @@ pub fn js_number(text: &str) -> Option<String> {
 
 fn is_identifier(s: &str) -> bool {
     let mut chars = s.chars();
-    chars.next().is_some_and(|c| c == '_' || c == '$' || c.is_alphabetic()) && chars.all(|c| c == '_' || c == '$' || c.is_alphanumeric())
+    chars
+        .next()
+        .is_some_and(|c| c == '_' || c == '$' || c.is_alphabetic())
+        && chars.all(|c| c == '_' || c == '$' || c.is_alphanumeric())
 }
 
 /// A property name as the printer writes it.
 pub fn property_name(name: &str) -> String {
-    if is_identifier(name) || name.parse::<u64>().is_ok_and(|n| n.to_string() == name) { name.to_owned() } else { quote(name) }
+    if is_identifier(name) || name.parse::<u64>().is_ok_and(|n| n.to_string() == name) {
+        name.to_owned()
+    } else {
+        quote(name)
+    }
 }
 
 /// `typeToString`, collecting the names it prints as type references.
@@ -491,7 +604,14 @@ impl Printer {
             },
             K::Array(el, _) => {
                 let inner = self.print(el, false)?;
-                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1) || el.is_function() { format!("({inner})[]") } else { format!("{inner}[]") }
+                if matches!(&*el.0, K::Union(ms, None, origin) if self.formatted_len(origin.as_deref().unwrap_or(ms)) > 1)
+                    || el.is_function()
+                    || el.prints_as_intersection()
+                {
+                    format!("({inner})[]")
+                } else {
+                    format!("{inner}[]")
+                }
             }
             K::Ref { name, args, .. } | K::Unresolved { name, args } => {
                 self.names.push(name.clone());
@@ -502,6 +622,7 @@ impl Printer {
                 _ => self.shape(&a.shape)?,
             },
             K::Param(_) => return unsupported("an unresolved type parameter"),
+            K::TypeParam(name, _) => name.clone(),
         })
     }
 
@@ -533,7 +654,10 @@ impl Printer {
                     out.push(Ty::new(K::Boolean));
                     i += 1;
                 }
-                K::EnumLit(e, 0) if i + e.members.len() <= ms.len() && matches!(&*ms[i + e.members.len() - 1].0, K::EnumLit(e2, j) if Rc::ptr_eq(e, e2) && *j == e.members.len() - 1) => {
+                K::EnumLit(e, 0)
+                    if i + e.members.len() <= ms.len()
+                        && matches!(&*ms[i + e.members.len() - 1].0, K::EnumLit(e2, j) if Rc::ptr_eq(e, e2) && *j == e.members.len() - 1) =>
+                {
                     out.push(Ty::new(K::Enum(e.clone())));
                     i += e.members.len() - 1;
                 }
@@ -559,7 +683,14 @@ impl Printer {
         let mut parts = Vec::new();
         for m in &formatted {
             let p = self.print(m, false)?;
-            parts.push(if m.is_function() { format!("({p})") } else { p });
+            // The printer parenthesizes a function or an intersection among a union's members.
+            parts.push(
+                if m.is_function() || (m.prints_as_intersection() && formatted.len() > 1) {
+                    format!("({p})")
+                } else {
+                    p
+                },
+            );
         }
         Ok(parts.join(" | "))
     }
@@ -568,7 +699,19 @@ impl Printer {
         match shape {
             Shape::Text(t) => Ok(t.clone()),
             Shape::Opaque => unsupported("a mapped type printed structurally"),
-            Shape::Function(sig) => Ok(format!("{} => {}", self.params(&sig.params)?, self.print(&sig.ret, false)?)),
+            Shape::Intersection(ms) => {
+                let mut parts = Vec::new();
+                for m in ms {
+                    let p = self.print(m, false)?;
+                    parts.push(if m.is_function() { format!("({p})") } else { p });
+                }
+                Ok(parts.join(" & "))
+            }
+            Shape::Function(sig) => Ok(format!(
+                "{} => {}",
+                self.params(&sig.params)?,
+                self.print(&sig.ret, false)?
+            )),
             Shape::Tuple(elems) => {
                 let mut parts = Vec::new();
                 for e in elems {
@@ -596,13 +739,34 @@ impl Printer {
                     return Ok("{}".into());
                 }
                 // An object type that is only one call signature prints as a function type.
-                if let [Member { kind: MemberKind::Call(sig), .. }] = members.as_slice() {
-                    return Ok(format!("{} => {}", self.params(&sig.params)?, self.print(&sig.ret, false)?));
+                if let [
+                    Member {
+                        kind: MemberKind::Call(sig),
+                        ..
+                    },
+                ] = members.as_slice()
+                {
+                    return Ok(format!(
+                        "{} => {}",
+                        self.params(&sig.params)?,
+                        self.print(&sig.ret, false)?
+                    ));
                 }
                 // Call signatures, then index signatures, then the properties in order.
-                let mut ordered: Vec<&Member> = members.iter().filter(|m| matches!(m.kind, MemberKind::Call(_))).collect();
-                ordered.extend(members.iter().filter(|m| matches!(m.kind, MemberKind::Index { .. })));
-                ordered.extend(members.iter().filter(|m| matches!(m.kind, MemberKind::Prop(_) | MemberKind::Method(_))));
+                let mut ordered: Vec<&Member> = members
+                    .iter()
+                    .filter(|m| matches!(m.kind, MemberKind::Call(_)))
+                    .collect();
+                ordered.extend(
+                    members
+                        .iter()
+                        .filter(|m| matches!(m.kind, MemberKind::Index { .. })),
+                );
+                ordered.extend(
+                    members
+                        .iter()
+                        .filter(|m| matches!(m.kind, MemberKind::Prop(_) | MemberKind::Method(_))),
+                );
                 let mut out = String::from("{ ");
                 for m in ordered {
                     if m.readonly {
@@ -610,16 +774,39 @@ impl Printer {
                     }
                     match &m.kind {
                         MemberKind::Prop(t) => {
-                            let _ = write!(out, "{}{}: {};", m.name, if m.optional { "?" } else { "" }, self.print(t, false)?);
+                            let _ = write!(
+                                out,
+                                "{}{}: {};",
+                                m.name,
+                                if m.optional { "?" } else { "" },
+                                self.print(t, false)?
+                            );
                         }
                         MemberKind::Method(sig) => {
-                            let _ = write!(out, "{}{}{}: {};", m.name, if m.optional { "?" } else { "" }, self.params(&sig.params)?, self.print(&sig.ret, false)?);
+                            let _ = write!(
+                                out,
+                                "{}{}{}: {};",
+                                m.name,
+                                if m.optional { "?" } else { "" },
+                                self.params(&sig.params)?,
+                                self.print(&sig.ret, false)?
+                            );
                         }
                         MemberKind::Call(sig) => {
-                            let _ = write!(out, "{}: {};", self.params(&sig.params)?, self.print(&sig.ret, false)?);
+                            let _ = write!(
+                                out,
+                                "{}: {};",
+                                self.params(&sig.params)?,
+                                self.print(&sig.ret, false)?
+                            );
                         }
                         MemberKind::Index { param, key, value } => {
-                            let _ = write!(out, "[{param}: {}]: {};", self.print(key, false)?, self.print(value, false)?);
+                            let _ = write!(
+                                out,
+                                "[{param}: {}]: {};",
+                                self.print(key, false)?,
+                                self.print(value, false)?
+                            );
                         }
                     }
                     out.push(' ');
@@ -634,7 +821,12 @@ impl Printer {
         let mut parts = Vec::new();
         for p in params {
             let t = self.print(&p.ty, false)?;
-            parts.push(format!("{}{}{}: {t}", if p.rest { "..." } else { "" }, p.name, if p.optional { "?" } else { "" }));
+            parts.push(format!(
+                "{}{}{}: {t}",
+                if p.rest { "..." } else { "" },
+                p.name,
+                if p.optional { "?" } else { "" }
+            ));
         }
         Ok(format!("({})", parts.join(", ")))
     }
@@ -667,11 +859,34 @@ fn parse_docs_type(ty: &Ty, parts: &mut BTreeSet<String>) -> Res<()> {
                 inner.insert("boolean".into());
             }
             let joined = inner.iter().cloned().collect::<Vec<_>>().join(" | ");
-            parts.insert(if inner.len() > 1 { format!("({joined})[]") } else { format!("{joined}[]") });
+            parts.insert(if inner.len() > 1 {
+                format!("({joined})[]")
+            } else {
+                format!("{joined}[]")
+            });
         }
-        K::Anon(Anon { alias: Some(alias), .. }) if !alias.args.is_empty() => {
+        K::Anon(Anon {
+            alias: Some(alias), ..
+        }) if !alias.args.is_empty() => {
             for arg in &alias.args {
                 parse_docs_type(arg, parts)?;
+            }
+        }
+        // An alias written without type arguments: `aliasTypeArguments` is empty, so the checker
+        // reads the declared type, whose alias arguments are the type parameters themselves.
+        K::Anon(Anon {
+            alias: Some(alias), ..
+        }) if !alias.declared.is_empty()
+            && matches!(
+                &*ty.0,
+                K::Anon(Anon {
+                    shape: Shape::Opaque,
+                    ..
+                })
+            ) =>
+        {
+            for name in &alias.declared {
+                parts.insert(name.clone());
             }
         }
         K::Unresolved { args, .. } if !args.is_empty() => {
@@ -697,7 +912,16 @@ pub fn resolve_type(ty: &Ty) -> Res<String> {
     }
     let mut parts: Vec<String> = set.into_iter().collect();
     if parts.len() > 1 {
-        parts = parts.into_iter().map(|p| if p.contains("=>") { format!("({p})") } else { p }).collect();
+        parts = parts
+            .into_iter()
+            .map(|p| {
+                if p.contains("=>") {
+                    format!("({p})")
+                } else {
+                    p
+                }
+            })
+            .collect();
     }
     Ok(parts.join(" | "))
 }
@@ -744,7 +968,9 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
                 (nested && free(shown) > 1) || shown.iter().any(|m| walk(m, true, false))
             }
             K::Array(t, _) => walk(t, nested, false),
-            K::Ref { args, .. } | K::Unresolved { args, .. } => args.iter().any(|a| walk(a, true, false)),
+            K::Ref { args, .. } | K::Unresolved { args, .. } => {
+                args.iter().any(|a| walk(a, true, false))
+            }
             K::Anon(a) => {
                 if a.alias.is_some() && nested && !top {
                     return false;
@@ -753,10 +979,13 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
                     Shape::Object(ms) => ms.iter().any(|m| match &m.kind {
                         MemberKind::Prop(t) => walk(t, true, false),
                         MemberKind::Method(s) | MemberKind::Call(s) => sig_depends(s),
-                        MemberKind::Index { key, value, .. } => walk(key, true, false) || walk(value, true, false),
+                        MemberKind::Index { key, value, .. } => {
+                            walk(key, true, false) || walk(value, true, false)
+                        }
                     }),
                     Shape::Function(s) => sig_depends(s),
                     Shape::Tuple(es) => es.iter().any(|e| walk(&e.ty, true, false)),
+                    Shape::Intersection(ms) => ms.iter().any(|m| walk(m, true, false)),
                     _ => false,
                 }
             }
@@ -770,7 +999,11 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     // unions nested in what is printed count.
     match &*ty.0 {
         _ if whole => walk(ty, true, true),
-        K::Union(ms, _, origin) => origin.as_deref().unwrap_or(ms).iter().any(|m| walk(m, true, false)),
+        K::Union(ms, _, origin) => origin
+            .as_deref()
+            .unwrap_or(ms)
+            .iter()
+            .any(|m| walk(m, true, false)),
         _ => walk(ty, false, true),
     }
 }
@@ -785,19 +1018,29 @@ pub struct Subst<'r> {
 pub fn contains_param(ty: &Ty) -> bool {
     match &*ty.0 {
         K::Param(_) => true,
-        K::Union(ms, alias, _) => ms.iter().any(contains_param) || alias.as_ref().is_some_and(|a| a.args.iter().any(contains_param)),
+        K::Union(ms, alias, _) => {
+            ms.iter().any(contains_param)
+                || alias
+                    .as_ref()
+                    .is_some_and(|a| a.args.iter().any(contains_param))
+        }
         K::Array(t, _) => contains_param(t),
         K::Ref { args, .. } | K::Unresolved { args, .. } => args.iter().any(contains_param),
         K::Anon(a) => {
-            a.alias.as_ref().is_some_and(|al| al.args.iter().any(contains_param))
+            a.alias
+                .as_ref()
+                .is_some_and(|al| al.args.iter().any(contains_param))
                 || match &a.shape {
                     Shape::Object(ms) => ms.iter().any(|m| match &m.kind {
                         MemberKind::Prop(t) => contains_param(t),
                         MemberKind::Method(s) | MemberKind::Call(s) => sig_has_param(s),
-                        MemberKind::Index { key, value, .. } => contains_param(key) || contains_param(value),
+                        MemberKind::Index { key, value, .. } => {
+                            contains_param(key) || contains_param(value)
+                        }
                     }),
                     Shape::Function(s) => sig_has_param(s),
                     Shape::Tuple(es) => es.iter().any(|e| contains_param(&e.ty)),
+                    Shape::Intersection(ms) => ms.iter().any(contains_param),
                     _ => false,
                 }
         }
@@ -816,7 +1059,11 @@ impl Subst<'_> {
         }
         match &*ty.0 {
             K::Param(i) => self.args.get(*i).cloned().unwrap_or_else(Ty::any),
-            K::Union(ms, alias, _) => union_of(ms.iter().map(|m| self.apply(m)).collect(), self.strict, self.alias(alias)),
+            K::Union(ms, alias, _) => union_of(
+                ms.iter().map(|m| self.apply(m)).collect(),
+                self.strict,
+                self.alias(alias),
+            ),
             K::Array(t, _) => {
                 let el = self.apply(t);
                 let id = self.reg.intern(&format!("array<{}>", el.key()));
@@ -824,30 +1071,81 @@ impl Subst<'_> {
             }
             K::Ref { name, args, .. } => {
                 let args: Vec<Ty> = args.iter().map(|a| self.apply(a)).collect();
-                let id = self.reg.intern(&format!("ref {name}<{}>", args.iter().map(Ty::key).collect::<Vec<_>>().join(",")));
-                Ty::new(K::Ref { name: name.clone(), args, id })
+                let id = self.reg.intern(&format!(
+                    "ref {name}<{}>",
+                    args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
+                ));
+                Ty::new(K::Ref {
+                    name: name.clone(),
+                    args,
+                    id,
+                })
             }
-            K::Unresolved { name, args } => Ty::new(K::Unresolved { name: name.clone(), args: args.iter().map(|a| self.apply(a)).collect() }),
+            K::Unresolved { name, args } => Ty::new(K::Unresolved {
+                name: name.clone(),
+                args: args.iter().map(|a| self.apply(a)).collect(),
+            }),
             K::Anon(a) => {
                 let shape = match &a.shape {
-                    Shape::Object(ms) => Shape::Object(ms.iter().map(|m| Member { name: m.name.clone(), optional: m.optional, readonly: m.readonly, kind: self.member(&m.kind) }).collect()),
+                    Shape::Object(ms) => Shape::Object(
+                        ms.iter()
+                            .map(|m| Member {
+                                name: m.name.clone(),
+                                optional: m.optional,
+                                readonly: m.readonly,
+                                kind: self.member(&m.kind),
+                            })
+                            .collect(),
+                    ),
                     Shape::Function(s) => Shape::Function(self.sig(s)),
-                    Shape::Tuple(es) => Shape::Tuple(es.iter().map(|e| TupleElem { label: e.label.clone(), ty: self.apply(&e.ty), optional: e.optional, rest: e.rest }).collect()),
+                    Shape::Tuple(es) => Shape::Tuple(
+                        es.iter()
+                            .map(|e| TupleElem {
+                                label: e.label.clone(),
+                                ty: self.apply(&e.ty),
+                                optional: e.optional,
+                                rest: e.rest,
+                            })
+                            .collect(),
+                    ),
+                    Shape::Intersection(ms) => {
+                        Shape::Intersection(ms.iter().map(|m| self.apply(m)).collect())
+                    }
                     other => clone_shape(other),
                 };
-                Ty::new(K::Anon(Anon { id: self.reg.fresh(), shape, alias: self.alias(&a.alias) }))
+                Ty::new(K::Anon(Anon {
+                    id: self.reg.fresh(),
+                    shape,
+                    alias: self.alias(&a.alias),
+                }))
             }
             _ => ty.clone(),
         }
     }
 
     fn alias(&self, alias: &Option<Rc<Alias>>) -> Option<Rc<Alias>> {
-        alias.as_ref().map(|a| Rc::new(Alias { name: a.name.clone(), args: a.args.iter().map(|t| self.apply(t)).collect(), id: self.reg.fresh() }))
+        alias.as_ref().map(|a| {
+            Rc::new(Alias {
+                name: a.name.clone(),
+                args: a.args.iter().map(|t| self.apply(t)).collect(),
+                id: self.reg.fresh(),
+                declared: a.declared.clone(),
+            })
+        })
     }
 
     fn sig(&self, s: &Sig) -> Sig {
         Sig {
-            params: s.params.iter().map(|p| Param { name: p.name.clone(), optional: p.optional, rest: p.rest, ty: self.apply(&p.ty) }).collect(),
+            params: s
+                .params
+                .iter()
+                .map(|p| Param {
+                    name: p.name.clone(),
+                    optional: p.optional,
+                    rest: p.rest,
+                    ty: self.apply(&p.ty),
+                })
+                .collect(),
             ret: self.apply(&s.ret),
         }
     }
@@ -857,7 +1155,11 @@ impl Subst<'_> {
             MemberKind::Prop(t) => MemberKind::Prop(self.apply(t)),
             MemberKind::Method(s) => MemberKind::Method(self.sig(s)),
             MemberKind::Call(s) => MemberKind::Call(self.sig(s)),
-            MemberKind::Index { param, key, value } => MemberKind::Index { param: param.clone(), key: self.apply(key), value: self.apply(value) },
+            MemberKind::Index { param, key, value } => MemberKind::Index {
+                param: param.clone(),
+                key: self.apply(key),
+                value: self.apply(value),
+            },
         }
     }
 }

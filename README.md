@@ -9,10 +9,20 @@
 stencilrs replaces the slow part of the Stencil compiler: the TypeScript transform layer that turns
 a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is a
 Rust port on [oxc](https://oxc.rs), runs as a Vite 8 plugin, and produces **the same output as
-Stencil v5**: about **22× faster per file** and **2.9× faster** for a production Vite build.
+Stencil v5**: about **22× faster per file** and **2.9× faster** for a production Vite build. From a
+fresh process, with module load counted, a build is about **6.0× faster** and the dev server answers
+about **3.3× sooner** (preview numbers from a shared Linux container until the run on the reference
+Windows machine lands; [details](https://popcorn245.github.io/StencilRS/benchmarks.html#cold-start-a-fresh-process)).
 
 You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
 own runtime (`@stencil/core`) runs them in the browser.
+
+[![Ionic Framework's core built three ways: cold build, dev server start and per-file transform, stencilrs against Stencil 5 and Stencil 4](site/public/img/chart-ionic-headline.png)](https://popcorn245.github.io/StencilRS/benchmarks.html)
+
+Ionic's core, built three ways (lower is better; bars are medians of 10 runs, whiskers min to max; measured on a quiet
+Windows 11 desktop, i9-10850K, 64 GB). Every measure, including the one where stencilrs is slower today (watch rebuild,
+[#79](https://github.com/popcorn245/StencilRS/issues/79)), is a chart on the
+[Benchmarks page](https://popcorn245.github.io/StencilRS/benchmarks.html), drawn from the data files.
 
 **Docs and live components:** [popcorn245.github.io/StencilRS](https://popcorn245.github.io/StencilRS/)
 
@@ -23,8 +33,10 @@ npm install --save-dev @popcorn245/stencilrs vite@8 \
   @stencil/core@5.0.0-beta.25 @stencil/unplugin@5.0.0-beta.25
 ```
 
-Node 22 or newer. Prebuilt binaries ship for Linux x64/arm64 (glibc 2.17+), macOS x64/arm64 and
-Windows x64; no Rust toolchain needed. Other platforms can [build from source](#develop).
+Node 22 or newer. Prebuilt binaries ship for Linux x64/arm64 (glibc 2.17+, and musl, so Alpine
+works), macOS x64/arm64 and Windows x64; no Rust toolchain needed. On any other platform the
+loader fails with an error naming it; you can [build from source](#develop). Install with optional
+dependencies on (no `--omit=optional`), since npm delivers the binary as one.
 
 ## Use it with Vite
 
@@ -53,9 +65,24 @@ Import a component module anywhere and its custom element is registered:
 import './components/my-counter/my-counter';
 ```
 
-The plugin compiles component files with stencilrs and leaves the rest to `@stencil/unplugin`
-(CSS, the runtime, build flags). A file that uses something stencilrs hasn't ported yet falls back
-to Stencil's own compiler, so a project never breaks for want of a feature.
+The plugin compiles component files, their stylesheets and the build flags with stencilrs, and
+loads neither `@stencil/unplugin` nor Stencil's compiler (TypeScript, ~700 ms) unless it has to. A
+file that uses something stencilrs hasn't ported yet falls back to Stencil's own compiler, loaded
+at that point, so a project never breaks for want of a feature
+([what is where](docs/vite-plugin.md)).
+
+### Type declarations for a library
+
+`stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
+`types` output does: an `HTML<Name>Element` interface per component with its props and methods,
+the tag in `HTMLElementTagNameMap`, typed custom events, and JSX `IntrinsicElements`. It is off by
+default. `dts: { fileName: 'types/components.d.ts' }` picks the path inside the output directory.
+`generateTypes([{ file, source }], { outFile })` does the same without Vite.
+
+Types a component imports from its own relative modules are imported again relative to the `.d.ts`,
+so ship declarations at those paths too, or call `generateTypes` with `outFile` next to the sources.
+A type that cannot be resolved (a local type that isn't exported, for example) becomes `any`, with a
+build warning.
 
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).
@@ -68,8 +95,8 @@ and library builds) copy [`examples/starter`](examples/starter/README.md).
 | Same scoped CSS as Stencil v5's `scopeCss`: its spec, every stylesheet here, 5,000 generated | **5,386/5,386**, byte for byte |
 | Same metadata as a full `stencil build`, 136-component library | **136/136** |
 | That library's spec suite (874 tests) | **874/874** with either compiler |
-| Per-file compile, 222 files, source maps on | **108 ms** vs 2.4 s (22×) |
-| Production `vite build` of the library | **1.0 s** vs 3.0 s (2.9×) |
+| Per-file compile, 222 files, source maps on ([chart](site/public/img/chart-uikit-transpile.png)) | **108 ms** vs 2.4 s (22×) |
+| Production `vite build` of the library ([chart](site/public/img/chart-uikit-vite-build.png)) | **1.0 s** vs 3.0 s (2.9×) |
 
 Supported: every Stencil decorator (`@Component`, `@Prop`, `@State`, `@Event`, `@Method`,
 `@Watch`, `@Element`, `@Listen`, `@AttachInternals`, `@PropSerialize`, `@AttrDeserialize`),
@@ -82,9 +109,14 @@ Not yet (these fall back to Stencil, or are tracked as issues):
 
 - in the lazy (`loader-bundle`), `ssr` and spec-page outputs, decorated base classes
   and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
-- `complexType` for types that need the checker: `keyof`, `typeof`, mapped, conditional and
-  generic types, inferred object types, types from packages or tsconfig `paths`, and unions whose
-  member order depends on the whole program. `analyze(..., { complexTypes: true })` reports each
+- `complexType` for types that need the checker: `keyof` of anything but an object literal, a
+  `const` object or an alias of those, `typeof` in an annotation, mapped and conditional types,
+  intersections with a union, `any`, literal or `{}` member (the checker distributes or collapses
+  those), return types inferred from the body, inferred object types, types from packages or
+  tsconfig `paths`, types Stencil generates, and unions whose member order depends on the whole
+  program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
+  never>` intersections, generic methods, `keyof typeof const` and generic aliases and interfaces
+  with defaults work. `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 
 ## How it works
@@ -140,8 +172,8 @@ Releases are automatic. Pull requests are squash-merged and their titles are
 `main`, [semantic-release](https://semantic-release.gitbook.io) reads the commits since the last tag
 and picks the version (`fix:` patch, `feat:` minor, `BREAKING CHANGE:` major; `docs:`, `chore:`
 and the like release nothing). [`release.yml`](.github/workflows/release.yml) then builds every
-platform, installs each from its packed tarball on its own OS, publishes the five
-`@popcorn245/stencilrs-<platform>` packages and `@popcorn245/stencilrs` with provenance, and
+platform, installs each from its packed tarball on its own OS, publishes the
+`@popcorn245/stencilrs-<platform>` packages (seven) and `@popcorn245/stencilrs` with provenance, and
 writes the tag and the GitHub Release. It needs the `NPM_TOKEN` secret.
 
 ## License

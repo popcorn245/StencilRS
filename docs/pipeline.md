@@ -136,9 +136,13 @@ Inside the Pass A transformers, the checker supplies:
 ## What still needs TypeScript
 
 - **Semantic diagnostics**: `tsgo --noEmit` as a parallel subprocess. Works with TS 7.0 today.
-- **`.d.ts` for the `types` target**: `tsgo --emitDeclarationOnly` plus a Rust post-process for alias
-  rewriting, or oxc isolated declarations when the project opts in. Watch TS4094 mixin handling
-  (`run-program.ts:162-181`).
+- **`.d.ts` for the `types` target**: the component declarations (`components.d.ts`: `Components`,
+  `HTML*Element`, `*CustomEvent`, `LocalJSX`) need no checker: `generateTypes` (`vite-types.js`, behind
+  `stencilrs({ dts: true })`) writes them from `analyze()`'s `complexTypeOriginal`, events, methods
+  and docs, taking each type name from the module's own imports. What it does not do is emit
+  declarations for the rest of the source (helper types, exported functions, classes): that stays
+  `tsgo --emitDeclarationOnly` plus a Rust post-process for alias rewriting, or oxc isolated
+  declarations when the project opts in. Watch TS4094 mixin handling (`run-program.ts:162-181`).
 - **Type enrichment and the docs type library**: a checker query API. TS 7.0 has none from JS.
 
 Public contracts typed against TS that need a compatibility story: `@stencil/core/compiler` re-exports `ts`

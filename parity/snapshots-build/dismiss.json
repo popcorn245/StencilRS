@@ -1,0 +1,166 @@
+{
+  "tag": "build-dismiss",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "detail",
+      "complexType": {
+        "signature": "() => Promise<OverlayEventDetail>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        },
+        "return": "Promise<OverlayEventDetail<any>>"
+      }
+    },
+    {
+      "name": "onDidDismiss",
+      "complexType": {
+        "signature": "<T = any>() => Promise<OverlayEventDetail<T>>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<OverlayEventDetail<T>>"
+      }
+    },
+    {
+      "name": "onWillDismiss",
+      "complexType": {
+        "signature": "<T = any>() => Promise<OverlayEventDetail<T>>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<OverlayEventDetail<T>>"
+      }
+    },
+    {
+      "name": "pair",
+      "complexType": {
+        "signature": "<T, U extends T>(first: T, second: U) => Promise<[T, U]>",
+        "parameters": [
+          {
+            "name": "first",
+            "type": "T",
+            "docs": ""
+          },
+          {
+            "name": "second",
+            "type": "U",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          },
+          "U": {
+            "location": "global",
+            "id": "global::U"
+          }
+        },
+        "return": "Promise<[T, U]>"
+      }
+    },
+    {
+      "name": "pickOne",
+      "complexType": {
+        "signature": "<T extends string = \"a\">(value?: T) => Promise<T | undefined>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "T | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<T | undefined>"
+      }
+    },
+    {
+      "name": "push",
+      "complexType": {
+        "signature": "<T extends string>(component: T, params?: Record<string, any>) => Promise<T[]>",
+        "parameters": [
+          {
+            "name": "component",
+            "type": "T",
+            "docs": ""
+          },
+          {
+            "name": "params",
+            "type": "Record<string, any> | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          },
+          "Record": {
+            "location": "global",
+            "id": "global::Record"
+          }
+        },
+        "return": "Promise<T[]>"
+      }
+    }
+  ],
+  "slots": []
+}

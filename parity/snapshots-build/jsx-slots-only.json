@@ -1,0 +1,20 @@
+{
+  "tag": "build-jsx-slots-only",
+  "properties": [],
+  "events": [],
+  "methods": [],
+  "slots": [
+    {
+      "name": "",
+      "docs": "The default slot"
+    },
+    {
+      "name": "a",
+      "docs": ""
+    },
+    {
+      "name": "b",
+      "docs": ""
+    }
+  ]
+}

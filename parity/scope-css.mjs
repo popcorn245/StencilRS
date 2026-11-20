@@ -92,15 +92,27 @@ const rules = (depth) => Array.from({ length: 1 + Math.floor(rand() * 4) }, () =
 for (let i = 0; i < fuzzCount; i++) {
   cases.push({ name: `generated #${i}`, css: rules(0), scopeId: pick(['sc-my-cmp', 'sc-my-cmp', 'sc-my-cmp-ios', 'a', 'sc-a.b', 'sc-x+']), comment: rand() < 0.3 });
 }
+// Noise: strings of the characters the matchers treat specially, in any order.
+const atoms = ['a', 'b', ':', '::', '\\', ' ', ' ', '\n', ' ', ';', '{', '}', '{%BLOCK%', '%BLOCK%', '-shadowcsshost', ':host', '[', ']', '>', '~', '+', ',', '__ph-1__', '__part-0__', '[is=x]', ':nth-child(2)', 'part~="a"'];
+for (let i = 0; i < fuzzCount; i++) {
+  let css = '';
+  for (let n = 1 + Math.floor(rand() * 14); n > 0; n--) css += pick(atoms);
+  cases.push({ name: `noise #${i}`, css, scopeId: pick(['sc-my-cmp', 'sc-a.b']), comment: rand() < 0.3 });
+}
 
 let failed = 0;
 for (const c of cases) {
-  const expected = stencilScopeCss(c.css, c.scopeId, c.comment);
+  let expected;
+  try {
+    expected = stencilScopeCss(c.css, c.scopeId, c.comment);
+  } catch (e) {
+    expected = "<error>";
+  }
   let actual;
   try {
     actual = scopeCss(c.css, c.scopeId, c.comment);
   } catch (e) {
-    actual = `<error: ${e.message}>`;
+    actual = "<error>";
   }
   if (actual !== expected) {
     failed++;

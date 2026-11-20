@@ -1,0 +1,349 @@
+{
+  "tag": "build-extras",
+  "properties": [
+    {
+      "name": "holder",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Holder",
+        "resolved": "Holder<number> | undefined",
+        "references": {
+          "Holder": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Holder",
+            "referenceLocation": "Holder"
+          }
+        }
+      }
+    },
+    {
+      "name": "holders",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Holder[]",
+        "resolved": "Holder<number>[]",
+        "references": {
+          "Holder": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Holder",
+            "referenceLocation": "Holder"
+          }
+        }
+      }
+    },
+    {
+      "name": "keys",
+      "flags": {
+        "attribute": "keys",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Keys",
+        "resolved": "\"a\" | \"b-c\" | \"d\" | undefined",
+        "references": {
+          "Keys": {
+            "location": "global",
+            "id": "global::Keys"
+          }
+        }
+      }
+    },
+    {
+      "name": "numbers",
+      "flags": {
+        "attribute": "numbers",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "LiteralUnion<1 | 2, number>",
+        "resolved": "1 | 2 | number & Record<never, never> | undefined",
+        "references": {
+          "LiteralUnion": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::LiteralUnion",
+            "referenceLocation": "LiteralUnion"
+          }
+        }
+      }
+    },
+    {
+      "name": "pair",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Pair",
+        "resolved": "Pair<string, string> | undefined",
+        "references": {
+          "Pair": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Pair",
+            "referenceLocation": "Pair"
+          }
+        }
+      }
+    },
+    {
+      "name": "pairOf",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Pair<number>",
+        "resolved": "Pair<number, number> | undefined",
+        "references": {
+          "Pair": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Pair",
+            "referenceLocation": "Pair"
+          }
+        }
+      }
+    },
+    {
+      "name": "size",
+      "flags": {
+        "attribute": "size",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "SizeName",
+        "resolved": "\"extra-large\" | \"medium\" | \"small\" | undefined",
+        "references": {
+          "SizeName": {
+            "location": "global",
+            "id": "global::SizeName"
+          }
+        }
+      }
+    },
+    {
+      "name": "sizes",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "SizeName[]",
+        "resolved": "(\"extra-large\" | \"medium\" | \"small\")[]",
+        "references": {
+          "SizeName": {
+            "location": "global",
+            "id": "global::SizeName"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "detail",
+      "complexType": {
+        "original": "OverlayEventDetail[]",
+        "resolved": "OverlayEventDetail<any>[]",
+        "references": {
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        }
+      }
+    },
+    {
+      "name": "sized",
+      "complexType": {
+        "original": "SizeName",
+        "resolved": "\"extra-large\" | \"medium\" | \"small\"",
+        "references": {
+          "SizeName": {
+            "location": "global",
+            "id": "global::SizeName"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "all",
+      "complexType": {
+        "signature": "<T>(...items: T[]) => Promise<T[]>",
+        "parameters": [
+          {
+            "name": "items",
+            "type": "T[]",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<T[]>"
+      }
+    },
+    {
+      "name": "detailed",
+      "complexType": {
+        "signature": "() => Promise<OverlayEventDetail[]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "OverlayEventDetail": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::OverlayEventDetail",
+            "referenceLocation": "OverlayEventDetail"
+          }
+        },
+        "return": "Promise<OverlayEventDetail<any>[]>"
+      }
+    },
+    {
+      "name": "holds",
+      "complexType": {
+        "signature": "<T extends Holder = Holder<number>>(holder: T) => Promise<Pair>",
+        "parameters": [
+          {
+            "name": "holder",
+            "type": "T",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Pair": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Pair",
+            "referenceLocation": "Pair"
+          },
+          "Holder": {
+            "location": "import",
+            "path": "../interface",
+            "id": "src/interface.d.ts::Holder",
+            "referenceLocation": "Holder"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<Pair<string, string>>"
+      }
+    },
+    {
+      "name": "lookup",
+      "complexType": {
+        "signature": "<T extends Box, K = keyof T>(item: T | null, key?: K) => Promise<T | undefined>",
+        "parameters": [
+          {
+            "name": "item",
+            "type": "T | null",
+            "docs": ""
+          },
+          {
+            "name": "key",
+            "type": "K | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          },
+          "Box": {
+            "location": "global",
+            "id": "global::Box"
+          },
+          "K": {
+            "location": "global",
+            "id": "global::K"
+          }
+        },
+        "return": "Promise<T | undefined>"
+      }
+    },
+    {
+      "name": "ordered",
+      "complexType": {
+        "signature": "<T extends \"b\" | \"a\" | undefined = \"b\">(pick?: T) => Promise<string>",
+        "parameters": [
+          {
+            "name": "pick",
+            "type": "T | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          }
+        },
+        "return": "Promise<string>"
+      }
+    }
+  ],
+  "slots": []
+}
