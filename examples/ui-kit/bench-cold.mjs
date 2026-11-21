@@ -42,6 +42,10 @@ const MARK = 'BENCH_COLD_MARK';
 const TIMEOUT_MS = { build: 180_000, dev: 90_000 };
 const WIN = process.platform === 'win32';
 
+// src/assets/svg: 1,339 static icons the dev server serves by URL and no module imports. The watcher opens one fs.watch for
+// each (~0.9 ms on Windows) for nothing. Both compilers' servers get the same ignore, so the comparison stays fair.
+const SVG_ASSETS = join(root, 'src/assets/svg').replaceAll('\\', '/');
+const ignoreSvgAssets = (p) => String(p).replaceAll('\\', '/').startsWith(SVG_ASSETS);
 const loadPlugin = async (compiler) =>
   compiler === 'stencilrs' ? (await import('@popcorn245/stencilrs/vite')).default() : (await import('@stencil/unplugin')).stencilVite();
 
@@ -64,7 +68,7 @@ if (args[0] === '--child') {
     console.log(MARK);
   } else {
     // port 0: the OS picks a free one
-    const server = await createServer({ ...common, server: { port: 0, host: '127.0.0.1' }, optimizeDeps: { noDiscovery: true, include: [] } });
+    const server = await createServer({ ...common, server: { port: 0, host: '127.0.0.1', watch: { ignored: [ignoreSvgAssets] } }, optimizeDeps: { noDiscovery: true, include: [] } });
     await server.listen();
     const res = await fetch(server.resolvedUrls.local[0].replace(/\/$/, '') + componentUrl);
     const body = await res.text();
