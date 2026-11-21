@@ -36,6 +36,10 @@ import { generateTypes } from './vite-types.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
+// The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
+// the same test here keeps the many files that only mention the word off the native call. A superset of the Rust test.
+const BUILD_IMPORT_RE = /\bimport\s*\{[^}]*\bBuild\b[^}]*\}\s*from\s*['"]@stencil\/core/;
+const mentionsBuildImport = (code) => code.includes('Build') && BUILD_IMPORT_RE.test(code);
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 // A decorator that starts a line or statement: not the `@Component` in a doc comment.
 const REAL_DECORATOR_RE = /(?:^|[;{}])[ \t]*@(?:Component|Prop|State|Event|Method|Watch|Listen|Element)\b/m;
@@ -211,6 +215,11 @@ export function stencilrs(options = {}) {
     styleScan.set(key, mentions);
     return mentions;
   };
+  // The project has Sass stylesheets: start loading the Sass package now, off the critical path (see `preloadSass`).
+  const preloadSass = () => {
+    if (!styleScan) return;
+    for (const key of styleScan.keys()) if (/\.s[ac]ss$/.test(key)) return void loadCss?.preloadSass();
+  };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
   const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
@@ -322,11 +331,13 @@ export function stencilrs(options = {}) {
           for (const [k, v] of styleScan ?? []) found.set(k, v); // what the watcher reported meanwhile is newer
           styleScan = found;
           styleScanPending = null;
+          preloadSass();
         });
         styleScanPending.catch(() => {});
         return;
       }
       if (!needsUnplugin) styleScan ??= scanStyleFiles(root);
+      preloadSass();
       if (needsUnplugin || [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
     },
 
@@ -345,7 +356,7 @@ export function stencilrs(options = {}) {
       if (!DECORATORS_RE.test(code)) {
         if (needsUnplugin) return fallbackPlugin.call('transform', this, code, id, transformOpts);
         // As @stencil/unplugin does in a production build: fold the flags in every TypeScript file.
-        if (!foldFlags || transformOpts?.ssr || !code.includes('Build') || handled.has(file) || id.startsWith(BASE_PREFIX)) return null;
+        if (!foldFlags || transformOpts?.ssr || !mentionsBuildImport(code) || handled.has(file) || id.startsWith(BASE_PREFIX)) return null;
         const folded = foldBuildFlags(code, file, { isBrowser: true, isServer: false });
         return folded === null ? null : { code: folded, map: null };
       }
@@ -353,8 +364,8 @@ export function stencilrs(options = {}) {
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
       if (ssr) {
-        if (code.includes('Build')) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
-      } else if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
+        if (mentionsBuildImport(code)) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
+      } else if (!isDev && !specPage && !transformOpts?.ssr && mentionsBuildImport(code)) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
