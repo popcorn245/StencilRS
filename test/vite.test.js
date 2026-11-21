@@ -230,6 +230,8 @@ test('serve pre-bundles the runtime imports the transform injects; Vite merges t
   assert.equal(run({}, 'build').optimizeDeps, undefined);
   assert.equal(run({ componentExport: 'ssr' }, 'serve').optimizeDeps, undefined);
   assert.equal(run({ mode: 'spec-page' }, 'serve').optimizeDeps, undefined);
+  // Discovery off: the user's include is the whole list, and nothing found on a request re-runs the optimizer.
+  assert.equal(run({}, 'serve', { optimizeDeps: { noDiscovery: true, include: [] } }).optimizeDeps, undefined);
 });
 
 test('a watch rebuild does not scan the stylesheets again, but a stylesheet that starts importing a virtual global is still handled', async () => {
