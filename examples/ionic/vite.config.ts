@@ -9,7 +9,7 @@
 //
 // The compiler runs from this folder (process.cwd()) so that Sass is found in this node_modules.
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,26 +51,77 @@ writeFileSync(
 // src/css/**/*.scss to css/**/*.css, what the `stencil build` output keeps in css/: compressed Sass, as `stencil build`'s
 // build:stencil step does (scripts/build.mjs). Vite's own preprocessCSS is not used: its
 // Sass worker pool keeps the process alive after the build.
-// Cached across rebuilds of `vite build --watch`, as the plugin caches component styles: a file is recompiled only when
-// it or a file Sass loaded for it (`loadedUrls`) changed, by content hash.
-const hashOf = (f: string) => createHash('sha1').update(readFileSync(f)).digest('hex');
-const globalCssCache = new Map<string, { hash: string; deps: [string, string][]; code: string }>();
-const compileGlobal = (file: string): string => {
-  const hash = hashOf(file);
-  const hit = globalCssCache.get(file);
-  if (hit && hit.hash === hash && hit.deps.every(([f, h]) => { try { return hashOf(f) === h; } catch { return false; } })) return hit.code;
-  const result = sass.compile(file, { style: 'compressed', silenceDeprecations: [...silenceDeprecations] });
+// Compiled with sass-embedded when the harness has it (all sheets at once, in one compiler process that is disposed when
+// the build ends), else with `sass`, one after another. Cached as the plugin caches component styles (vite-css.js): in
+// memory across rebuilds of `vite build --watch`, and on disk (node_modules/.cache/stencilrs/ionic-global-css); a file is
+// recompiled only when it or a file Sass loaded for it (`loadedUrls`) changed, by content hash.
+const sha = (...parts: string[]) => parts.reduce((h, p) => h.update(p).update('\0'), createHash('sha1')).digest('hex');
+const hashOf = (f: string) => {
+  try {
+    return createHash('sha1').update(readFileSync(f)).digest('hex');
+  } catch {
+    return 'missing';
+  }
+};
+type GlobalEntry = { code: string; deps: [string, string][] };
+const globalCssCache = new Map<string, GlobalEntry>();
+const globalCssDisk = join(here, 'node_modules/.cache/stencilrs/ionic-global-css');
+const sassOptions = { style: 'compressed' as const, silenceDeprecations: [...silenceDeprecations] };
+const sassVersion = sass.info.split('\t')[1] ?? sass.info;
+type AsyncCompiler = { compileAsync(path: string, options: typeof sassOptions): Promise<{ css: string; loadedUrls: URL[] }>; dispose(): Promise<void> };
+let embedded: Promise<AsyncCompiler | null> | undefined;
+const embeddedCompiler = () =>
+  (embedded ??= import('sass-embedded').then(
+    (m) => (m.initAsyncCompiler() as Promise<AsyncCompiler>),
+    () => null, // not installed: `sass`
+  ));
+const disposeCompiler = async () => {
+  const c = embedded;
+  embedded = undefined;
+  await (await c)?.dispose();
+};
+const compileGlobal = async (file: string): Promise<string> => {
+  const content = hashOf(file);
+  const key = sha('global', sassVersion, JSON.stringify(sassOptions), file, content);
+  const current = (e: GlobalEntry) => e.deps.every(([f, h]) => hashOf(f) === h);
+  let hit = globalCssCache.get(key);
+  if (!hit) {
+    try {
+      hit = JSON.parse(readFileSync(join(globalCssDisk, `${key}.json`), 'utf8')) as GlobalEntry;
+    } catch {}
+  }
+  if (hit && current(hit)) {
+    globalCssCache.set(key, hit);
+    return hit.code;
+  }
+  const compiler = await embeddedCompiler();
+  const result = compiler ? await compiler.compileAsync(file, sassOptions) : sass.compile(file, sassOptions);
   const deps = result.loadedUrls.filter((u) => u.protocol === 'file:').map((u) => fileURLToPath(u)).filter((f) => f !== file);
-  globalCssCache.set(file, { hash, deps: deps.map((f) => [f, hashOf(f)]), code: result.css });
+  const entry: GlobalEntry = { code: result.css, deps: deps.map((f) => [f, hashOf(f)]) };
+  globalCssCache.set(key, entry);
+  try {
+    mkdirSync(globalCssDisk, { recursive: true });
+    const tmp = join(globalCssDisk, `${key}.${process.pid}.tmp`);
+    writeFileSync(tmp, JSON.stringify(entry));
+    renameSync(tmp, join(globalCssDisk, `${key}.json`));
+  } catch {}
   return result.css;
 };
 const globalCss = (): Plugin => ({
   name: 'ionic-global-css',
-  generateBundle() {
-    for (const file of walk(join(src, 'css')).filter((f) => f.endsWith('.scss'))) {
-      const code = compileGlobal(file);
-      this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: code + '\n' });
-    }
+  async generateBundle() {
+    const files = walk(join(src, 'css')).filter((f) => f.endsWith('.scss'));
+    const codes = await Promise.all(files.map(compileGlobal));
+    files.forEach((file, i) => {
+      this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: codes[i] + '\n' });
+    });
+  },
+  // The compiler process would keep the process alive: stopped when a build ends, and with the watcher in `--watch`.
+  async closeBundle() {
+    if (!this.meta.watchMode) await disposeCompiler();
+  },
+  async closeWatcher() {
+    await disposeCompiler();
   },
 });
 
