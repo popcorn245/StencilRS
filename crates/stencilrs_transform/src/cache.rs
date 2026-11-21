@@ -93,23 +93,46 @@ struct ModuleEntry {
 }
 
 static MODULES: OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>> = OnceLock::new();
+/// Summaries of modules read as the entry point of a walk (nothing in progress), kept apart from
+/// `MODULES` because they are only valid as such: a module in an import cycle reads differently
+/// when another member of the cycle is being read around it.
+static ROOTS: OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>> = OnceLock::new();
 
-/// The cached summary of the module at `path`, if none of the files it came from has changed.
-pub fn module(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
-    let entry = lock(&MODULES).get(path)?.clone();
+type Modules = OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>>;
+
+fn lookup(map: &'static Modules, path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    let entry = lock(map).get(path)?.clone();
     if fresh(&entry.deps) {
         return Some((entry.exports, entry.deps));
     }
-    lock(&MODULES).remove(path);
+    lock(map).remove(path);
     None
 }
 
-pub fn store_module(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
-    let mut modules = lock(&MODULES);
+fn store(map: &'static Modules, path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    let mut modules = lock(map);
     if modules.len() >= MAX_MODULES {
         modules.clear();
     }
     modules.insert(path.to_owned(), ModuleEntry { exports, deps });
+}
+
+/// The cached summary of the module at `path`, if none of the files it came from has changed.
+pub fn module(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    lookup(&MODULES, path)
+}
+
+pub fn store_module(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    store(&MODULES, path, exports, deps);
+}
+
+/// The cached summary of the module at `path` read as the entry point of a walk.
+pub fn root(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    lookup(&ROOTS, path)
+}
+
+pub fn store_root(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    store(&ROOTS, path, exports, deps);
 }
 
 #[derive(Clone)]

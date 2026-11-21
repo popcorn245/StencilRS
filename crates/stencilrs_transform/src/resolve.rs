@@ -89,6 +89,8 @@ struct Frame {
 
 pub struct Resolver {
     cache: RefCell<FxHashMap<PathBuf, Slot>>,
+    /// Modules read as the entry point of a walk (see `module_at`).
+    roots: RefCell<FxHashMap<PathBuf, Slot>>,
     frames: RefCell<Vec<Frame>>,
     depth: Cell<u8>,
     /// Whether the caller reads `ModuleSummary::defs` (`complexType`). They are numbered by
@@ -112,6 +114,7 @@ impl Resolver {
         let (strict, tsconfig_deps) = strict_null_checks(file);
         Resolver {
             cache: RefCell::default(),
+            roots: RefCell::default(),
             frames: RefCell::default(),
             depth: Cell::new(0),
             defs,
@@ -156,7 +159,65 @@ impl Resolver {
         self.module_at(path)
     }
 
+    /// A module asked for with nothing in progress is read as the entry point of a walk, and
+    /// what that gives depends on the module alone: the other members of an import cycle see
+    /// it in progress, whatever else was read in this call before. That is what makes it safe
+    /// to keep (`cache::root`) although it is not `complete`.
     fn module_at(&self, path: PathBuf) -> Option<Rc<ModuleSummary>> {
+        if self.defs || !self.frames.borrow().is_empty() {
+            return self.read_module(path);
+        }
+        if let Some(slot) = self.roots.borrow().get(&path) {
+            self.merge(&slot.deps, true);
+            return slot.summary.clone();
+        }
+        if let Some((exports, deps)) = cache::root(&path) {
+            let summary = Rc::new(ModuleSummary {
+                file: exports.file,
+                types: exports.types,
+                values: exports.values,
+                defs: FxHashMap::default(),
+            });
+            self.merge(&deps, true);
+            self.roots.borrow_mut().insert(
+                path,
+                Slot {
+                    summary: Some(summary.clone()),
+                    deps,
+                    complete: true,
+                },
+            );
+            return Some(summary);
+        }
+        let summary = self.read_module(path.clone());
+        // Summaries of cycle members made on the way were cut short by this entry point.
+        let mut cache = self.cache.borrow_mut();
+        let deps = cache.get(&path).map(|s| s.deps.clone());
+        cache.retain(|_, slot| slot.complete);
+        drop(cache);
+        if let (Some(s), Some(deps)) = (summary.as_ref(), deps) {
+            cache::store_root(
+                &path,
+                cache::Exports {
+                    file: s.file.clone(),
+                    types: s.types.clone(),
+                    values: s.values.clone(),
+                },
+                deps.clone(),
+            );
+            self.roots.borrow_mut().insert(
+                path,
+                Slot {
+                    summary: summary.clone(),
+                    deps,
+                    complete: true,
+                },
+            );
+        }
+        summary
+    }
+
+    fn read_module(&self, path: PathBuf) -> Option<Rc<ModuleSummary>> {
         if let Some(slot) = self.cache.borrow().get(&path) {
             self.merge(&slot.deps, slot.complete);
             return slot.summary.clone();
@@ -207,11 +268,8 @@ impl Resolver {
             .pop()
             .expect("the frame pushed above");
         self.depth.set(self.depth.get() - 1);
-        // Measured on Ionic (95 components): a module that is part of an import cycle is never `complete`, so it is not stored in
-        // the process-wide cache and every file that reaches it reads and parses it again (1944 of 1997 `summarize` calls over
-        // three passes, for 65 distinct modules; this is most of what `resolve_imports` costs: ~175 ms against ~47 ms without it,
-        // for 95 files). Storing the members of a cycle once its outermost member is done is not safe as is: an in-cycle summary
-        // depends on which member the walk entered at (the others resolve to nothing, or to a partial summary).
+        // A module in an import cycle is not `complete` (its summary depends on which member the walk entered at), so it is not
+        // stored in `cache::module`; `module_at` keeps the ones read as the entry point of a walk in `cache::root` instead.
         let complete = frame.complete && summary.is_some();
         let deps = Arc::new(frame.deps);
         if let Some(s) = summary.as_ref().filter(|_| complete && !self.defs) {
@@ -912,6 +970,28 @@ mod tests {
             b.values.contains_key("A"),
             "b re-exports a, which is read in full when b is the entry point"
         );
+    }
+
+    #[test]
+    fn a_cycle_member_reads_the_same_whichever_module_was_read_before_it() {
+        let dir = folder("cycle-order");
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
+        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
+        let importer = dir.join("c.tsx").to_string_lossy().into_owned();
+        let r = Resolver::new(&importer, false);
+        r.module(&importer, "./a").unwrap();
+        let b = r.module(&importer, "./b").unwrap();
+        assert!(b.values.contains_key("A") && b.values.contains_key("B"));
+        // A later call shares the summary, though b is in a cycle.
+        let again = Resolver::new(&importer, false)
+            .module(&importer, "./b")
+            .unwrap();
+        assert!(Arc::ptr_eq(&b.values, &again.values));
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 'x';", 1);
+        let after = Resolver::new(&importer, false)
+            .module(&importer, "./b")
+            .unwrap();
+        assert_ne!(after.values["A"].original, b.values["A"].original);
     }
 
     fn strict_in(dir: &Path) -> bool {
