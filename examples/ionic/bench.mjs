@@ -7,6 +7,11 @@
 //   stencil4   Ionic stock: `stencil build` on Stencil 4.45 (the reference)
 //   stencil    `stencil build` of the Stencil v5 port (migrated/)
 //   stencilrs  `vite build` of the same migrated/ source with the stencilrs plugin
+//   stencil-standalone  `stencil build` of migrated/ with only the `standalone` output target (stencil.standalone.config.ts:
+//              no lazy loader, no docs-json), the closest Stencil build to stencilrs' one bundle. Cold and warm build only.
+//   stencilrs+check  the stencilrs build with `dts: true` (components.d.ts) run at the same time as `tsgo --noEmit` over
+//              migrated/; the wall is until both have finished and a type error fails the sample. Cold and warm build only.
+//              Also times `tsgo` and `tsc` --noEmit alone (metric typecheck), and the two halves of the concurrent run.
 //
 // Metrics (each: every raw sample, then median / min / max):
 //   coldBuild       fresh process, Stencil's .stencil cache, Vite's cache and stencilrs's Sass disk cache removed first. The Stencil rows
@@ -24,7 +29,7 @@
 //
 // Options:
 //   --runs N            runs per metric (10). Warm builds do one extra, discarded.
-//   --rows a,b          stencil4, stencil, stencilrs (all)
+//   --rows a,b          stencil4, stencil, stencil-standalone, stencilrs, stencilrs+check (all)
 //   --steps a,b         cold, warm, dev, edit, transpile (all); `dev` and `edit` run together
 //   --transpile-passes  passes per transpile process (5): the first is cold, the rest warm
 //   --out <file>        default ../../site/data/benchmarks-ionic.json
@@ -86,6 +91,15 @@ const ROWS = {
     tsx: join(root, 'migrated/src/components/button/button.tsx'),
     loader: '/dist/ionic/ionic.js',
   },
+  'stencil-standalone': {
+    label: 'StencilJS v5: stencil build, standalone output only',
+    cwd: join(root, 'migrated'),
+    tools: join(root, 'node_modules'),
+    cli: '@stencil/cli/bin/stencil.mjs',
+    config: 'stencil.standalone.config.ts',
+    caches: [join(root, 'migrated/.stencil-standalone')],
+    steps: ['cold', 'warm'],
+  },
   stencilrs: {
     label: 'stencilrs: vite build',
     cwd: root,
@@ -95,9 +109,17 @@ const ROWS = {
     tsx: join(root, 'migrated/src/components/button/button.tsx'),
   },
 };
-const ROW_IDS = opt('--rows', 'stencil4,stencil,stencilrs').split(',');
+ROWS['stencilrs+check'] = {
+  ...ROWS.stencilrs,
+  label: 'stencilrs: vite build + components.d.ts + tsgo type check, concurrently',
+  steps: ['cold', 'warm'],
+};
+const ROW_IDS = opt('--rows', 'stencil4,stencil,stencil-standalone,stencilrs,stencilrs+check').split(',');
 for (const r of ROW_IDS) if (!ROWS[r]) throw new Error(`unknown row ${r}`);
-const isStencil = (r) => r !== 'stencilrs';
+const isStencil = (r) => !r.startsWith('stencilrs');
+const isCheck = (r) => r === 'stencilrs+check';
+// rows that take part in a step: the dev, edit and transpile steps are for the three original rows only
+const rowsFor = (step) => ROW_IDS.filter((r) => !ROWS[r].steps || ROWS[r].steps.includes(step));
 
 // -------------------------------------------------------------------------------------------- utilities
 const median = (xs) => {
@@ -331,7 +353,12 @@ const output = {};
 
 // -------------------------------------------------------------------------------------- build commands
 const outDir = (row) => join(BENCH, 'out', row);
+// --skipLibCheck is what Stencil's own checker forces (docs/spike-stencil-build-tsgo.md section 2); without it both tools
+// report one error from Rolldown's .d.mts (lib is es2022 here), which is not the source's.
+const TYPECHECK_ARGS = ['--noEmit', '--skipLibCheck', '-p', 'tsconfig.json'];
 const nodeBin = (row, rel) => realpathSync(join(ROWS[row].tools, rel));
+const tsgoJs = () => nodeBin('stencilrs', '.bin/tsgo');
+const tscJs = () => nodeBin('stencilrs', 'typescript/bin/tsc');
 const cliPath = (row) => nodeBin(row, row === 'stencil4' ? '@stencil/core/bin/stencil' : ROWS[row].cli);
 const viteJs = () => nodeBin('stencilrs', 'vite/bin/vite.js');
 const buildEnv = (row) => ({ IONIC_OUT_DIR: outDir(row), IONIC_STENCIL_CACHE: '1' });
@@ -341,12 +368,27 @@ const clearCaches = (row) => ROWS[row].caches.forEach((c) => rmSync(c, { recursi
 const buildOnce = async (row) => {
   rmSync(join(outDir(row), 'css'), { recursive: true, force: true });
   if (isStencil(row)) {
-    const main = await exec(process.execPath, [cliPath(row), 'build'], { cwd: ROWS[row].cwd, env: buildEnv(row) });
+    const main = await exec(process.execPath, [cliPath(row), 'build', ...(ROWS[row].config ? ['--config', ROWS[row].config] : [])], { cwd: ROWS[row].cwd, env: buildEnv(row) });
     // Ionic's global stylesheets (css/core.css, ...) are a separate Sass run in upstream (`npm run css.sass`).
     const sass = nodeBin(row, 'sass/sass.js');
     const css = await exec(process.execPath, [sass, '--quiet', '--no-source-map', '--style', 'compressed', `${join(ROWS[row].cwd, 'src/css')}:${join(outDir(row), 'css')}`], { cwd: ROWS[row].cwd, env: {} });
-    if (!existsSync(join(outDir(row), 'docs.json'))) throw new Error(`${row}: build wrote no docs.json`);
+    if (row === 'stencil-standalone' ? !existsSync(join(outDir(row), 'components')) : !existsSync(join(outDir(row), 'docs.json'))) throw new Error(`${row}: build wrote no ${row === 'stencil-standalone' ? 'components/' : 'docs.json'}`);
     return { totalMs: main.ms + css.ms, mainMs: main.ms, cssMs: css.ms, peakRssKiB: Math.max(main.peakRssKiB, css.peakRssKiB) };
+  }
+  if (isCheck(row)) {
+    // vite build (with components.d.ts) and the type check of migrated/ start together; the sample ends when both have
+    // ended, and either failing (a type error is exit 1) fails it. Each half's own time is kept beside the wall.
+    const t0 = performance.now();
+    const timed = async (cmd, args, o) => ({ ...(await exec(cmd, args, o)), end: performance.now() - t0 });
+    const [vite, check] = await Promise.allSettled([
+      timed(process.execPath, [viteJs(), 'build', '--config', join(root, 'vite.config.ts')], { cwd: root, env: { ...buildEnv(row), IONIC_DTS: '1' } }),
+      timed(process.execPath, [tsgoJs(), ...TYPECHECK_ARGS], { cwd: join(root, 'migrated'), env: {} }),
+    ]);
+    const totalMs = performance.now() - t0;
+    if (vite.status === 'rejected') throw new Error(`stencilrs+check: the vite build failed: ${vite.reason.message}`);
+    if (check.status === 'rejected') throw new Error(`stencilrs+check: type check failed: ${check.reason.message}`);
+    for (const f of ['ionic.js', 'components.d.ts']) if (!existsSync(join(outDir(row), f))) throw new Error(`stencilrs+check: build wrote no ${f}`);
+    return { totalMs, mainMs: vite.value.ms, cssMs: 0, checkMs: check.value.ms, peakRssKiB: vite.value.peakRssKiB + check.value.peakRssKiB };
   }
   const main = await exec(process.execPath, [viteJs(), 'build', '--config', join(root, 'vite.config.ts')], { cwd: root, env: buildEnv(row) });
   if (!existsSync(join(outDir(row), 'ionic.js'))) throw new Error('stencilrs: build wrote no ionic.js');
@@ -396,21 +438,41 @@ const editButton = (row) => {
 const stepCold = async () => {
   metric('coldBuild', { title: 'Cold build', unit: 'ms', what: 'fresh process, build caches removed first; the Stencil rows include the Sass step for css/' });
   metric('coldBuildCssStep', { title: 'Cold build: of which the separate Sass step for css/', unit: 'ms', what: 'stencil build leaves Ionic\'s global css/ to a second command; stencilrs builds it in the same run (not counted here)' });
+  if (ROW_IDS.some(isCheck)) {
+    metric('coldBuildCheckVite', { title: 'stencilrs+check: of which the vite build (with components.d.ts)', unit: 'ms', what: 'the vite half of the concurrent run, measured while the type check ran beside it' });
+    metric('coldBuildCheckTypecheck', { title: 'stencilrs+check: of which tsgo --noEmit', unit: 'ms', what: 'the type-check half of the concurrent run, measured while the vite build ran beside it' });
+    metric('typecheck', { title: 'Type check alone: tsgo and tsc --noEmit of migrated/', unit: 'ms', what: 'each on its own, nothing else running, --skipLibCheck, as the stencilrs+check row runs it. Rows: tsgo, tsc' });
+  }
   metric('peakRss', { title: 'Peak memory, cold build', unit: 'MiB', what: 'sum of the RSS of the whole process tree (workers included), peak of samples every 250 ms' });
   for (let i = 1; i <= RUNS; i++) {
     log(`cold build, run ${i}/${RUNS}`);
-    for (const row of ROW_IDS) {
+    for (const row of rowsFor('cold')) {
       try {
         clearCaches(row);
         rmSync(outDir(row), { recursive: true, force: true });
         const r = await buildOnce(row);
         sample('coldBuild', row, Math.round(r.totalMs));
         if (isStencil(row)) sample('coldBuildCssStep', row, Math.round(r.cssMs));
+        if (isCheck(row)) {
+          sample('coldBuildCheckVite', row, Math.round(r.mainMs));
+          sample('coldBuildCheckTypecheck', row, Math.round(r.checkMs));
+        }
         if (r.peakRssKiB) sample('peakRss', row, Math.round(r.peakRssKiB / 1024));
         log(`  ${row.padEnd(9)} ${(r.totalMs / 1000).toFixed(1)} s${r.peakRssKiB ? `, ${Math.round(r.peakRssKiB / 1024)} MiB` : ''}`);
         if (i === 1) output[row] = dirStats(outDir(row));
       } catch (e) {
         fail('coldBuild', row, i, e);
+      }
+    }
+    if (ROW_IDS.some(isCheck)) {
+      for (const [name, js] of [['tsgo', tsgoJs()], ['tsc', tscJs()]]) {
+        try {
+          const r = await exec(process.execPath, [js, ...TYPECHECK_ARGS], { cwd: join(root, 'migrated'), env: {} });
+          sample('typecheck', name, Math.round(r.ms));
+          log(`  ${name.padEnd(9)} --noEmit ${(r.ms / 1000).toFixed(2)} s`);
+        } catch (e) {
+          fail('typecheck', name, i, e);
+        }
       }
     }
   }
@@ -419,7 +481,7 @@ const stepCold = async () => {
 const stepWarm = async () => {
   metric('warmBuild', { title: 'Warm rebuild', unit: 'ms', what: 'the same command again, caches kept; the first, discarded build primes them (Stencil\'s .stencil, Vite\'s cache)' });
   log('warm build: priming (discarded)');
-  for (const row of ROW_IDS) {
+  for (const row of rowsFor('warm')) {
     try {
       await buildOnce(row);
     } catch (e) {
@@ -428,7 +490,7 @@ const stepWarm = async () => {
   }
   for (let i = 1; i <= RUNS; i++) {
     log(`warm build, run ${i}/${RUNS}`);
-    for (const row of ROW_IDS) {
+    for (const row of rowsFor('warm')) {
       try {
         const r = await buildOnce(row);
         sample('warmBuild', row, Math.round(r.totalMs));
@@ -450,7 +512,7 @@ const stepDevAndEdit = async () => {
   metric('editDevTransform', { title: 'Edit one component: Vite dev re-transform', unit: 'ms', what: 'stencilrs row only: edit, then a request for the module until it carries the edit' });
   for (let i = 1; i <= RUNS; i++) {
     log(`dev server + edit, run ${i}/${RUNS}`);
-    for (const row of ROW_IDS) {
+    for (const row of rowsFor('dev')) {
       try {
         if (isStencil(row)) await devStencil(row, i);
         else await devVite(row, i);
@@ -559,7 +621,7 @@ const stepTranspile = async () => {
   const passes = {};
   for (let i = 1; i <= RUNS; i++) {
     log(`transpile, run ${i}/${RUNS}`);
-    for (const row of ROW_IDS) {
+    for (const row of rowsFor('transpile')) {
       try {
         const r = await run1(process.execPath, [join(root, 'bench/transpile-worker.mjs'), row, String(PASSES)]);
         const w = JSON.parse(r.split('\n').filter(Boolean).pop());
@@ -595,7 +657,9 @@ const prepare = async () => {
   if (!existsSync(join(root, 'node_modules/.bin'))) sh('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund']);
   if (!existsSync(join(root, 'upstream/core/src'))) sh(process.execPath, ['scripts/fetch.mjs']);
   const migratedConfig = join(root, 'migrated/stencil.config.ts');
-  if (!existsSync(migratedConfig) || !readFileSync(migratedConfig, 'utf8').includes('IONIC_STENCIL_CACHE') || !readFileSync(migratedConfig, 'utf8').includes('devServer')) sh(process.execPath, ['scripts/migrate.mjs']);
+  if (!existsSync(migratedConfig) || !existsSync(join(root, 'migrated/stencil.standalone.config.ts')) || !readFileSync(migratedConfig, 'utf8').includes('IONIC_STENCIL_CACHE') || !readFileSync(migratedConfig, 'utf8').includes('devServer')) sh(process.execPath, ['scripts/migrate.mjs']);
+  // the type-check row needs tsgo; the spike installed it the same way (not in package.json: a preview package)
+  if (ROW_IDS.some(isCheck) && !existsSync(join(root, 'node_modules/.bin/tsgo'))) sh('npm', ['i', '--no-save', '--ignore-scripts', '--no-audit', '--no-fund', '@typescript/native-preview']);
   if (ROW_IDS.includes('stencil4')) {
     const stockConfig = join(root, 'stencil4/stock/stencil.config.ts');
     if (!existsSync(stockConfig) || !readFileSync(stockConfig, 'utf8').includes('devServer')) {
@@ -605,7 +669,8 @@ const prepare = async () => {
   }
   mkdirSync(BENCH, { recursive: true });
   // components.d.ts is generated by the first build; a missing one makes a Stencil dev build rebuild (and fail) at startup
-  for (const row of ROW_IDS.filter(isStencil)) {
+  // (the type check reads it too: src/components.d.ts declares the elements' JSX types)
+  for (const row of ROW_IDS.some(isCheck) && !ROW_IDS.some(isStencil) ? ['stencil'] : ROW_IDS.filter(isStencil)) {
     if (!existsSync(join(ROWS[row].cwd, 'src/components.d.ts'))) {
       log(`generating ${row}'s components.d.ts with one build`);
       await buildOnce(row);
@@ -667,12 +732,14 @@ const fmt = (v, depth = 0) => {
   return JSON.stringify(v);
 };
 
+// the build rows in the order asked for, then any other keys of a metric (typecheck: tsgo, tsc)
+const rowKeys = (samples) => [...ROW_IDS.filter((r) => samples[r]), ...Object.keys(samples).filter((r) => !ROW_IDS.includes(r))];
 const startedAt = new Date();
 const write = (complete) => {
   const metrics = {};
   for (const [id, m] of Object.entries(results)) {
     const { samples, ...rest } = m;
-    metrics[id] = { ...rest, rows: Object.fromEntries(ROW_IDS.filter((r) => samples[r]).map((r) => [r, { ...summary(samples[r]), samples: samples[r] }])) };
+    metrics[id] = { ...rest, rows: Object.fromEntries(rowKeys(samples).map((r) => [r, { ...summary(samples[r]), samples: samples[r] }])) };
   }
   const doc = {
     schema: 1,
@@ -705,7 +772,7 @@ write(true);
 log(`wrote ${OUT}`);
 for (const [id, m] of Object.entries(results)) {
   console.log(`\n${m.title} (${m.unit})`);
-  for (const r of ROW_IDS) if (m.samples[r]) console.log(`  ${r.padEnd(10)} median ${summary(m.samples[r]).median}  min ${summary(m.samples[r]).min}  max ${summary(m.samples[r]).max}  n=${m.samples[r].length}`);
+  for (const r of rowKeys(m.samples)) console.log(`  ${r.padEnd(10)} median ${summary(m.samples[r]).median}  min ${summary(m.samples[r]).min}  max ${summary(m.samples[r]).max}  n=${m.samples[r].length}`);
 }
 if (errors.length) console.log(`\n${errors.length} failed sample(s), see "errors" in the JSON`);
 process.exit(0);
