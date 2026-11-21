@@ -187,8 +187,8 @@ stencilrs `{{ ionic.versions.stencilrs.git.slice(0, 9) }}`.
 <div class="chart-grid">
 <BenchChart :chart="c['ionic-dev-start']" />
 <BenchChart :chart="c['ionic-edit-rebuild']">
-<p><b>stencilrs is slower here:</b> {{ editRs }} against Stencil 5's {{ editS5 }}. Its watch build recompiles every stylesheet on each edit
-(<a href="#where-stencilrs-spends-its-time">why</a>); tracked in <a href="https://github.com/popcorn245/StencilRS/issues/79" target="_blank" rel="noreferrer">issue #79</a>.</p>
+<p><b>stencilrs rebuilds in</b> {{ editRs }} against Stencil 5's {{ editS5 }}. A watch rebuild reuses every component and stylesheet
+that did not change (<a href="#where-stencilrs-spends-its-time">how</a>; <a href="https://github.com/popcorn245/StencilRS/issues/85" target="_blank" rel="noreferrer">issue #85</a>).</p>
 </BenchChart>
 </div>
 
@@ -251,14 +251,16 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
 
 ### Where stencilrs spends its time
 
-One path in the stencilrs row is still slower than Stencil v5, and it is not the compiler:
+The compiler is rarely the long pole; what is left is file system work and bundling:
 
-- **The watch rebuild redoes the whole bundle.** After one line of `button.tsx` changes, `vite build --watch` takes about 1.4 s:
-  less than half of Stencil 4's rebuild (about 3.4 s), but about twice Stencil v5's incremental rebuild (about 0.6 s). Component and
-  global stylesheets are cached since [#81](https://github.com/popcorn245/StencilRS/issues/81) (a stylesheet is compiled again only when it
-  or a file Sass loaded for it changed), so what is left is Rollup rebuilding and writing every output chunk
-  ([#79](https://github.com/popcorn245/StencilRS/issues/79)). The Vite dev server does not have the problem: it transforms only the module
-  that was requested, in about 66 ms.
+- **A watch rebuild only redoes what changed.** After one line of `button.tsx` changes, `vite build --watch` takes {{ editRs }},
+  against Stencil v5's incremental rebuild ({{ editS5 }}) and Stencil 4's full one. It used to take about 1.4 s on this machine:
+  every rebuild compiled all 95 components again, re-hashed each stylesheet's Sass dependencies, and re-read every stylesheet in the project
+  to look for virtual global imports, and each of those file reads costs far more on Windows than on Linux. A component's result is now
+  kept while its source and every file the compile read are unchanged ([#88](https://github.com/popcorn245/StencilRS/pull/88)), and the
+  stylesheet scan runs once per watch session ([#101](https://github.com/popcorn245/StencilRS/pull/101)). What remains is Rolldown
+  relinking and writing the bundle. Minifying it costs about 10 ms. The Vite dev server only transforms the module that was requested,
+  in about {{ format('ms', ionic.metrics.editDevTransform.rows.stencilrs.median) }}.
 - **A cold build is mostly Sass.** `sass` is JavaScript and single-threaded here, and a cold build compiles every stylesheet, so the
   compile of 95 files (about 53 ms, see the per-file table) and the bundling are the smaller part. This is why the whole build is about 8x faster than
   `stencil build`, not as many times faster as the compile step alone.
