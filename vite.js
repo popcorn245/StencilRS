@@ -34,7 +34,7 @@ import { dirname, join, resolve } from 'node:path';
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
-import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, projectUsesVirtualGlobalImports, virtualGlobalAlias } from './vite-fallback.js';
+import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, virtualGlobalAlias } from './vite-fallback.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 // A decorator that starts a line or statement: not the `@Component` in a doc comment.
@@ -172,7 +172,23 @@ export function stencilrs(options = {}) {
   let stamps = new Map();
   const runtimeByDir = new Map();
   let buildStamps = false; // a dev server has no build boundary to reset them at
-  const counts = { stencilrs: 0, stencil: 0 };
+  // Per build (reset in `buildStart`): compiled now, reused from the memo, left to Stencil's compiler.
+  const counts = { stencilrs: 0, reused: 0, stencil: 0 };
+  // The project's stylesheets and whether each mentions a virtual global stylesheet import (see `scanStyleFiles`):
+  // scanned on the first build that needs it, then kept up to date by `watchChange` / the dev server's watcher / `load`.
+  let styleScan = null;
+  const styleKey = (file) => file.split('?')[0].replaceAll('\\', '/');
+  const noteStyle = (file, event) => {
+    if (!styleScan) return false;
+    const key = styleKey(file);
+    if (event === 'delete') {
+      styleScan.delete(key);
+      return false;
+    }
+    const mentions = mentionsVirtualGlobalImport(file);
+    styleScan.set(key, mentions);
+    return mentions;
+  };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
   const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
@@ -246,17 +262,28 @@ export function stencilrs(options = {}) {
       // The Sass compiler process (sass-embedded) ends with the server.
       server.httpServer?.once('close', () => void loadCss?.dispose());
       server.watcher.on('add', async (file) => {
-        if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(file) && mentionsVirtualGlobalImport(file)) await fallbackPlugin.ensure(this);
+        if (!STYLE_FILE_RE.test(file)) return;
+        const mentions = styleScan ? noteStyle(file, 'create') : mentionsVirtualGlobalImport(file);
+        if (!fallbackPlugin.loaded && mentions) await fallbackPlugin.ensure(this);
       });
+      server.watcher.on('change', (file) => void (STYLE_FILE_RE.test(file) && noteStyle(file, 'update')));
+      server.watcher.on('unlink', (file) => void (STYLE_FILE_RE.test(file) && noteStyle(file, 'delete')));
+    },
+
+    // A watch rebuild: a stylesheet that changed is looked at again; the rest of the project is not.
+    watchChange(id, change) {
+      if (STYLE_FILE_RE.test(id)) noteStyle(id, change?.event);
     },
 
     async buildStart() {
       stamps = new Map();
+      counts.stencilrs = counts.reused = counts.stencil = 0;
       if (buildStamps) loadCss?.newBuild();
       runtimeByDir.clear();
       if (fallbackPlugin.loaded) return void (await fallbackPlugin.call('buildStart', this, {}));
       // Stylesheets that import the virtual global stylesheets need them written before the build.
-      if (needsUnplugin || projectUsesVirtualGlobalImports(root)) await fallbackPlugin.ensure(this);
+      if (!needsUnplugin) styleScan ??= scanStyleFiles(root);
+      if (needsUnplugin || [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
     },
 
     async transform(code, id, transformOpts) {
@@ -290,7 +317,7 @@ export function stencilrs(options = {}) {
       const memoKey = `${id}\0${transformOpts?.ssr ? 1 : 0}`;
       const kept = memo.get(memoKey);
       if (kept && kept.source === original && depsFresh(kept.deps, buildStamps ? stamps : new Map())) {
-        counts.stencilrs++;
+        counts.reused++;
         handled.add(file);
         for (const base of kept.baseClasses) {
           baseClasses.add(base);
@@ -385,6 +412,12 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      // A stylesheet the scan has not seen (created since, and not reported by a watcher): it may be the first to import a
+      // virtual global stylesheet, which has to be generated before it is compiled.
+      if (styleScan && !fallbackPlugin.loaded) {
+        const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
+        if (STYLE_FILE_RE.test(sheet) && !styleScan.has(styleKey(sheet)) && noteStyle(sheet, 'create')) await fallbackPlugin.ensure(this);
+      }
       if (serveCss && id.startsWith(STENCIL_CSS_PREFIX)) {
         const { file, tag } = parseStencilCssId(id);
         const css = await loadCss(id, isDev);
@@ -448,8 +481,8 @@ export function stencilrs(options = {}) {
     },
 
     buildEnd() {
-      if (verbose && counts.stencilrs + counts.stencil > 0) {
-        this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s); ${counts.stencil} left to Stencil's compiler`);
+      if (verbose && counts.stencilrs + counts.reused + counts.stencil > 0) {
+        this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s), reused ${counts.reused}; ${counts.stencil} left to Stencil's compiler`);
       }
     },
   };
