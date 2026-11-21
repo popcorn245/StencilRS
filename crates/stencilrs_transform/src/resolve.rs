@@ -207,6 +207,11 @@ impl Resolver {
             .pop()
             .expect("the frame pushed above");
         self.depth.set(self.depth.get() - 1);
+        // Measured on Ionic (95 components): a module that is part of an import cycle is never `complete`, so it is not stored in
+        // the process-wide cache and every file that reaches it reads and parses it again (1944 of 1997 `summarize` calls over
+        // three passes, for 65 distinct modules; this is most of what `resolve_imports` costs: ~175 ms against ~47 ms without it,
+        // for 95 files). Storing the members of a cycle once its outermost member is done is not safe as is: an in-cycle summary
+        // depends on which member the walk entered at (the others resolve to nothing, or to a partial summary).
         let complete = frame.complete && summary.is_some();
         let deps = Arc::new(frame.deps);
         if let Some(s) = summary.as_ref().filter(|_| complete && !self.defs) {

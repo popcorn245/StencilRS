@@ -37,6 +37,26 @@ const packageExists = (name) => {
 };
 
 /**
+ * The installed version of a package as the project (or, with `from`, that package) resolves it; null when unknown.
+ * Found by walking up from the package's entry point: a package's `exports` may hide its package.json from `resolve`.
+ */
+const packageVersion = (name, from) => {
+  try {
+    let req = createRequire(join(process.cwd(), 'noop.js'));
+    if (from) req = createRequire(req.resolve(`${from}/package.json`));
+    for (let dir = dirname(req.resolve(name)); ; dir = dirname(dir)) {
+      try {
+        const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
+        if (pkg.name === name) return pkg.version ?? null;
+      } catch {}
+      if (dirname(dir) === dir) return null;
+    }
+  } catch {
+    return null;
+  }
+};
+
+/**
  * `import(name)`, from the project first: a package linked into node_modules (`file:` dependencies,
  * workspaces) resolves from its real path, where the project's own Sass / PostCSS / lightningcss
  * are out of reach.
@@ -180,10 +200,27 @@ export function createCssPipeline(options = {}) {
     if (!targetsOption) return (targets = null);
     if (typeof targetsOption === 'object' && !Array.isArray(targetsOption)) return (targets = targetsOption);
     const explicit = targetsOption !== STENCIL_CSS_TARGETS;
+    // The resolved targets are a function of the query and of the browserslist, caniuse-lite and lightningcss versions (the
+    // browser data ships in caniuse-lite): kept on disk under that key, so a build does not load browserslist and its data (~40 ms).
+    const versions = [packageVersion('browserslist'), packageVersion('caniuse-lite', 'browserslist'), packageVersion('lightningcss')];
+    const cacheFile = diskCache && versions.every(Boolean) ? join(diskCache, '..', 'targets', `${sha('targets', ...versions, JSON.stringify(targetsOption))}.json`) : null;
+    if (cacheFile) {
+      try {
+        return (targets = JSON.parse(readFileSync(cacheFile, 'utf8')));
+      } catch {}
+    }
     try {
       const mod = await importFromProject('browserslist');
       const browserslist = typeof mod === 'function' ? mod : mod.default;
       targets = mods.lightningcss.browserslistToTargets(browserslist(targetsOption));
+      if (cacheFile) {
+        try {
+          mkdirSync(dirname(cacheFile), { recursive: true });
+          const tmp = `${cacheFile}.${process.pid}.tmp`;
+          writeFileSync(tmp, JSON.stringify(targets));
+          renameSync(tmp, cacheFile);
+        } catch {}
+      }
     } catch (err) {
       if (explicit) throw new Error(`[stencilrs] css.targets needs the browserslist package: ${err.message}`);
       targets = null; // no browserslist here: no targets, as before
@@ -195,6 +232,14 @@ export function createCssPipeline(options = {}) {
   const sassPackage = packageExists('sass-embedded') ? 'sass-embedded' : 'sass';
   const has = { sass: packageExists('sass-embedded') || packageExists('sass'), less: packageExists('less'), postcss: packageExists('postcss') && packageExists('postcss-load-config'), lightningcss: packageExists('lightningcss') };
   const mods = {};
+  // sass-embedded, unless it does not load (its platform binary is missing): then `sass`, if installed. Imported once; the
+  // plugin starts it early (`preloadSass`) so the first stylesheet does not wait for the module to load.
+  let sassModule;
+  const loadSassModule = () =>
+    (sassModule ??= importFromProject(sassPackage).catch((err) => {
+      if (sassPackage === 'sass' || !packageExists('sass')) throw err;
+      return importFromProject('sass');
+    }));
   const need = async (ext) => {
     const names = [];
     const wantsSass = has.sass && (ext === 'scss' || ext === 'sass');
@@ -205,13 +250,8 @@ export function createCssPipeline(options = {}) {
     for (const name of names) {
       if (name in mods) continue;
       try {
-        if (name === 'sass') {
-          // sass-embedded, unless it does not load (its platform binary is missing): then `sass`, if installed.
-          mods.sass = await importFromProject(sassPackage).catch((err) => {
-            if (sassPackage === 'sass' || !packageExists('sass')) throw err;
-            return importFromProject('sass');
-          });
-        } else mods[name] = await importFromProject(name);
+        if (name === 'sass') mods.sass = await loadSassModule();
+        else mods[name] = await importFromProject(name);
       } catch {
         mods[name] = null;
       }
@@ -362,6 +402,13 @@ export function createCssPipeline(options = {}) {
     const out = { code: `export default () => ${JSON.stringify(css)};`, deps };
     if (outKey) outputMemo.set(outKey, out);
     return out;
+  };
+  /**
+   * Starts importing the Sass package without waiting for it (the plugin calls this once the project is known to have Sass
+   * stylesheets). Only the module is loaded: no compiler process starts, nothing keeps the process alive.
+   */
+  load.preloadSass = () => {
+    if (has.sass) loadSassModule().catch(() => {}); // a failure surfaces in `need`, as without the preload
   };
   /** A build starts: what a file hashed to is remembered until the next one. */
   load.newBuild = () => {
