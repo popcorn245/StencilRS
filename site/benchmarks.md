@@ -225,9 +225,6 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
 - **Cold build.** A fresh process per sample with Stencil's `.stencil` cache, Vite's cache and stencilrs's Sass disk cache (`node_modules/.cache/stencilrs`) removed first. Stencil's cache is *on*
   for the whole benchmark (the harness config reads `IONIC_STENCIL_CACHE`), so the cold build pays for writing it and the warm build can use it.
   The Stencil rows include the separate Sass command that produces Ionic's global `css/` (stencilrs builds it inside the same run).
-  *Note:* the cold stencilrs numbers published here were measured before the Sass disk cache was cleared for cold samples, so every
-  sample after the first reused compiled Sass and the cold figure is optimistic. They will be re-run on Popcorn-Tower (together with
-  the sass-embedded change) and replaced.
 - **Warm rebuild.** The same command again with every cache kept; one extra build before the {{ ionic.runs }} measured ones is discarded.
   Neither Stencil version nor Vite has more than a build cache between processes, so this is "run the command again", not an incremental build.
 - **Dev server.** Stencil: `stencil build --dev --watch --serve`. stencilrs: `vite`. Fresh process, caches removed, a free port. The clock
