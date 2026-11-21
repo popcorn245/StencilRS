@@ -9,8 +9,9 @@
 //   stencilrs  `vite build` of the same migrated/ source with the stencilrs plugin
 //   stencil-standalone  `stencil build` of migrated/ with only the `standalone` output target (stencil.standalone.config.ts:
 //              no lazy loader, no docs-json), the closest Stencil build to stencilrs' one bundle. Cold and warm build only.
-//   stencilrs+check  the stencilrs build with `dts: true` (components.d.ts) run at the same time as `tsgo --noEmit` over
-//              migrated/; the wall is until both have finished and a type error fails the sample. Cold and warm build only.
+//   stencilrs+check  the stencilrs build with `dts: true`, then `tsgo --noEmit` over migrated/ against the components.d.ts that
+//              build wrote (copied to src/, Stencil's own set aside), started as soon as that file exists and so beside the rest of
+//              the build; the wall is until both have finished and a type error fails the sample. Cold and warm build only.
 //              Also times `tsgo` and `tsc` --noEmit alone (metric typecheck), and the two halves of the concurrent run.
 //
 // Metrics (each: every raw sample, then median / min / max):
@@ -376,19 +377,52 @@ const buildOnce = async (row) => {
     return { totalMs: main.ms + css.ms, mainMs: main.ms, cssMs: css.ms, peakRssKiB: Math.max(main.peakRssKiB, css.peakRssKiB) };
   }
   if (isCheck(row)) {
-    // vite build (with components.d.ts) and the type check of migrated/ start together; the sample ends when both have
-    // ended, and either failing (a type error is exit 1) fails it. Each half's own time is kept beside the wall.
-    const t0 = performance.now();
-    const timed = async (cmd, args, o) => ({ ...(await exec(cmd, args, o)), end: performance.now() - t0 });
-    const [vite, check] = await Promise.allSettled([
-      timed(process.execPath, [viteJs(), 'build', '--config', join(root, 'vite.config.ts')], { cwd: root, env: { ...buildEnv(row), IONIC_DTS: '1' } }),
-      timed(process.execPath, [tsgoJs(), ...TYPECHECK_ARGS], { cwd: join(root, 'migrated'), env: {} }),
-    ]);
-    const totalMs = performance.now() - t0;
-    if (vite.status === 'rejected') throw new Error(`stencilrs+check: the vite build failed: ${vite.reason.message}`);
-    if (check.status === 'rejected') throw new Error(`stencilrs+check: type check failed: ${check.reason.message}`);
-    for (const f of ['ionic.js', 'components.d.ts']) if (!existsSync(join(outDir(row), f))) throw new Error(`stencilrs+check: build wrote no ${f}`);
-    return { totalMs, mainMs: vite.value.ms, cssMs: 0, checkMs: check.value.ms, peakRssKiB: vite.value.peakRssKiB + check.value.peakRssKiB };
+    // The type check runs against the components.d.ts stencilrs' own build writes (`dts: true`), not Stencil's. That file
+    // exists only once the build has generated its bundle, so tsgo starts then (the plugin's own `typecheck` option waits
+    // for the same moment) and runs beside the rest of the build (writing the bundle and chunks, the css/ files). It cannot overlap
+    // the whole build the way a check of the sources alone could. The file is copied to migrated/src/components.d.ts, where
+    // the sources import it from; Stencil's own copy of that path is set aside first, so a stale one can never be read,
+    // and put back afterwards. The sample ends when both have ended; either failing (a type error is exit 1) fails it.
+    const made = join(outDir(row), 'components.d.ts');
+    const used = join(root, 'migrated/src/components.d.ts');
+    rmSync(made, { force: true });
+    const stencilsOwn = existsSync(used) ? readFileSync(used) : null;
+    const restore = () => {
+      if (stencilsOwn) writeFileSync(used, stencilsOwn);
+      else rmSync(used, { force: true });
+      restorers.delete(restore);
+    };
+    restorers.add(restore);
+    rmSync(used, { force: true });
+    try {
+      const t0 = performance.now();
+      const timed = async (cmd, args, o) => ({ ...(await exec(cmd, args, o)), end: performance.now() - t0 });
+      let viteDone = false;
+      const viteRun = timed(process.execPath, [viteJs(), 'build', '--config', join(root, 'vite.config.ts')], { cwd: root, env: { ...buildEnv(row), IONIC_DTS: '1' } });
+      viteRun.then(() => (viteDone = true), () => (viteDone = true));
+      const checkRun = (async () => {
+        // the file is there and its size has not changed over two polls
+        let last = -1;
+        for (;;) {
+          const size = existsSync(made) ? statSync(made).size : -1;
+          if (size > 0 && size === last) break;
+          if (viteDone && !existsSync(made)) throw new Error('the vite build wrote no components.d.ts');
+          last = size;
+          await sleep(10);
+        }
+        copyFileSync(made, used);
+        const startMs = performance.now() - t0;
+        return { ...(await timed(process.execPath, [tsgoJs(), ...TYPECHECK_ARGS], { cwd: join(root, 'migrated'), env: {} })), startMs };
+      })();
+      const [vite, check] = await Promise.allSettled([viteRun, checkRun]);
+      const totalMs = performance.now() - t0;
+      if (vite.status === 'rejected') throw new Error(`stencilrs+check: the vite build failed: ${vite.reason.message}`);
+      if (check.status === 'rejected') throw new Error(`stencilrs+check: type check failed: ${check.reason.message}`);
+      if (!existsSync(join(outDir(row), 'ionic.js'))) throw new Error('stencilrs+check: build wrote no ionic.js');
+      return { totalMs, mainMs: vite.value.ms, cssMs: 0, checkMs: check.value.ms, checkStartMs: check.value.startMs, peakRssKiB: vite.value.peakRssKiB + check.value.peakRssKiB };
+    } finally {
+      restore();
+    }
   }
   const main = await exec(process.execPath, [viteJs(), 'build', '--config', join(root, 'vite.config.ts')], { cwd: root, env: buildEnv(row) });
   if (!existsSync(join(outDir(row), 'ionic.js'))) throw new Error('stencilrs: build wrote no ionic.js');
@@ -439,9 +473,10 @@ const stepCold = async () => {
   metric('coldBuild', { title: 'Cold build', unit: 'ms', what: 'fresh process, build caches removed first; the Stencil rows include the Sass step for css/' });
   metric('coldBuildCssStep', { title: 'Cold build: of which the separate Sass step for css/', unit: 'ms', what: 'stencil build leaves Ionic\'s global css/ to a second command; stencilrs builds it in the same run (not counted here)' });
   if (ROW_IDS.some(isCheck)) {
-    metric('coldBuildCheckVite', { title: 'stencilrs+check: of which the vite build (with components.d.ts)', unit: 'ms', what: 'the vite half of the concurrent run, measured while the type check ran beside it' });
-    metric('coldBuildCheckTypecheck', { title: 'stencilrs+check: of which tsgo --noEmit', unit: 'ms', what: 'the type-check half of the concurrent run, measured while the vite build ran beside it' });
-    metric('typecheck', { title: 'Type check alone: tsgo and tsc --noEmit of migrated/', unit: 'ms', what: 'each on its own, nothing else running, --skipLibCheck, as the stencilrs+check row runs it. Rows: tsgo, tsc' });
+    metric('coldBuildCheckVite', { title: 'stencilrs+check: of which the vite build (with components.d.ts)', unit: 'ms', what: 'the vite half of the run, measured while the type check ran beside its last part' });
+    metric('coldBuildCheckTypecheck', { title: 'stencilrs+check: of which tsgo --noEmit', unit: 'ms', what: 'the type-check half of the run, started once components.d.ts was written and measured while the vite build finished beside it' });
+    metric('coldBuildCheckStart', { title: 'stencilrs+check: when tsgo could start', unit: 'ms', what: 'time from the start of the build until stencilrs\' own components.d.ts is written and tsgo starts; the check cannot begin earlier because it reads that file' });
+    metric('typecheck', { title: 'Type check alone: tsgo and tsc --noEmit of migrated/', unit: 'ms', what: 'each on its own, nothing else running, --skipLibCheck, as the stencilrs+check row runs it (against the components.d.ts Stencil wrote, as Ionic ships it). Rows: tsgo, tsc' });
   }
   metric('peakRss', { title: 'Peak memory, cold build', unit: 'MiB', what: 'sum of the RSS of the whole process tree (workers included), peak of samples every 250 ms' });
   for (let i = 1; i <= RUNS; i++) {
@@ -456,6 +491,7 @@ const stepCold = async () => {
         if (isCheck(row)) {
           sample('coldBuildCheckVite', row, Math.round(r.mainMs));
           sample('coldBuildCheckTypecheck', row, Math.round(r.checkMs));
+          sample('coldBuildCheckStart', row, Math.round(r.checkStartMs));
         }
         if (r.peakRssKiB) sample('peakRss', row, Math.round(r.peakRssKiB / 1024));
         log(`  ${row.padEnd(9)} ${(r.totalMs / 1000).toFixed(1)} s${r.peakRssKiB ? `, ${Math.round(r.peakRssKiB / 1024)} MiB` : ''}`);
