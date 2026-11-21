@@ -31,3 +31,23 @@ test('cold-start rows exist and the README headline matches them', () => {
   const devText = dev >= 1 ? `about **${x(dev)} sooner**` : `about **${x(1 / dev)} slower**`;
   assert.ok(readme.includes(devText), `cold dev: README should say ${devText}`);
 });
+
+// The Ionic data (site/data/benchmarks-ionic.json) carries the like-for-like rows the Benchmarks page's tables read. The published
+// file may predate them (the rows arrive with the next full run on the benchmark machine): then the page draws nothing for them
+// (`hasLf` in site/benchmarks.md), and this checks only that the page still has its guard; once the rows are there it checks their numbers.
+test('Ionic like-for-like rows: absent is fine, present must be complete', (t) => {
+  const io = JSON.parse(read('../site/data/benchmarks-ionic.json'));
+  const page = read('../site/benchmarks.md');
+  assert.equal(typeof io.preview, 'boolean');
+  assert.ok(page.includes('### What each row does') && page.includes('v-if="hasLf"'), 'the page explains each row, guarded for data without them');
+  const present = ['stencil-standalone', 'stencilrs+check'].filter((r) => io.rows[r]);
+  if (!present.length) return t.diagnostic('the Ionic data has no like-for-like rows yet; the page hides their sections');
+  assert.equal(present.length, 2, 'both like-for-like rows, or neither');
+  for (const row of ['stencil', 'stencil-standalone', 'stencilrs', 'stencilrs+check']) {
+    for (const m of ['coldBuild', 'warmBuild']) {
+      const r = io.metrics[m].rows[row];
+      assert.ok(r && r.n > 0 && r.median > 0 && r.min <= r.median && r.median <= r.max, `${m} ${row}`);
+    }
+  }
+  for (const tool of ['tsgo', 'tsc']) assert.ok(io.metrics.typecheck.rows[tool].median > 0, `typecheck ${tool}`);
+});

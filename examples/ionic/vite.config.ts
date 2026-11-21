@@ -139,7 +139,7 @@ export default defineConfig({
   // The dev server's watcher opens an fs.watch per file under migrated/ (slow on Windows). `stencil build` (npm run
   // build:stencil, in this folder) writes dist/ (types, collection) and .stencil/ there; the plugin's default also
   // skips www/, loader/ and hydrate/. `components/` is Stencil's standalone output folder (never source: that is src/).
-  plugins: [stencilrs({ watchIgnore: ['.stencil', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
+  plugins: [stencilrs({ dts: process.env.IONIC_DTS === '1', watchIgnore: ['.stencil', '.stencil-standalone', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
   build: {
     outDir: process.env.IONIC_OUT_DIR ?? join(here, 'dist-stencilrs'),
     emptyOutDir: true,
