@@ -44,12 +44,24 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 |---|---|---|
 | `targets` | Stencil's `autoprefixCss` targets (`last 2 Chrome versions`, ..., `iOS >= 16`, `> 0.5%`, `not dead`), resolved with `browserslist` when it is installed | the browsers lightningcss prefixes and lowers for: a browserslist query (string or array), lightningcss' targets object, or `false` for none |
 | `minify` | `'whitespace'` in a build, `false` in dev | `true` is lightningcss' own minify (shortens values: `bold` to `700`, `none` to `0 0`, `translate3d(x, 0, 0)` to `translate(x)`); `'whitespace'` keeps the values and drops the whitespace, as `stencil build` ships them |
-| `sass` | `{}` | options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, `logger`, ...); `url` and `syntax` are the plugin's |
+| `sass` | `{}` | options for Sass' `compileString` / `compileStringAsync` (`silenceDeprecations`, `loadPaths`, `quietDeps`, `logger`, ...); `url` and `syntax` are the plugin's. With `sass-embedded`, `functions` and `importers` may be async |
 | `cache` | `true` | a stylesheet's output is reused while it and every file Sass loaded for it (`loadedUrls`) have the same content hash, so `vite build --watch` recompiles only what an edit touched (Ionic: 3.0 s to 0.4 s per rebuild). `true` also keeps the Sass step in `node_modules/.cache/stencilrs/sass`, keyed by file content, Sass version and options, and checked against its dependencies' hashes on every read (a file's hash is remembered by mtime and size, and looked at once per build); `'memory'` skips the disk; `false` turns it off. Sass options with `functions`, `importers` or `logger` bypass the cache. A new file that would shadow an already-resolved import is not noticed until the stylesheet itself changes |
 
 The defaults give the CSS `stencil build` writes with `autoprefixCss: true` (the Ionic check compares 94 to 95 of
 96 stylesheets as identical text). @stencil/unplugin runs lightningcss with no targets and `minify: true`;
 `css: { targets: false, minify: true }` reproduces that byte for byte (the ui-kit's `compare:css` does).
+### Sass: `sass-embedded` (optional, installed by the project)
+
+When `sass-embedded` resolves from the project, component Sass is compiled with it: one compiler process, with up to
+`os.availableParallelism()` stylesheets in flight at once, so Rolldown's concurrent `load` calls overlap (Ionic's 154
+stylesheets, truly cold build: 4.25 s to 2.4 s in the 4-core container, output byte-identical). Without it the plugin uses
+`sass`, synchronously and one at a time, as before; a project with neither compiles no Sass here. If `sass-embedded` is
+installed but does not load (no binary for the platform), `sass` is used. The cache key uses Sass' version, not the package, so
+switching between the two keeps the cache.
+
+The compiler process is stopped when a build ends (`closeBundle`) and when the dev server closes; `vite build --watch` keeps it
+for the next rebuilds and stops it with the watcher.
+
 The plugin never calls Vite's `preprocessCSS`, so Vite's Sass worker pool is not started by component styles.
 
 ## Loading it on purpose

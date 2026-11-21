@@ -237,6 +237,8 @@ export function stencilrs(options = {}) {
     configureServer(server) {
       fallbackPlugin.remember('server', server);
       // A new stylesheet that imports a virtual global stylesheet: @stencil/unplugin generates it.
+      // The Sass compiler process (sass-embedded) ends with the server.
+      server.httpServer?.once('close', () => void loadCss?.dispose());
       server.watcher.on('add', async (file) => {
         if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(file) && mentionsVirtualGlobalImport(file)) await fallbackPlugin.ensure(this);
       });
@@ -427,6 +429,16 @@ export function stencilrs(options = {}) {
       for (const d of diagnostics) this.warn(`[stencilrs] types: ${d.file}: ${d.message}`);
       if (!components.length) return;
       this.emitFile({ type: 'asset', fileName: dtsFileName, source: code });
+    },
+
+    // A build is over: stop the Sass compiler process, which would keep the process alive. `vite build --watch` keeps it
+    // for the next rebuild and stops it with the watcher (`closeWatcher`).
+    async closeBundle() {
+      if (!this.meta?.watchMode) await loadCss?.dispose();
+    },
+
+    async closeWatcher() {
+      await loadCss?.dispose();
     },
 
     buildEnd() {

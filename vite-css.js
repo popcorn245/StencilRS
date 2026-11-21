@@ -14,6 +14,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { availableParallelism } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -175,18 +176,28 @@ export function createCssPipeline(options = {}) {
     }
     return targets;
   };
-  const has = { sass: packageExists('sass'), less: packageExists('less'), postcss: packageExists('postcss') && packageExists('postcss-load-config'), lightningcss: packageExists('lightningcss') };
+  // Sass: `sass-embedded` when the project has it (a native compiler process: stylesheets compile concurrently, off the main
+  // thread), else `sass` (compiles synchronously, one at a time).
+  const sassPackage = packageExists('sass-embedded') ? 'sass-embedded' : 'sass';
+  const has = { sass: packageExists('sass-embedded') || packageExists('sass'), less: packageExists('less'), postcss: packageExists('postcss') && packageExists('postcss-load-config'), lightningcss: packageExists('lightningcss') };
   const mods = {};
   const need = async (ext) => {
     const names = [];
-    if (has.sass && (ext === 'scss' || ext === 'sass')) names.push('sass');
+    const wantsSass = has.sass && (ext === 'scss' || ext === 'sass');
+    if (wantsSass) names.push('sass');
     else if (has.less && ext === 'less') names.push('less');
     if (has.postcss) names.push('postcss', 'postcss-load-config');
     if (has.lightningcss) names.push('lightningcss');
     for (const name of names) {
       if (name in mods) continue;
       try {
-        mods[name] = await importFromProject(name);
+        if (name === 'sass') {
+          // sass-embedded, unless it does not load (its platform binary is missing): then `sass`, if installed.
+          mods.sass = await importFromProject(sassPackage).catch((err) => {
+            if (sassPackage === 'sass' || !packageExists('sass')) throw err;
+            return importFromProject('sass');
+          });
+        } else mods[name] = await importFromProject(name);
       } catch {
         mods[name] = null;
       }
@@ -194,16 +205,43 @@ export function createCssPipeline(options = {}) {
     return names.every((n) => mods[n]);
   };
 
-  const compileSassUncached = (source, filePath, indented) => {
+  // sass-embedded: one compiler process, shared; at most `availableParallelism()` compilations in flight. It is started on
+  // the first compilation and stopped by `dispose` (a running one keeps the process alive); a compilation after `dispose` starts a new one.
+  let asyncCompiler = null;
+  const maxConcurrent = Math.max(1, availableParallelism());
+  let running = 0;
+  const waiting = [];
+  const slot = async () => {
+    if (running >= maxConcurrent) await new Promise((r) => waiting.push(r));
+    else running++;
+  };
+  const release = () => {
+    const next = waiting.shift();
+    if (next) next(); // the slot passes on
+    else running--;
+  };
+  const compileSassUncached = async (source, filePath, indented) => {
     const mainUrl = `file://${filePath}`;
-    const result = mods.sass.compileString(source, { ...sassOptions, url: new URL(mainUrl), syntax: indented ? 'indented' : 'scss' });
+    const opts = { ...sassOptions, url: new URL(mainUrl), syntax: indented ? 'indented' : 'scss' };
+    let result;
+    if (String(mods.sass.info).startsWith('sass-embedded')) {
+      await slot();
+      try {
+        const compiler = await (asyncCompiler ??= mods.sass.initAsyncCompiler());
+        result = await compiler.compileStringAsync(source, opts);
+      } finally {
+        release();
+      }
+    } else {
+      result = mods.sass.compileString(source, opts);
+    }
     const deps = result.loadedUrls.filter((u) => u.protocol === 'file:' && u.href !== mainUrl).map((u) => fileURLToPath(u));
     return { css: result.css, deps };
   };
   let sassVersion;
-  const compileSass = (source, filePath, indented) => {
-    if (!memCache || sassOptionsKey === null) return compileSassUncached(source, filePath, indented);
-    sassVersion ??= String(mods.sass.info);
+  const compileSass = async (source, filePath, indented) => {
+    if (!memCache || sassOptionsKey === null) return await compileSassUncached(source, filePath, indented);
+    sassVersion ??= String(mods.sass.info).split('\t')[1] ?? String(mods.sass.info); // 'dart-sass\t1.99.0\t...' and 'sass-embedded\t1.99.0\t...' alike: the cache does not depend on which package compiled
     // The key: the file, its content, the syntax, Sass' version and options. The entry also holds the hash of each file Sass loaded.
     const key = sha('sass', sassVersion, sassOptionsKey, indented, filePath, source);
     let hit = sassMemo.get(key);
@@ -217,7 +255,7 @@ export function createCssPipeline(options = {}) {
       sassMemo.set(key, hit);
       return { css: hit.css, deps: hit.deps, key: sha(key, ...hit.depHashes.flat()) };
     }
-    const { css, deps } = compileSassUncached(source, filePath, indented);
+    const { css, deps } = await compileSassUncached(source, filePath, indented);
     const entry = { css, deps, depHashes: deps.map((d) => [d, fileHash(d)]) };
     sassMemo.set(key, entry);
     if (diskFile) {
@@ -262,7 +300,7 @@ export function createCssPipeline(options = {}) {
     let css = readFileSync(file, 'utf-8');
     let deps = [];
     let sassKey = null;
-    if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps, key: sassKey } = compileSass(css, file, ext === 'sass'));
+    if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps, key: sassKey } = await compileSass(css, file, ext === 'sass'));
     else if (has.less && ext === 'less') ({ css, deps } = await compileLess(css, file));
     // Everything after Sass is a function of the CSS it produced and of the id: reuse the whole output while both are unchanged.
     const outKey = sassKey ? sha(sassKey, id, isDev) : null;
@@ -314,6 +352,12 @@ export function createCssPipeline(options = {}) {
   /** A build starts: what a file hashed to is remembered until the next one. */
   load.newBuild = () => {
     hashesOfBuild = new Map();
+  };
+  /** Stops the Sass compiler process (sass-embedded). A later compilation starts it again. */
+  load.dispose = async () => {
+    const compiler = asyncCompiler;
+    asyncCompiler = null;
+    if (compiler) await (await compiler).dispose();
   };
   return load;
 }
