@@ -144,7 +144,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the

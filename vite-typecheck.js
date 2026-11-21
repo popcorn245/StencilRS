@@ -1,7 +1,7 @@
 // Opt-in type check for the Vite plugin: `stencilrs({ typecheck: true })` (see README, "Type-check the build").
 //
 // stencilrs transpiles and never type-checks; `stencil build` does. This runs a checker (`tsgo`, the native
-// TypeScript port, preferred; else `tsc`) with `--noEmit` in a child process, so it overlaps the build, and hands
+// TypeScript port, preferred; else `tsc`; `bin: 'tsrs'` / `'tsc-rs'` opt in to the Rust ports) with `--noEmit` in a child process, so it overlaps the build, and hands
 // its verdict to vite.js. The child is spawned without a shell, from the executable itself (not a `.cmd` shim),
 // so killing a stale run really ends it, on Windows too.
 import { spawn as nodeSpawn } from 'node:child_process';
@@ -17,12 +17,16 @@ export function normalizeTypecheck(option) {
   if (!option) return null;
   if (option === true) return {};
   if (typeof option !== 'object') throw new Error(`[stencilrs] typecheck must be a boolean or { tsconfig?, bin? }, got ${JSON.stringify(option)}`);
-  if (option.bin !== undefined && option.bin !== 'tsgo' && option.bin !== 'tsc') {
-    throw new Error(`[stencilrs] typecheck.bin must be 'tsgo' or 'tsc', got ${JSON.stringify(option.bin)}`);
+  if (option.bin !== undefined && !BINS.includes(option.bin)) {
+    throw new Error(`[stencilrs] typecheck.bin must be 'tsgo', 'tsc', 'tsrs' or 'tsc-rs', got ${JSON.stringify(option.bin)}`);
   }
   if (option.tsconfig !== undefined && typeof option.tsconfig !== 'string') throw new Error('[stencilrs] typecheck.tsconfig must be a path string');
   return { ...option };
 }
+
+/** Checkers that ship a native executable, by `bin` name: the package that provides it. */
+const NATIVE = { tsgo: '@typescript/native-preview', tsrs: 'tsrs', 'tsc-rs': 'tsc-rs' };
+const BINS = ['tsgo', 'tsc', 'tsrs', 'tsc-rs'];
 
 const tryResolve = (req, id) => {
   try {
@@ -44,8 +48,9 @@ export async function resolveChecker(root, { tsconfig, bin } = {}) {
   // node_modules would otherwise fail the check.
   const flags = ['--noEmit', '--skipLibCheck', '-p', config, '--pretty', 'false'];
   for (const name of bin ? [bin] : ['tsgo', 'tsc']) {
-    if (name === 'tsgo') {
-      const pkgPath = tryResolve(req, '@typescript/native-preview/package.json');
+    const pkg = NATIVE[name];
+    if (pkg) {
+      const pkgPath = tryResolve(req, `${pkg}/package.json`);
       if (!pkgPath) continue;
       const pkgDir = dirname(pkgPath);
       try {
@@ -53,7 +58,8 @@ export async function resolveChecker(root, { tsconfig, bin } = {}) {
         const { default: getExePath } = await import(pathToFileURL(join(pkgDir, 'lib', 'getExePath.js')).href);
         return { name, command: getExePath(), args: flags, cwd: root };
       } catch {
-        const script = join(pkgDir, JSON.parse(readFileSync(pkgPath, 'utf8')).bin?.tsgo ?? 'bin/tsgo');
+        const bins = JSON.parse(readFileSync(pkgPath, 'utf8')).bin;
+        const script = join(pkgDir, (typeof bins === 'string' ? bins : bins?.[name]) ?? `bin/${name}`);
         return { name, command: process.execPath, args: [script, ...flags], cwd: root };
       }
     }
@@ -62,7 +68,7 @@ export async function resolveChecker(root, { tsconfig, bin } = {}) {
     const script = join(dirname(pkgPath), JSON.parse(readFileSync(pkgPath, 'utf8')).bin?.tsc ?? 'bin/tsc');
     return { name, command: process.execPath, args: [script, ...flags], cwd: root };
   }
-  const pkg = bin === 'tsc' ? 'typescript' : '@typescript/native-preview';
+  const pkg = bin === 'tsc' ? 'typescript' : (NATIVE[bin] ?? '@typescript/native-preview');
   const either = bin ? '' : ' (or typescript)';
   throw new Error(`[stencilrs] typecheck is on, but ${pkg}${either} cannot be resolved from ${root}. Install it: npm i -D ${pkg}`);
 }

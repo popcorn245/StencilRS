@@ -69,7 +69,8 @@ test('typecheck: option validation and the false default', () => {
   assert.equal(normalizeTypecheck(undefined), null);
   assert.deepEqual(normalizeTypecheck(true), {});
   assert.deepEqual(normalizeTypecheck({ tsconfig: 'a.json', bin: 'tsc' }), { tsconfig: 'a.json', bin: 'tsc' });
-  assert.throws(() => normalizeTypecheck({ bin: 'swc' }), /bin must be 'tsgo' or 'tsc'/);
+  assert.throws(() => normalizeTypecheck({ bin: 'swc' }), /bin must be 'tsgo', 'tsc', 'tsrs' or 'tsc-rs'/);
+  for (const bin of ['tsgo', 'tsc', 'tsrs', 'tsc-rs']) assert.deepEqual(normalizeTypecheck({ bin }), { bin });
   assert.throws(() => normalizeTypecheck('yes'), /boolean or/);
   assert.equal(createTypecheck(tmp, false).enabled, false);
 });
@@ -114,6 +115,65 @@ test('typecheck: no checker installed is a clear error', async () => {
   const missing = join(tmp, 'no-tsconfig');
   mkdirSync(missing, { recursive: true });
   await assert.rejects(resolveChecker(missing, {}), /tsconfig\.json not found/);
+});
+
+// A stand-in for an installed checker package: package.json plus lib/getExePath.js, as the real three ship.
+const fakePackage = (root, name, { exe = null, bin = null } = {}) => {
+  const dir = join(root, 'node_modules', ...name.split('/'));
+  mkdirSync(join(dir, 'lib'), { recursive: true });
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ name, version: '0.0.0', ...(bin ? { bin } : {}) }));
+  if (exe) writeFileSync(join(dir, 'lib', 'getExePath.js'), `export default function getExePath() { return ${JSON.stringify(exe)}; }\n`);
+  return dir;
+};
+
+for (const [bin, pkg] of [['tsrs', 'tsrs'], ['tsc-rs', 'tsc-rs'], ['tsgo', '@typescript/native-preview']]) {
+  test(`typecheck: bin '${bin}' spawns the package's native executable directly`, async () => {
+    const root = project(`native-${bin.replace('/', '-')}`, { link: false });
+    fakePackage(root, pkg, { exe: `/opt/${bin}-exe` });
+    const c = await resolveChecker(root, { bin });
+    assert.equal(c.name, bin);
+    assert.equal(c.command, `/opt/${bin}-exe`);
+    assert.deepEqual(c.args, ['--noEmit', '--skipLibCheck', '-p', join(root, 'tsconfig.json'), '--pretty', 'false']);
+    assert.equal(c.cwd, root);
+  });
+
+  test(`typecheck: bin '${bin}' without its package is a clear error`, async () => {
+    const root = project(`missing-${bin.replace('/', '-')}`, { link: false });
+    const escaped = pkg.replace(/[/@]/g, '\\$&');
+    await assert.rejects(resolveChecker(root, { bin }), new RegExp(`${escaped} cannot be resolved from .*npm i -D ${escaped}`));
+  });
+}
+
+test('typecheck: a Rust checker without getExePath.js falls back to its package bin script under node', async () => {
+  const root = project('native-script', { link: false });
+  const dir = fakePackage(root, 'tsrs', { bin: { tsrs: './bin/tsrs' } });
+  const c = await resolveChecker(root, { bin: 'tsrs' });
+  assert.equal(c.command, process.execPath);
+  assert.equal(c.args[0], join(dir, 'bin/tsrs'));
+});
+
+test('typecheck: the Rust checkers are opt-in, never part of the automatic order', async () => {
+  const root = project('auto-order', { link: false });
+  fakePackage(root, 'tsrs', { exe: '/opt/tsrs-exe' });
+  fakePackage(root, 'tsc-rs', { exe: '/opt/tsc-rs-exe' });
+  // tsgo or tsc may happen to resolve from here (a global install); either way, never one of the Rust checkers.
+  const c = await resolveChecker(root, {}).catch((e) => e);
+  if (c instanceof Error) assert.match(c.message, /@typescript\/native-preview \(or typescript\) cannot be resolved/);
+  else assert.ok(['tsgo', 'tsc'].includes(c.name), c.name);
+});
+
+test('typecheck: exit 0 passes, any other exit code fails (tsrs exits 2, tsgo 1)', async () => {
+  for (const [code, ok] of [[0, true], [1, false], [2, false]]) {
+    const { spawn, calls } = fakeSpawn();
+    const check = createTypecheck(tmp, { bin: 'tsrs' }, { spawn, resolve: async () => ({ name: 'tsrs', command: 'tsrs-bin', args: [], cwd: tmp }) });
+    const run = check.start();
+    await ready(calls, 1);
+    calls[0].child.stdout.emit('data', code ? 'src/a.ts(1,1): error TS2322: nope\n' : '');
+    calls[0].child.emit('close', code);
+    const r = await run;
+    assert.deepEqual([r.ok, r.code, r.errors], [ok, code, code ? 1 : 0]);
+    if (!ok) assert.match(formatFailure(r), /typecheck failed \(tsrs, 1 error\)/);
+  }
 });
 
 test('typecheck: tsc is the fallback when tsgo is not installed, and the command runs without a shell', async () => {
