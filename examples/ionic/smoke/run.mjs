@@ -1,7 +1,7 @@
 // Smoke test: load a Stencil build of Ionic core in headless Chrome, in ios and md mode, check that button,
 // card, list, toggle and modal are defined, hydrated and interactive, and save a screenshot of each.
 //
-//   node smoke/run.mjs [stencil|stencil4|stencilrs] [--shots <dir>]
+//   node smoke/run.mjs [stencil|stencil4|stencilrs] [--shots <dir>] [--out <build dir>]
 //
 // stencil = dist-stencil (Stencil v5, default), stencil4 = dist-stencil4 (stock Ionic on Stencil 4),
 // stencilrs = dist-stencilrs (the Vite plugin build: one module, ionic.js, instead of the lazy loader).
@@ -9,15 +9,16 @@
 // console error. The page and the build are served from a throwaway local http server.
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { root } from '../scripts/paths.mjs';
 
 const args = process.argv.slice(2);
 const shotsFlag = args.indexOf('--shots');
-const build = args.find((a, i) => !a.startsWith('--') && (shotsFlag < 0 || i !== shotsFlag + 1)) ?? 'stencil';
+const outFlag = args.indexOf('--out');
+const build = args.find((a, i) => !a.startsWith('--') && (shotsFlag < 0 || i !== shotsFlag + 1) && (outFlag < 0 || i !== outFlag + 1)) ?? 'stencil';
 const shotsDir = shotsFlag >= 0 ? args[shotsFlag + 1] : join(root, 'smoke', 'shots');
-const buildDir = join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs' }[build] ?? 'dist-stencil');
+const buildDir = outFlag >= 0 ? resolve(args[outFlag + 1]) : join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs' }[build] ?? 'dist-stencil');
 const entry = build === 'stencilrs' ? 'ionic.js' : join('dist', 'ionic', 'ionic.esm.js');
 if (!existsSync(join(buildDir, entry))) {
   console.error(`${buildDir} has no build: run npm run build:${build}`);

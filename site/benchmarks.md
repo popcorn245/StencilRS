@@ -38,6 +38,25 @@ const ionicOut = [
   ['Gzip (text files each)', ...order.map((r) => (io.output[r] ? mb(io.output[r].gzipBytes) : 'n/a'))],
   ['JavaScript, raw / gzip', ...order.map((r) => (io.output[r] ? `${mb(io.output[r].js.rawBytes)} / ${mb(io.output[r].js.gzipBytes)}` : 'n/a'))],
 ]
+
+const med = (m, row) => io.metrics[m]?.rows[row]?.median ?? null
+const times = (a, b) => (a == null || b == null ? 'n/a' : `${(a / b).toFixed(1)}×`)
+const lfHead = ['Row', 'Cold build', 'Warm rebuild', 'Cold: Stencil 5 (full) ÷ row', 'Cold: Stencil 5 standalone ÷ row']
+const lfRows = ['stencil', 'stencil-standalone', 'stencilrs', 'stencilrs+check'].filter((r) => io.rows[r]).map((r) => [
+  io.rows[r], cell('coldBuild', r, sec), cell('warmBuild', r, sec),
+  times(med('coldBuild', 'stencil'), med('coldBuild', r)), times(med('coldBuild', 'stencil-standalone'), med('coldBuild', r)),
+])
+const lf = { cold: times(med('coldBuild', 'stencil-standalone'), med('coldBuild', 'stencilrs+check')), warm: times(med('warmBuild', 'stencil-standalone'), med('warmBuild', 'stencilrs+check')), headline: times(med('coldBuild', 'stencil'), med('coldBuild', 'stencilrs')) }
+// The two like-for-like rows come from a later run than the first three; until the data has them, their sections are not drawn.
+const hasLf = !!(io.rows['stencil-standalone'] && io.rows['stencilrs+check'] && io.metrics.coldBuild?.rows['stencil-standalone'] && io.metrics.coldBuild?.rows['stencilrs+check'])
+const checkHead = ['Type check of migrated/', 'Median (min to max)']
+const checkRows = [
+  ['tsgo --noEmit alone', cell('typecheck', 'tsgo', sec)],
+  ['tsc --noEmit alone', cell('typecheck', 'tsc', sec)],
+  ['tsgo inside the stencilrs+check run (from the file being written to the verdict)', cell('coldBuildCheckTypecheck', 'stencilrs+check', sec)],
+  ['when tsgo could start (components.d.ts written), from the build start', cell('coldBuildCheckStart', 'stencilrs+check', sec)],
+  ['the vite build with dts: true inside that run', cell('coldBuildCheckVite', 'stencilrs+check', sec)],
+]
 </script>
 
 # Benchmarks
@@ -163,7 +182,8 @@ the whiskers show min to max.</p></div>
 
 [Ionic Framework](https://github.com/ionic-team/ionic-framework)'s `core` ({{ ionic.versions.ionic.tag }}, 94 components, per-mode Sass) is the
 largest open-source Stencil code base, so it is the fairest single test: the same source built three ways
-(the harness is `examples/ionic`; the migration to Stencil v5 is described in its README).
+(the harness is `examples/ionic`; the migration to Stencil v5 is described in its README). <span v-if="hasLf">Two further rows, a standalone-only Stencil build and
+stencilrs with a type check, are [explained below](#what-each-row-does).</span>
 
 | Row | Build |
 |---|---|
@@ -174,6 +194,47 @@ largest open-source Stencil code base, so it is the fairest single test: the sam
 Bars are the median of {{ ionic.runs }} runs, whiskers the min to max. Every raw sample is in
 `site/data/benchmarks-ionic.json`, measured {{ ionic.startedAt.slice(0, 10) }} on {{ ionic.machine.os }}, Node {{ ionic.machine.node }},
 stencilrs `{{ ionic.versions.stencilrs.git.slice(0, 9) }}`.
+
+<div v-if="hasLf">
+
+### What each row does
+
+The headline rows do not do the same work. Stencil's build type-checks and writes `components.d.ts`, and writes three kinds of output; a plain
+`vite build` does none of the first two and writes one bundle. Two more rows close that gap from each side:
+
+| Row | Type check | `components.d.ts` | Outputs |
+|---|---|---|---|
+| {{ ionic.rows.stencil4 }} | yes | yes | lazy loader (`dist/`), `dist-custom-elements`, `docs.json`, CommonJS and more declarations |
+| {{ ionic.rows.stencil }} | yes | yes | lazy loader (`loader-bundle`), `standalone`, `docs-json` |
+| {{ ionic.rows['stencil-standalone'] }} | yes | yes | `standalone` only: no lazy loader, no `docs-json` |
+| {{ ionic.rows.stencilrs }} | no (Vite strips types) | no | one ES bundle (`ionic.js`) and its chunks |
+| {{ ionic.rows['stencilrs+check'] }} | yes, `tsgo --noEmit` once the build has written `components.d.ts` | yes (`dts: true`) | one ES bundle (`ionic.js`) and its chunks, plus `components.d.ts` |
+
+- **Stencil 5, standalone only** is the same `stencil build` with a second config (`config/stencil.config.standalone.ts`) that keeps only the
+  `standalone` output target: the closest thing Stencil has to one customElements bundle. It still type-checks and writes `components.d.ts`.
+- **stencilrs + type check** runs `vite build` with `dts: true`, then `tsgo --noEmit --skipLibCheck -p tsconfig.json` (`@typescript/native-preview`)
+  over `migrated/` against the `components.d.ts` that build wrote (the stencilrs file, not Stencil's: Ionic type-checks clean against it since
+  [#118](https://github.com/popcorn245/StencilRS/pull/118)). The harness copies the file to `src/components.d.ts`, where the sources import it, after setting Stencil's own copy aside
+  (so a stale one is never read) and restores it afterwards. **How that affects the time:** the file is only complete once the build has generated its bundle, so
+  `tsgo` starts then and overlaps just the end of the build (writing the bundle, chunks and `css/`), not all of it; the wall is until both have finished, so it is roughly
+  the build plus most of the check. A type error fails the sample. (The plugin's own `typecheck` option waits for the same moment.)
+- Every Stencil row also includes the separate Sass command for Ionic's global `css/`; every stencilrs row builds it in the same run.
+
+### Like for like
+
+<DataTable :head="lfHead" :rows="lfRows" highlight="stencilrs" />
+
+The headline ratio, `stencil build` against a plain `vite build`, is **{{ lf.headline }}** cold. With the same work on both sides (type check,
+`components.d.ts`, one bundle) it is **{{ lf.cold }}** cold and **{{ lf.warm }}** warm: standalone-only `stencil build` against stencilrs with the
+type check. The type check is a small part of the difference:
+
+<DataTable :head="checkHead" :rows="checkRows" />
+
+`tsgo` and `tsc` run alone, with nothing else running, against the `components.d.ts` Stencil wrote; the other rows are the pieces of the stencilrs+check run itself.
+Neither the standalone nor the type-check row is measured for the dev server, the watch rebuild,
+the per-file transform or the dev memory: those are the three original rows only.
+
+</div>
 
 ### Builds
 
@@ -240,6 +301,10 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
   On Windows there is no `ps`, so the harness reads each process's working set through CIM instead, and memory comes from a separate
   {{ ionic.runs }}-run pass of the cold-build and dev steps (the sampler adds load, so that pass's timings are not used). A reused process id can
   briefly pull an unrelated process into a sample: one Stencil sample in each of the two Stencil rows reads about 8 GB; the median is unaffected.
+<p v-if="hasLf"><b>Standalone and type-check rows.</b> Cold and warm builds only, measured as the sections above describe: <code>stencil build --config stencil.standalone.config.ts</code> with its own cache folder;
+<code>vite build</code> with <code>dts: true</code> (<code>IONIC_DTS=1</code>), and <code>tsgo --noEmit --skipLibCheck</code> started when the stencilrs <code>components.d.ts</code> is written, the clock stopping when both have exited.
+<code>--skipLibCheck</code> is what Stencil's own checker forces. Peak memory of the check row is the sum of the two processes' peaks.</p>
+
 - Rows are interleaved within each run, so drift on the machine hits all of them.
 
 ### What is not here

@@ -173,3 +173,9 @@ It fetches, migrates and prepares the Stencil 4 toolchain itself if they are mis
 killed with its tree on exit, Ctrl-C or timeout (dev servers included); ports are chosen free; the edited `button.tsx` is restored on every exit path.
 For the benchmark the configs read `IONIC_STENCIL_CACHE=1` (Stencil's cache on, so a warm build can use it); `build:*` leave it off.
 `.bench/` (git-ignored) holds the outputs.
+
+Besides the three builds the bench has two like-for-like rows, for cold and warm builds only: `stencil-standalone` (`stencil build --config stencil.standalone.config.ts`,
+copied from `config/stencil.config.standalone.ts` by `npm run migrate`: only the `standalone` output target) and `stencilrs+check` (`vite build` with
+`IONIC_DTS=1`, i.e. `dts: true`, run beside `tsgo --noEmit` over `migrated/`; it installs `@typescript/native-preview` with `--no-save` when missing, and the
+bench also times `tsgo` and `tsc` alone). Run only those: `npm run bench -- --rows stencil,stencil-standalone,stencilrs,stencilrs+check --runs 3`.
+`node smoke/run.mjs stencilrs --out .bench/out/stencilrs+check` smoke-tests the check row's output.
