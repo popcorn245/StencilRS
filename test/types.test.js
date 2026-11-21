@@ -90,7 +90,9 @@ test('JSX: LocalJSX, IntrinsicElements and the @stencil/core augmentation', () =
   assert.match(dts, /declare namespace LocalJSX \{\n\s+\/\*\* A probe\. \*\/\n\s+interface CornProbe \{/);
   assert.match(dts, /"onCornSelect"\?: \(event: CornProbeCustomEvent<\{ id: string \}>\) => void;/);
   assert.match(dts, /"onFooPicked"\?: \(event: CornProbeCustomEvent<Foo>\) => void;/);
-  assert.match(dts, /interface IntrinsicElements \{\n\s+"corn-probe": CornProbe;/);
+  // Props with an attribute are also accepted as `attr:name` / `prop:name`, as Stencil v5 writes it.
+  assert.match(dts, /interface CornProbeAttributes \{[^}]*"src": string;/);
+  assert.match(dts, /interface IntrinsicElements \{\n\s+"corn-probe": Omit<CornProbe, keyof CornProbeAttributes> & /);
   assert.match(dts, /export \{ LocalJSX as JSX \};/);
   assert.match(dts, /declare module "@stencil\/core" \{[\s\S]*"corn-probe": LocalJSX\.IntrinsicElements\["corn-probe"\] & JSXBase\.HTMLAttributes<HTMLCornProbeElement>;/);
   assert.match(dts, /import \{ HTMLStencilElement, JSXBase \} from "@stencil\/core\/runtime";/);
@@ -260,4 +262,80 @@ export class CornProbe {
 
   await run(false, 'dist3');
   assert.ok(!existsSync(join(root, 'dist3/components.d.ts')), 'off by default');
+});
+
+// Stencil names every generated declaration from the tag (`dashToPascalCase`), not from the class.
+const accordion = `import { Component, Prop, Event, EventEmitter, Method, h } from '@stencil/core';
+
+/**
+ * @virtualProp {"ios" | "md"} mode - The mode determines which platform styles to use.
+ */
+@Component({ tag: 'ion-accordion', encapsulation: { type: 'shadow' } })
+export class Accordion {
+  @Prop() value: string = \`ion-accordion-\${1}\`;
+  @Prop() disabled = false;
+  @Prop() required!: string;
+  @Event() ionChange!: EventEmitter<{ value: string }>;
+  @Method() async getAccordions(): Promise<HTMLIonAccordionElement[]> { return []; }
+  @Method() async focus(): Promise<void> {}
+  /** Opens it. */
+  @Method()
+  async open<T = any>(value?: T, flag = true): Promise<boolean> { return flag; }
+  render() { return <slot />; }
+}
+`;
+
+test('names come from the tag, not from the class (class Accordion, tag ion-accordion)', () => {
+  const file = write('src/ion-accordion.tsx', accordion);
+  const { code } = generateTypes([{ file, source: accordion }], { outFile: join(project, 'dist/parity.d.ts') });
+  assert.match(code, /namespace Components \{[\s\S]*interface IonAccordion \{/);
+  assert.match(code, /interface HTMLIonAccordionElement extends Omit<Components\.IonAccordion, "focus">, HTMLStencilElement/);
+  assert.match(code, /var HTMLIonAccordionElement: \{\n\s+prototype: HTMLIonAccordionElement;/);
+  assert.match(code, /interface HTMLIonAccordionElementEventMap \{\n\s+"ionChange": \{ value: string \};/);
+  assert.match(code, /export interface IonAccordionCustomEvent<T> extends CustomEvent<T> \{\n\s+detail: T;\n\s+target: HTMLIonAccordionElement;/);
+  assert.match(code, /"ion-accordion": HTMLIonAccordionElement;/);
+  assert.match(code, /declare namespace LocalJSX \{[\s\S]*interface IonAccordion \{/);
+  assert.match(code, /"onIonChange"\?: \(event: IonAccordionCustomEvent<\{ value: string \}>\) => void;/);
+  assert.match(code, /"ion-accordion": Omit<IonAccordion, keyof IonAccordionAttributes>.*& OneOf<"required", IonAccordion\["required"\], IonAccordionAttributes\["required"\]>;/);
+  // Nothing is named after the class.
+  assert.doesNotMatch(code, /(?<![A-Za-z])Accordion(?![A-Za-z])/);
+  assert.doesNotMatch(code, /HTMLAccordionElement/);
+});
+
+test('members are sorted by name, a virtual prop is a prop, a method named like an HTMLElement method replaces it', () => {
+  const file = write('src/ion-accordion.tsx', accordion);
+  const { code } = generateTypes([{ file, source: accordion }], { outFile: join(project, 'dist/parity.d.ts') });
+  const components = /namespace Components \{([\s\S]*?)\n\}/.exec(code)[1];
+  const names = [...components.matchAll(/^ {8}"(\w+)"/gm)].map((m) => m[1]);
+  assert.deepEqual(names, [...names].sort());
+  assert.deepEqual(names, ['disabled', 'focus', 'getAccordions', 'mode', 'open', 'required', 'value']);
+  assert.match(components, /"mode"\?: "ios" \| "md";/);
+  assert.match(code, /interface HTMLIonAccordionElement extends Omit<Components\.IonAccordion, "focus">, HTMLStencilElement \{\n\s+"focus": \(\) => Promise<void>;/);
+  // Signatures the analyzer cannot compute are written from the declaration; generics are not types to import.
+  assert.match(components, /"getAccordions": \(\) => Promise<HTMLIonAccordionElement\[\]>;/);
+  assert.match(components, /"open": <T = any>\(value\?: T, flag\?: boolean\) => Promise<boolean>;/);
+});
+
+test('Stencil\'s names type-check in a consumer: HTMLIonAccordionElement, Components.IonAccordion, LocalJSX.IonAccordion', () => {
+  const file = write('src/ion-accordion.tsx', accordion);
+  const { code } = generateTypes([{ file, source: accordion }], { outFile: join(project, 'dist/components.d.ts') });
+  const dtsFile = write('dist/components.d.ts', code);
+  const consumer = write(
+    'consumer/parity.ts',
+    `import type { Components, IonAccordionCustomEvent, JSX } from '../dist/components';
+const el: HTMLIonAccordionElement = document.createElement('ion-accordion');
+const same: Components.IonAccordion = el;
+void same;
+const mode: 'ios' | 'md' | undefined = (null as unknown as JSX.IonAccordion).mode;
+void mode;
+const props: JSX.IonAccordion = { required: 'x', onIonChange: (e: IonAccordionCustomEvent<{ value: string }>) => void e.detail.value };
+void props;
+el.addEventListener('ionChange', (event) => { const v: string = event.detail.value; void v; });
+const tagged: HTMLElementTagNameMap['ion-accordion'] = el;
+void tagged;
+const view: JSX.IntrinsicElements['ion-accordion'] = { required: 'x', mode: 'md', 'attr:disabled': false };
+void view;
+`,
+  );
+  assert.deepEqual(typecheck([dtsFile, consumer]), []);
 });

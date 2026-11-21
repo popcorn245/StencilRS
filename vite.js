@@ -33,6 +33,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
+import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
@@ -141,9 +142,11 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
+ *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
+ *   build; a type error fails the build. In dev and watch it runs in the background and logs. See vite-typecheck.js and the README.
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
  *   Vite build leaves at their defaults (all features on, `hydrateClientSide` too). A client-only library
  *   sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate output target.
@@ -159,7 +162,7 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, ...stencilOptions } = options;
+  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -199,6 +202,32 @@ export function stencilrs(options = {}) {
   // The dev server's scan runs in the background (see `buildStart`): a promise until it is done. Stylesheets wait for it in `load`.
   let styleScanPending = null;
   let isServe = false;
+  // `typecheck`: a child-process `tsgo` / `tsc --noEmit` (vite-typecheck.js). A build starts it at `buildStart` and awaits it
+  // before the bundle is written (after `components.d.ts` is written when `dts` is on); a dev server and a watch rebuild
+  // run it in the background and log the verdict.
+  const checker = createTypecheck(() => root, typecheck);
+  let logger = null;
+  let checkTimer = null;
+  let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
+  let checkDev = false; // dev server or `vite build --watch`: report, never block
+  const reportCheck = (r) => {
+    if (!r || r.killed) return;
+    if (r.ok) logger?.info(`[stencilrs] typecheck passed (${r.name})`, { timestamp: true });
+    else logger?.error(formatFailure(r), { timestamp: true });
+  };
+  const checkInBackground = () => {
+    checker.start().then(reportCheck, (e) => logger?.error(e.message, { timestamp: true }));
+  };
+  /** Await the running check; a type error fails the build with the checker's output. */
+  const awaitCheck = async (ctx) => {
+    const r = await checker.wait();
+    if (r && !r.ok && !r.killed) ctx.error(formatFailure(r));
+  };
+  const stopCheck = () => {
+    clearTimeout(checkTimer);
+    checker.stop();
+  };
+  const TS_FILE_RE = /\.(?:[cm]?tsx?|json)$/;
   const styleKey = (file) => file.split('?')[0].replaceAll('\\', '/');
   const noteStyle = (file, event) => {
     if (!styleScan) return false;
@@ -284,6 +313,8 @@ export function stencilrs(options = {}) {
       buildStamps = config.command === 'build';
       root = config.root;
       isServe = config.command === 'serve';
+      logger = config.logger;
+      deferCheck = !!dtsFileName && !specPage && !ssr && config.build.write !== false;
       tsconfigJsx = readTsconfigJsx(root);
       // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
       useDefineForClassFields = readTsconfigOptions(root).useDefineForClassFields !== false;
@@ -293,7 +324,19 @@ export function stencilrs(options = {}) {
       fallbackPlugin.remember('server', server);
       // A new stylesheet that imports a virtual global stylesheet: @stencil/unplugin generates it.
       // The Sass compiler process (sass-embedded) ends with the server.
-      server.httpServer?.once('close', () => void loadCss?.dispose());
+      server.httpServer?.once('close', () => {
+        stopCheck();
+        void loadCss?.dispose();
+      });
+      if (checker.enabled) {
+        // After a change to a TypeScript file or a tsconfig: once edits settle, and a run still going is killed for the new one.
+        const recheck = (file) => {
+          if (!TS_FILE_RE.test(file) || file.includes('/node_modules/') || file.includes('\\node_modules\\')) return;
+          clearTimeout(checkTimer);
+          checkTimer = setTimeout(checkInBackground, 300);
+        };
+        for (const event of ['add', 'change', 'unlink']) server.watcher.on(event, recheck);
+      }
       server.watcher.on('add', async (file) => {
         if (!STYLE_FILE_RE.test(file)) return;
         const mentions = styleScan ? noteStyle(file, 'create') : mentionsVirtualGlobalImport(file);
@@ -309,6 +352,19 @@ export function stencilrs(options = {}) {
     },
 
     async buildStart() {
+      if (checker.enabled) {
+        checkDev = isServe || !!this.meta?.watchMode;
+        if (checkDev) checkInBackground();
+        // `dts` writes components.d.ts with the output files: the check then starts once they are written (`writeBundle`).
+        else if (!deferCheck) {
+          try {
+            await checker.prepare(); // no checker installed: fail now, with the clear error
+          } catch (e) {
+            this.error(e.message);
+          }
+          void checker.start();
+        }
+      }
       stamps = new Map();
       counts.stencilrs = counts.reused = counts.stencil = 0;
       if (buildStamps) loadCss?.newBuild();
@@ -510,7 +566,9 @@ export function stencilrs(options = {}) {
       return theirs ?? mine;
     },
 
-    generateBundle(outputOptions) {
+    async generateBundle(outputOptions) {
+      // Before the bundle is written: a type error leaves no output. `dts` with a write waits for `writeBundle`.
+      if (checker.enabled && !checkDev && !deferCheck) await awaitCheck(this);
       if (!dtsFileName || !dtsSources.size || specPage || ssr) return;
       const outDir = resolve(root, outputOptions.dir ?? dirname(outputOptions.file ?? 'dist/x.js'));
       const outFile = resolve(outDir, dtsFileName);
@@ -521,13 +579,29 @@ export function stencilrs(options = {}) {
       this.emitFile({ type: 'asset', fileName: dtsFileName, source: code });
     },
 
+    // `components.d.ts` is on disk now: check against it.
+    async writeBundle() {
+      if (!checker.enabled || checkDev || !deferCheck) return;
+      try {
+        await checker.prepare();
+      } catch (e) {
+        this.error(e.message);
+      }
+      void checker.start();
+      await awaitCheck(this);
+    },
+
     // A build is over: stop the Sass compiler process, which would keep the process alive. `vite build --watch` keeps it
     // for the next rebuild and stops it with the watcher (`closeWatcher`).
     async closeBundle() {
-      if (!this.meta?.watchMode) await loadCss?.dispose();
+      if (!this.meta?.watchMode) {
+        stopCheck(); // a build that failed elsewhere must not leave the checker running
+        await loadCss?.dispose();
+      }
     },
 
     async closeWatcher() {
+      stopCheck();
       await loadCss?.dispose();
     },
 
