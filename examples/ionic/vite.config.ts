@@ -10,11 +10,11 @@
 // The compiler runs from this folder (process.cwd()) so that Sass is found in this node_modules.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import stencilrs from '@popcorn245/stencilrs/vite';
-import * as sass from 'sass';
 import { defineConfig, type Plugin } from 'vite';
 
 // Ionic's Sass still uses `@import`, global built-ins and other deprecated features (about 2,000 lines of warnings per build).
@@ -67,7 +67,6 @@ type GlobalEntry = { code: string; deps: [string, string][] };
 const globalCssCache = new Map<string, GlobalEntry>();
 const globalCssDisk = join(here, 'node_modules/.cache/stencilrs/ionic-global-css');
 const sassOptions = { style: 'compressed' as const, silenceDeprecations: [...silenceDeprecations] };
-const sassVersion = sass.info.split('\t')[1] ?? sass.info;
 type AsyncCompiler = { compileAsync(path: string, options: typeof sassOptions): Promise<{ css: string; loadedUrls: URL[] }>; dispose(): Promise<void> };
 let embedded: Promise<AsyncCompiler | null> | undefined;
 const embeddedCompiler = () =>
@@ -80,9 +79,20 @@ const disposeCompiler = async () => {
   embedded = undefined;
   await (await c)?.dispose();
 };
+// The Sass version for the cache key, from the package.json of the package that compiles: `import * as sass` would load
+// Sass (about 100 ms) on every config load, dev server included. `sass` is imported only when sass-embedded is missing.
+const requireFrom = createRequire(import.meta.url);
+const sassVersion = (pkg: string): string => {
+  try {
+    return (JSON.parse(readFileSync(requireFrom.resolve(`${pkg}/package.json`), 'utf8')) as { version: string }).version;
+  } catch {
+    return 'unknown';
+  }
+};
 const compileGlobal = async (file: string): Promise<string> => {
   const content = hashOf(file);
-  const key = sha('global', sassVersion, JSON.stringify(sassOptions), file, content);
+  const compiler = await embeddedCompiler();
+  const key = sha('global', sassVersion(compiler ? 'sass-embedded' : 'sass'), JSON.stringify(sassOptions), file, content);
   const current = (e: GlobalEntry) => e.deps.every(([f, h]) => hashOf(f) === h);
   let hit = globalCssCache.get(key);
   if (!hit) {
@@ -94,8 +104,7 @@ const compileGlobal = async (file: string): Promise<string> => {
     globalCssCache.set(key, hit);
     return hit.code;
   }
-  const compiler = await embeddedCompiler();
-  const result = compiler ? await compiler.compileAsync(file, sassOptions) : sass.compile(file, sassOptions);
+  const result = compiler ? await compiler.compileAsync(file, sassOptions) : (await import('sass')).compile(file, sassOptions);
   const deps = result.loadedUrls.filter((u) => u.protocol === 'file:').map((u) => fileURLToPath(u)).filter((f) => f !== file);
   const entry: GlobalEntry = { code: result.css, deps: deps.map((f) => [f, hashOf(f)]) };
   globalCssCache.set(key, entry);
@@ -107,23 +116,32 @@ const compileGlobal = async (file: string): Promise<string> => {
   } catch {}
   return result.css;
 };
-const globalCss = (): Plugin => ({
-  name: 'ionic-global-css',
-  async generateBundle() {
-    const files = walk(join(src, 'css')).filter((f) => f.endsWith('.scss'));
-    const codes = await Promise.all(files.map(compileGlobal));
-    files.forEach((file, i) => {
-      this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: codes[i] + '\n' });
-    });
-  },
-  // The compiler process would keep the process alive: stopped when a build ends, and with the watcher in `--watch`.
-  async closeBundle() {
-    if (!this.meta.watchMode) await disposeCompiler();
-  },
-  async closeWatcher() {
-    await disposeCompiler();
-  },
-});
+const globalCss = (): Plugin => {
+  // Started at buildStart, so Sass runs beside the bundle rather than after it; awaited where css/ is emitted.
+  let pending: Promise<{ files: string[]; codes: string[] }> | undefined;
+  return {
+    name: 'ionic-global-css',
+    apply: 'build', // the dev server never emitted css/, and must not start Sass
+    buildStart() {
+      const files = walk(join(src, 'css')).filter((f) => f.endsWith('.scss'));
+      pending = Promise.all(files.map(compileGlobal)).then((codes) => ({ files, codes }));
+      pending.catch(() => {}); // reported where it is awaited: a build that fails first must not leave it unhandled
+    },
+    async generateBundle() {
+      const { files, codes } = await pending!;
+      files.forEach((file, i) => {
+        this.emitFile({ type: 'asset', fileName: `css/${relative(join(src, 'css'), file).replace(/\.scss$/, '.css')}`, source: codes[i] + '\n' });
+      });
+    },
+    // The compiler process would keep the process alive: stopped when a build ends, and with the watcher in `--watch`.
+    async closeBundle() {
+      if (!this.meta.watchMode) await disposeCompiler();
+    },
+    async closeWatcher() {
+      await disposeCompiler();
+    },
+  };
+};
 
 export default defineConfig({
   root: join(here, 'migrated'),
