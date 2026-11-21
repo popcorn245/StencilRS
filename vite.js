@@ -34,7 +34,7 @@ import { dirname, join, resolve } from 'node:path';
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
-import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, virtualGlobalAlias } from './vite-fallback.js';
+import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 // A decorator that starts a line or statement: not the `@Component` in a doc comment.
@@ -46,10 +46,10 @@ const BASE_PREFIX = '\0stencilrs-base:';
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
-// `loader`, `hydrate`, `.stencil`). Never source: Stencil's source lives in `src/`. The dev server's file
+// `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
 // watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
 // that has been built holds thousands of them: skipped, see `watchIgnore`.
-const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate'];
+const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate', '.vitest'];
 
 /**
  * A `server.watch.ignored` matcher for the given folders directly under `root`: true for the folder and
@@ -196,6 +196,9 @@ export function stencilrs(options = {}) {
   // The project's stylesheets and whether each mentions a virtual global stylesheet import (see `scanStyleFiles`):
   // scanned on the first build that needs it, then kept up to date by `watchChange` / the dev server's watcher / `load`.
   let styleScan = null;
+  // The dev server's scan runs in the background (see `buildStart`): a promise until it is done. Stylesheets wait for it in `load`.
+  let styleScanPending = null;
+  let isServe = false;
   const styleKey = (file) => file.split('?')[0].replaceAll('\\', '/');
   const noteStyle = (file, event) => {
     if (!styleScan) return false;
@@ -277,6 +280,7 @@ export function stencilrs(options = {}) {
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
       root = config.root;
+      isServe = config.command === 'serve';
       tsconfigJsx = readTsconfigJsx(root);
       // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
       useDefineForClassFields = readTsconfigOptions(root).useDefineForClassFields !== false;
@@ -308,6 +312,17 @@ export function stencilrs(options = {}) {
       runtimeByDir.clear();
       if (fallbackPlugin.loaded) return void (await fallbackPlugin.call('buildStart', this, {}));
       // Stylesheets that import the virtual global stylesheets need them written before the build.
+      if (!needsUnplugin && !styleScan && !styleScanPending && isServe) {
+        // Dev: the first response does not wait for every stylesheet to be read. A stylesheet that is requested before the scan
+        // is done waits for it (`load`), so a virtual global stylesheet import is still generated before it is needed.
+        styleScanPending = scanStyleFilesAsync(root).then((found) => {
+          for (const [k, v] of styleScan ?? []) found.set(k, v); // what the watcher reported meanwhile is newer
+          styleScan = found;
+          styleScanPending = null;
+        });
+        styleScanPending.catch(() => {});
+        return;
+      }
       if (!needsUnplugin) styleScan ??= scanStyleFiles(root);
       if (needsUnplugin || [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
     },
@@ -440,8 +455,12 @@ export function stencilrs(options = {}) {
     async load(id) {
       // A stylesheet the scan has not seen (created since, and not reported by a watcher): it may be the first to import a
       // virtual global stylesheet, which has to be generated before it is compiled.
+      const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
+      if (styleScanPending && !fallbackPlugin.loaded && STYLE_FILE_RE.test(sheet)) {
+        await styleScanPending;
+        if (!fallbackPlugin.loaded && [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
+      }
       if (styleScan && !fallbackPlugin.loaded) {
-        const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
         if (STYLE_FILE_RE.test(sheet) && !styleScan.has(styleKey(sheet)) && noteStyle(sheet, 'create')) await fallbackPlugin.ensure(this);
       }
       if (serveCss && id.startsWith(STENCIL_CSS_PREFIX)) {
@@ -454,6 +473,9 @@ export function stencilrs(options = {}) {
         }
         this.addWatchFile(file);
         if (tag) trackCss(file, tag, id);
+        // Vite's own `addWatchFile` only hands files outside the root to the watcher (the root is watched already, minus the
+        // ignored folders), so a dependency inside the root costs no `fs.watch`; it is still registered, because Vite links it to
+        // this module for HMR and invalidation.
         for (const dep of css.deps) {
           this.addWatchFile(dep);
           if (tag) trackCss(dep, tag, id);
