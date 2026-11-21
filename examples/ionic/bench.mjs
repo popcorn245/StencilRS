@@ -9,7 +9,7 @@
 //   stencilrs  `vite build` of the same migrated/ source with the stencilrs plugin
 //
 // Metrics (each: every raw sample, then median / min / max):
-//   coldBuild       fresh process, Stencil's .stencil cache and Vite's cache removed first. The Stencil rows
+//   coldBuild       fresh process, Stencil's .stencil cache, Vite's cache and stencilrs's Sass disk cache removed first. The Stencil rows
 //                   include the separate Sass step Ionic's global css/ needs (stencilrs does it in the build).
 //   warmBuild       the same command again with every cache kept; one extra build first, discarded
 //   devStart        dev server started (Stencil: `build --dev --watch --serve`; stencilrs: `vite`) until a page
@@ -90,7 +90,8 @@ const ROWS = {
     label: 'stencilrs: vite build',
     cwd: root,
     tools: join(root, 'node_modules'),
-    caches: [join(root, 'migrated/node_modules/.vite'), join(root, 'node_modules/.vite')],
+    // .cache/stencilrs is vite-css.js's Sass disk cache (nearest node_modules to cwd); cold rows must not reuse it
+    caches: [join(root, 'migrated/node_modules/.vite'), join(root, 'node_modules/.vite'), join(root, 'node_modules/.cache/stencilrs'), join(root, 'migrated/node_modules/.cache/stencilrs')],
     tsx: join(root, 'migrated/src/components/button/button.tsx'),
   },
 };
