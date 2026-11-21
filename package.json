@@ -45,6 +45,7 @@
     "vite-css.js",
     "vite-types.js",
     "vite-fallback.js",
+    "vite-typecheck.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

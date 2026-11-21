@@ -84,6 +84,31 @@ so ship declarations at those paths too, or call `generateTypes` with `outFile` 
 A type that cannot be resolved (a local type that isn't exported, for example) becomes `any`, with a
 build warning.
 
+### Type-check the build
+
+stencilrs transpiles and never type-checks; `stencil build` does. `stencilrs({ typecheck: true })` runs
+the checker for you, off by default (nothing changes without it):
+
+```ts
+stencilrs({ typecheck: true });
+stencilrs({ typecheck: { tsconfig: 'tsconfig.app.json', bin: 'tsc' } });
+```
+
+- It runs `tsgo` (`@typescript/native-preview`, about 5x faster than `tsc`) when that package resolves from
+  the project root, else `tsc` from `typescript`, else the build stops with a message that says what to
+  install. `bin: 'tsgo' | 'tsc'` forces one. `tsconfig` (default `tsconfig.json`, relative to the root)
+  picks the config. It runs `--noEmit --skipLibCheck` (what `stencil build` forces), in a child process
+  started without a shell.
+- `vite build`: the checker starts at `buildStart`, so it overlaps the build, and is awaited before the
+  bundle is written. A type error fails the build with the checker's diagnostics and writes no output.
+- `vite` (dev) and `vite build --watch`: it runs once at start and again after a change to a
+  TypeScript or JSON file (debounced, and a run still going is killed). The result goes to Vite's logger;
+  a response is never held back for it, and a failed check does not stop the server.
+- With `dts` on and a written build, the check starts after the output files, `components.d.ts`
+  included, are written, so it sees the fresh declarations when your tsconfig includes them (this gives
+  up the overlap with the write step; type errors then leave the output on disk). Without `dts`, keep a
+  checked-in `src/components.d.ts` as Stencil projects do.
+
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).
 
