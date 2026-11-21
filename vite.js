@@ -43,6 +43,8 @@ const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
+const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
+const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
@@ -332,6 +334,11 @@ export function stencilrs(options = {}) {
 
     async transform(code, id, transformOpts) {
       const file = id.split('?')[0].replaceAll('\\', '/');
+      // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
+      // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).
+      if (code.includes(STENCIL_BASE_URL) && !ssr && !transformOpts?.ssr && STENCIL_DIST_RE.test(file)) {
+        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`), map: null };
+      }
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
       // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
