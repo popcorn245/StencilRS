@@ -26,5 +26,8 @@ test('cold-start rows exist and the README headline matches them', () => {
   const b = data.coldBuild.rows;
   const d = data.coldDev.rows;
   assert.ok(readme.includes(`about **${x(b[1].wallMedianMs / b[0].wallMedianMs)} faster**`), 'cold build speedup');
-  assert.ok(readme.includes(`about **${x(d[1].firstResponseMedianMs / d[0].firstResponseMedianMs)} sooner**`), 'cold dev speedup');
+  // stencilrs first (d[0]), Stencil v5 second: "N× sooner" when stencilrs answers first, "N× slower" when it does not.
+  const dev = d[1].firstResponseMedianMs / d[0].firstResponseMedianMs;
+  const devText = dev >= 1 ? `about **${x(dev)} sooner**` : `about **${x(1 / dev)} slower**`;
+  assert.ok(readme.includes(devText), `cold dev: README should say ${devText}`);
 });

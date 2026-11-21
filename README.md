@@ -10,9 +10,10 @@ stencilrs replaces the slow part of the Stencil compiler: the TypeScript transfo
 a component file (`@Component`, `@Prop`, `@State`, JSX…) into a working custom element. It is a
 Rust port on [oxc](https://oxc.rs), runs as a Vite 8 plugin, and produces **the same output as
 Stencil v5**: about **22× faster per file** and **2.9× faster** for a production Vite build. From a
-fresh process, with module load counted, a build is about **6.0× faster** and the dev server answers
-about **3.3× sooner** (preview numbers from a shared Linux container until the run on the reference
-Windows machine lands; [details](https://popcorn245.github.io/StencilRS/benchmarks.html#cold-start-a-fresh-process)).
+fresh process, with module load counted, a build is about **4.6× faster**; the dev server's first
+answer is still about **2.5× slower** than Stencil v5's on Windows
+([#102](https://github.com/popcorn245/StencilRS/issues/102); measured on the reference Windows machine,
+[details](https://popcorn245.github.io/StencilRS/benchmarks.html#cold-start-a-fresh-process)).
 
 You write components exactly as you would for Stencil v5. stencilrs compiles them, and Stencil's
 own runtime (`@stencil/core`) runs them in the browser.
