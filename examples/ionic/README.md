@@ -124,7 +124,7 @@ component upgrades the elements already in the page, and they read their mode at
 `ionicons/components/ion-icon.js`, and registers the 95 files that declare a component (the 94 tags of `docs.json` and the internal
 `ion-select-popover`); `css/`, Ionic's global stylesheets (compressed Sass, byte for byte what
 `build:stencil` writes). Sass for the `.ios.scss` / `.md.scss` mode styles is the plugin's own pipeline. The build
-takes about 5 s (`stencil build`: about 30 s) and the log says `compiled 95 component file(s); 0 left to
+takes about 5 s (`stencil build`: about 30 s) and the log says `compiled 95 component file(s), reused 0; 0 left to
 Stencil's compiler`.
 
 `npm run check` (`check/run.mjs`) needs both builds and a Chromium (`CHROME_PATH`, or `npx playwright install

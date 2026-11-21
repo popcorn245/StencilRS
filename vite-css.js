@@ -110,6 +110,20 @@ const hashNow = (f) => {
   return hash;
 };
 
+// A stylesheet's text, by its stat: read again only when (mtime, size) changed or it was modified within the last 2 s.
+const sourceByStamp = new Map();
+const readSource = (f) => {
+  const st = statSync(f, { bigint: true, throwIfNoEntry: false });
+  if (!st?.isFile()) return readFileSync(f, 'utf-8');
+  const stamp = `${st.mtimeNs}:${st.size}`;
+  const known = sourceByStamp.get(f);
+  if (known?.stamp === stamp) return known.text;
+  const text = readFileSync(f, 'utf-8');
+  if (Date.now() - Number(st.mtimeNs / 1000000n) > 2000) sourceByStamp.set(f, { stamp, text });
+  else sourceByStamp.delete(f);
+  return text;
+};
+
 /** `node_modules/.cache/stencilrs/sass` of the nearest node_modules above the working directory, or null. */
 const diskCacheDir = () => {
   for (let dir = process.cwd(); ; dir = dirname(dir)) {
@@ -297,7 +311,7 @@ export function createCssPipeline(options = {}) {
     if (!existsSync(file)) return { code: 'export default () => ""', deps: [] };
     const ext = extname(file).slice(1);
     if (!(await need(ext))) return null;
-    let css = readFileSync(file, 'utf-8');
+    let css = readSource(file);
     let deps = [];
     let sassKey = null;
     if (has.sass && (ext === 'scss' || ext === 'sass')) ({ css, deps, key: sassKey } = await compileSass(css, file, ext === 'sass'));
