@@ -3,6 +3,9 @@
 //! caches save on the later passes.
 //!
 //!   cargo run --release -p stencilrs_transform --example resolve_cost
+//!
+//! `RESOLVE_COST_DIR=<dir>` times another tree (examples/ionic/migrated/src/components for Ionic's 95 components); the
+//! "first pass" figure is the cold one (nothing cached in the process yet): run it in a fresh process each time.
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -21,13 +24,10 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
 
 fn main() {
     let mut files = Vec::new();
-    walk(
-        Path::new(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../examples/ui-kit/src"
-        )),
-        &mut files,
-    );
+    let dir = std::env::var("RESOLVE_COST_DIR").unwrap_or_else(|_| {
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/ui-kit/src").to_string()
+    });
+    walk(Path::new(&dir), &mut files);
     files.sort();
     let sources: Vec<(String, String)> = files
         .iter()
@@ -38,16 +38,27 @@ fn main() {
             )
         })
         .collect();
-    for (resolve_imports, complex_types) in [
-        (false, false),
-        (true, false),
-        (false, false),
-        (true, false),
-        (true, true),
-        (true, true),
-    ] {
+    // RESOLVE_COST_ONLY=resolve: only the configuration the Vite plugin uses, for tracing one pass of it.
+    let configs: &[(bool, bool)] = if std::env::var("RESOLVE_COST_ONLY").is_ok() {
+        &[(true, false)]
+    } else {
+        &[
+            (false, false),
+            (true, false),
+            (false, false),
+            (true, false),
+            (true, true),
+            (true, true),
+        ]
+    };
+    let passes = if std::env::var("RESOLVE_COST_ONLY").is_ok() {
+        3
+    } else {
+        15
+    };
+    for &(resolve_imports, complex_types) in configs {
         let mut times = Vec::new();
-        for pass in 0..15 {
+        for pass in 0..passes {
             let t = Instant::now();
             for (file, src) in &sources {
                 let opts = TranspileOptions {
