@@ -31,3 +31,18 @@ test('cold-start rows exist and the README headline matches them', () => {
   const devText = dev >= 1 ? `about **${x(dev)} sooner**` : `about **${x(1 / dev)} slower**`;
   assert.ok(readme.includes(devText), `cold dev: README should say ${devText}`);
 });
+
+// The Ionic data (site/data/benchmarks-ionic.json) carries the like-for-like rows the Benchmarks page's tables read.
+test('Ionic data has the standalone and type-check rows and their numbers', () => {
+  const io = JSON.parse(read('../site/data/benchmarks-ionic.json'));
+  assert.equal(typeof io.preview, 'boolean');
+  for (const row of ['stencil', 'stencil-standalone', 'stencilrs', 'stencilrs+check']) {
+    assert.ok(io.rows[row], `row ${row}`);
+    for (const m of ['coldBuild', 'warmBuild']) {
+      const r = io.metrics[m].rows[row];
+      assert.ok(r && r.n > 0 && r.median > 0 && r.min <= r.median && r.median <= r.max, `${m} ${row}`);
+    }
+  }
+  for (const tool of ['tsgo', 'tsc']) assert.ok(io.metrics.typecheck.rows[tool].median > 0, `typecheck ${tool}`);
+  assert.ok(readFileSync(new URL('../site/benchmarks.md', import.meta.url), 'utf8').includes('### What each row does'), 'site explains each row');
+});
