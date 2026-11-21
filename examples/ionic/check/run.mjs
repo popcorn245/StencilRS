@@ -36,7 +36,7 @@ const fail = (msg) => {
 console.log('== stencilrs compiled every component itself');
 {
   const log = readFileSync(join(root, 'logs', 'stencilrs.log'), 'utf8');
-  const summary = log.match(/\[stencilrs\] compiled (\d+) component file\(s\); (\d+) left to Stencil's compiler/);
+  const summary = log.match(/\[stencilrs\] compiled (\d+) component file\(s\)(?:, reused \d+)?; (\d+) left to Stencil's compiler/);
   if (!summary) fail('logs/stencilrs.log has no [stencilrs] summary: run npm run build:stencilrs');
   else if (summary[2] !== '0') {
     fail(`${summary[2]} of ${summary[1]} files left to Stencil's compiler:`);
