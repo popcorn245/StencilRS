@@ -263,7 +263,10 @@ export function stencilrs(options = {}) {
       // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
       // first request and re-runs its optimizer. Only the client runtime of the default output
       // does this; ssr (`runtime/server`) and spec-page (`core/testing`) import others.
-      if (env?.command === 'serve' && !ssr && !specPage) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      // `optimizeDeps.noDiscovery`: Vite finds nothing on a request, so there is no re-run to avoid, and the user's `include`
+      // is the whole list. Adding to it there makes `listen` wait for an optimizer run (behind the watcher's first crawl on
+      // Windows) that the user turned off: ~1.4 s of the ui-kit's first response.
+      if (env?.command === 'serve' && !ssr && !specPage && !userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
       // Stencil's output and cache folders are not watched (see DEFAULT_WATCH_IGNORE); `watchIgnore: false`
       // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
       // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`

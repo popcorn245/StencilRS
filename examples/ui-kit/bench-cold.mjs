@@ -45,7 +45,13 @@ const WIN = process.platform === 'win32';
 // src/assets/svg: 1,339 static icons the dev server serves by URL and no module imports. The watcher opens one fs.watch for
 // each (~0.9 ms on Windows) for nothing. Both compilers' servers get the same ignore, so the comparison stays fair.
 const SVG_ASSETS = join(root, 'src/assets/svg').replaceAll('\\', '/');
-const ignoreSvgAssets = (p) => String(p).replaceAll('\\', '/').startsWith(SVG_ASSETS);
+// .bench: the benchmarks' own output (bench.mjs leaves two full `stencil build`s in .bench/out, ~7,000 files). Not source, and
+// absent on a fresh clone; watched, its crawl ate ~1.5 s of the main thread in both rows on Windows.
+const BENCH_OUT = join(root, '.bench').replaceAll('\\', '/');
+const ignoreSvgAssets = (p) => {
+  const s = String(p).replaceAll('\\', '/');
+  return s.startsWith(SVG_ASSETS) || s === BENCH_OUT || s.startsWith(`${BENCH_OUT}/`);
+};
 const loadPlugin = async (compiler) =>
   compiler === 'stencilrs' ? (await import('@popcorn245/stencilrs/vite')).default() : (await import('@stencil/unplugin')).stencilVite();
 
