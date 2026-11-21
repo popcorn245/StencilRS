@@ -32,13 +32,178 @@ const LIB_GLOBALS = new Set(
     'MediaStream MediaStreamTrack ImageData ImageBitmap Image Audio Worker MessagePort ErrorEvent ' +
     'ElementInternals ValidityState CSSNumericValue IntersectionObserver ResizeObserver MutationObserver ' +
     'EventListener EventListenerOrEventListenerObject AddEventListenerOptions ScrollIntoViewOptions FocusOptions ' +
-    'PropertyKey TemplateStringsArray Intl'
+    'PropertyKey TemplateStringsArray Intl globalThis'
   ).split(' '),
 );
 const LIB_GLOBAL_PATTERNS = [/^(HTML|SVG|MathML)\w*Element$/, /^\w*Event$/, /^\w+EventMap$/];
 const isLibGlobal = (name) => LIB_GLOBALS.has(name) || LIB_GLOBAL_PATTERNS.some((re) => re.test(name));
 
 const q = (s) => JSON.stringify(s);
+
+const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+
+/** Above this many required props on one component Stencil skips the `OneOf` checks (the type checker would blow up). */
+const MAX_ONE_OF_REQUIRED_PROPS = 8;
+
+/** What Stencil adds to the JSX of a form-associated component. */
+const FORM_ASSOCIATED_ATTRIBUTES = [
+  { name: 'disabled', type: 'boolean', doc: 'If `true`, the user cannot interact with the element.' },
+  { name: 'form', type: 'string', doc: 'The `id` of a `<form>` element to associate this element with.' },
+  { name: 'name', type: 'string', doc: 'The name of the element, used when submitting an HTML form.' },
+];
+
+/** Methods HTMLElement already has: a component method of that name replaces the inherited one on its element interface. */
+const HTML_ELEMENT_METHODS = new Set(
+  (
+    'attachInternals blur click focus hidePopover showPopover togglePopover after animate append attachShadow before checkVisibility ' +
+    'closest computedStyleMap getAnimations getAttribute getAttributeNames getAttributeNode getAttributeNodeNS getAttributeNS ' +
+    'getBoundingClientRect getClientRects getElementsByClassName getElementsByTagName getElementsByTagNameNS getHTML hasAttribute ' +
+    'hasAttributeNS hasAttributes hasPointerCapture insertAdjacentElement insertAdjacentHTML insertAdjacentText matches moveBefore ' +
+    'prepend querySelector querySelectorAll releasePointerCapture remove removeAttribute removeAttributeNode removeAttributeNS ' +
+    'replaceChildren replaceWith requestFullscreen requestPointerLock scroll scrollBy scrollIntoView scrollIntoViewIfNeeded scrollTo ' +
+    'setAttribute setAttributeNode setAttributeNodeNS setAttributeNS setCapture setHTML setHTMLUnsafe setPointerCapture toggleAttribute ' +
+    'appendChild cloneNode compareDocumentPosition contains getRootNode hasChildNodes insertBefore isDefaultNamespace isEqualNode ' +
+    'isSameNode lookupNamespaceURI lookupPrefix normalize removeChild replaceChild addEventListener dispatchEvent removeEventListener'
+  ).split(' '),
+);
+
+/** Index just past the bracket that closes the one at `from` (strings skipped, `=>` is not a closer), or -1. */
+function closeOf(text, from) {
+  const open = text[from];
+  const close = { '(': ')', '[': ']', '{': '}', '<': '>' }[open];
+  let depth = 0;
+  for (let i = from; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"' || ch === "'" || ch === '`') {
+      for (i++; i < text.length && text[i] !== ch; i++) if (text[i] === '\\') i++;
+    } else if (ch === open) depth++;
+    else if (ch === close && !(open === '<' && text[i - 1] === '=') && --depth === 0) return i + 1;
+  }
+  return -1;
+}
+
+/** Split at the commas that are not inside brackets. */
+function splitTop(text) {
+  const parts = [];
+  let last = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"' || ch === "'" || ch === '`') {
+      for (i++; i < text.length && text[i] !== ch; i++) if (text[i] === '\\') i++;
+    } else if ('([{<'.includes(ch) ) {
+      const end = closeOf(text, i);
+      if (end < 0) return null;
+      i = end - 1;
+    } else if (ch === ',') {
+      parts.push(text.slice(last, i));
+      last = i + 1;
+    }
+  }
+  parts.push(text.slice(last));
+  return parts.filter((p) => p.trim());
+}
+
+/**
+ * A `@Method`'s signature written from its declaration, for when the analyzer could not compute one (it
+ * reports those as "not ported"). Parameters and return type are taken as annotated; what has no
+ * annotation is `any`. Null when the declaration is not in a shape this can read.
+ */
+function signatureFromSource(source, name) {
+  const decl = /@Method\s*\([^)]*\)\s*(?:(?:public|async)\s+)*([\w$]+)\s*/g;
+  for (const m of source.matchAll(decl)) {
+    if (m[1] !== name) continue;
+    let i = m.index + m[0].length;
+    let generics = '';
+    if (source[i] === '<') {
+      const end = closeOf(source, i);
+      if (end < 0) return null;
+      generics = source.slice(i, end);
+      i = end;
+      while (/\s/.test(source[i])) i++;
+    }
+    if (source[i] !== '(') return null;
+    const end = closeOf(source, i);
+    if (end < 0) return null;
+    const params = splitTop(source.slice(i + 1, end - 1));
+    if (!params) return null;
+    const out = [];
+    for (const raw of params) {
+      const pm = /^\s*(\.\.\.)?([\w$]+)\s*(\?)?\s*(?::([\s\S]*))?$/.exec(raw);
+      if (!pm) return null;
+      let [, rest = '', pname, opt, type] = pm;
+      let optional = !!opt;
+      if (type === undefined) {
+        const eq = /^\s*(\.\.\.)?([\w$]+)\s*=/.exec(raw);
+        if (eq) optional = true;
+        type = 'any';
+      } else {
+        // `type = default`: the first top-level `=` that is not part of `=>`
+        for (let k = 0; k < type.length; k++) {
+          if ('([{<'.includes(type[k])) {
+            const e = closeOf(type, k);
+            if (e < 0) return null;
+            k = e - 1;
+          } else if (type[k] === '=' && type[k + 1] !== '>') {
+            type = type.slice(0, k);
+            optional = true;
+            break;
+          }
+        }
+      }
+      out.push(`${rest}${pname}${optional ? '?' : ''}: ${type.trim()}`);
+    }
+    let j = end;
+    while (/\s/.test(source[j])) j++;
+    let ret = 'Promise<any>';
+    let inferred = true;
+    if (source[j] === ':') {
+      inferred = false;
+      let k = j + 1;
+      for (; k < source.length; k++) {
+        const ch = source[k];
+        if ('([<'.includes(ch)) {
+          const e = closeOf(source, k);
+          if (e < 0) return null;
+          k = e - 1;
+        } else if (ch === '{' || ch === ';') break;
+      }
+      ret = source.slice(j + 1, k).trim();
+    }
+    return { text: `${generics}(${out.join(', ')}) => ${ret}`, inferred };
+  }
+  return null;
+}
+
+/** The type parameters a signature like `<T = any, U extends Foo>(...) => ...` declares: not types to import. */
+function genericNames(signature) {
+  const names = new Set();
+  if (!signature.startsWith('<')) return names;
+  let depth = 0;
+  let start = 0;
+  let end = signature.length;
+  for (let i = 0; i < signature.length; i++) {
+    const ch = signature[i];
+    if (ch === '<') depth++;
+    else if (ch === '>' && signature[i - 1] !== '=' && --depth === 0) {
+      end = i;
+      break;
+    }
+  }
+  depth = 0;
+  for (const part of signature.slice(start + 1, end).split(/,(?![^<(\[{]*[>)\]}])/)) {
+    const m = /^\s*([A-Za-z_$][\w$]*)/.exec(part);
+    if (m) names.add(m[1]);
+  }
+  return names;
+}
+
+/** Stencil's `dashToPascalCase`: `ion-accordion` -> `IonAccordion`. Generated names come from the tag, not the class. */
+const dashToPascalCase = (tag) =>
+  tag
+    .toLowerCase()
+    .split('-')
+    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
+    .join('');
 
 /** `/** ... *\/` for Stencil's `{ text, tags }` docs, or '' when there are none. */
 function jsdoc(docs, indent, defaultValue) {
@@ -182,7 +347,7 @@ export function generateTypes(modules, options = {}) {
   items.sort((a, b) => (a.component.tagName < b.component.tagName ? -1 : a.component.tagName > b.component.tagName ? 1 : 0));
   const seen = new Set();
   const unique = items.filter((i) => !seen.has(i.component.tagName) && seen.add(i.component.tagName));
-  for (const i of unique) imports.claim(`HTML${i.component.componentClassName}Element`);
+  for (const i of unique) imports.claim(`HTML${dashToPascalCase(i.component.tagName)}Element`);
 
   /**
    * `text` with every type it names reachable from the declaration file, or null when one is not
@@ -190,9 +355,10 @@ export function generateTypes(modules, options = {}) {
    * the module's own `import`s and exported declarations, so a type the analyzer could not
    * resolve (`complexTypes` errors) is handled the same as one it could.
    */
-  const resolveType = (item, text, missing) => {
+  const resolveType = (item, text, missing, skip) => {
     let out = text;
     for (const name of typeNames(text)) {
+      if (skip?.has(name)) continue;
       const scan = item.scanned.get(name);
       let bound = null;
       if (scan) {
@@ -212,63 +378,112 @@ export function generateTypes(modules, options = {}) {
     }
     return out;
   };
-  const typeOrAny = (item, text, label) => {
+  const typeOrAny = (item, text, label, prop) => {
     const missing = [];
     const t = resolveType(item, text || 'any', missing);
     if (t !== null) return t;
+    // A type the source never names (`@Prop() mode = getIonMode(this)`, whose type the compiler inferred) is
+    // best expressed by what it resolves to, which is what Stencil writes.
+    const resolved = prop?.complexType?.resolved?.replace(/ \| undefined$/, '');
+    if (resolved && resolved !== 'any') {
+      const again = resolveType(item, resolved, []);
+      if (again !== null) return again;
+    }
     diagnostics.push({ file: item.file, message: `${label}: type \`${text}\` uses ${missing[0]}, which cannot be imported; emitted as any` });
     return `any /* unresolved: ${text.replaceAll('*/', '*\\/')} */`;
+  };
+
+  /**
+   * Stencil re-exports (and so imports) every type its analysis lists as referenced by a prop, event or
+   * method, which includes types used only inside a method's body. Bind the ones the member's own text
+   * did not already, quietly skipping any that cannot be imported.
+   */
+  const bindReferences = (item, member) => {
+    const refs = member.complexType?.references;
+    for (const name of Array.isArray(refs) ? refs : Object.keys(refs ?? {})) {
+      const scan = item.scanned.get(name);
+      if (scan) imports.bind(imports.specFrom(item.file, scan.spec), scan.kind, scan.imported, name);
+      else if (declaresType(item.source, name) && exportsName(item.source, name)) {
+        imports.bind(imports.specFrom(item.file, './' + posix.basename(item.file).replace(/\.[cm]?[jt]sx?$/, '')), 'named', name, name);
+      }
+    }
   };
 
   const components = [];
   const customEvents = [];
   const globals = [];
   const jsx = [];
+  const attributeInterfaces = [];
   const augment = [];
   const tagMap = [];
   const intrinsic = [];
+  let needsOneOf = false;
 
   for (const item of unique) {
     const c = item.component;
-    const cls = c.componentClassName;
+    // Stencil names every generated interface from the tag, not from the class.
+    const cls = dashToPascalCase(c.tagName);
     const el = `HTML${cls}Element`;
     const where = `<${c.tagName}>`;
 
     const props = c.properties.map((p) => {
-      const t = typeOrAny(item, p.complexTypeOriginal || p.complexType?.original, `${where} @Prop ${p.name}`);
-      return { p, t };
+      bindReferences(item, p);
+      const t = typeOrAny(item, p.complexTypeOriginal || p.complexType?.original, `${where} @Prop ${p.name}`, p);
+      let docs = p.docs;
+      // A getter without a setter is read-only, which Stencil says in the docs.
+      if (p.getter && !p.setter && !JSON.stringify(docs ?? '').includes('readonly')) {
+        docs = { text: docs?.text ?? '', tags: [...(docs?.tags ?? []), { name: 'readonly', text: '' }] };
+      }
+      return { name: p.name, p, t, optional: p.optional, required: p.required, docs, defaultValue: p.defaultValue };
     });
+    // `@virtualProp {type} name - docs` in the component's doc comment: a prop that exists only in the types (Ionic's `mode`).
+    for (const tag of c.docs?.tags ?? []) {
+      if (tag.name !== 'virtualProp') continue;
+      const m = /^\s*(?:\{([^}]+)\}\s+)?(\w+)\s+-\s+(.*)$/s.exec(tag.text ?? '');
+      if (m) props.push({ name: m[2].trim(), p: null, t: (m[1] ?? 'any').trim(), optional: true, required: false, docs: { text: m[3].trim(), tags: [] } });
+    }
     const methods = c.methods.map((m) => {
+      bindReferences(item, m);
       const missing = [];
-      let sig = resolveType(item, m.complexType?.signature || '(...args: any[]) => Promise<any>', missing);
+      let signature = m.complexType?.signature;
+      if (!signature) {
+        const written = signatureFromSource(item.source, m.name);
+        signature = written?.text || '(...args: any[]) => Promise<any>';
+        if (!written || written.inferred) {
+          diagnostics.push({ file: item.file, message: `${where} @Method ${m.name}: the return type is not annotated and stencilrs does not infer types; emitted as Promise<any>` });
+        }
+      }
+      let sig = resolveType(item, signature, missing, genericNames(signature));
       if (sig === null) {
         diagnostics.push({ file: item.file, message: `${where} @Method ${m.name}: signature uses ${missing[0]}, which cannot be imported; emitted as any` });
         sig = '(...args: any[]) => Promise<any>';
       }
-      return { m, sig };
+      return { name: m.name, sig, docs: m.docs };
     });
-    const events = c.events.map((e) => ({
-      e,
-      t: typeOrAny(item, e.complexType?.original, `${where} @Event ${e.name}`),
-    }));
+    const events = c.events.map((e) => {
+      bindReferences(item, e);
+      return { name: e.name, e, t: typeOrAny(item, e.complexType?.original, `${where} @Event ${e.name}`, e) };
+    });
 
-    // Components.<Cls>
-    let body = '';
-    for (const { p, t } of props) {
-      body += jsdoc(p.docs, '        ', p.defaultValue) + `        ${q(p.name)}${p.optional && !p.required ? '?' : ''}: ${t};\n`;
-    }
-    for (const { m, sig } of methods) body += jsdoc(m.docs, '        ') + `        ${q(m.name)}: ${sig};\n`;
+    // Components.<Tag>: props and methods, sorted by name as Stencil does.
+    const componentMembers = [...props.map((x) => ({ ...x, kind: 'prop' })), ...methods.map((x) => ({ ...x, kind: 'method' }))].sort(byName);
+    const body = componentMembers
+      .map((x) =>
+        x.kind === 'prop'
+          ? jsdoc(x.docs, '        ', x.defaultValue) + `        ${q(x.name)}${x.optional && !x.required ? '?' : ''}: ${x.t};\n`
+          : jsdoc(x.docs, '        ') + `        ${q(x.name)}: ${x.sig};\n`,
+      )
+      .join('');
     components.push(jsdoc(c.docs, '    ') + `    interface ${cls} {\n${body}    }`);
 
-    // HTML<Cls>Element
-    const hasEvents = events.length > 0;
+    // HTML<Tag>Element
     let extra = '';
     let eventMap = '';
-    if (hasEvents) {
+    if (events.length) {
       customEvents.push(
         `export interface ${cls}CustomEvent<T> extends CustomEvent<T> {\n    detail: T;\n    target: ${el};\n}`,
       );
-      eventMap = `    interface ${el}EventMap {\n${events.map(({ e, t }) => `        ${q(e.name)}: ${t};`).join('\n')}\n    }\n`;
+      eventMap = `    interface ${el}EventMap {\n${events.map(({ name, t }) => `        ${q(name)}: ${t};`).join('\n')}\n    }\n`;
       const overloads = (verb, opts) =>
         [
           `        ${verb}EventListener<K extends keyof ${el}EventMap>(type: K, listener: (this: ${el}, ev: ${cls}CustomEvent<${el}EventMap[K]>) => any, options?: boolean | ${opts}): void;`,
@@ -276,29 +491,65 @@ export function generateTypes(modules, options = {}) {
           `        ${verb}EventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any, options?: boolean | ${opts}): void;`,
           `        ${verb}EventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ${opts}): void;`,
         ].join('\n');
-      extra = `\n${overloads('add', 'AddEventListenerOptions')}\n${overloads('remove', 'EventListenerOptions')}\n    `;
+      extra = `${overloads('add', 'AddEventListenerOptions')}\n${overloads('remove', 'EventListenerOptions')}\n`;
+    }
+    // A method named like one of HTMLElement's (`focus`, `scrollTo`, ...) replaces the inherited one.
+    let heritage = `Components.${cls}`;
+    const conflicts = methods.filter((m) => HTML_ELEMENT_METHODS.has(m.name));
+    if (conflicts.length) {
+      heritage = `Omit<Components.${cls}, ${conflicts.map((m) => q(m.name)).join(' | ')}>`;
+      extra = conflicts.map((m) => jsdoc(m.docs, '        ') + `        ${q(m.name)}: ${m.sig};\n`).join('') + extra;
     }
     globals.push(
       eventMap +
         jsdoc(c.docs, '    ') +
-        `    interface ${el} extends Components.${cls}, HTMLStencilElement {${extra}}\n` +
+        `    interface ${el} extends ${heritage}, HTMLStencilElement {\n${extra}    }\n` +
         `    var ${el}: {\n        prototype: ${el};\n        new (): ${el};\n    };`,
     );
     tagMap.push(`        ${q(c.tagName)}: ${el};`);
 
-    // LocalJSX.<Cls>
-    let jsxBody = '';
-    for (const { p, t } of props) jsxBody += jsdoc(p.docs, '        ', p.defaultValue) + `        ${q(p.name)}${p.required ? '' : '?'}: ${t};\n`;
-    for (const { e, t } of events) {
-      const handler = `on${e.name.charAt(0).toUpperCase()}${e.name.slice(1)}`;
-      jsxBody += jsdoc(e.docs, '        ') + `        ${q(handler)}?: (event: ${cls}CustomEvent<${t}>) => void;\n`;
+    // LocalJSX.<Tag>: props, event handlers and form-associated attributes, sorted by name.
+    const jsxMembers = [
+      ...props.map((x) => ({ name: x.name, text: jsdoc(x.docs, '        ', x.defaultValue) + `        ${q(x.name)}${x.required ? '' : '?'}: ${x.t};\n` })),
+      ...events.map(({ name, e, t }) => {
+        const handler = `on${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+        return { name: handler, text: jsdoc(e.docs, '        ') + `        ${q(handler)}?: (event: ${cls}CustomEvent<${t}>) => void;\n` };
+      }),
+    ];
+    if (c.formAssociated) {
+      const own = new Set(props.map((x) => x.name));
+      for (const a of FORM_ASSOCIATED_ATTRIBUTES.filter((a) => !own.has(a.name))) {
+        jsxMembers.push({ name: a.name, text: jsdoc({ text: a.doc, tags: [] }, '        ') + `        ${q(a.name)}?: ${a.type};\n` });
+      }
     }
-    jsx.push(jsdoc(c.docs, '    ') + `    interface ${cls} {\n${jsxBody}    }`);
-    intrinsic.push(`        ${q(c.tagName)}: ${cls};`);
+    jsxMembers.sort(byName);
+    jsx.push(jsdoc(c.docs, '    ') + `    interface ${cls} {\n${jsxMembers.map((x) => x.text).join('')}    }`);
+
+    // `<Tag>Attributes`: what each prop with an attribute accepts as `attr:name`, and `OneOf` for required ones.
+    const withAttribute = props.filter((x) => x.p && x.p.attribute != null);
+    if (withAttribute.length) {
+      const attrType = (x) => (['string', 'number', 'boolean'].includes(x.p.type?.trim()) ? x.t : 'string');
+      attributeInterfaces.push(`    interface ${cls}Attributes {\n${withAttribute.map((x) => `        ${q(x.name)}: ${attrType(x)};`).join('\n')}\n    }`);
+      const required = withAttribute.filter((x) => x.required);
+      const useOneOf = required.length > 0 && required.length <= MAX_ONE_OF_REQUIRED_PROPS;
+      if (useOneOf) needsOneOf = true;
+      const base =
+        `Omit<${cls}, keyof ${cls}Attributes> & { [K in keyof ${cls} & keyof ${cls}Attributes]?: ${cls}[K] }` +
+        ` & { [K in keyof ${cls} & keyof ${cls}Attributes as \`attr:\${K}\`]?: ${cls}Attributes[K] }` +
+        ` & { [K in keyof ${cls} & keyof ${cls}Attributes as \`prop:\${K}\`]?: ${cls}[K] }`;
+      const unions = useOneOf ? required.map((x) => ` & OneOf<${q(x.name)}, ${cls}[${q(x.name)}], ${cls}Attributes[${q(x.name)}]>`).join('') : '';
+      intrinsic.push(`        ${q(c.tagName)}: ${base}${unions};`);
+    } else {
+      intrinsic.push(`        ${q(c.tagName)}: ${cls};`);
+    }
     augment.push(`            ${q(c.tagName)}: LocalJSX.IntrinsicElements[${q(c.tagName)}] & JSXBase.HTMLAttributes<${el}>;`);
   }
 
   const importLines = imports.render();
+  const oneOf = needsOneOf
+    ? '    type OneOf<K extends string, PropT, AttrT = PropT> = { [P in K]: PropT } & { [P in `attr:${K}`]?: never } | { [P in `attr:${K}`]: AttrT } & { [P in K]?: never };\n\n'
+    : '';
+  const attributes = attributeInterfaces.length ? `\n${attributeInterfaces.join('\n')}\n\n` : '';
   const code = [
     HEADER,
     'import { HTMLStencilElement, JSXBase } from "@stencil/core/runtime";',
@@ -306,7 +557,7 @@ export function generateTypes(modules, options = {}) {
     `export namespace Components {\n${components.join('\n')}\n}`,
     ...customEvents,
     `declare global {\n${globals.join('\n')}\n    interface HTMLElementTagNameMap {\n${tagMap.join('\n')}\n    }\n}`,
-    `declare namespace LocalJSX {\n${jsx.join('\n')}\n    interface IntrinsicElements {\n${intrinsic.join('\n')}\n    }\n}`,
+    `declare namespace LocalJSX {\n${oneOf}${jsx.join('\n')}\n${attributes}    interface IntrinsicElements {\n${intrinsic.join('\n')}\n    }\n}`,
     'export { LocalJSX as JSX };',
     `declare module "@stencil/core" {\n    export namespace JSX {\n        interface IntrinsicElements {\n${augment.join('\n')}\n        }\n    }\n}`,
   ].join('\n');
