@@ -45,6 +45,25 @@ const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
+// Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
+// `loader`, `hydrate`, `.stencil`). Never source: Stencil's source lives in `src/`. The dev server's file
+// watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
+// that has been built holds thousands of them: skipped, see `watchIgnore`.
+const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate'];
+
+/**
+ * A `server.watch.ignored` matcher for the given folders directly under `root`: true for the folder and
+ * everything below it. A function, not a glob, so that characters in the root path (`(`, `[`, `\\` on
+ * Windows) need no escaping. Vite adds it to the user's own `ignored` and to its defaults.
+ */
+export function watchIgnoreMatcher(root, folders) {
+  const base = resolve(root).replaceAll('\\', '/').replace(/\/+$/, '');
+  const dirs = folders.map((f) => `${base}/${String(f).replaceAll('\\', '/').replace(/^\.?\/+|\/+$/g, '')}`);
+  return (path) => {
+    const p = String(path).replaceAll('\\', '/');
+    return dirs.some((d) => p === d || p.startsWith(`${d}/`));
+  };
+}
 
 /** @stencil/unplugin's `resolveSpecifier`, which stencilrs' ancestor walk mirrors. */
 const resolveSpecifier = (specifier, importer) => {
@@ -122,7 +141,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
@@ -140,7 +159,7 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, ...stencilOptions } = options;
+  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -226,6 +245,13 @@ export function stencilrs(options = {}) {
       // first request and re-runs its optimizer. Only the client runtime of the default output
       // does this; ssr (`runtime/server`) and spec-page (`core/testing`) import others.
       if (env?.command === 'serve' && !ssr && !specPage) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      // Stencil's output and cache folders are not watched (see DEFAULT_WATCH_IGNORE); `watchIgnore: false`
+      // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
+      // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
+      // (the user turned the watcher off) is left alone.
+      if (env?.command === 'serve' && watchIgnore && watchIgnore.length && userConfig.server?.watch !== null) {
+        result.server = { watch: { ignored: [watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore)] } };
+      }
       return result;
     },
 

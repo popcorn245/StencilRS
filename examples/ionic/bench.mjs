@@ -303,7 +303,10 @@ const crawl = async (origin, entry, bodyOfEntry) => {
           return;
         }
         if (!/\.(m?js|tsx?|jsx)(\?|$)/.test(item.url) && !/\.(scss|css)/.test(item.url)) return;
-        for (const m of body.matchAll(re)) {
+        // Comments are not imports: Stencil's runtime documents `import './foo.css'` in a doc comment, which a browser never
+        // requests (and Vite logs as a 404 for /node_modules/.vite/deps/foo.css).
+        const code = body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        for (const m of code.matchAll(re)) {
           const spec = m[1];
           if (!spec.startsWith('/') && !spec.startsWith('./') && !spec.startsWith('../')) continue;
           const next = new URL(spec, origin + item.url);
