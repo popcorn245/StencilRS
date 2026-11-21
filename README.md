@@ -96,9 +96,23 @@ stencilrs({ typecheck: { tsconfig: 'tsconfig.app.json', bin: 'tsc' } });
 
 - It runs `tsgo` (`@typescript/native-preview`, about 5x faster than `tsc`) when that package resolves from
   the project root, else `tsc` from `typescript`, else the build stops with a message that says what to
-  install. `bin: 'tsgo' | 'tsc'` forces one. `tsconfig` (default `tsconfig.json`, relative to the root)
+  install. `bin: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs'` forces one; the two Rust checkers (below) are used only when named. `tsconfig` (default `tsconfig.json`, relative to the root)
   picks the config. It runs `--noEmit --skipLibCheck` (what `stencil build` forces), in a child process
   started without a shell.
+- The four checkers, on Ionic core (362 files, `--noEmit --skipLibCheck`, median of 7 interleaved runs on a shared
+  4-core container; see [the spike](docs/spike-rust-typecheckers.md)):
+
+  | `bin` | Package | Implements | Ionic median |
+  |---|---|---|---:|
+  | `tsc` | `typescript` | TypeScript 6.0.3 (what Stencil v5 pins) | 5.9 s |
+  | `tsgo` | `@typescript/native-preview` | TypeScript 7.0 dev | 1.4 s |
+  | `tsc-rs` | `tsc-rs` ([pingdotgg/ts-rust](https://github.com/pingdotgg/ts-rust)) | TypeScript 7.1 beta | 0.39 s |
+  | `tsrs` | `tsrs` ([oxc-project/tsrs](https://github.com/oxc-project/tsrs)) | TypeScript 7.1 beta | 0.26 s |
+
+  `tsrs` and `tsc-rs` implement TypeScript 7.1, not 6.0, so a project on TypeScript 6 can see new errors
+  (Ionic reports one: its own `CloseWatcher` type conflicts with the 7.1 `lib.dom.d.ts`; official
+  `typescript@7.1.0-beta` reports it too). Both are pre-1.0 releases. Otherwise their diagnostics matched
+  `tsc` on Ionic and ui-kit, including injected TS2322, TS6133 and TS2339. They are opt-in for that reason.
 - `vite build`: the checker starts at `buildStart`, so it overlaps the build, and is awaited before the
   bundle is written. A type error fails the build with the checker's diagnostics and writes no output.
 - `vite` (dev) and `vite build --watch`: it runs once at start and again after a change to a

@@ -1,15 +1,22 @@
 # Spike: Rust TypeScript checkers (tsc-rs, tsrs) beside tsgo and tsc (#117)
 
-**Verdict: neither Rust checker is added to `typecheck.bin`.** Both run, are 4x to 20x faster than tsgo, and report
-the same errors as tsc and tsgo on `examples/ui-kit`. On `examples/ionic/migrated` both report one error on a clean
-tree that tsc 6.0.3 and tsgo do not report, so they cannot be a drop-in check for a Stencil v5 project (which pins
-TypeScript 6.0.3). The extra error is not a Rust bug: it is TypeScript 7.1's `lib.dom.d.ts`, which the Rust checkers
-bundle. The default stays tsgo, then tsc.
+**Verdict: both Rust checkers are compatible with TypeScript 7.1 semantics, with one TS 6.0 to 7.1 `lib.dom`
+difference on Ionic. They are added as opt-in `typecheck.bin: 'tsrs' | 'tsc-rs'`; the default stays tsgo, then tsc.**
+Both run, are 4x to 20x faster than tsgo, and report the same errors as tsc and tsgo on `examples/ui-kit`. On
+`examples/ionic/migrated` both report one error on a clean tree that tsc 6.0.3 and tsgo do not. It is not a Rust
+bug: it is TypeScript 7.1's `lib.dom.d.ts`, and official `typescript@7.1.0-beta` prints it too, so the checkers are
+faithful to 7.1. A Stencil v5 project (TypeScript 6.0.3) that opts in can therefore see new errors, which is why they
+are never picked automatically. Both are pre-1.0.
+
+**Integration:** `resolveChecker` in `vite-typecheck.js` resolves `tsrs` and `tsc-rs` like tsgo (package plus
+`lib/getExePath.js`, executable spawned directly without a shell, killed on stop; package `bin` script under node as
+the fallback), with the clear `npm i -D <package>` error when the package is missing. Exit 0 passes, any other code
+fails (tsrs and tsc-rs exit 2, tsgo 1).
 
 | Tool | Version, how installed | Ionic migrated (clean) | ui-kit (clean) | Injected TS2322, TS6133, TS2339 | Verdict |
 |---|---|---|---|---|---|
-| tsc-rs ([pingdotgg/ts-rust](https://github.com/pingdotgg/ts-rust)) | npm `tsc-rs@0.8.0` (README: `npm install -D tsc-rs`), binary `@tsc-rs/linux-x64`; `Version 7.1.0-dev`; pinned to microsoft/TypeScript `3e9236361fa9` (7.1.0-beta) | 1 extra error (TS2322, see below) | identical to tsc, byte for byte | identical to tsc, plus the same extra error | **not compatible** with TS 6.0.3 projects (1 false positive on Ionic) |
-| tsrs ([oxc-project/tsrs](https://github.com/oxc-project/tsrs)) | npm `tsrs@7.1.0-beta.tsrs4` (README: `pnpm add -D tsrs`), binary `@tsrs/linux-x64-gnu`; same pin `3e9236361fa9` | same 1 extra error | identical to tsc, byte for byte | identical to tsc, plus the same extra error | **not compatible** with TS 6.0.3 projects (same cause) |
+| tsc-rs ([pingdotgg/ts-rust](https://github.com/pingdotgg/ts-rust)) | npm `tsc-rs@0.8.0` (README: `npm install -D tsc-rs`), binary `@tsc-rs/linux-x64`; `Version 7.1.0-dev`; pinned to microsoft/TypeScript `3e9236361fa9` (7.1.0-beta) | 1 extra error (TS2322, see below) | identical to tsc, byte for byte | identical to tsc, plus the same extra error | compatible with TS 7.1 semantics; one TS 6 to 7.1 lib difference on Ionic; opt-in `bin: 'tsc-rs'` |
+| tsrs ([oxc-project/tsrs](https://github.com/oxc-project/tsrs)) | npm `tsrs@7.1.0-beta.tsrs4` (README: `pnpm add -D tsrs`), binary `@tsrs/linux-x64-gnu`; same pin `3e9236361fa9` | same 1 extra error | identical to tsc, byte for byte | identical to tsc, plus the same extra error | compatible with TS 7.1 semantics; same lib difference; opt-in `bin: 'tsrs'` |
 | tsgo | `@typescript/native-preview@7.0.0-dev.20260707.2` | identical to tsc | identical to tsc | identical to tsc | compatible (already supported) |
 
 Both READMEs were taken as data. The installs worked as documented, so no `cargo build` was needed (the issue
@@ -84,14 +91,12 @@ An unloaded single run on Ionic: tsc 4.4 s, tsgo 0.74 s, tsc-rs 0.23 s, tsrs 0.1
 `--extendedDiagnostics` show them checking the same file set (check time 0.15 s tsc-rs, 0.09 s tsrs, 0.39 s tsgo), so
 the speed is real, not a skipped check. Both are about half of tsgo's memory.
 
-## What would change the verdict
+## Notes on the opt-in
 
-- A project on TypeScript 7.1 (or whose code has no `lib.dom` conflicts) would match; ui-kit already does.
-- Stencil v5 pins TypeScript 6.0.3, whose `lib.d.ts` differs; adding a Rust checker as the default or even as
-  `typecheck.bin` would make a clean Ionic build fail on a diagnostic its own compiler does not report.
-- Both projects call themselves early releases (tsc-rs: "early release"; tsrs: prerelease versions on the `latest`
-  tag). Re-run when either offers a TS 6.0 lib or a `--lib` pin: the integration is small, since both ship
-  `lib/getExePath.js` like `@typescript/native-preview`, so `resolveChecker` could spawn them directly.
+- Stencil v5 pins TypeScript 6.0.3, whose `lib.d.ts` differs; a clean Ionic build with `bin: 'tsrs'` or `'tsc-rs'`
+  fails on the `CloseWatcher` error above until the project's own type is adjusted or it moves to TypeScript 7.1.
+- Both projects are early releases (tsc-rs calls itself one; tsrs versions are prereleases), so the auto order is
+  unchanged.
 
 ## Reproducing
 
