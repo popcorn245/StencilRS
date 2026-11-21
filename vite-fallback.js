@@ -36,23 +36,29 @@ export const mentionsVirtualGlobalImport = (file) => {
   }
 };
 
-/** @stencil/unplugin's `projectUsesVirtualGlobalImports`: a text scan of the project's stylesheets. */
-export function projectUsesVirtualGlobalImports(root) {
+/**
+ * Every stylesheet of the project (@stencil/unplugin's `projectUsesVirtualGlobalImports` is a text scan of these), with whether it mentions a virtual
+ * global stylesheet import. Keys use forward slashes. The plugin keeps this across a watch build's rebuilds and updates it
+ * from the changes it is told about, instead of walking and reading the whole project each time.
+ */
+export function scanStyleFiles(root) {
+  const found = new Map();
   const walk = (dir) => {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch {
-      return false;
+      return;
     }
     for (const entry of entries) {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
       const abs = join(dir, entry.name);
-      if (entry.isDirectory() ? walk(abs) : entry.isFile() && STYLE_FILE_RE.test(abs) && mentionsVirtualGlobalImport(abs)) return true;
+      if (entry.isDirectory()) walk(abs);
+      else if (entry.isFile() && STYLE_FILE_RE.test(abs)) found.set(abs.replaceAll('\\', '/'), mentionsVirtualGlobalImport(abs));
     }
-    return false;
   };
-  return existsSync(root) && walk(root);
+  if (existsSync(root)) walk(root);
+  return found;
 }
 
 const fnOf = (hook) => (typeof hook === 'function' ? hook : hook?.handler);

@@ -36,6 +36,32 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
 
+## Folders the dev server does not watch (`watchIgnore`)
+
+Vite's file watcher (chokidar) opens one `fs.watch` per file under the project root, about 0.9 ms
+each on Windows, on the main thread, while the first requests wait. A Stencil project that has been
+built keeps thousands of files next to its source: the build output and caches. In `serve`, the
+plugin adds `server.watch.ignored` for these folders directly under the Vite root (the folder and
+everything in it):
+
+| Folder | What writes it |
+|---|---|
+| `.stencil/` | Stencil's build cache |
+| `www/` | the `www` output (`stencil build`, `--serve`) |
+| `dist/` | the `dist` output: lazy bundles, `collection/`, `types/` |
+| `loader/` | the `dist` output's `loader` |
+| `hydrate/` | the `dist-hydrate-script` output |
+
+Source lives in `src/`, so none of these hold any. Nothing is excluded from being served: a file in
+these folders is still served on request, it just does not trigger HMR or a reload when it changes.
+Vite concatenates the list with your own `server.watch.ignored` (a string, a function or an array)
+and its own defaults (`.git`, `node_modules`, `test-results`); `server.watch: null` is respected.
+
+```ts
+stencilrs({ watchIgnore: false }); // watch everything, as before
+stencilrs({ watchIgnore: ['www', 'dist', 'components'] }); // replace the list (folders under the root)
+```
+
 ## Component CSS options (`css`)
 
 `stencilrs({ css: { targets, minify, sass, cache } })`:
