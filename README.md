@@ -21,8 +21,8 @@ own runtime (`@stencil/core`) runs them in the browser.
 [![Ionic Framework's core built three ways: cold build, dev server start and per-file transform, stencilrs against Stencil 5 and Stencil 4](site/public/img/chart-ionic-headline.png)](https://popcorn245.github.io/StencilRS/benchmarks.html)
 
 Ionic's core, built three ways (lower is better; bars are medians of 10 runs, whiskers min to max; measured on a quiet
-Windows 11 desktop, i9-10850K, 64 GB). Every measure, including the one where stencilrs is slower today (watch rebuild,
-[#79](https://github.com/popcorn245/StencilRS/issues/79)), is a chart on the
+Windows 11 desktop, i9-10850K, 64 GB). Every measure, the watch rebuild included (stencilrs 2× faster than Stencil 5 since
+[#85](https://github.com/popcorn245/StencilRS/issues/85)), is a chart on the
 [Benchmarks page](https://popcorn245.github.io/StencilRS/benchmarks.html), drawn from the data files.
 
 **Docs and live components:** [popcorn245.github.io/StencilRS](https://popcorn245.github.io/StencilRS/)
