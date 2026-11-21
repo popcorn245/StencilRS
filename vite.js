@@ -220,7 +220,13 @@ export function stencilrs(options = {}) {
 
     config(userConfig, env) {
       fallbackPlugin.remember('config', [userConfig, env]);
-      return { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+      const result = { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+      // The dev server's startup scan reads source files, so it misses the imports the transform
+      // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
+      // first request and re-runs its optimizer. Only the client runtime of the default output
+      // does this; ssr (`runtime/server`) and spec-page (`core/testing`) import others.
+      if (env?.command === 'serve' && !ssr && !specPage) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      return result;
     },
 
     configResolved(config) {
