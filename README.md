@@ -75,14 +75,19 @@ at that point, so a project never breaks for want of a feature
 
 `stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
 `types` output does: an `HTML<Name>Element` interface per component with its props and methods,
-the tag in `HTMLElementTagNameMap`, typed custom events, and JSX `IntrinsicElements`. It is off by
-default. `dts: { fileName: 'types/components.d.ts' }` picks the path inside the output directory.
+the tag in `HTMLElementTagNameMap`, typed custom events, and JSX `IntrinsicElements` (with the
+`attr:` / `prop:` forms). Every name comes from the tag, as Stencil's does (`ion-accordion` is
+`HTMLIonAccordionElement`, `Components.IonAccordion`, `LocalJSX.IonAccordion`), whatever the class
+is called. It is off by default. `dts: { fileName: 'types/components.d.ts' }` picks the path inside the output directory.
 `generateTypes([{ file, source }], { outFile })` does the same without Vite.
 
 Types a component imports from its own relative modules are imported again relative to the `.d.ts`,
 so ship declarations at those paths too, or call `generateTypes` with `outFile` next to the sources.
 A type that cannot be resolved (a local type that isn't exported, for example) becomes `any`, with a
-build warning.
+build warning. Differences from `stencil build`'s file that remain: a prop whose type the source never
+writes (`@Prop() mode = getIonMode(this)`) and a `@Method` without a return annotation are `any` /
+`Promise<any>` (there is no checker to infer them), and import aliases for same-named types from
+different files may be numbered differently.
 
 ### Type-check the build
 
