@@ -108,6 +108,7 @@ const cold = (mode, compiler) =>
   new Promise((resolve, reject) => {
     const cacheDir = join(bench, 'cache');
     rmSync(cacheDir, { recursive: true, force: true });
+    rmSync(join(root, 'node_modules/.cache/stencilrs'), { recursive: true, force: true }); // stencilrs's Sass disk cache
     rmSync(join(bench, 'dist'), { recursive: true, force: true });
     let mark = null;
     let out = '';
@@ -175,7 +176,7 @@ const entry = {};
 if (res.build) {
   entry.coldBuild = {
     ...provenance,
-    what: `Fresh-process production vite build of all ${components.length} ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache cleared each run; median, min-max)`,
+    what: `Fresh-process production vite build of all ${components.length} ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)`,
     runs,
     rows: compilers.map((c) => ({
       compiler: label[c],
@@ -190,7 +191,7 @@ if (res.build) {
 if (res.dev) {
   entry.coldDev = {
     ...provenance,
-    what: `Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache cleared each run; median, min-max)`,
+    what: `Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)`,
     runs,
     rows: compilers.map((c) => ({
       compiler: label[c],
