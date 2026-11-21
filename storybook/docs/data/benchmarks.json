@@ -98,48 +98,48 @@
     "rows": [
       {
         "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
-        "wallMedianMs": 755,
-        "buildEndMedianMs": 727,
+        "wallMedianMs": 812,
+        "buildEndMedianMs": 784,
         "wallSpreadMs": [
-          744,
-          777
+          800,
+          821
         ],
         "wallRunsMs": [
-          752,
-          747,
-          755,
-          777,
-          744,
-          771,
-          757,
-          750,
-          749,
-          759
+          803,
+          821,
+          810,
+          814,
+          812,
+          814,
+          806,
+          816,
+          808,
+          800
         ]
       },
       {
         "compiler": "Stencil v5 (@stencil/unplugin)",
-        "wallMedianMs": 3488,
-        "buildEndMedianMs": 3451,
+        "wallMedianMs": 3935,
+        "buildEndMedianMs": 3897,
         "wallSpreadMs": [
-          3448,
-          3527
+          3897,
+          3965
         ],
         "wallRunsMs": [
-          3471,
-          3448,
-          3488,
-          3489,
-          3465,
-          3514,
-          3483,
-          3479,
-          3527,
-          3507
+          3915,
+          3965,
+          3928,
+          3897,
+          3904,
+          3935,
+          3941,
+          3944,
+          3914,
+          3937
         ]
       }
     ],
-    "speedup": "4.6× wall, 4.7× to build end"
+    "speedup": "4.8× wall, 5.0× to build end"
   },
   "coldDev": {
     "date": "2026-11-21",
@@ -155,45 +155,45 @@
     "rows": [
       {
         "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
-        "firstResponseMedianMs": 3659,
+        "firstResponseMedianMs": 423,
         "firstResponseSpreadMs": [
-          3119,
-          5428
+          418,
+          433
         ],
         "firstResponseRunsMs": [
-          3659,
-          3154,
-          4251,
-          3119,
-          4441,
-          3460,
-          5428,
-          4003,
-          3516,
-          3514
+          423,
+          421,
+          426,
+          424,
+          420,
+          423,
+          433,
+          422,
+          430,
+          418
         ]
       },
       {
         "compiler": "Stencil v5 (@stencil/unplugin)",
-        "firstResponseMedianMs": 1451,
+        "firstResponseMedianMs": 1211,
         "firstResponseSpreadMs": [
-          1156,
-          2641
+          1144,
+          2259
         ],
         "firstResponseRunsMs": [
-          1156,
-          1300,
-          1340,
-          2501,
-          1451,
-          1417,
-          1711,
-          1733,
-          2641,
-          1429
+          1208,
+          1223,
+          1163,
+          1144,
+          1168,
+          1202,
+          2075,
+          2259,
+          2093,
+          1211
         ]
       }
     ],
-    "speedup": "0.4×"
+    "speedup": "2.9×"
   }
 }
