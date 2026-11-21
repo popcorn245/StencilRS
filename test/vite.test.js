@@ -309,3 +309,36 @@ test('a stylesheet is not read again by a rebuild while its stamp is unchanged',
   writeFileSync(file, ':host { color: green; margin: 0; }');
   assert.match((await load(id, false)).code, /green/, 'a changed stamp reads the file again');
 });
+
+test('serve does not watch the folders `stencil build` writes into; merged with the user ignored (string, function, array)', async () => {
+  const { mergeConfig } = await import('vite');
+  const win = process.platform === 'win32';
+  const root = win ? 'C:\\proj (1)' : '/proj (1)';
+  const run = (options, command, userConfig = {}) => stencilrs(options)[0].config({ root, ...userConfig }, { command, mode: 'development' });
+  const [ignore] = run({}, 'serve').server.watch.ignored;
+  const p = (rel) => (win ? `C:\\proj (1)\\${rel}` : `/proj (1)/${rel}`);
+  for (const dir of ['www', 'dist', 'loader', 'hydrate', '.stencil']) {
+    assert.equal(ignore(p(dir)), true, dir);
+    assert.equal(ignore(p(`${dir}/build/app.js`)), true, `${dir}/...`);
+  }
+  // Source and look-alikes are never ignored; neither is a same-named folder deeper down.
+  for (const rel of ['src/components/a.tsx', 'src/dist/a.ts', 'index.html', 'wwwroot/a.js', 'distance.ts', 'docs.json']) assert.equal(ignore(p(rel)), false, rel);
+  assert.equal(ignore('/elsewhere/www/a.js'), false);
+
+  // Vite concatenates a string, a function or an array with the plugin's entry.
+  const userFn = () => false;
+  for (const user of ['**/mine/**', userFn, ['**/a/**', userFn]]) {
+    const merged = mergeConfig({ root, server: { watch: { ignored: user } } }, run({}, 'serve'));
+    const list = merged.server.watch.ignored;
+    assert.ok(Array.isArray(list) && list.length === [user].flat().length + 1, 'user entries kept, plugin entry added');
+    for (const u of [user].flat()) assert.ok(list.includes(u));
+  }
+
+  // Off, replaced, not for build, or a watcher the user turned off.
+  assert.equal(run({ watchIgnore: false }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: [] }, 'serve').server, undefined);
+  assert.equal(run({}, 'build').server, undefined);
+  assert.equal(run({}, 'serve', { server: { watch: null } }).server, undefined);
+  const [custom] = run({ watchIgnore: ['components', './out/'] }, 'serve').server.watch.ignored;
+  assert.deepEqual([custom(p('components/x.js')), custom(p('out/x.js')), custom(p('www/x.js'))], [true, true, false]);
+});
