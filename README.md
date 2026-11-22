@@ -182,6 +182,43 @@ Stencil v5 and compares stencilrs against it on every change. Where Stencil has 
 stencilrs copies it on purpose ([`docs/quirks.md`](docs/quirks.md)). Design notes:
 [`docs/transformers.md`](docs/transformers.md), [`docs/pipeline.md`](docs/pipeline.md).
 
+## Server-render in Express
+
+`@popcorn245/stencilrs/express` is an Express view engine that renders Stencil components on the
+server. It wraps an engine you already use: EJS, Handlebars, Pug and the rest fill in the locals
+as they always did, then the hydrate app's `renderToString` renders the components in the HTML
+that comes out. There is no template syntax of its own, and Express is not a dependency of this
+package. It reads like Stencil's server-rendering examples:
+
+```js
+import express from 'express';
+import ejs from 'ejs';
+import { stencilEngine } from '@popcorn245/stencilrs/express';
+import * as hydrate from './dist/hydrate/index.js';
+
+const app = express();
+app.engine('ejs', stencilEngine({ hydrate, engine: ejs.renderFile, renderOptions: { serializeShadowRoot: 'declarative-shadow-dom' } }));
+app.engine('html', stencilEngine({ hydrate })); // no inner engine: the file is the HTML
+app.set('view engine', 'ejs');
+app.get('/', (req, res) => res.render('home', { user }));
+```
+
+- `hydrate`: any hydrate app, one built by stencilrs (`componentExport: 'ssr'`) or by Stencil's own
+  `ssr` output target; a module, or a path to one (loaded on the first render).
+- `engine`: any `(path, locals, callback)` function (`ejs.renderFile`; wrap `pug.renderFile` or
+  Handlebars to that shape). Omitted, the view file is read as HTML.
+- `renderOptions`: `renderToString` options for every render. One view overrides them with the
+  reserved `stencil` local: `res.render('home', { user, stencil: { serializeShadowRoot: 'scoped' } })`.
+- `view cache`: when Express's setting is on (it is in production), plain HTML views are read once,
+  and the flag reaches the inner engine as `cache`.
+- Diagnostics: an error-level diagnostic is passed to Express as the error (`next(err)`); warnings
+  go to `onDiagnostic` (default `console.warn`), once per unique message.
+- A view that starts with a doctype or `<html>` is rendered as a document. Anything else is a
+  fragment (`fullDocument: false`): its components render, but there is no `<head>`, so no styles.
+
+[`examples/express`](examples/express) is a working app on the ui-kit's hydrate app, with tests
+(EJS and plain HTML views, cache on and off, the override, the error path, hydration in Chromium).
+
 ## JavaScript API
 
 ```js
