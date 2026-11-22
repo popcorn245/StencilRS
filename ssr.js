@@ -23,6 +23,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { analyze } from './index.js';
 import { readCollections } from './ssr-collection.js';
+import { readComponentMetadata, SSR_BUILD, ssrBuildConditionals } from './ssr-features.js';
 import { runtimePatchesPlugin } from './ssr-patches.js';
 import stencilrs from './vite.js';
 
@@ -102,18 +103,6 @@ const SERVER_ID = '@stencil/core/runtime/server';
 const ENTRY_ID = '\0stencilrs-hydrate-entry';
 const APP_DATA_VIRTUAL = '\0stencilrs-ssr-app-data';
 const APP_GLOBALS_VIRTUAL = '\0stencilrs-ssr-app-globals';
-
-/**
- * `getSsrBuildConditionals` (output-targets/ssr/ssr-build-conditionals.ts): what Stencil forces on, whatever the
- * project uses. The features it derives from the components (`getBuildFeatures`: `shadowDom`, `vdomRef`, ...) are
- * the runtime's defaults here, every feature on; `buildConditionals` overrides them.
- */
-const SSR_BUILD = {
-  slotRelocation: true, lazyLoad: true, hydrateServerSide: true, hydrateClientSide: true, isDebug: false, isDev: false,
-  isTesting: false, devTools: false, lifecycleDOMEvents: false, profile: false, hotModuleReplacement: false, updatable: true,
-  member: true, constructableCSS: false, asyncLoading: true, lightDomPatches: false, slotChildNodes: false, slotCloneNode: false,
-  slotDomMutations: false, slotTextContent: false, cssAnnotations: true,
-};
 
 const walk = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? walk(join(d, n)) : [join(d, n)]));
 
@@ -222,7 +211,7 @@ const buildFactory = async (o) => {
           // The runtime's defaults, with the ssr build's conditionals (`appDataPlugin`).
           if (id === APP_DATA_VIRTUAL) {
             return `import { BUILD as DEFAULTS, Env as DEFAULT_ENV, NAMESPACE as DEFAULT_NAMESPACE } from ${JSON.stringify(join(o.core, 'dist/app-data/index.js'))};
-export const BUILD = { ...DEFAULTS, ...${JSON.stringify({ ...SSR_BUILD, ...o.buildConditionals })} };
+export const BUILD = { ...DEFAULTS, ...${JSON.stringify({ ...o.features, ...o.buildConditionals })} };
 export const Env = { ...DEFAULT_ENV, ...${JSON.stringify(o.env)} };
 export const NAMESPACE = ${o.namespace == null ? 'DEFAULT_NAMESPACE' : JSON.stringify(o.namespace)};`;
           }
@@ -303,7 +292,8 @@ const buildRunner = async (factory, o) => {
  * @param {string} [options.globalStyles] CSS added to every render (the `global-style` targets of Stencil with `inject: 'all'`).
  * @param {string} [options.preamble] Stencil's `preamble`, as a banner comment.
  * @param {Record<string, string> | Array<{ find: string | RegExp, replacement: string }>} [options.alias] Vite `resolve.alias` of the component build.
- * @param {Record<string, boolean>} [options.buildConditionals] overrides of the runtime's `BUILD` flags, over Stencil's ssr conditionals.
+ * @param {'derive' | 'all'} [options.features] which runtime features the app has (`BUILD`). `'derive'` (default): from the components, as Stencil's `getSsrBuildConditionals` does (`ssr-features.js`), so the runtime skips what no component uses. `'all'`: every feature on, the runtime's defaults under Stencil's ssr conditionals.
+ * @param {Record<string, boolean>} [options.buildConditionals] overrides of the runtime's `BUILD` flags, over the features.
  * @param {Record<string, unknown>} [options.env] Stencil's `env`.
  * @param {object} [options.stencilrs] options of the stencilrs Vite plugin (`componentExport` is always `'ssr'`).
  * @param {import('vite').Plugin[]} [options.plugins] more Vite plugins for the component build (a CSS fix, a resolver).
@@ -320,7 +310,8 @@ export const buildHydrate = async (options = {}) => {
   const core = stencilCoreDir(root);
   const srcDir = resolve(root, options.srcDir ?? 'src');
   const files = options.components ?? walk(srcDir).filter((f) => SOURCE_RE.test(f) && !NOT_SOURCE_RE.test(f) && /@Component\s*\(/.test(readFileSync(f, 'utf8')));
-  const cmps = discoverComponents(files.map((f) => resolve(root, f)));
+  const absFiles = files.map((f) => resolve(root, f));
+  const cmps = discoverComponents(absFiles);
   // Components of collections (`ionicons`' `ion-icon`): decorated source rebuilt from the compiled collection.
   const virtual = new Map();
   const origin = new Map();
@@ -331,6 +322,8 @@ export const buildHydrate = async (options = {}) => {
     cmps.push({ file: c.file, className: meta.componentClassName, tagName: meta.tagName });
   }
   cmps.sort((a, b) => (a.className < b.className ? -1 : a.className > b.className ? 1 : 0));
+  const features = options.features ?? 'derive';
+  if (features !== 'derive' && features !== 'all') throw new Error(`stencilrs/ssr: features must be 'derive' or 'all', got ${JSON.stringify(features)}`);
   if (!cmps.length) throw new Error(`stencilrs/ssr: no component found in ${options.components ? 'the given files' : srcDir}`);
   const o = {
     root,
@@ -343,6 +336,7 @@ export const buildHydrate = async (options = {}) => {
     globalScript: options.globalScript ? resolve(root, options.globalScript).replaceAll('\\', '/') : null,
     globalStyles: options.globalStyles ?? '',
     preamble: options.preamble,
+    features: SSR_BUILD,
     buildConditionals: options.buildConditionals ?? {},
     env: options.env ?? {},
     pluginOptions: options.stencilrs ?? {},
@@ -353,6 +347,14 @@ export const buildHydrate = async (options = {}) => {
     runnerPlugins: options.runnerPlugins ?? [],
     logLevel: options.logLevel ?? 'warn',
   };
+  if (features === 'derive') {
+    // Every registered component: the project's, then the collections' (the decorated source rebuilt from each).
+    const sources = [
+      ...[...new Set(cmps.map((c) => c.file))].filter((f) => !virtual.has(f)).map((file) => ({ file, code: readFileSync(file, 'utf8') })),
+      ...[...virtual].map(([file, code]) => ({ file, code, base: origin.get(file) })),
+    ];
+    o.features = ssrBuildConditionals(await readComponentMetadata(sources, o.alias));
+  }
   const code = await buildRunner(await buildFactory(o), o);
   let file = null;
   if (options.outDir) {

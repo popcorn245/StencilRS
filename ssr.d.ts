@@ -21,7 +21,12 @@ export interface BuildHydrateOptions {
   preamble?: string;
   /** Vite `resolve.alias` of the component build. */
   alias?: Record<string, string> | Array<{ find: string | RegExp; replacement: string }>;
-  /** Overrides of the runtime's `BUILD` flags, over the conditionals Stencil's `ssr` target forces. */
+  /**
+   * Which runtime features the app has (`BUILD`). `'derive'` (default): from the components' metadata, as Stencil's
+   * `getSsrBuildConditionals` does, so the runtime skips branches no component needs. `'all'`: every feature on.
+   */
+  features?: 'derive' | 'all';
+  /** Overrides of the runtime's `BUILD` flags, over the features. */
   buildConditionals?: Record<string, boolean>;
   /** Stencil's `env`. */
   env?: Record<string, unknown>;

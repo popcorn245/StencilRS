@@ -92,6 +92,35 @@ Every variant is checked byte-identical to `none` before timing. Percentages are
 profile after the patches agrees (attribute lookups 9.4% -> 3.0% incl., selector engine 13.0% -> 7.2% on list-50 dsd).
 The numbers of the three rows, before and after, are in the PR description.
 
+## Runtime features derived from the components (issue #142)
+
+`buildHydrate` used to hand the runtime every feature on (`BUILD` = the runtime's defaults under Stencil's ssr overrides).
+`stencil build` derives them per app (`getBuildFeatures` + `updateBuildConditionals` + `getSsrBuildConditionals`).
+`ssr-features.js` ports that and reads the facts from stencilrs' own `componentMetadata: 'compilerstatic'`
+(`COMPILER_META`), also for the collection components. `buildHydrate({ features: 'all' })` keeps the old behaviour;
+`buildConditionals` still overrides either.
+
+Compared with the `BUILD` of Stencil 5's own `ssr` build of Ionic (`dist/hydrate-stencil/index.js`, factory copy): every
+flag is equal. The only keys that differ are three the runtime's defaults carry and Stencil's object lacks
+(`staticHydrationStyles`, `initializeNextTick`, `asyncQueue`, all `false` here, `undefined` there: same behaviour). Flags that go
+off for Ionic: `element` (Stencil's metadata pass never sets it), `formAssociated`, `serializer`, `deserializer`, `patchAll`,
+`patchChildren`, `patchClone`, `patchInsert`, `shadowClonable`, `shadowSerializable`; all vdom flags stay on (Ionic uses
+them all).
+
+Differences from Stencil, both conservative (a flag may be on where Stencil has it off, never the reverse): Stencil ORs in the
+vdom facts and tag names of every module a component imports (`updateComponentBuildConditionals`); stencilrs reads facts per
+class, so a local module that renders JSX turns all vdom flags, `slot` and `svg` on for its importer. And the Ionic `BUILD`
+is not constant-folded by either build (it is a runtime object in both), so a flag only skips a branch at run time.
+
+Measured (container, 4 cores shared with other jobs, Node 22): byte-identical output on every page and mode
+(`check:ssr`, `bench-ssr.mjs` equality, ui-kit `test:ssr`, `node --test test/ssr-*.test.js`). Per render, 15 interleaved
+rounds x 30 renders (`ssr-bench/variants.mjs`, `fragment` is not in its table), with the same build twice as a noise
+control: `all` 30.2 / 20.3 / 30.1 / 20.4 ms, `all2` (identical file) +7.7% / -0.1% / +4.7% / +4.0%, `derive` -3.2% / +1.6% /
+-9.2% / +1.7% (list-50 dsd, kitchen-sink dsd, list-50 scoped, kitchen-sink scoped). The identical build differs from itself by
+as much as the derived one differs from it: no measurable per-render gain. Bundle: 2,370,915 -> 2,372,417 bytes (+1.5 KB, the
+longer `BUILD` literal). It is kept for parity with `stencil build` (and for apps whose components lack features such as
+shadow DOM, where the runtime's branches differ), not for speed.
+
 ## Evaluated, not done
 
 - **Cache the parsed input and clone it (Express templates).** Measured on the patched runner, 200 iterations: parse of the
