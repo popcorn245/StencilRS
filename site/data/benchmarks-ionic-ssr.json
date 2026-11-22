@@ -50,7 +50,7 @@
   "rows": {
     "ionic-published": {
       "label": "@ionic/core 9.0.12 hydrate from npm (built by Ionic with Stencil 4)",
-      "hydrateApp": "../../../wt-130/examples/ionic/node_modules/@ionic/core/hydrate/index.mjs"
+      "hydrateApp": "node_modules/@ionic/core/hydrate/index.mjs"
     },
     "stencil5": {
       "label": "Stencil 5 hydrate app (`stencil build`, { type: 'ssr' }) of the migrated Ionic source",
