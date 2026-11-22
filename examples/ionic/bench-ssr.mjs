@@ -18,6 +18,10 @@
 //                 the differences (size, first differing offset) are reported, not failed.
 //   2. render     ssr-bench/render.mjs in a fresh process per row: module load, first render (cold), warm median and p95
 //                 ms/render after a warm-up, RSS.
+//   2b. cold      ssr-bench/cold.mjs: a fresh process starts stencilEngine and serves its first two requests, per variant:
+//                 base (no compile cache, no warm-up), cache (Node's compile cache, primed by one untimed run), warmup (a small
+//                 document, every row), cache+warmup, and, for rows whose hydrate app exports `tags`, warmup-tags (a document of
+//                 every registered tag). Median of N runs; kept apart from step 2, whose rows are the bare module (issue #141).
 //   3. express    ssr-bench/server.mjs per row (GET / -> renderToString -> res.send) under autocannon: req/s and p99 latency.
 //
 // Options:
@@ -27,6 +31,7 @@
 //   --warmup N            untimed renders before them (3)
 //   --pages a,b           pages (all)        --modes dsd,scoped (both)
 //   --no-express          skip step 3
+//   --cold-runs N         fresh processes per cold-start variant (5; 0 skips step 2b)
 //   --express-page <p>    page the Express app renders (list-50)
 //   --workers N           also measure each row through the stencilEngine worker pool (issue #140), as extra express rows
 //                         `<row>+workers` (N worker_threads, or 'auto'); the single-process rows are unchanged. Use
@@ -65,6 +70,7 @@ const RENDERS = num('--renders', 20);
 const WARMUP = Number(opt('--warmup', 3));
 const CONNECTIONS = num('--connections', 4);
 const DURATION = num('--duration', 5);
+const COLD_RUNS = Number(opt('--cold-runs', 5));
 const EXPRESS = !flag('--no-express');
 const WORKERS = opt('--workers', null);
 if (WORKERS != null && WORKERS !== 'auto' && !(Number(WORKERS) >= 1)) throw new Error("--workers must be a number of at least 1, or 'auto'");
@@ -186,6 +192,37 @@ for (const r of present) {
   timing[r.id] = await run('render.mjs', [r.file, String(WARMUP), String(RENDERS)]);
 }
 
+// 2b. cold start through stencilEngine: compile cache and warm-up variants, each in fresh processes
+const COLD_VARIANTS = [
+  { id: 'base', cache: false, warmup: 'none' },
+  { id: 'cache', cache: true, warmup: 'none' },
+  { id: 'warmup', cache: false, warmup: 'html' },
+  { id: 'cache+warmup', cache: true, warmup: 'html' },
+  { id: 'warmup-tags', cache: false, warmup: 'tags', needsTags: true },
+  { id: 'cache+warmup-tags', cache: true, warmup: 'tags', needsTags: true },
+];
+const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+const cold = {};
+if (COLD_RUNS > 0) {
+  const hasTags = (file) => /\nexport const tags = \[/.test(readFileSync(file, 'utf8').slice(-20000));
+  for (const r of present) {
+    cold[r.id] = {};
+    for (const v of COLD_VARIANTS) {
+      if (v.needsTags && !hasTags(r.file)) continue;
+      log(`cold start: ${r.id} / ${v.id} (${COLD_RUNS} fresh processes)`);
+      const cacheDir = v.cache ? mkdtempSync(join(os.tmpdir(), 'ssr-cc-')) : 'none';
+      try {
+        if (v.cache) await run('cold.mjs', [r.file, cacheDir, v.warmup]); // primes the cache; not timed
+        const runs = [];
+        for (let i = 0; i < COLD_RUNS; i++) runs.push(await run('cold.mjs', [r.file, cacheDir, v.warmup]));
+        cold[r.id][v.id] = Object.fromEntries(['readyMs', 'fragmentMs', 'list50Ms', 'firstResponseMs'].map((k) => [k, median(runs.map((x) => x[k]))]));
+      } finally {
+        if (v.cache) rmSync(cacheDir, { recursive: true, force: true });
+      }
+    }
+  }
+}
+
 // 3. Express throughput
 const throughput = {};
 if (EXPRESS) {
@@ -214,6 +251,12 @@ const table = (title, head, body) => {
   lines.push('', title, ...all.map((r, k) => r.map((c, i) => (i === 0 ? String(c).padEnd(w[i]) : String(c).padStart(w[i]))).join('  ') + (k === 0 ? '\n' + w.map((x) => '-'.repeat(x)).join('  ') : '')));
 };
 table('Module load, first render, memory (cold, fresh process per row)', ['row', 'load ms', 'first render ms', 'RSS MB', 'peak RSS MB'], present.map((r) => [r.id, f(timing[r.id].loadMs), f(timing[r.id].firstRenderMs), f(timing[r.id].rssMb), f(timing[r.id].peakRssMb)]));
+if (COLD_RUNS > 0)
+  table(
+    `Cold start through stencilEngine (median of ${COLD_RUNS} fresh processes; ms): ready / first fragment / first list-50 / start to first response`,
+    ['row / variant', 'ready', 'fragment', 'list-50', 'first response'],
+    present.flatMap((r) => Object.entries(cold[r.id]).map(([v, c]) => [`${r.id} / ${v}`, f(c.readyMs), f(c.fragmentMs), f(c.list50Ms), f(c.firstResponseMs)]))
+  );
 table(
   `Warm render, ms per render (median / p95 over ${RENDERS}, after ${WARMUP} warm-up)`,
   ['page / mode', ...present.map((r) => r.id), 'HTML KB'],
@@ -253,11 +296,12 @@ const doc = {
     loadavgAtStart: os.loadavg().map((x) => Number(x.toFixed(2))),
   },
   versions: { ionicCore: pkgVersion('@ionic/core'), stencil5: pkgVersion('@stencil/core'), express: pkgVersion('express'), autocannon: pkgVersion('autocannon'), git: git('rev-parse', 'HEAD') },
-  config: { pages, modes, renders: RENDERS, warmup: WARMUP, renderOptions: { prettyHtml: false, serializeShadowRoot: '<mode>', buildId: 'ionic-ssr-bench' }, express: EXPRESS ? { page: EXPRESS_PAGE, connections: CONNECTIONS, durationSeconds: DURATION, workers: WORKERS ? (WORKERS === 'auto' ? 'auto' : Number(WORKERS)) : null } : null },
+  config: { pages, modes, renders: RENDERS, warmup: WARMUP, coldRuns: COLD_RUNS, renderOptions: { prettyHtml: false, serializeShadowRoot: '<mode>', buildId: 'ionic-ssr-bench' }, express: EXPRESS ? { page: EXPRESS_PAGE, connections: CONNECTIONS, durationSeconds: DURATION, workers: WORKERS ? (WORKERS === 'auto' ? 'auto' : Number(WORKERS)) : null } : null },
   rows: Object.fromEntries(rows.map((r) => [r.id, { label: r.label, hydrateApp: r.file && relative(root, r.file).replace(/\\/g, '/'), skipped: r.file ? undefined : r.missing }])),
   equality,
   diagnostics,
   timing,
+  cold: COLD_RUNS > 0 ? { runs: COLD_RUNS, variants: cold } : null,
   throughput,
 };
 mkdirSync(resolve(OUT, '..'), { recursive: true });

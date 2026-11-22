@@ -353,13 +353,16 @@ export const buildHydrate = async (options = {}) => {
     runnerPlugins: options.runnerPlugins ?? [],
     logLevel: options.logLevel ?? 'warn',
   };
-  const code = await buildRunner(await buildFactory(o), o);
+  // `tags`: the registered tags, for `stencilEngine({ warmup: true })` (a document with every one of them). An export of its own,
+  // after the runner: the factory and what a render writes are untouched.
+  const tags = cmps.map((c) => c.tagName);
+  const code = `${await buildRunner(await buildFactory(o), o)}\nexport const tags = ${JSON.stringify(tags)};\n`;
   let file = null;
   if (options.outDir) {
     mkdirSync(resolve(root, options.outDir), { recursive: true });
     file = join(resolve(root, options.outDir), 'index.js');
     writeFileSync(file, code);
   }
-  return { code, file, components: cmps.map((c) => c.tagName) };
+  return { code, file, components: tags };
 };
 

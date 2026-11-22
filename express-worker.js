@@ -4,17 +4,37 @@
 // encoding to a transferred ArrayBuffer measured slower (the main thread then pays a decode on top), so there is no buffer path.
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { pickRenderToString } from './express-hydrate.js';
+import { enableCompileCache, pickRenderToString, warmupHtml } from './express-hydrate.js';
 
+// Before the import: a thread has its own isolate, so the main thread's `enableCompileCache` does not reach it.
+enableCompileCache(workerData.compileCache);
+
+// Load, then `loaded`; the main thread answers with the warm-up renders (it holds the views and the inner engine) and
+// `ready` follows them. Without a warm-up the main thread sends none and `ready` follows at once.
 let renderToString;
+let app;
 try {
-  renderToString = pickRenderToString(await import(workerData.hydrate));
-  parentPort.postMessage({ ready: true });
+  app = await import(workerData.hydrate);
+  renderToString = pickRenderToString(app);
+  parentPort.postMessage({ loaded: true });
 } catch (e) {
   parentPort.postMessage({ initError: { message: String(e?.message ?? e), stack: e?.stack } });
 }
 
-parentPort.on('message', async ({ id, html, options }) => {
+parentPort.on('message', async ({ id, html, options, warm }) => {
+  if (warm) {
+    // `{ tags: true }` is the document of every registered tag; only this thread knows them without a round trip.
+    let error;
+    for (const w of warm) {
+      try {
+        await renderToString(w.tags ? warmupHtml(app) : w.html, w.options); // diagnostics ignored, as in-process: a bare tag may log errors
+      } catch (e) {
+        error ??= { message: String(e?.message ?? e), stack: e?.stack };
+      }
+    }
+    parentPort.postMessage({ ready: true, warmError: error });
+    return;
+  }
   try {
     const result = await renderToString(html, options);
     // Only what crosses: the page and the diagnostics (plain objects). The rest of the result stays here.
