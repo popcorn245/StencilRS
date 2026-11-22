@@ -245,15 +245,14 @@ app.get('/', (req, res) => res.render('home', { user }));
   no-op on a Node without the API, and needs `hydrate` as a path (a module you imported yourself is already compiled).
   The first run writes the cache, so it pays off from the second start of a process (a restart, a new worker, a deploy
   that keeps the directory).
-- `warmup`: render at startup, so the first request is not JIT-cold: `true` renders one document holding every tag the
-  hydrate app registers (the `tags` export of apps built by stencilrs' `buildHydrate`; Stencil's own build has none, so
-  it renders an empty page), or a list of view paths (rendered through the inner engine with no locals) and HTML strings
-  (starting with `<`). It runs in-process and on every worker, with the engine's `renderOptions`, and `engine.ready`
-  resolves after it (a failed warm-up rejects `ready`; the engine still renders). A cold first render of a small page
-  fell from 55 ms to 10 ms in our container. The JIT warms per code path, so a list of pages shaped like your real ones
-  warms better than `true`: the first list-50 render only reached its warm cost after warming with a list page. `true`
-  renders every tag bare, and a component that fails without props fails here too (its `excludeComponents` entry in
-  `renderOptions` skips it); await `engine.ready` before `listen()`.
+- `warmup`: render at startup, so the first request is not JIT-cold: a list of view paths (rendered through the inner
+  engine with no locals) and HTML strings (starting with `<`), or `{ views: [...], times: 3 }` to run the list several
+  times. It runs in-process and on every worker, with the engine's `renderOptions`, and `engine.ready` resolves after it
+  (a failed warm-up rejects `ready`; the engine still renders). Warm with pages shaped like your real traffic: the JIT
+  warms per code path, and the first list-50 render only reached its warm cost after warming with a list page, a few
+  times. A cold first render of a small page fell from 55 ms to 10 ms in our container. There is no "every component"
+  mode (`true` is a TypeError): bare tags are not what a page looks like, and a component that fails without props
+  could take the server down at boot. Await `engine.ready` before `listen()`.
 - A view that starts with a doctype or `<html>` is rendered as a document. Anything else is a
   fragment (`fullDocument: false`): its components render, but there is no `<head>`, so no styles.
 

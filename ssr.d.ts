@@ -48,7 +48,7 @@ export interface BuildHydrateOptions {
 }
 
 export interface BuildHydrateResult {
-  /** The hydrate app, an ES module (it also exports `tags`: the tag of every component, what `stencilEngine`'s `warmup: true` renders). */
+  /** The hydrate app, an ES module. */
   code: string;
   /** `<outDir>/index.js`, or `null` when no `outDir` was given. */
   file: string | null;

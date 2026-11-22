@@ -20,8 +20,8 @@
 //                 ms/render after a warm-up, RSS.
 //   2b. cold      ssr-bench/cold.mjs: a fresh process starts stencilEngine and serves its first two requests, per variant:
 //                 base (no compile cache, no warm-up), cache (Node's compile cache, primed by one untimed run), warmup (a small
-//                 document, every row), cache+warmup, and, for rows whose hydrate app exports `tags`, warmup-tags (a document of
-//                 every registered tag). Median of N runs; kept apart from step 2, whose rows are the bare module (issue #141).
+//                 document, every row), cache+warmup, and warmup-list3 / cache+warmup-list3 (the list-50 page, 3 times: warm-up shaped
+//                 like the traffic). Median of N runs; kept apart from step 2, whose rows are the bare module (issue #141).
 //   3. express    ssr-bench/server.mjs per row (GET / -> renderToString -> res.send) under autocannon: req/s and p99 latency.
 //
 // Options:
@@ -198,17 +198,15 @@ const COLD_VARIANTS = [
   { id: 'cache', cache: true, warmup: 'none' },
   { id: 'warmup', cache: false, warmup: 'html' },
   { id: 'cache+warmup', cache: true, warmup: 'html' },
-  { id: 'warmup-tags', cache: false, warmup: 'tags', needsTags: true },
-  { id: 'cache+warmup-tags', cache: true, warmup: 'tags', needsTags: true },
+  { id: 'warmup-list3', cache: false, warmup: 'list3' },
+  { id: 'cache+warmup-list3', cache: true, warmup: 'list3' },
 ];
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 const cold = {};
 if (COLD_RUNS > 0) {
-  const hasTags = (file) => /\nexport const tags = \[/.test(readFileSync(file, 'utf8').slice(-20000));
   for (const r of present) {
     cold[r.id] = {};
     for (const v of COLD_VARIANTS) {
-      if (v.needsTags && !hasTags(r.file)) continue;
       log(`cold start: ${r.id} / ${v.id} (${COLD_RUNS} fresh processes)`);
       const cacheDir = v.cache ? mkdtempSync(join(os.tmpdir(), 'ssr-cc-')) : 'none';
       try {

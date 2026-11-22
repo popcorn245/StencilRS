@@ -19,9 +19,6 @@ const built = existsSync(hydratePath);
 const opts = { skip: built ? false : 'run `npm run build` first' };
 const exec = promisify(execFile);
 
-// `warmup: true` renders every tag bare, and these two components of the ui-kit fail on their own, asynchronously and with no props
-// (an editor with no holder, a slideshow with no MutationObserver): a real app lists them in `excludeComponents`, as here.
-const bare = { excludeComponents: ['pop-editor', 'pop-slideshow'] };
 const engines = [];
 const make = (config = {}) => {
   const e = stencilEngine({ hydrate: hydratePath, ...config });
@@ -33,7 +30,6 @@ const run = (engine, view, locals = {}) => new Promise((ok) => engine(view, loca
 
 // A hydrate app that records what it was asked to render, for what the real app cannot show (how many renders, which HTML).
 const fake = (log) => ({
-  tags: ['x-a', 'x-b'],
   renderToString: async (html, options) => (log.push({ html, options }), { html, diagnostics: [] }),
 });
 
@@ -44,21 +40,16 @@ describe('warmup, in-process', () => {
     assert.equal(log.length, 0);
   });
 
-  test('true renders one document with every registered tag, before ready resolves', async () => {
-    const log = [];
-    const e = stencilEngine({ hydrate: fake(log), warmup: true, renderOptions: { prettyHtml: false } });
-    await e.ready;
-    assert.equal(log.length, 1);
-    assert.match(log[0].html, /^<!doctype html>.*<x-a><\/x-a><x-b><\/x-b>/);
-    assert.equal(log[0].options.fullDocument, true);
-    assert.equal(log[0].options.prettyHtml, false); // the engine's renderOptions apply
+  test('true is a clear TypeError', () => {
+    assert.throws(() => stencilEngine({ hydrate: fake([]), warmup: true }), /warmup: true. is not supported/);
   });
 
-  test('a hydrate app without `tags` still warms up, with an empty page', async () => {
+  test('{ views, times } runs the list that many times, in order, before ready', async () => {
     const log = [];
-    await stencilEngine({ hydrate: { renderToString: fake(log).renderToString }, warmup: true }).ready;
-    assert.equal(log.length, 1);
-    assert.doesNotMatch(log[0].html, /<x-/);
+    const e = stencilEngine({ hydrate: fake(log), warmup: { views: ['<p>a</p>', '<p>b</p>'], times: 3 }, renderOptions: { prettyHtml: false } });
+    await e.ready;
+    assert.deepEqual(log.map((l) => l.html), ['<p>a</p>', '<p>b</p>', '<p>a</p>', '<p>b</p>', '<p>a</p>', '<p>b</p>']);
+    assert.equal(log[0].options.prettyHtml, false); // the engine's renderOptions apply
   });
 
   test('a list takes HTML strings and view files, through the inner engine', async () => {
@@ -90,11 +81,12 @@ describe('warmup, in-process', () => {
   test('bad options are TypeErrors', () => {
     assert.throws(() => stencilEngine({ hydrate: fake([]), warmup: 'home' }), /warmup/);
     assert.throws(() => stencilEngine({ hydrate: fake([]), warmup: [1] }), /warmup/);
+    assert.throws(() => stencilEngine({ hydrate: fake([]), warmup: { views: [], times: 0 } }), /times/);
     assert.throws(() => stencilEngine({ hydrate: fake([]), compileCache: 1 }), /compileCache/);
   });
 
   test('with the real hydrate app: the first render after ready is a normal render', opts, async () => {
-    const warm = make({ warmup: true, renderOptions: bare });
+    const warm = make({ warmup: { views: ['<pop-stat value="1" label="w"></pop-stat>'], times: 2 } });
     await warm.ready;
     const cold = make();
     const page = join(here, '../views/about.html');
@@ -106,16 +98,9 @@ describe('warmup, in-process', () => {
   });
 });
 
-describe('the hydrate app', opts, () => {
-  test('buildHydrate writes a `tags` export: every registered component', async () => {
-    const app = await import(hydratePath);
-    assert.ok(Array.isArray(app.tags) && app.tags.includes('pop-card') && app.tags.every((t) => t.includes('-')));
-  });
-});
-
 describe('warmup, on workers', opts, () => {
-  test('ready resolves after every worker has warmed up; the registered tags are rendered by the thread', async () => {
-    const e = make({ workers: 2, warmup: true, renderOptions: bare });
+  test('ready resolves after every worker has warmed up', async () => {
+    const e = make({ workers: 2, warmup: { views: ['<pop-stat value="1" label="w"></pop-stat>'], times: 2 } });
     await e.ready;
     const r = await run(e, join(here, '../views/about.html'), { cache: true });
     assert.equal(r.err, null);
@@ -139,7 +124,7 @@ describe('warmup, on workers', opts, () => {
   });
 
   test('an unloadable hydrate app still rejects ready with a warm-up on', async () => {
-    const e = make({ hydrate: join(tmpdir(), 'no-such-hydrate-app.js'), workers: 1, warmup: true });
+    const e = make({ hydrate: join(tmpdir(), 'no-such-hydrate-app.js'), workers: 1, warmup: ['<p>x</p>'] });
     await assert.rejects(e.ready);
   });
 });

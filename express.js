@@ -20,7 +20,7 @@ import { readFile } from 'node:fs/promises';
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
-import { enableCompileCache, hydrateHref, pickRenderToString, warmupHtml } from './express-hydrate.js';
+import { enableCompileCache, hydrateHref, pickRenderToString } from './express-hydrate.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
 const isDocument = (html) => /^\s*(?:<!--[\s\S]*?-->\s*)*<(?:!doctype\b|html[\s>])/i.test(html);
@@ -29,7 +29,7 @@ const loadHydrate = async (hydrate) => {
   const app = await hydrate;
   const href = hydrateHref(app);
   const mod = href ? await import(href) : app;
-  return { renderToString: pickRenderToString(mod), html: () => warmupHtml(mod) };
+  return pickRenderToString(mod);
 };
 
 const workerFile = new URL('./express-worker.js', import.meta.url);
@@ -39,9 +39,9 @@ const workerFile = new URL('./express-worker.js', import.meta.url);
  * A crashed or timed-out thread fails only the render it held and is replaced. `ready` resolves when every thread has
  * loaded the app and run the warm-up (rejects if one cannot load it: the pool is then broken and every render fails with that
  * error, no restart loop; a failed warm-up rejects `ready` too but leaves the thread in service).
- * `warm` is a promise of the warm-up renders (`[{ html, options } | { tags: true, options }]`), or null for none.
+ * `warm` is a promise of the warm-up renders (`[{ html, options }]`) and how many times to run them, or null for none.
  */
-const createPool = ({ href, size, maxQueue, timeout, compileCache, warm }) => {
+const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }) => {
   const queue = [];
   const slots = new Set();
   let nextId = 0;
@@ -106,7 +106,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm }) => {
         warm.then(
           (items) => {
             try {
-              worker.postMessage({ warm: items });
+              worker.postMessage({ warm: items, times });
             } catch (e) {
               markReady(e); // options that cannot be cloned
             }
@@ -178,7 +178,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm }) => {
  * @param [config.workers] render on a pool of this many `worker_threads` (`'auto'`: available parallelism minus one); 0 or omitted renders in-process. `hydrate` must then be a path or URL
  * @param [config.maxQueue] renders that may wait for a free worker (default 100); one more fails with code `ESTENCIL_QUEUE_FULL`
  * @param [config.compileCache] Node's compile cache (`module.enableCompileCache`) for the hydrate app, here and in each worker: `true` (default; a no-op on a Node without it), `false` to opt out, or a directory for the cache
- * @param [config.warmup] render at startup so the first request is not JIT-cold: `true` renders one document holding every tag the hydrate app registers (its `tags` export, which stencilrs' `buildHydrate` writes; without it an empty page), or a list of views (paths, run through the inner engine with no locals) and HTML strings (starting with `<`). In-process and on every worker; `ready` resolves after it
+ * @param [config.warmup] render at startup so the first request is not JIT-cold: a list of views (paths, run through the inner engine with no locals) and HTML strings (starting with `<`), or `{ views, times }` to run the list `times` times (default 1; the JIT needs repeats). Shape them like real traffic. In-process and on every worker; `ready` resolves after it
  * @param [config.renderTimeout] ms a pooled render may take (default 30000, 0 = no limit); past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`
  * @returns an Express engine: `app.engine('ext', stencilEngine({ ... }))`, with `ready` (a promise: the app is loaded and warmed up; resolves at once without `warmup` or a pool; rejects when the app cannot load or a warm-up render fails, the engine stays usable after a failed warm-up) and `close()` (stops the workers)
  */
@@ -186,13 +186,16 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   if (hydrate == null) throw new TypeError('stencilEngine: `hydrate` is required');
   const size = workers === 'auto' ? Math.max(1, availableParallelism() - 1) : workers;
   if (!Number.isInteger(size) || size < 0) throw new TypeError("stencilEngine: `workers` must be a non-negative integer or 'auto'");
-  if (!(warmup === false || warmup === true || (Array.isArray(warmup) && warmup.every((w) => typeof w === 'string')))) throw new TypeError('stencilEngine: `warmup` must be true or an array of view paths and HTML strings');
+  if (warmup === true) throw new TypeError('stencilEngine: `warmup: true` is not supported: rendering every tag bare is not what a page looks like, and a component that fails without props can take the server down. Pass views or HTML shaped like your traffic: `warmup: [\'<my-page>...\', \'/path/to/view\']`');
+  const warmViews = Array.isArray(warmup) ? warmup : warmup && typeof warmup === 'object' ? warmup.views : warmup === false ? [] : null;
+  const warmTimes = warmup && typeof warmup === 'object' && !Array.isArray(warmup) ? warmup.times ?? 1 : 1;
+  if (warmup !== false && !(Array.isArray(warmViews) && warmViews.every((w) => typeof w === 'string') && Number.isInteger(warmTimes) && warmTimes >= 1)) throw new TypeError('stencilEngine: `warmup` must be an array of view paths and HTML strings, or { views, times } with a whole `times` of at least 1');
   if (!(typeof compileCache === 'boolean' || typeof compileCache === 'string')) throw new TypeError('stencilEngine: `compileCache` must be a boolean or a directory');
   // Before the hydrate app is imported (here or by a worker): the cache serves modules loaded after the call.
   enableCompileCache(compileCache);
   let pool = null;
   const warming = warmup !== false;
-  let warmItems = null; // a promise of the warm-up renders: `{ html, options }`, or `{ tags: true, options }`
+  let warmItems = null; // a promise of the warm-up renders: `{ html, options }`
   if (engine != null && typeof engine !== 'function') throw new TypeError('stencilEngine: `engine` must be a (path, locals, callback) function');
   let renderer; // loaded on the first render, so a path to a build that does not exist yet still lets the app start
   const files = new Map(); // plain-HTML views, kept while `view cache` is on
@@ -213,9 +216,8 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   // The warm-up renders, resolved on this thread (the views and the inner engine are here): a worker gets them as messages.
   function resolveWarmup() {
     return Promise.all(
-      (warmup === true ? [true] : warmup).map(async (w) => {
+      warmViews.map(async (w) => {
         const options = { ...renderOptions };
-        if (w === true) return { tags: true, options: { ...options, fullDocument: true } };
         const html = /^\s*</.test(w) ? w : engine ? await fill(w, {}) : await readFile(w, 'utf8');
         options.fullDocument ??= isDocument(html);
         return { html, options };
@@ -228,21 +230,20 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     // A module object, a function or a promise cannot be sent to another thread: the worker imports the app itself.
     const href = hydrateHref(hydrate);
     if (!href) throw new TypeError('stencilEngine: with `workers`, `hydrate` must be a path or URL to the hydrate app (a module object cannot cross to a worker thread)');
-    pool = createPool({ href, size, maxQueue, timeout: renderTimeout, compileCache, warm: warming ? (warmItems = resolveWarmup()) : null });
+    pool = createPool({ href, size, maxQueue, timeout: renderTimeout, compileCache, warm: warming ? (warmItems = resolveWarmup()) : null, times: warmTimes });
     warmItems?.catch(() => {}); // the threads report it through `ready`, once they ask for it
   }
 
   // In-process: load the app, then render them.
   const warmInProcess = async () => {
-    const { renderToString, html: tagsHtml } = await load();
-    for (const w of await (warmItems ??= resolveWarmup())) {
-      // Diagnostics are not looked at: a bare tag with no parent or props makes some components log errors (`<ion-refresher> must be used inside ion-content`), which is not a failed warm-up. A throw is.
-      await renderToString(w.tags ? tagsHtml() : w.html, w.options);
-    }
+    const renderToString = await load();
+    const items = await (warmItems ??= resolveWarmup());
+    // Diagnostics are not looked at: a view that needs locals it does not get may log errors, which is not a failed warm-up. A throw is.
+    for (let n = 0; n < warmTimes; n++) for (const w of items) await renderToString(w.html, w.options);
   };
 
   const render = async (path, locals) => {
-    const renderToString = pool ? null : (await load()).renderToString;
+    const renderToString = pool ? null : await load();
     const html = engine ? await fill(path, locals) : await read(path, locals.cache);
     const options = { ...renderOptions, ...locals.stencil };
     options.fullDocument ??= isDocument(html);

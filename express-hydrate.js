@@ -30,9 +30,3 @@ export const enableCompileCache = (option = true) => {
     // no cache: slower start, nothing else
   }
 };
-
-/** The document `warmup: true` renders: every tag the app registers (its `tags` export), once. Without the export, an empty page: still warms parsing and serializing. */
-export const warmupHtml = (app) => {
-  const tags = app?.tags ?? app?.default?.tags ?? [];
-  return `<!doctype html><html><head><title>warm-up</title></head><body>${tags.map((t) => `<${t}></${t}>`).join('')}</body></html>`;
-};
