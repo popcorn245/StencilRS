@@ -7,6 +7,7 @@ description: "Per-file compile, a production Vite build and a full stencil build
 import { data } from './data/site.data'
 import { data as ionic } from './data/ionic-bench.data'
 import { data as chartData } from './data/charts.data'
+import { data as ssr } from './data/ionic-ssr.data'
 import { format } from './data/charts'
 const b = data.bench
 const c = chartData.charts
@@ -57,6 +58,26 @@ const checkRows = [
   ['when tsgo could start (components.d.ts written), from the build start', cell('coldBuildCheckStart', 'stencilrs+check', sec)],
   ['the vite build with dts: true inside that run', cell('coldBuildCheckVite', 'stencilrs+check', sec)],
 ]
+
+// SSR (examples/ionic/bench-ssr.mjs). One run per row; `ssr.preview` marks container data that a quiet-machine run replaces.
+const ssrKeys = ['stencilrs', 'stencil5', 'ionic-published'].filter((k) => ssr.timing[k])
+const ssrName = { stencilrs: 'stencilrs', stencil5: 'Stencil 5', 'ionic-published': 'Ionic published (Stencil 4)' }
+const ssrMode = { 'declarative-shadow-dom': 'dsd', scoped: 'scoped' }
+const f1 = (v) => (v == null ? 'n/a' : v < 10 ? v.toFixed(2) : v.toFixed(1))
+const ssrHead = ['Page / mode', ...ssrKeys.map((k) => ssrName[k]), 'HTML, KB (stencilrs)']
+const ssrRender = ssr.config.modes.flatMap((mode) => ssr.config.pages.map((page) => [
+  `${page} / ${ssrMode[mode] ?? mode}`,
+  ...ssrKeys.map((k) => { const r = ssr.timing[k].results[`${page}.${mode}`]; return `${f1(r.medianMs)} (p95 ${f1(r.p95Ms)})` }),
+  Math.round(ssr.timing.stencilrs.results[`${page}.${mode}`].htmlBytes / 1024).toLocaleString('en-US'),
+]))
+const ssrExpressHead = ['Mode', ...ssrKeys.map((k) => `${ssrName[k]}: req/s (p99)`)]
+const ssrExpress = ssr.config.express ? ssr.config.modes.map((mode) => [ssrMode[mode] ?? mode, ...ssrKeys.map((k) => { const t = ssr.throughput[k][mode]; return `${t.reqPerSec.toFixed(1)} (${Math.round(t.p99Ms)} ms)` })]) : []
+const ssrColdHead = ['Row', 'Module load', 'First render', 'RSS after', 'Peak RSS']
+const ssrCold = ssrKeys.map((k) => { const t = ssr.timing[k]; return [ssrName[k], `${f1(t.loadMs)} ms`, `${f1(t.firstRenderMs)} ms`, `${Math.round(t.rssMb)} MiB`, `${Math.round(t.peakRssMb)} MiB`] })
+const ssrMed = (page, mode, k) => ssr.timing[k].results[`${page}.${mode}`].medianMs
+const ssrX = (a, b) => `${(a / b).toFixed(1)}×`
+const ssrEqual = ssr.equal ? 'it was, on all ' + ssr.comparisons + ' combinations' : 'it was not: see the JSON'
+const L = 'list-50', DSD = 'declarative-shadow-dom'
 </script>
 
 # Benchmarks
@@ -344,6 +365,75 @@ npm run bench -- --runs 3 --preview  # a quicker, labelled run
 
 The benchmark needs no browser: it is builds, dev servers and a compiler loop. Linux and macOS record peak memory; on Windows
 those rows are missing.
+
+## Server-side rendering (Ionic)
+
+<div :class="[ssr.preview ? 'warning' : 'info', 'custom-block']"><p class="custom-block-title">{{ ssr.preview ? 'Container data' : 'Numbers' }}</p>
+<p v-if="ssr.preview">These numbers were measured in a shared cloud container ({{ ssr.machine.description }}; {{ ssr.machine.cpu }}, {{ ssr.machine.logicalCores }} logical cores,
+{{ ssr.machine.ramGiB }} GB, Node {{ ssr.machine.node }}, load average {{ ssr.machine.loadavgAtStart.join(' / ') }} at the start) while other jobs ran on it. They are indicative, not final: treat the ratios as
+rough, and expect run-to-run noise of several percent on a combination. They are replaced by quiet runs on Popcorn-Tower (WSL shut down) and an Apple M2, and this page will then state each machine's spec.</p>
+<p v-else>Measured on {{ ssr.machine.description }} ({{ ssr.machine.cpu }}, {{ ssr.machine.logicalCores }} logical cores, {{ ssr.machine.ramGiB }} GB, {{ ssr.machine.os }}, Node {{ ssr.machine.node }}).</p></div>
+
+Server-side rendering of Ionic {{ ssr.versions.ionicCore }}: `renderToString` of a hydrate app, the way [the SSR guide](/guide/ssr) describes. Three rows, each in its own fresh process:
+
+| Row | Hydrate app |
+|---|---|
+| Ionic published | `@ionic/core/hydrate` from npm, which Ionic built with Stencil 4 |
+| Stencil 5 | `stencil build` with the `ssr` output target over the same source, migrated to Stencil {{ ssr.versions.stencil5 }} |
+| stencilrs | `buildHydrate` from `@popcorn245/stencilrs/ssr`, the same migrated source, with the fast serializer and the runtime patches |
+
+**Fairness.** Ionic {{ ssr.versions.ionicCore }} in every row; the same Node, the same input HTML (the pages in `examples/ionic/ssr-pages.mjs`), and the same
+render options for every row (`prettyHtml: false`, a fixed build id, `serializeShadowRoot` as the table says, everything else default).
+Before anything is timed the harness renders every page and mode with Stencil 5 and stencilrs and requires the HTML to be **byte-identical**
+({{ ssrEqual }}). Ionic published is Stencil 4's output, which differs from Stencil 5's
+(it is larger, for one thing; the two are compared and reported, not failed). **Most of the gap between Ionic published and the other two is Stencil 5 itself**,
+not stencilrs: on {{ L }} in declarative shadow DOM, Stencil 5 is {{ ssrX(ssrMed(L, DSD, 'ionic-published'), ssrMed(L, DSD, 'stencil5')) }} faster than Ionic published,
+and stencilrs adds {{ ssrX(ssrMed(L, DSD, 'stencil5'), ssrMed(L, DSD, 'stencilrs')) }} on top of that. The comparison that isolates stencilrs is the Stencil 5 row against the stencilrs row.
+
+### Time per render
+
+<div class="chart-grid">
+<BenchChart v-for="id in ['ssr-render-list-50-dsd', 'ssr-render-list-50-scoped', 'ssr-render-kitchen-sink-dsd', 'ssr-render-kitchen-sink-scoped', 'ssr-render-fragment-dsd', 'ssr-render-fragment-scoped']" :key="id" :chart="c[id]" />
+</div>
+
+<DataTable :head="ssrHead" :rows="ssrRender" highlight="stencilrs" />
+
+Milliseconds per `renderToString`, median (p95) over {{ ssr.config.renders }} timed renders after {{ ssr.config.warmup }} warm-up renders. The HTML column is the size of the output.
+In declarative shadow DOM mode every component's styles are written into the page, which is why `list-50` is about a megabyte.
+
+### Express
+
+<div class="chart-grid">
+<BenchChart v-for="id in ['ssr-express-dsd', 'ssr-express-scoped']" :key="id" :chart="c[id]" />
+</div>
+
+<DataTable :head="ssrExpressHead" :rows="ssrExpress" highlight="stencilrs" />
+
+An Express app with one route that calls `renderToString` on the {{ ssr.config.express.page }} page and sends the result, under
+[autocannon](https://github.com/mcollina/autocannon) with {{ ssr.config.express.connections }} connections for {{ ssr.config.express.durationSeconds }} s. Rendering is CPU-bound and
+single-threaded, so requests per second is about one over the time per render.
+
+### Cold start and memory
+
+<div class="chart-grid">
+<BenchChart :chart="c['ssr-load']" />
+<BenchChart :chart="c['ssr-first-render']" />
+</div>
+<div class="chart-grid one"><BenchChart :chart="c['ssr-rss']" /></div>
+
+<DataTable :head="ssrColdHead" :rows="ssrCold" highlight="stencilrs" />
+
+A fresh process per row: `import()` of the hydrate app, then the very first render, with nothing cached. The patches help least here (the caches start empty), so do not
+read the warm rows as a startup number. Memory is the process's resident set after, and at the peak of, rendering every page and mode.
+
+### Reproduce
+
+```sh
+cd examples/ionic
+npm run build:ssr && npm run build:hydrate   # Stencil 5's hydrate app and stencilrs's
+npm run check:ssr                            # byte-for-byte parity of the two
+node bench-ssr.mjs --machine "my machine"    # writes ../../site/data/benchmarks-ionic-ssr.json; --help lists the options
+```
 
 ## Reproduce
 

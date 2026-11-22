@@ -31,12 +31,13 @@
 //   --connections N       autocannon connections (4)        --duration S  seconds per run (5)
 //   --out <file>          JSON path (../../site/data/benchmarks-ionic-ssr.json)
 //   --note "<text>"       free text stored in the JSON      --machine "<text>"  machine description
+//   --preview             mark the JSON as a preview run (shared or noisy machine): the site labels it until a quiet run replaces it
 // The benchmark is CPU-bound and single-threaded per row; on a shared machine the numbers are noisy (loadavg is recorded).
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import os from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import autocannon from 'autocannon';
@@ -226,6 +227,7 @@ const pkgVersion = (p) => { try { return JSON.parse(readFileSync(join(root, 'nod
 const cpus = os.cpus();
 const doc = {
   schema: 1,
+  preview: flag('--preview'),
   note: opt('--note', null),
   finishedAt: new Date().toISOString(),
   machine: {
@@ -240,7 +242,7 @@ const doc = {
   },
   versions: { ionicCore: pkgVersion('@ionic/core'), stencil5: pkgVersion('@stencil/core'), express: pkgVersion('express'), autocannon: pkgVersion('autocannon'), git: git('rev-parse', 'HEAD') },
   config: { pages, modes, renders: RENDERS, warmup: WARMUP, renderOptions: { prettyHtml: false, serializeShadowRoot: '<mode>', buildId: 'ionic-ssr-bench' }, express: EXPRESS ? { page: EXPRESS_PAGE, connections: CONNECTIONS, durationSeconds: DURATION } : null },
-  rows: Object.fromEntries(rows.map((r) => [r.id, { label: r.label, hydrateApp: r.file, skipped: r.file ? undefined : r.missing }])),
+  rows: Object.fromEntries(rows.map((r) => [r.id, { label: r.label, hydrateApp: r.file && relative(root, r.file).replace(/\\/g, '/'), skipped: r.file ? undefined : r.missing }])),
   equality,
   diagnostics,
   timing,

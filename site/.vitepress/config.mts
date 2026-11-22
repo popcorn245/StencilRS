@@ -151,6 +151,7 @@ export default defineConfig({
             { text: 'Vite plugin', link: '/guide/vite-plugin' },
             { text: 'API', link: '/guide/api' },
             { text: 'Testing', link: '/guide/testing' },
+            { text: 'Server-side rendering', link: '/guide/ssr' },
             { text: 'Migrating to Stencil v5', link: '/guide/migrating' },
           ],
         },
