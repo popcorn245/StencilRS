@@ -1,0 +1,441 @@
+{
+  "schema": 1,
+  "preview": true,
+  "note": "container data: indicative only, replaced by the quiet Popcorn-Tower and M2 runs (issue #132)",
+  "finishedAt": "2026-11-22T04:36:55.036Z",
+  "machine": {
+    "description": "Shared cloud build container, 4 vCPU",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "logicalCores": 4,
+    "ramGiB": 16,
+    "os": "Linux 6.18.44-fc-v726",
+    "platform": "linux-x64",
+    "node": "22.23.5",
+    "loadavgAtStart": [
+      1.14,
+      0.98,
+      1.02
+    ]
+  },
+  "versions": {
+    "ionicCore": "9.0.12",
+    "stencil5": "5.0.0-beta.25",
+    "express": "5.3.0",
+    "autocannon": "9.0.0",
+    "git": "f58a4e4932e9b7f5d600977dd948dd897f0b9467"
+  },
+  "config": {
+    "pages": [
+      "fragment",
+      "list-50",
+      "kitchen-sink"
+    ],
+    "modes": [
+      "declarative-shadow-dom",
+      "scoped"
+    ],
+    "renders": 20,
+    "warmup": 3,
+    "renderOptions": {
+      "prettyHtml": false,
+      "serializeShadowRoot": "<mode>",
+      "buildId": "ionic-ssr-bench"
+    },
+    "express": {
+      "page": "list-50",
+      "connections": 4,
+      "durationSeconds": 5
+    }
+  },
+  "rows": {
+    "ionic-published": {
+      "label": "@ionic/core 9.0.12 hydrate from npm (built by Ionic with Stencil 4)",
+      "hydrateApp": "node_modules/@ionic/core/hydrate/index.mjs"
+    },
+    "stencil5": {
+      "label": "Stencil 5 hydrate app (`stencil build`, { type: 'ssr' }) of the migrated Ionic source",
+      "hydrateApp": "dist/hydrate-stencil/index.js"
+    },
+    "stencilrs": {
+      "label": "hydrate app built from stencilrs output (issue #128)",
+      "hydrateApp": "dist/hydrate-stencilrs/index.js"
+    }
+  },
+  "equality": {
+    "stencil5VsStencilrs": [
+      {
+        "page": "fragment",
+        "mode": "declarative-shadow-dom",
+        "identical": true,
+        "bytes": {
+          "stencil5": 9708,
+          "stencilrs": 9708
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      },
+      {
+        "page": "list-50",
+        "mode": "declarative-shadow-dom",
+        "identical": true,
+        "bytes": {
+          "stencil5": 1014148,
+          "stencilrs": 1014148
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      },
+      {
+        "page": "kitchen-sink",
+        "mode": "declarative-shadow-dom",
+        "identical": true,
+        "bytes": {
+          "stencil5": 360386,
+          "stencilrs": 360386
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      },
+      {
+        "page": "fragment",
+        "mode": "scoped",
+        "identical": true,
+        "bytes": {
+          "stencil5": 13188,
+          "stencilrs": 13188
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      },
+      {
+        "page": "list-50",
+        "mode": "scoped",
+        "identical": true,
+        "bytes": {
+          "stencil5": 126751,
+          "stencilrs": 126751
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      },
+      {
+        "page": "kitchen-sink",
+        "mode": "scoped",
+        "identical": true,
+        "bytes": {
+          "stencil5": 240440,
+          "stencilrs": 240440
+        },
+        "firstDifferenceAt": null,
+        "context": null
+      }
+    ],
+    "publishedVsStencil5": [
+      {
+        "page": "fragment",
+        "mode": "declarative-shadow-dom",
+        "identical": false,
+        "bytes": {
+          "stencil5": 9708,
+          "ionic-published": 11676
+        },
+        "firstDifferenceAt": 218,
+        "context": {
+          "stencil5": "md button button-solid ion-activatable ion-focusable hydrate",
+          "ionic-published": "sc-ion-button-md-h md button button-solid ion-activatable io"
+        }
+      },
+      {
+        "page": "list-50",
+        "mode": "declarative-shadow-dom",
+        "identical": false,
+        "bytes": {
+          "stencil5": 1014148,
+          "ionic-published": 1159660
+        },
+        "firstDifferenceAt": 268,
+        "context": {
+          "stencil5": "color:var(--color);font-family:var(--ion-font-family, inheri",
+          "ionic-published": "display:block;color:var(--color);font-family:var(--ion-font-"
+        }
+      },
+      {
+        "page": "kitchen-sink",
+        "mode": "declarative-shadow-dom",
+        "identical": false,
+        "bytes": {
+          "stencil5": 360386,
+          "ionic-published": 431251
+        },
+        "firstDifferenceAt": 418,
+        "context": {
+          "stencil5": ".6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--p",
+          "ionic-published": "0.6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--"
+        }
+      },
+      {
+        "page": "fragment",
+        "mode": "scoped",
+        "identical": false,
+        "bytes": {
+          "stencil5": 13188,
+          "ionic-published": 15072
+        },
+        "firstDifferenceAt": 456,
+        "context": {
+          "stencil5": "width:auto;color:var(--color);font-family:var(--ion-font-fam",
+          "ionic-published": "display:inline-block;width:auto;color:var(--color);font-fami"
+        }
+      },
+      {
+        "page": "list-50",
+        "mode": "scoped",
+        "identical": false,
+        "bytes": {
+          "stencil5": 126751,
+          "ionic-published": 148262
+        },
+        "firstDifferenceAt": 269,
+        "context": {
+          "stencil5": "color:var(--color);font-family:var(--ion-font-family, inheri",
+          "ionic-published": "display:block;color:var(--color);font-family:var(--ion-font-"
+        }
+      },
+      {
+        "page": "kitchen-sink",
+        "mode": "scoped",
+        "identical": false,
+        "bytes": {
+          "stencil5": 240440,
+          "ionic-published": 278821
+        },
+        "firstDifferenceAt": 418,
+        "context": {
+          "stencil5": ".6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--p",
+          "ionic-published": "0.6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--"
+        }
+      }
+    ]
+  },
+  "diagnostics": {},
+  "timing": {
+    "ionic-published": {
+      "loadMs": 34.360362,
+      "firstRenderMs": 29.939697999999993,
+      "rssMb": 200.9,
+      "peakRssMb": 204.1,
+      "results": {
+        "fragment.declarative-shadow-dom": {
+          "firstMs": 29.939697999999993,
+          "medianMs": 1.896464999999992,
+          "p95Ms": 3.5690529999999967,
+          "minMs": 1.650072999999992,
+          "htmlBytes": 11676
+        },
+        "list-50.declarative-shadow-dom": {
+          "firstMs": 488.0869640000001,
+          "medianMs": 407.6371740000004,
+          "p95Ms": 438.5486799999999,
+          "minMs": 328.53895100000045,
+          "htmlBytes": 1159969
+        },
+        "kitchen-sink.declarative-shadow-dom": {
+          "firstMs": 189.08230699999876,
+          "medianMs": 78.34632500000043,
+          "p95Ms": 99.64453899999899,
+          "minMs": 72.08230199999889,
+          "htmlBytes": 431819
+        },
+        "fragment.scoped": {
+          "firstMs": 6.590401999999813,
+          "medianMs": 2.8994329999986803,
+          "p95Ms": 5.606415999998717,
+          "minMs": 2.5444100000004255,
+          "htmlBytes": 15087
+        },
+        "list-50.scoped": {
+          "firstMs": 362.076998999999,
+          "medianMs": 285.368794,
+          "p95Ms": 331.44478700000036,
+          "minMs": 250.95828500000061,
+          "htmlBytes": 150100
+        },
+        "kitchen-sink.scoped": {
+          "firstMs": 96.650744999999,
+          "medianMs": 79.98709400000007,
+          "p95Ms": 87.80040699999881,
+          "minMs": 73.81582100000014,
+          "htmlBytes": 280147
+        }
+      }
+    },
+    "stencil5": {
+      "loadMs": 32.710187999999995,
+      "firstRenderMs": 43.759941000000005,
+      "rssMb": 192.7,
+      "peakRssMb": 195.5,
+      "results": {
+        "fragment.declarative-shadow-dom": {
+          "firstMs": 43.759941000000005,
+          "medianMs": 2.594161999999983,
+          "p95Ms": 4.875074999999995,
+          "minMs": 1.8268240000000162,
+          "htmlBytes": 9708
+        },
+        "list-50.declarative-shadow-dom": {
+          "firstMs": 103.91804200000001,
+          "medianMs": 38.31639699999994,
+          "p95Ms": 49.966995999999995,
+          "minMs": 34.62782299999981,
+          "htmlBytes": 1014457
+        },
+        "kitchen-sink.declarative-shadow-dom": {
+          "firstMs": 40.77507300000002,
+          "medianMs": 24.205105999999887,
+          "p95Ms": 31.243556000000126,
+          "minMs": 19.607420000000047,
+          "htmlBytes": 360954
+        },
+        "fragment.scoped": {
+          "firstMs": 8.812373000000207,
+          "medianMs": 3.238851000000068,
+          "p95Ms": 5.4332509999999274,
+          "minMs": 2.5443149999998695,
+          "htmlBytes": 13203
+        },
+        "list-50.scoped": {
+          "firstMs": 58.22081399999979,
+          "medianMs": 43.75002199999972,
+          "p95Ms": 52.09319400000004,
+          "minMs": 39.08433100000002,
+          "htmlBytes": 128589
+        },
+        "kitchen-sink.scoped": {
+          "firstMs": 45.89771099999962,
+          "medianMs": 42.674023000000034,
+          "p95Ms": 58.37565399999994,
+          "minMs": 39.63155599999982,
+          "htmlBytes": 241766
+        }
+      }
+    },
+    "stencilrs": {
+      "loadMs": 28.606716000000002,
+      "firstRenderMs": 36.334571999999994,
+      "rssMb": 208.5,
+      "peakRssMb": 223.7,
+      "results": {
+        "fragment.declarative-shadow-dom": {
+          "firstMs": 36.334571999999994,
+          "medianMs": 1.9875609999999995,
+          "p95Ms": 3.8739550000000094,
+          "minMs": 1.4590619999999888,
+          "htmlBytes": 9708
+        },
+        "list-50.declarative-shadow-dom": {
+          "firstMs": 57.93379899999999,
+          "medianMs": 31.66844100000003,
+          "p95Ms": 37.40538000000004,
+          "minMs": 28.134907,
+          "htmlBytes": 1014457
+        },
+        "kitchen-sink.declarative-shadow-dom": {
+          "firstMs": 45.087089000000105,
+          "medianMs": 19.800568000000112,
+          "p95Ms": 24.952142999999978,
+          "minMs": 15.416099999999915,
+          "htmlBytes": 360954
+        },
+        "fragment.scoped": {
+          "firstMs": 5.676120000000083,
+          "medianMs": 1.2979400000001533,
+          "p95Ms": 1.430648999999903,
+          "minMs": 1.1834830000000238,
+          "htmlBytes": 13203
+        },
+        "list-50.scoped": {
+          "firstMs": 49.08515200000011,
+          "medianMs": 28.751732000000175,
+          "p95Ms": 48.283390000000054,
+          "minMs": 24.214733000000024,
+          "htmlBytes": 128589
+        },
+        "kitchen-sink.scoped": {
+          "firstMs": 37.6239700000001,
+          "medianMs": 21.65016000000014,
+          "p95Ms": 24.138952000000245,
+          "minMs": 17.317058999999972,
+          "htmlBytes": 241766
+        }
+      }
+    }
+  },
+  "throughput": {
+    "ionic-published": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 2.4,
+        "p99Ms": 2527,
+        "p50Ms": 1262,
+        "requests": 12,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1159636
+      },
+      "scoped": {
+        "reqPerSec": 3,
+        "p99Ms": 1942,
+        "p50Ms": 968,
+        "requests": 15,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 147533
+      }
+    },
+    "stencil5": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 24.6,
+        "p99Ms": 322,
+        "p50Ms": 129,
+        "requests": 123,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1014124
+      },
+      "scoped": {
+        "reqPerSec": 23.2,
+        "p99Ms": 311,
+        "p50Ms": 153,
+        "requests": 116,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 126022
+      }
+    },
+    "stencilrs": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 34.8,
+        "p99Ms": 212,
+        "p50Ms": 94,
+        "requests": 174,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1014124
+      },
+      "scoped": {
+        "reqPerSec": 34.6,
+        "p99Ms": 241,
+        "p50Ms": 101,
+        "requests": 173,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 126022
+      }
+    }
+  }
+}

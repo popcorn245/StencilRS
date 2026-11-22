@@ -107,6 +107,51 @@ export function ionicCharts(io: any): { charts: Record<string, Chart>; meta: str
   return { charts, meta, status };
 }
 
+/**
+ * The SSR benchmark (examples/ionic/bench-ssr.mjs -> site/data/benchmarks-ionic-ssr.json): Ionic 9.0.12's `renderToString`,
+ * three hydrate apps. Rows: Ionic published (Stencil 4's build of @ionic/core, drawn in the Stencil 4 colour), Stencil 5, stencilrs.
+ * One run per row, so the bars are medians over the timed renders and there is no min to max whisker.
+ */
+const SSR_ROWS: Array<[Compiler, string, string]> = [
+  ['stencilrs', 'stencilrs', 'stencilrs'],
+  ['stencil5', 'stencil5', 'Stencil 5'],
+  ['stencil4', 'ionic-published', 'Ionic published'],
+];
+const SSR_MODE: Record<string, string> = { 'declarative-shadow-dom': 'declarative shadow DOM', scoped: 'scoped' };
+
+export function ssrCharts(io: any): { charts: Record<string, Chart>; meta: string; status: string } {
+  const m = io.machine;
+  const status = io.preview ? 'Container data' : '';
+  const meta = `Measured on ${m.description ?? 'an unnamed machine'}; ${cleanCpu(m.cpu)}, ${m.logicalCores} logical cores, ${m.ramGiB} GB, Node ${m.node}; ${io.config.renders} timed renders per page and mode after ${io.config.warmup} warm-up`;
+  const charts: Record<string, Chart> = {};
+  const rows = SSR_ROWS.filter(([, key]) => io.timing[key]);
+  const make = (id: string, title: string, display: Display, value: (key: string) => number | undefined, what: string, kind: 'time' | 'memory' = 'time') => {
+    const bars: Bar[] = rows.flatMap(([id2, key, label]) => {
+      const v = value(key);
+      return v == null ? [] : [{ id: id2, label, full: io.rows[key].label, median: v }];
+    });
+    charts[id] = { id, title, display, bars, headline: headline(bars, kind, 'stencil5'), what, status, meta };
+  };
+  const pageName: Record<string, string> = { fragment: 'Fragment (a few elements)', 'list-50': 'list-50 (a 50-row ion-list)', 'kitchen-sink': 'kitchen-sink (many components)' };
+  for (const mode of io.config.modes as string[]) {
+    for (const page of io.config.pages as string[]) {
+      make(`ssr-render-${page}-${mode === 'scoped' ? 'scoped' : 'dsd'}`, `${pageName[page] ?? page}, ${SSR_MODE[mode] ?? mode}`, 'ms', (k) => io.timing[k].results[`${page}.${mode}`]?.medianMs,
+        `Median over ${io.config.renders} timed renders of the page, after ${io.config.warmup} untimed ones, in a fresh process per row. Same Node, same input HTML, same options for every row.`);
+    }
+  }
+  const ex = io.config.express;
+  if (ex) {
+    for (const mode of io.config.modes as string[]) {
+      make(`ssr-express-${mode === 'scoped' ? 'scoped' : 'dsd'}`, `Express, ${ex.page}, ${SSR_MODE[mode] ?? mode}: latency`, 'ms', (k) => io.throughput?.[k]?.[mode]?.p50Ms,
+        `Median request latency of GET / -> renderToString -> res.send, ${ex.connections} connections for ${ex.durationSeconds} s under autocannon. Requests per second are in the table.`);
+    }
+  }
+  make('ssr-load', 'Cold: module load', 'ms', (k) => io.timing[k].loadMs, 'import() of the hydrate app in a fresh process: parse and evaluate.');
+  make('ssr-first-render', 'Cold: first render', 'ms', (k) => io.timing[k].firstRenderMs, 'The very first renderToString of a fresh process (the fragment page, first mode): nothing is cached yet.');
+  make('ssr-rss', 'Peak memory', 'MiB', (k) => io.timing[k].peakRssMb, 'Peak resident set size of the process that rendered every page and mode.', 'memory');
+  return { charts, meta, status };
+}
+
 export function uikitCharts(b: any): Record<string, Chart> {
   const meta = `${b.machine}; measured ${b.date}`;
   const t = b.transpile.rows;
