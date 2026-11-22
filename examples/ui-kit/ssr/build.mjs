@@ -20,6 +20,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { analyze } from '@popcorn245/stencilrs';
+import { fastSerializerPlugin } from '@popcorn245/stencilrs/ssr';
 import stencilrs from '@popcorn245/stencilrs/vite';
 import { rolldown } from 'rolldown';
 import { build } from 'vite';
@@ -118,6 +119,9 @@ const buildRunner = async (factory) => {
     external: ['node:stream'],
     treeshake: false,
     plugins: [
+      // mock-doc's generator serializer, replaced by a single-pass one (ssr-serializer.js); STENCILRS_SLOW_SERIALIZER=1
+      // keeps Stencil's own, for the benchmark's baseline.
+      ...(process.env.STENCILRS_SLOW_SERIALIZER ? [] : [fastSerializerPlugin()]),
       {
         name: 'ssrAppPlugin',
         resolveId: (id) => (id === FACTORY_ID ? FACTORY_ID : id === APP_DATA_ID ? join(core, 'dist/app-data/index.js') : null),

@@ -36,7 +36,8 @@
   },
   "exports": {
     ".": "./index.js",
-    "./vite": "./vite.js"
+    "./vite": "./vite.js",
+    "./ssr": "./ssr.js"
   },
   "files": [
     "index.js",
@@ -46,6 +47,8 @@
     "vite-types.js",
     "vite-fallback.js",
     "vite-typecheck.js",
+    "ssr.js",
+    "ssr-serializer.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
