@@ -10,6 +10,7 @@
 // `configResolved`, `configureServer`, `buildStart`) and then called from vite.js's own hooks.
 // The inventory of what @stencil/unplugin does, and which of it is where, is in docs/vite-plugin.md.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 const VIRTUAL_GLOBAL_IMPORTS = ['stencil-hydrate', 'stencil-component-globals', 'stencil-css-components'];
@@ -36,23 +37,57 @@ export const mentionsVirtualGlobalImport = (file) => {
   }
 };
 
-/** @stencil/unplugin's `projectUsesVirtualGlobalImports`: a text scan of the project's stylesheets. */
-export function projectUsesVirtualGlobalImports(root) {
+/**
+ * Every stylesheet of the project (@stencil/unplugin's `projectUsesVirtualGlobalImports` is a text scan of these), with whether it mentions a virtual
+ * global stylesheet import. Keys use forward slashes. The plugin keeps this across a watch build's rebuilds and updates it
+ * from the changes it is told about, instead of walking and reading the whole project each time.
+ */
+export function scanStyleFiles(root) {
+  const found = new Map();
   const walk = (dir) => {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
     } catch {
-      return false;
+      return;
     }
     for (const entry of entries) {
       if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
       const abs = join(dir, entry.name);
-      if (entry.isDirectory() ? walk(abs) : entry.isFile() && STYLE_FILE_RE.test(abs) && mentionsVirtualGlobalImport(abs)) return true;
+      if (entry.isDirectory()) walk(abs);
+      else if (entry.isFile() && STYLE_FILE_RE.test(abs)) found.set(abs.replaceAll('\\', '/'), mentionsVirtualGlobalImport(abs));
     }
-    return false;
   };
-  return existsSync(root) && walk(root);
+  if (existsSync(root)) walk(root);
+  return found;
+}
+
+/**
+ * `scanStyleFiles` without blocking the event loop: the dev server starts it at `buildStart` and does not wait for it, so the
+ * first response does not pay for reading every stylesheet (~0.15 s on Windows for Ionic). Resolves to the same map.
+ */
+export async function scanStyleFilesAsync(root) {
+  const found = new Map();
+  const walk = async (dir) => {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    await Promise.all(
+      entries.map(async (entry) => {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) return;
+        const abs = join(dir, entry.name);
+        if (entry.isDirectory()) return walk(abs);
+        if (!entry.isFile() || !STYLE_FILE_RE.test(abs)) return;
+        const mentions = await readFile(abs, 'utf8').then((text) => VIRTUAL_GLOBAL_IMPORT_RE.test(text), () => false);
+        found.set(abs.replaceAll('\\', '/'), mentions);
+      }),
+    );
+  };
+  if (existsSync(root)) await walk(root);
+  return found;
 }
 
 const fnOf = (hook) => (typeof hook === 'function' ? hook : hook?.handler);

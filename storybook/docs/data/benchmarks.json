@@ -85,89 +85,115 @@
     }
   },
   "coldBuild": {
-    "date": "2026-11-19",
-    "preview": true,
-    "machine": "Intel Xeon Processor @ 2.10GHz, 4 logical cores, 16 GB, Linux 6.18.44-fc-v653 (linux-x64), Node 22.23.5",
+    "date": "2026-11-21",
+    "preview": false,
+    "machine": "Intel Core i9-10850K CPU @ 3.60GHz, 20 logical cores, 64 GB, Windows_NT 10.0.26120 (win32-x64), Node 26.12.1",
     "loadavgAtStart": [
-      2.27,
-      1.93,
-      0.86
+      0,
+      0,
+      0
     ],
-    "note": "cloud container, shared and noisy",
-    "what": "Fresh-process production vite build of all 137 ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 3 runs, alternating, Vite cache cleared each run; median, min-max)",
-    "runs": 3,
+    "what": "Fresh-process production vite build of all 137 ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 10 runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)",
+    "runs": 10,
     "rows": [
       {
         "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
-        "wallMedianMs": 765,
-        "buildEndMedianMs": 750,
+        "wallMedianMs": 812,
+        "buildEndMedianMs": 784,
         "wallSpreadMs": [
-          589,
-          795
+          800,
+          821
         ],
         "wallRunsMs": [
-          589,
-          795,
-          765
+          803,
+          821,
+          810,
+          814,
+          812,
+          814,
+          806,
+          816,
+          808,
+          800
         ]
       },
       {
         "compiler": "Stencil v5 (@stencil/unplugin)",
-        "wallMedianMs": 4592,
-        "buildEndMedianMs": 4567,
+        "wallMedianMs": 3935,
+        "buildEndMedianMs": 3897,
         "wallSpreadMs": [
-          4292,
-          4964
+          3897,
+          3965
         ],
         "wallRunsMs": [
-          4292,
-          4964,
-          4592
+          3915,
+          3965,
+          3928,
+          3897,
+          3904,
+          3935,
+          3941,
+          3944,
+          3914,
+          3937
         ]
       }
     ],
-    "speedup": "6.0× wall, 6.1× to build end"
+    "speedup": "4.8× wall, 5.0× to build end"
   },
   "coldDev": {
-    "date": "2026-11-19",
-    "preview": true,
-    "machine": "Intel Xeon Processor @ 2.10GHz, 4 logical cores, 16 GB, Linux 6.18.44-fc-v653 (linux-x64), Node 22.23.5",
+    "date": "2026-11-21",
+    "preview": false,
+    "machine": "Intel Core i9-10850K CPU @ 3.60GHz, 20 logical cores, 64 GB, Windows_NT 10.0.26120 (win32-x64), Node 26.12.1",
     "loadavgAtStart": [
-      2.27,
-      1.93,
-      0.86
+      0,
+      0,
+      0
     ],
-    "note": "cloud container, shared and noisy",
-    "what": "Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 3 runs, alternating, Vite cache cleared each run; median, min-max)",
-    "runs": 3,
+    "what": "Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, 10 runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)",
+    "runs": 10,
     "rows": [
       {
         "compiler": "stencilrs (@popcorn245/stencilrs/vite)",
-        "firstResponseMedianMs": 293,
+        "firstResponseMedianMs": 423,
         "firstResponseSpreadMs": [
-          283,
-          295
+          418,
+          433
         ],
         "firstResponseRunsMs": [
-          295,
-          293,
-          283
+          423,
+          421,
+          426,
+          424,
+          420,
+          423,
+          433,
+          422,
+          430,
+          418
         ]
       },
       {
         "compiler": "Stencil v5 (@stencil/unplugin)",
-        "firstResponseMedianMs": 966,
+        "firstResponseMedianMs": 1211,
         "firstResponseSpreadMs": [
-          965,
-          1050
+          1144,
+          2259
         ],
         "firstResponseRunsMs": [
-          1050,
-          965,
-          966
+          1208,
+          1223,
+          1163,
+          1144,
+          1168,
+          1202,
+          2075,
+          2259,
+          2093,
+          1211
         ]
       }
     ],
-    "speedup": "3.3×"
+    "speedup": "2.9×"
   }
 }

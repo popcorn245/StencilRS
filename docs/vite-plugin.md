@@ -27,6 +27,7 @@ cold `vite build` of the ui-kit loads `typescript`, `@stencil/core`'s compiler o
 | `configResolved` | `isDev`, whether to fold flags, the root | both |
 | `configureServer` | watches added / deleted files for docs, virtual stylesheets, `types` | unplugin, when loaded |
 | `handleHotUpdate` | `stencil:hmr` for a changed component or stylesheet; virtual stylesheets; docs; `types` | stencilrs for its components and stylesheets; then unplugin's, when loaded |
+| `transform` (rebuilds) | a watch rebuild runs `transform` for every module again; a component's result is kept by module id and reused while its exact source and every file the compile read (imports followed by `resolveImports`, tsconfigs, reported by `transpile` as `deps`) are unchanged | n/a |
 | `watchChange` | nothing under Vite | n/a |
 | `optimizeDeps`, `define`, `ssr`, core / runtime aliases, app-data | not set by unplugin | n/a (the app-data module is the runtime's) |
 | `transformInclude` (`include` / `exclude`) | a file filter | unplugin, loaded up front when either is set |
@@ -34,6 +35,32 @@ cold `vite build` of the ui-kit loads `typescript`, `@stencil/core`'s compiler o
 When unplugin loads late (the first fallback in the middle of a build), the hooks that already ran
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
+
+## Folders the dev server does not watch (`watchIgnore`)
+
+Vite's file watcher (chokidar) opens one `fs.watch` per file under the project root, about 0.9 ms
+each on Windows, on the main thread, while the first requests wait. A Stencil project that has been
+built keeps thousands of files next to its source: the build output and caches. In `serve`, the
+plugin adds `server.watch.ignored` for these folders directly under the Vite root (the folder and
+everything in it):
+
+| Folder | What writes it |
+|---|---|
+| `.stencil/` | Stencil's build cache |
+| `www/` | the `www` output (`stencil build`, `--serve`) |
+| `dist/` | the `dist` output: lazy bundles, `collection/`, `types/` |
+| `loader/` | the `dist` output's `loader` |
+| `hydrate/` | the `dist-hydrate-script` output |
+
+Source lives in `src/`, so none of these hold any. Nothing is excluded from being served: a file in
+these folders is still served on request, it just does not trigger HMR or a reload when it changes.
+Vite concatenates the list with your own `server.watch.ignored` (a string, a function or an array)
+and its own defaults (`.git`, `node_modules`, `test-results`); `server.watch: null` is respected.
+
+```ts
+stencilrs({ watchIgnore: false }); // watch everything, as before
+stencilrs({ watchIgnore: ['www', 'dist', 'components'] }); // replace the list (folders under the root)
+```
 
 ## Component CSS options (`css`)
 
@@ -43,12 +70,24 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 |---|---|---|
 | `targets` | Stencil's `autoprefixCss` targets (`last 2 Chrome versions`, ..., `iOS >= 16`, `> 0.5%`, `not dead`), resolved with `browserslist` when it is installed | the browsers lightningcss prefixes and lowers for: a browserslist query (string or array), lightningcss' targets object, or `false` for none |
 | `minify` | `'whitespace'` in a build, `false` in dev | `true` is lightningcss' own minify (shortens values: `bold` to `700`, `none` to `0 0`, `translate3d(x, 0, 0)` to `translate(x)`); `'whitespace'` keeps the values and drops the whitespace, as `stencil build` ships them |
-| `sass` | `{}` | options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, `logger`, ...); `url` and `syntax` are the plugin's |
-| `cache` | `true` | a stylesheet's output is reused while it and every file Sass loaded for it (`loadedUrls`) have the same content hash, so `vite build --watch` recompiles only what an edit touched (Ionic: 3.0 s to 0.4 s per rebuild). `true` also keeps the Sass step in `node_modules/.cache/stencilrs/sass`, keyed by file content, Sass version and options, and checked against its dependencies' hashes on every read; `'memory'` skips the disk; `false` turns it off. Sass options with `functions`, `importers` or `logger` bypass the cache. A new file that would shadow an already-resolved import is not noticed until the stylesheet itself changes |
+| `sass` | `{}` | options for Sass' `compileString` / `compileStringAsync` (`silenceDeprecations`, `loadPaths`, `quietDeps`, `logger`, ...); `url` and `syntax` are the plugin's. With `sass-embedded`, `functions` and `importers` may be async |
+| `cache` | `true` | a stylesheet's output is reused while it and every file Sass loaded for it (`loadedUrls`) have the same content hash, so `vite build --watch` recompiles only what an edit touched (Ionic: 3.0 s to 0.4 s per rebuild). `true` also keeps the Sass step in `node_modules/.cache/stencilrs/sass`, keyed by file content, Sass version and options, and checked against its dependencies' hashes on every read (a file's hash is remembered by mtime and size, and looked at once per build); `'memory'` skips the disk; `false` turns it off. Sass options with `functions`, `importers` or `logger` bypass the cache. A new file that would shadow an already-resolved import is not noticed until the stylesheet itself changes |
 
 The defaults give the CSS `stencil build` writes with `autoprefixCss: true` (the Ionic check compares 94 to 95 of
 96 stylesheets as identical text). @stencil/unplugin runs lightningcss with no targets and `minify: true`;
 `css: { targets: false, minify: true }` reproduces that byte for byte (the ui-kit's `compare:css` does).
+### Sass: `sass-embedded` (optional, installed by the project)
+
+When `sass-embedded` resolves from the project, component Sass is compiled with it: one compiler process, with up to
+`os.availableParallelism()` stylesheets in flight at once, so Rolldown's concurrent `load` calls overlap (Ionic's 154
+stylesheets, truly cold build: 4.25 s to 2.4 s in the 4-core container, output byte-identical). Without it the plugin uses
+`sass`, synchronously and one at a time, as before; a project with neither compiles no Sass here. If `sass-embedded` is
+installed but does not load (no binary for the platform), `sass` is used. The cache key uses Sass' version, not the package, so
+switching between the two keeps the cache.
+
+The compiler process is stopped when a build ends (`closeBundle`) and when the dev server closes; `vite build --watch` keeps it
+for the next rebuilds and stops it with the watcher.
+
 The plugin never calls Vite's `preprocessCSS`, so Vite's Sass worker pool is not started by component styles.
 
 ## Loading it on purpose

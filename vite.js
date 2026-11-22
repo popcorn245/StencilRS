@@ -33,9 +33,14 @@ import { dirname, join, resolve } from 'node:path';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
+import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
-import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, projectUsesVirtualGlobalImports, virtualGlobalAlias } from './vite-fallback.js';
+import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
+// The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
+// the same test here keeps the many files that only mention the word off the native call. A superset of the Rust test.
+const BUILD_IMPORT_RE = /\bimport\s*\{[^}]*\bBuild\b[^}]*\}\s*from\s*['"]@stencil\/core/;
+const mentionsBuildImport = (code) => code.includes('Build') && BUILD_IMPORT_RE.test(code);
 const DECORATORS_RE = /(@Component|@Prop|@State|@Event|@Method|@Watch|@Listen)\s*[(\s]/;
 // A decorator that starts a line or statement: not the `@Component` in a doc comment.
 const REAL_DECORATOR_RE = /(?:^|[;{}])[ \t]*@(?:Component|Prop|State|Event|Method|Watch|Listen|Element)\b/m;
@@ -43,8 +48,29 @@ const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
+const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
+const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
+// Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
+// `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
+// watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
+// that has been built holds thousands of them: skipped, see `watchIgnore`.
+const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate', '.vitest'];
+
+/**
+ * A `server.watch.ignored` matcher for the given folders directly under `root`: true for the folder and
+ * everything below it. A function, not a glob, so that characters in the root path (`(`, `[`, `\\` on
+ * Windows) need no escaping. Vite adds it to the user's own `ignored` and to its defaults.
+ */
+export function watchIgnoreMatcher(root, folders) {
+  const base = resolve(root).replaceAll('\\', '/').replace(/\/+$/, '');
+  const dirs = folders.map((f) => `${base}/${String(f).replaceAll('\\', '/').replace(/^\.?\/+|\/+$/g, '')}`);
+  return (path) => {
+    const p = String(path).replaceAll('\\', '/');
+    return dirs.some((d) => p === d || p.startsWith(`${d}/`));
+  };
+}
 
 /** @stencil/unplugin's `resolveSpecifier`, which stencilrs' ancestor walk mirrors. */
 const resolveSpecifier = (specifier, importer) => {
@@ -54,6 +80,22 @@ const resolveSpecifier = (specifier, importer) => {
   const found = candidates.find((c) => existsSync(c) && statSync(c).isFile());
   return found ? found.replaceAll('\\', '/') : null;
 };
+
+/**
+ * Whether every file a transpile read (`result.deps`: imported modules and tsconfigs, each with the
+ * `<mtime ns>:<size>` stamp the native side saw, or null for a file that was absent) is as it was.
+ * `stamps` memoises the stat calls of one build.
+ */
+const depsFresh = (deps, stamps) =>
+  deps.every(([path, was]) => {
+    let now = stamps.get(path);
+    if (now === undefined) {
+      const st = statSync(path, { bigint: true, throwIfNoEntry: false });
+      now = st?.isFile() ? `${st.mtimeNs}:${st.size}` : null;
+      stamps.set(path, now);
+    }
+    return now === was;
+  });
 
 /** tsconfig `jsx`, or @stencil/unplugin's heuristic: classic `h` when the file imports it. */
 const jsxFor = (code, tsconfigJsx) => {
@@ -106,9 +148,11 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace', sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
+ *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
+ *   build; a type error fails the build. In dev and watch it runs in the background and logs. See vite-typecheck.js and the README.
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
  *   Vite build leaves at their defaults (all features on, `hydrateClientSide` too). A client-only library
  *   sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate output target.
@@ -124,7 +168,7 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, ...stencilOptions } = options;
+  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -147,7 +191,66 @@ export function stencilrs(options = {}) {
   // its default.
   let useDefineForClassFields = true;
   const fileToTag = new Map();
-  const counts = { stencilrs: 0, stencil: 0 };
+  // A watch rebuild runs `transform` for every module again, changed or not (Rolldown and Rollup both do).
+  // What a component compiled to is kept, keyed by module id, and reused while the module's exact source and
+  // every file the compile read (`resolveImports`: imported modules, tsconfigs) are unchanged. Only clean results
+  // are kept (no diagnostics, not the fallback), so a reused one has nothing to replay but the result.
+  const memo = new Map();
+  // `fs.stat` results of the current build, for `depsFresh`.
+  let stamps = new Map();
+  const runtimeByDir = new Map();
+  let buildStamps = false; // a dev server has no build boundary to reset them at
+  // Per build (reset in `buildStart`): compiled now, reused from the memo, left to Stencil's compiler.
+  const counts = { stencilrs: 0, reused: 0, stencil: 0 };
+  // The project's stylesheets and whether each mentions a virtual global stylesheet import (see `scanStyleFiles`):
+  // scanned on the first build that needs it, then kept up to date by `watchChange` / the dev server's watcher / `load`.
+  let styleScan = null;
+  // The dev server's scan runs in the background (see `buildStart`): a promise until it is done. Stylesheets wait for it in `load`.
+  let styleScanPending = null;
+  let isServe = false;
+  // `typecheck`: a child-process `tsgo` / `tsc --noEmit` (vite-typecheck.js). A build starts it at `buildStart` and awaits it
+  // before the bundle is written (after `components.d.ts` is written when `dts` is on); a dev server and a watch rebuild
+  // run it in the background and log the verdict.
+  const checker = createTypecheck(() => root, typecheck);
+  let logger = null;
+  let checkTimer = null;
+  let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
+  let checkDev = false; // dev server or `vite build --watch`: report, never block
+  const reportCheck = (r) => {
+    if (!r || r.killed) return;
+    if (r.ok) logger?.info(`[stencilrs] typecheck passed (${r.name})`, { timestamp: true });
+    else logger?.error(formatFailure(r), { timestamp: true });
+  };
+  const checkInBackground = () => {
+    checker.start().then(reportCheck, (e) => logger?.error(e.message, { timestamp: true }));
+  };
+  /** Await the running check; a type error fails the build with the checker's output. */
+  const awaitCheck = async (ctx) => {
+    const r = await checker.wait();
+    if (r && !r.ok && !r.killed) ctx.error(formatFailure(r));
+  };
+  const stopCheck = () => {
+    clearTimeout(checkTimer);
+    checker.stop();
+  };
+  const TS_FILE_RE = /\.(?:[cm]?tsx?|json)$/;
+  const styleKey = (file) => file.split('?')[0].replaceAll('\\', '/');
+  const noteStyle = (file, event) => {
+    if (!styleScan) return false;
+    const key = styleKey(file);
+    if (event === 'delete') {
+      styleScan.delete(key);
+      return false;
+    }
+    const mentions = mentionsVirtualGlobalImport(file);
+    styleScan.set(key, mentions);
+    return mentions;
+  };
+  // The project has Sass stylesheets: start loading the Sass package now, off the critical path (see `preloadSass`).
+  const preloadSass = () => {
+    if (!styleScan) return;
+    for (const key of styleScan.keys()) if (/\.s[ac]ss$/.test(key)) return void loadCss?.preloadSass();
+  };
   // Files stencilrs compiled: @stencil/unplugin must not transform its output again.
   const handled = new Set();
   const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
@@ -195,14 +298,34 @@ export function stencilrs(options = {}) {
 
     config(userConfig, env) {
       fallbackPlugin.remember('config', [userConfig, env]);
-      return { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+      const result = { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+      // The dev server's startup scan reads source files, so it misses the imports the transform
+      // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
+      // first request and re-runs its optimizer. Only the client runtime of the default output
+      // does this; ssr (`runtime/server`) and spec-page (`core/testing`) import others.
+      // `optimizeDeps.noDiscovery`: Vite finds nothing on a request, so there is no re-run to avoid, and the user's `include`
+      // is the whole list. Adding to it there makes `listen` wait for an optimizer run (behind the watcher's first crawl on
+      // Windows) that the user turned off: ~1.4 s of the ui-kit's first response.
+      if (env?.command === 'serve' && !ssr && !specPage && !userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      // Stencil's output and cache folders are not watched (see DEFAULT_WATCH_IGNORE); `watchIgnore: false`
+      // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
+      // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
+      // (the user turned the watcher off) is left alone.
+      if (env?.command === 'serve' && watchIgnore && watchIgnore.length && userConfig.server?.watch !== null) {
+        result.server = { watch: { ignored: [watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore)] } };
+      }
+      return result;
     },
 
     configResolved(config) {
       fallbackPlugin.remember('resolved', config);
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
+      buildStamps = config.command === 'build';
       root = config.root;
+      isServe = config.command === 'serve';
+      logger = config.logger;
+      deferCheck = !!dtsFileName && !specPage && !ssr && config.build.write !== false;
       tsconfigJsx = readTsconfigJsx(root);
       // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
       useDefineForClassFields = readTsconfigOptions(root).useDefineForClassFields !== false;
@@ -211,19 +334,78 @@ export function stencilrs(options = {}) {
     configureServer(server) {
       fallbackPlugin.remember('server', server);
       // A new stylesheet that imports a virtual global stylesheet: @stencil/unplugin generates it.
-      server.watcher.on('add', async (file) => {
-        if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(file) && mentionsVirtualGlobalImport(file)) await fallbackPlugin.ensure(this);
+      // The Sass compiler process (sass-embedded) ends with the server.
+      server.httpServer?.once('close', () => {
+        stopCheck();
+        void loadCss?.dispose();
       });
+      if (checker.enabled) {
+        // After a change to a TypeScript file or a tsconfig: once edits settle, and a run still going is killed for the new one.
+        const recheck = (file) => {
+          if (!TS_FILE_RE.test(file) || file.includes('/node_modules/') || file.includes('\\node_modules\\')) return;
+          clearTimeout(checkTimer);
+          checkTimer = setTimeout(checkInBackground, 300);
+        };
+        for (const event of ['add', 'change', 'unlink']) server.watcher.on(event, recheck);
+      }
+      server.watcher.on('add', async (file) => {
+        if (!STYLE_FILE_RE.test(file)) return;
+        const mentions = styleScan ? noteStyle(file, 'create') : mentionsVirtualGlobalImport(file);
+        if (!fallbackPlugin.loaded && mentions) await fallbackPlugin.ensure(this);
+      });
+      server.watcher.on('change', (file) => void (STYLE_FILE_RE.test(file) && noteStyle(file, 'update')));
+      server.watcher.on('unlink', (file) => void (STYLE_FILE_RE.test(file) && noteStyle(file, 'delete')));
+    },
+
+    // A watch rebuild: a stylesheet that changed is looked at again; the rest of the project is not.
+    watchChange(id, change) {
+      if (STYLE_FILE_RE.test(id)) noteStyle(id, change?.event);
     },
 
     async buildStart() {
+      if (checker.enabled) {
+        checkDev = isServe || !!this.meta?.watchMode;
+        if (checkDev) checkInBackground();
+        // `dts` writes components.d.ts with the output files: the check then starts once they are written (`writeBundle`).
+        else if (!deferCheck) {
+          try {
+            await checker.prepare(); // no checker installed: fail now, with the clear error
+          } catch (e) {
+            this.error(e.message);
+          }
+          void checker.start();
+        }
+      }
+      stamps = new Map();
+      counts.stencilrs = counts.reused = counts.stencil = 0;
+      if (buildStamps) loadCss?.newBuild();
+      runtimeByDir.clear();
       if (fallbackPlugin.loaded) return void (await fallbackPlugin.call('buildStart', this, {}));
       // Stylesheets that import the virtual global stylesheets need them written before the build.
-      if (needsUnplugin || projectUsesVirtualGlobalImports(root)) await fallbackPlugin.ensure(this);
+      if (!needsUnplugin && !styleScan && !styleScanPending && isServe) {
+        // Dev: the first response does not wait for every stylesheet to be read. A stylesheet that is requested before the scan
+        // is done waits for it (`load`), so a virtual global stylesheet import is still generated before it is needed.
+        styleScanPending = scanStyleFilesAsync(root).then((found) => {
+          for (const [k, v] of styleScan ?? []) found.set(k, v); // what the watcher reported meanwhile is newer
+          styleScan = found;
+          styleScanPending = null;
+          preloadSass();
+        });
+        styleScanPending.catch(() => {});
+        return;
+      }
+      if (!needsUnplugin) styleScan ??= scanStyleFiles(root);
+      preloadSass();
+      if (needsUnplugin || [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
     },
 
     async transform(code, id, transformOpts) {
       const file = id.split('?')[0].replaceAll('\\', '/');
+      // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
+      // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).
+      if (code.includes(STENCIL_BASE_URL) && !ssr && !transformOpts?.ssr && STENCIL_DIST_RE.test(file)) {
+        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`), map: null };
+      }
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
       // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
@@ -237,7 +419,7 @@ export function stencilrs(options = {}) {
       if (!DECORATORS_RE.test(code)) {
         if (needsUnplugin) return fallbackPlugin.call('transform', this, code, id, transformOpts);
         // As @stencil/unplugin does in a production build: fold the flags in every TypeScript file.
-        if (!foldFlags || transformOpts?.ssr || !code.includes('Build') || handled.has(file) || id.startsWith(BASE_PREFIX)) return null;
+        if (!foldFlags || transformOpts?.ssr || !mentionsBuildImport(code) || handled.has(file) || id.startsWith(BASE_PREFIX)) return null;
         const folded = foldBuildFlags(code, file, { isBrowser: true, isServer: false });
         return folded === null ? null : { code: folded, map: null };
       }
@@ -245,9 +427,22 @@ export function stencilrs(options = {}) {
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
       if (ssr) {
-        if (code.includes('Build')) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
-      } else if (!isDev && !specPage && !transformOpts?.ssr && code.includes('Build')) {
+        if (mentionsBuildImport(code)) code = foldBuildFlags(code, file, { isBrowser: false, isServer: true }) ?? code;
+      } else if (!isDev && !specPage && !transformOpts?.ssr && mentionsBuildImport(code)) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
+      }
+
+      const memoKey = `${id}\0${transformOpts?.ssr ? 1 : 0}`;
+      const kept = memo.get(memoKey);
+      if (kept && kept.source === original && depsFresh(kept.deps, buildStamps ? stamps : new Map())) {
+        counts.reused++;
+        handled.add(file);
+        for (const base of kept.baseClasses) {
+          baseClasses.add(base);
+          this.addWatchFile(base);
+        }
+        fileToTag.set(file, kept.tagName);
+        return kept.result;
       }
 
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
@@ -297,7 +492,10 @@ export function stencilrs(options = {}) {
         out += `\nexport { ${componentClassName} };`;
       }
       if (isDev && !ssr) out += hmrSnippet(tagName, componentClassName);
-      return { code: out, map };
+      const value = { code: out, map };
+      if (result.diagnostics.length || !result.deps) memo.delete(memoKey);
+      else memo.set(memoKey, { source: original, deps: result.deps, baseClasses: result.baseClasses, tagName, result: value });
+      return value;
     },
 
     // An import of a file an ancestor lives in gets its base-class compilation instead
@@ -311,7 +509,10 @@ export function stencilrs(options = {}) {
       // entry is a separate, minimal client whose mode resolver, task queue and vdom state the components
       // never see (`stencil build` rewrites these imports the same way).
       if (id === '@stencil/core' && importer && !specPage && !ssr && !importer.startsWith('\0')) {
-        return this.resolve(RUNTIME_ID, importer, { skipSelf: true });
+        // The same answer for every file of a folder: asked once per folder and build.
+        const dir = dirname(importer);
+        if (!runtimeByDir.has(dir)) runtimeByDir.set(dir, this.resolve(RUNTIME_ID, importer, { skipSelf: true }));
+        return runtimeByDir.get(dir);
       }
       if (importer) {
         if (serveCss) {
@@ -329,6 +530,16 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      // A stylesheet the scan has not seen (created since, and not reported by a watcher): it may be the first to import a
+      // virtual global stylesheet, which has to be generated before it is compiled.
+      const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
+      if (styleScanPending && !fallbackPlugin.loaded && STYLE_FILE_RE.test(sheet)) {
+        await styleScanPending;
+        if (!fallbackPlugin.loaded && [...styleScan.values()].some(Boolean)) await fallbackPlugin.ensure(this);
+      }
+      if (styleScan && !fallbackPlugin.loaded) {
+        if (STYLE_FILE_RE.test(sheet) && !styleScan.has(styleKey(sheet)) && noteStyle(sheet, 'create')) await fallbackPlugin.ensure(this);
+      }
       if (serveCss && id.startsWith(STENCIL_CSS_PREFIX)) {
         const { file, tag } = parseStencilCssId(id);
         const css = await loadCss(id, isDev);
@@ -339,6 +550,9 @@ export function stencilrs(options = {}) {
         }
         this.addWatchFile(file);
         if (tag) trackCss(file, tag, id);
+        // Vite's own `addWatchFile` only hands files outside the root to the watcher (the root is watched already, minus the
+        // ignored folders), so a dependency inside the root costs no `fs.watch`; it is still registered, because Vite links it to
+        // this module for HMR and invalidation.
         for (const dep of css.deps) {
           this.addWatchFile(dep);
           if (tag) trackCss(dep, tag, id);
@@ -370,7 +584,9 @@ export function stencilrs(options = {}) {
       return theirs ?? mine;
     },
 
-    generateBundle(outputOptions) {
+    async generateBundle(outputOptions) {
+      // Before the bundle is written: a type error leaves no output. `dts` with a write waits for `writeBundle`.
+      if (checker.enabled && !checkDev && !deferCheck) await awaitCheck(this);
       if (!dtsFileName || !dtsSources.size || specPage || ssr) return;
       const outDir = resolve(root, outputOptions.dir ?? dirname(outputOptions.file ?? 'dist/x.js'));
       const outFile = resolve(outDir, dtsFileName);
@@ -381,9 +597,35 @@ export function stencilrs(options = {}) {
       this.emitFile({ type: 'asset', fileName: dtsFileName, source: code });
     },
 
+    // `components.d.ts` is on disk now: check against it.
+    async writeBundle() {
+      if (!checker.enabled || checkDev || !deferCheck) return;
+      try {
+        await checker.prepare();
+      } catch (e) {
+        this.error(e.message);
+      }
+      void checker.start();
+      await awaitCheck(this);
+    },
+
+    // A build is over: stop the Sass compiler process, which would keep the process alive. `vite build --watch` keeps it
+    // for the next rebuild and stops it with the watcher (`closeWatcher`).
+    async closeBundle() {
+      if (!this.meta?.watchMode) {
+        stopCheck(); // a build that failed elsewhere must not leave the checker running
+        await loadCss?.dispose();
+      }
+    },
+
+    async closeWatcher() {
+      stopCheck();
+      await loadCss?.dispose();
+    },
+
     buildEnd() {
-      if (verbose && counts.stencilrs + counts.stencil > 0) {
-        this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s); ${counts.stencil} left to Stencil's compiler`);
+      if (verbose && counts.stencilrs + counts.reused + counts.stencil > 0) {
+        this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s), reused ${counts.reused}; ${counts.stencil} left to Stencil's compiler`);
       }
     },
   };

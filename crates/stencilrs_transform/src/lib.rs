@@ -55,6 +55,10 @@ pub struct TranspileResult {
     /// those with `transform_as_base_class` (as @stencil/unplugin does), so they extend `HTMLElement`.
     #[serde(rename = "baseClasses")]
     pub base_classes: Vec<String>,
+    /// With `resolve_imports`: every file the result was derived from besides the source itself
+    /// (imported modules, tsconfigs), each with a stamp (`<mtime ns>:<size>`, `None` when the file
+    /// was absent). The result is valid while none of them changes.
+    pub deps: Vec<(String, Option<String>)>,
 }
 
 fn parse<'a>(
@@ -185,5 +189,9 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
         components: analysis.components,
         diagnostics,
         base_classes,
+        deps: resolver
+            .as_ref()
+            .map(|r| r.deps().iter().map(cache::Dep::report).collect())
+            .unwrap_or_default(),
     }
 }

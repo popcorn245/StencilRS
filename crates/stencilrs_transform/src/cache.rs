@@ -43,6 +43,21 @@ pub struct Dep {
 }
 
 impl Dep {
+    /// The file as a build tool can compare it later: its path and a stamp string
+    /// (`<mtime in ns>:<size>`, as `fs.statSync(path, { bigint: true })` reports them), or `None`
+    /// when the file was absent.
+    pub fn report(&self) -> (String, Option<String>) {
+        let stamp = self.stamp.map(|s| {
+            let ns = s
+                .mtime
+                .and_then(|t| t.duration_since(SystemTime::UNIX_EPOCH).ok())
+                .map(|d| d.as_nanos().to_string())
+                .unwrap_or_else(|| "none".into());
+            format!("{ns}:{}", s.len)
+        });
+        (self.path.to_string_lossy().replace('\\', "/"), stamp)
+    }
+
     /// The file as it is now.
     pub fn of(path: &Path) -> Dep {
         Dep {
@@ -78,23 +93,46 @@ struct ModuleEntry {
 }
 
 static MODULES: OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>> = OnceLock::new();
+/// Summaries of modules read as the entry point of a walk (nothing in progress), kept apart from
+/// `MODULES` because they are only valid as such: a module in an import cycle reads differently
+/// when another member of the cycle is being read around it.
+static ROOTS: OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>> = OnceLock::new();
 
-/// The cached summary of the module at `path`, if none of the files it came from has changed.
-pub fn module(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
-    let entry = lock(&MODULES).get(path)?.clone();
+type Modules = OnceLock<Mutex<HashMap<PathBuf, ModuleEntry>>>;
+
+fn lookup(map: &'static Modules, path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    let entry = lock(map).get(path)?.clone();
     if fresh(&entry.deps) {
         return Some((entry.exports, entry.deps));
     }
-    lock(&MODULES).remove(path);
+    lock(map).remove(path);
     None
 }
 
-pub fn store_module(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
-    let mut modules = lock(&MODULES);
+fn store(map: &'static Modules, path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    let mut modules = lock(map);
     if modules.len() >= MAX_MODULES {
         modules.clear();
     }
     modules.insert(path.to_owned(), ModuleEntry { exports, deps });
+}
+
+/// The cached summary of the module at `path`, if none of the files it came from has changed.
+pub fn module(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    lookup(&MODULES, path)
+}
+
+pub fn store_module(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    store(&MODULES, path, exports, deps);
+}
+
+/// The cached summary of the module at `path` read as the entry point of a walk.
+pub fn root(path: &Path) -> Option<(Exports, Arc<Vec<Dep>>)> {
+    lookup(&ROOTS, path)
+}
+
+pub fn store_root(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
+    store(&ROOTS, path, exports, deps);
 }
 
 #[derive(Clone)]
@@ -107,16 +145,16 @@ struct TsconfigEntry {
 static TSCONFIGS: OnceLock<Mutex<HashMap<PathBuf, TsconfigEntry>>> = OnceLock::new();
 
 /// `strictNullChecks` for files in `dir`, if the tsconfigs it came from have not changed.
-pub fn tsconfig(dir: &Path) -> Option<bool> {
+pub fn tsconfig(dir: &Path) -> Option<(bool, Arc<Vec<Dep>>)> {
     let entry = lock(&TSCONFIGS).get(dir)?.clone();
     if fresh(&entry.deps) {
-        return Some(entry.strict);
+        return Some((entry.strict, entry.deps));
     }
     lock(&TSCONFIGS).remove(dir);
     None
 }
 
-pub fn store_tsconfig(dir: &Path, strict: bool, deps: Vec<Dep>) {
+pub fn store_tsconfig(dir: &Path, strict: bool, deps: Arc<Vec<Dep>>) {
     let mut tsconfigs = lock(&TSCONFIGS);
     if tsconfigs.len() >= MAX_TSCONFIGS {
         tsconfigs.clear();
@@ -125,7 +163,7 @@ pub fn store_tsconfig(dir: &Path, strict: bool, deps: Vec<Dep>) {
         dir.to_owned(),
         TsconfigEntry {
             strict,
-            deps: Arc::new(deps),
+            deps,
         },
     );
 }

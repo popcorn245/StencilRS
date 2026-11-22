@@ -36,15 +36,33 @@
   },
   "exports": {
     ".": "./index.js",
-    "./vite": "./vite.js"
+    "./express": {
+      "types": "./express.d.ts",
+      "default": "./express.js"
+    },
+    "./vite": "./vite.js",
+    "./ssr": {
+      "types": "./ssr.d.ts",
+      "default": "./ssr.js"
+    }
   },
   "files": [
     "index.js",
     "binding.js",
+    "express.js",
+    "express.d.ts",
+    "express-hydrate.js",
+    "express-worker.js",
     "vite.js",
     "vite-css.js",
     "vite-types.js",
     "vite-fallback.js",
+    "vite-typecheck.js",
+    "ssr.js",
+    "ssr-collection.js",
+    "ssr.d.ts",
+    "ssr-serializer.js",
+    "ssr-patches.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

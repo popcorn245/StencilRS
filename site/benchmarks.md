@@ -7,6 +7,7 @@ description: "Per-file compile, a production Vite build and a full stencil build
 import { data } from './data/site.data'
 import { data as ionic } from './data/ionic-bench.data'
 import { data as chartData } from './data/charts.data'
+import { data as ssr } from './data/ionic-ssr.data'
 import { format } from './data/charts'
 const b = data.bench
 const c = chartData.charts
@@ -38,6 +39,45 @@ const ionicOut = [
   ['Gzip (text files each)', ...order.map((r) => (io.output[r] ? mb(io.output[r].gzipBytes) : 'n/a'))],
   ['JavaScript, raw / gzip', ...order.map((r) => (io.output[r] ? `${mb(io.output[r].js.rawBytes)} / ${mb(io.output[r].js.gzipBytes)}` : 'n/a'))],
 ]
+
+const med = (m, row) => io.metrics[m]?.rows[row]?.median ?? null
+const times = (a, b) => (a == null || b == null ? 'n/a' : `${(a / b).toFixed(1)}×`)
+const lfHead = ['Row', 'Cold build', 'Warm rebuild', 'Cold: Stencil 5 (full) ÷ row', 'Cold: Stencil 5 standalone ÷ row']
+const lfRows = ['stencil', 'stencil-standalone', 'stencilrs', 'stencilrs+check'].filter((r) => io.rows[r]).map((r) => [
+  io.rows[r], cell('coldBuild', r, sec), cell('warmBuild', r, sec),
+  times(med('coldBuild', 'stencil'), med('coldBuild', r)), times(med('coldBuild', 'stencil-standalone'), med('coldBuild', r)),
+])
+const lf = { cold: times(med('coldBuild', 'stencil-standalone'), med('coldBuild', 'stencilrs+check')), warm: times(med('warmBuild', 'stencil-standalone'), med('warmBuild', 'stencilrs+check')), headline: times(med('coldBuild', 'stencil'), med('coldBuild', 'stencilrs')) }
+// The two like-for-like rows come from a later run than the first three; until the data has them, their sections are not drawn.
+const hasLf = !!(io.rows['stencil-standalone'] && io.rows['stencilrs+check'] && io.metrics.coldBuild?.rows['stencil-standalone'] && io.metrics.coldBuild?.rows['stencilrs+check'])
+const checkHead = ['Type check of migrated/', 'Median (min to max)']
+const checkRows = [
+  ['tsgo --noEmit alone', cell('typecheck', 'tsgo', sec)],
+  ['tsc --noEmit alone', cell('typecheck', 'tsc', sec)],
+  ['tsgo inside the stencilrs+check run (from the file being written to the verdict)', cell('coldBuildCheckTypecheck', 'stencilrs+check', sec)],
+  ['when tsgo could start (components.d.ts written), from the build start', cell('coldBuildCheckStart', 'stencilrs+check', sec)],
+  ['the vite build with dts: true inside that run', cell('coldBuildCheckVite', 'stencilrs+check', sec)],
+]
+
+// SSR (examples/ionic/bench-ssr.mjs). One run per row; `ssr.preview` marks container data that a quiet-machine run replaces.
+const ssrKeys = ['stencilrs', 'stencil5', 'ionic-published'].filter((k) => ssr.timing[k])
+const ssrName = { stencilrs: 'stencilrs', stencil5: 'Stencil 5', 'ionic-published': 'Ionic published (Stencil 4)' }
+const ssrMode = { 'declarative-shadow-dom': 'dsd', scoped: 'scoped' }
+const f1 = (v) => (v == null ? 'n/a' : v < 10 ? v.toFixed(2) : v.toFixed(1))
+const ssrHead = ['Page / mode', ...ssrKeys.map((k) => ssrName[k]), 'HTML, KB (stencilrs)']
+const ssrRender = ssr.config.modes.flatMap((mode) => ssr.config.pages.map((page) => [
+  `${page} / ${ssrMode[mode] ?? mode}`,
+  ...ssrKeys.map((k) => { const r = ssr.timing[k].results[`${page}.${mode}`]; return `${f1(r.medianMs)} (p95 ${f1(r.p95Ms)})` }),
+  Math.round(ssr.timing.stencilrs.results[`${page}.${mode}`].htmlBytes / 1024).toLocaleString('en-US'),
+]))
+const ssrExpressHead = ['Mode', ...ssrKeys.map((k) => `${ssrName[k]}: req/s (p99)`)]
+const ssrExpress = ssr.config.express ? ssr.config.modes.map((mode) => [ssrMode[mode] ?? mode, ...ssrKeys.map((k) => { const t = ssr.throughput[k][mode]; return `${t.reqPerSec.toFixed(1)} (${Math.round(t.p99Ms)} ms)` })]) : []
+const ssrColdHead = ['Row', 'Module load', 'First render', 'RSS after', 'Peak RSS']
+const ssrCold = ssrKeys.map((k) => { const t = ssr.timing[k]; return [ssrName[k], `${f1(t.loadMs)} ms`, `${f1(t.firstRenderMs)} ms`, `${Math.round(t.rssMb)} MiB`, `${Math.round(t.peakRssMb)} MiB`] })
+const ssrMed = (page, mode, k) => ssr.timing[k].results[`${page}.${mode}`].medianMs
+const ssrX = (a, b) => `${(a / b).toFixed(1)}×`
+const ssrEqual = ssr.equal ? 'it was, on all ' + ssr.comparisons + ' combinations' : 'it was not: see the JSON'
+const L = 'list-50', DSD = 'declarative-shadow-dom'
 </script>
 
 # Benchmarks
@@ -163,7 +203,8 @@ the whiskers show min to max.</p></div>
 
 [Ionic Framework](https://github.com/ionic-team/ionic-framework)'s `core` ({{ ionic.versions.ionic.tag }}, 94 components, per-mode Sass) is the
 largest open-source Stencil code base, so it is the fairest single test: the same source built three ways
-(the harness is `examples/ionic`; the migration to Stencil v5 is described in its README).
+(the harness is `examples/ionic`; the migration to Stencil v5 is described in its README). <span v-if="hasLf">Two further rows, a standalone-only Stencil build and
+stencilrs with a type check, are [explained below](#what-each-row-does).</span>
 
 | Row | Build |
 |---|---|
@@ -174,6 +215,47 @@ largest open-source Stencil code base, so it is the fairest single test: the sam
 Bars are the median of {{ ionic.runs }} runs, whiskers the min to max. Every raw sample is in
 `site/data/benchmarks-ionic.json`, measured {{ ionic.startedAt.slice(0, 10) }} on {{ ionic.machine.os }}, Node {{ ionic.machine.node }},
 stencilrs `{{ ionic.versions.stencilrs.git.slice(0, 9) }}`.
+
+<div v-if="hasLf">
+
+### What each row does
+
+The headline rows do not do the same work. Stencil's build type-checks and writes `components.d.ts`, and writes three kinds of output; a plain
+`vite build` does none of the first two and writes one bundle. Two more rows close that gap from each side:
+
+| Row | Type check | `components.d.ts` | Outputs |
+|---|---|---|---|
+| {{ ionic.rows.stencil4 }} | yes | yes | lazy loader (`dist/`), `dist-custom-elements`, `docs.json`, CommonJS and more declarations |
+| {{ ionic.rows.stencil }} | yes | yes | lazy loader (`loader-bundle`), `standalone`, `docs-json` |
+| {{ ionic.rows['stencil-standalone'] }} | yes | yes | `standalone` only: no lazy loader, no `docs-json` |
+| {{ ionic.rows.stencilrs }} | no (Vite strips types) | no | one ES bundle (`ionic.js`) and its chunks |
+| {{ ionic.rows['stencilrs+check'] }} | yes, `tsgo --noEmit` once the build has written `components.d.ts` | yes (`dts: true`) | one ES bundle (`ionic.js`) and its chunks, plus `components.d.ts` |
+
+- **Stencil 5, standalone only** is the same `stencil build` with a second config (`config/stencil.config.standalone.ts`) that keeps only the
+  `standalone` output target: the closest thing Stencil has to one customElements bundle. It still type-checks and writes `components.d.ts`.
+- **stencilrs + type check** runs `vite build` with `dts: true`, then `tsgo --noEmit --skipLibCheck -p tsconfig.json` (`@typescript/native-preview`)
+  over `migrated/` against the `components.d.ts` that build wrote (the stencilrs file, not Stencil's: Ionic type-checks clean against it since
+  [#118](https://github.com/popcorn245/StencilRS/pull/118)). The harness copies the file to `src/components.d.ts`, where the sources import it, after setting Stencil's own copy aside
+  (so a stale one is never read) and restores it afterwards. **How that affects the time:** the file is only complete once the build has generated its bundle, so
+  `tsgo` starts then and overlaps just the end of the build (writing the bundle, chunks and `css/`), not all of it; the wall is until both have finished, so it is roughly
+  the build plus most of the check. A type error fails the sample. (The plugin's own `typecheck` option waits for the same moment.)
+- Every Stencil row also includes the separate Sass command for Ionic's global `css/`; every stencilrs row builds it in the same run.
+
+### Like for like
+
+<DataTable :head="lfHead" :rows="lfRows" highlight="stencilrs" />
+
+The headline ratio, `stencil build` against a plain `vite build`, is **{{ lf.headline }}** cold. With the same work on both sides (type check,
+`components.d.ts`, one bundle) it is **{{ lf.cold }}** cold and **{{ lf.warm }}** warm: standalone-only `stencil build` against stencilrs with the
+type check. The type check is a small part of the difference:
+
+<DataTable :head="checkHead" :rows="checkRows" />
+
+`tsgo` and `tsc` run alone, with nothing else running, against the `components.d.ts` Stencil wrote; the other rows are the pieces of the stencilrs+check run itself.
+Neither the standalone nor the type-check row is measured for the dev server, the watch rebuild,
+the per-file transform or the dev memory: those are the three original rows only.
+
+</div>
 
 ### Builds
 
@@ -187,8 +269,8 @@ stencilrs `{{ ionic.versions.stencilrs.git.slice(0, 9) }}`.
 <div class="chart-grid">
 <BenchChart :chart="c['ionic-dev-start']" />
 <BenchChart :chart="c['ionic-edit-rebuild']">
-<p><b>stencilrs is slower here:</b> {{ editRs }} against Stencil 5's {{ editS5 }}. Its watch build recompiles every stylesheet on each edit
-(<a href="#where-stencilrs-spends-its-time">why</a>); tracked in <a href="https://github.com/popcorn245/StencilRS/issues/79" target="_blank" rel="noreferrer">issue #79</a>.</p>
+<p><b>stencilrs rebuilds in</b> {{ editRs }} against Stencil 5's {{ editS5 }}. A watch rebuild reuses every component and stylesheet
+that did not change (<a href="#where-stencilrs-spends-its-time">how</a>; <a href="https://github.com/popcorn245/StencilRS/issues/85" target="_blank" rel="noreferrer">issue #85</a>).</p>
 </BenchChart>
 </div>
 
@@ -222,7 +304,7 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
 
 ### Method
 
-- **Cold build.** A fresh process per sample with Stencil's `.stencil` cache and Vite's cache removed first. Stencil's cache is *on*
+- **Cold build.** A fresh process per sample with Stencil's `.stencil` cache, Vite's cache and stencilrs's Sass disk cache (`node_modules/.cache/stencilrs`) removed first. Stencil's cache is *on*
   for the whole benchmark (the harness config reads `IONIC_STENCIL_CACHE`), so the cold build pays for writing it and the warm build can use it.
   The Stencil rows include the separate Sass command that produces Ionic's global `css/` (stencilrs builds it inside the same run).
 - **Warm rebuild.** The same command again with every cache kept; one extra build before the {{ ionic.runs }} measured ones is discarded.
@@ -240,6 +322,10 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
   On Windows there is no `ps`, so the harness reads each process's working set through CIM instead, and memory comes from a separate
   {{ ionic.runs }}-run pass of the cold-build and dev steps (the sampler adds load, so that pass's timings are not used). A reused process id can
   briefly pull an unrelated process into a sample: one Stencil sample in each of the two Stencil rows reads about 8 GB; the median is unaffected.
+<p v-if="hasLf"><b>Standalone and type-check rows.</b> Cold and warm builds only, measured as the sections above describe: <code>stencil build --config stencil.standalone.config.ts</code> with its own cache folder;
+<code>vite build</code> with <code>dts: true</code> (<code>IONIC_DTS=1</code>), and <code>tsgo --noEmit --skipLibCheck</code> started when the stencilrs <code>components.d.ts</code> is written, the clock stopping when both have exited.
+<code>--skipLibCheck</code> is what Stencil's own checker forces. Peak memory of the check row is the sum of the two processes' peaks.</p>
+
 - Rows are interleaved within each run, so drift on the machine hits all of them.
 
 ### What is not here
@@ -251,14 +337,16 @@ build also writes CommonJS and more type declarations); stencilrs writes one ES 
 
 ### Where stencilrs spends its time
 
-One path in the stencilrs row is still slower than Stencil v5, and it is not the compiler:
+The compiler is rarely the long pole; what is left is file system work and bundling:
 
-- **The watch rebuild redoes the whole bundle.** After one line of `button.tsx` changes, `vite build --watch` takes about 1.4 s:
-  less than half of Stencil 4's rebuild (about 3.4 s), but about twice Stencil v5's incremental rebuild (about 0.6 s). Component and
-  global stylesheets are cached since [#81](https://github.com/popcorn245/StencilRS/issues/81) (a stylesheet is compiled again only when it
-  or a file Sass loaded for it changed), so what is left is Rollup rebuilding and writing every output chunk
-  ([#79](https://github.com/popcorn245/StencilRS/issues/79)). The Vite dev server does not have the problem: it transforms only the module
-  that was requested, in about 66 ms.
+- **A watch rebuild only redoes what changed.** After one line of `button.tsx` changes, `vite build --watch` takes {{ editRs }},
+  against Stencil v5's incremental rebuild ({{ editS5 }}) and Stencil 4's full one. It used to take about 1.4 s on this machine:
+  every rebuild compiled all 95 components again, re-hashed each stylesheet's Sass dependencies, and re-read every stylesheet in the project
+  to look for virtual global imports, and each of those file reads costs far more on Windows than on Linux. A component's result is now
+  kept while its source and every file the compile read are unchanged ([#88](https://github.com/popcorn245/StencilRS/pull/88)), and the
+  stylesheet scan runs once per watch session ([#101](https://github.com/popcorn245/StencilRS/pull/101)). What remains is Rolldown
+  relinking and writing the bundle. Minifying it costs about 10 ms. The Vite dev server only transforms the module that was requested,
+  in about {{ format('ms', ionic.metrics.editDevTransform.rows.stencilrs.median) }}.
 - **A cold build is mostly Sass.** `sass` is JavaScript and single-threaded here, and a cold build compiles every stylesheet, so the
   compile of 95 files (about 53 ms, see the per-file table) and the bundling are the smaller part. This is why the whole build is about 8x faster than
   `stencil build`, not as many times faster as the compile step alone.
@@ -277,6 +365,75 @@ npm run bench -- --runs 3 --preview  # a quicker, labelled run
 
 The benchmark needs no browser: it is builds, dev servers and a compiler loop. Linux and macOS record peak memory; on Windows
 those rows are missing.
+
+## Server-side rendering (Ionic)
+
+<div :class="[ssr.preview ? 'warning' : 'info', 'custom-block']"><p class="custom-block-title">{{ ssr.preview ? 'Container data' : 'Numbers' }}</p>
+<p v-if="ssr.preview">These numbers were measured in a shared cloud container ({{ ssr.machine.description }}; {{ ssr.machine.cpu }}, {{ ssr.machine.logicalCores }} logical cores,
+{{ ssr.machine.ramGiB }} GB, Node {{ ssr.machine.node }}, load average {{ ssr.machine.loadavgAtStart.join(' / ') }} at the start) while other jobs ran on it. They are indicative, not final: treat the ratios as
+rough, and expect run-to-run noise of several percent on a combination. They are replaced by quiet runs on Popcorn-Tower (WSL shut down) and an Apple M2, and this page will then state each machine's spec.</p>
+<p v-else>Measured on {{ ssr.machine.description }} ({{ ssr.machine.cpu }}, {{ ssr.machine.logicalCores }} logical cores, {{ ssr.machine.ramGiB }} GB, {{ ssr.machine.os }}, Node {{ ssr.machine.node }}).</p></div>
+
+Server-side rendering of Ionic {{ ssr.versions.ionicCore }}: `renderToString` of a hydrate app, the way [the SSR guide](/guide/ssr) describes. Three rows, each in its own fresh process:
+
+| Row | Hydrate app |
+|---|---|
+| Ionic published | `@ionic/core/hydrate` from npm, which Ionic built with Stencil 4 |
+| Stencil 5 | `stencil build` with the `ssr` output target over the same source, migrated to Stencil {{ ssr.versions.stencil5 }} |
+| stencilrs | `buildHydrate` from `@popcorn245/stencilrs/ssr`, the same migrated source, with the fast serializer and the runtime patches |
+
+**Fairness.** Ionic {{ ssr.versions.ionicCore }} in every row; the same Node, the same input HTML (the pages in `examples/ionic/ssr-pages.mjs`), and the same
+render options for every row (`prettyHtml: false`, a fixed build id, `serializeShadowRoot` as the table says, everything else default).
+Before anything is timed the harness renders every page and mode with Stencil 5 and stencilrs and requires the HTML to be **byte-identical**
+({{ ssrEqual }}). Ionic published is Stencil 4's output, which differs from Stencil 5's
+(it is larger, for one thing; the two are compared and reported, not failed). **Most of the gap between Ionic published and the other two is Stencil 5 itself**,
+not stencilrs: on {{ L }} in declarative shadow DOM, Stencil 5 is {{ ssrX(ssrMed(L, DSD, 'ionic-published'), ssrMed(L, DSD, 'stencil5')) }} faster than Ionic published,
+and stencilrs adds {{ ssrX(ssrMed(L, DSD, 'stencil5'), ssrMed(L, DSD, 'stencilrs')) }} on top of that. The comparison that isolates stencilrs is the Stencil 5 row against the stencilrs row.
+
+### Time per render
+
+<div class="chart-grid">
+<BenchChart v-for="id in ['ssr-render-list-50-dsd', 'ssr-render-list-50-scoped', 'ssr-render-kitchen-sink-dsd', 'ssr-render-kitchen-sink-scoped', 'ssr-render-fragment-dsd', 'ssr-render-fragment-scoped']" :key="id" :chart="c[id]" />
+</div>
+
+<DataTable :head="ssrHead" :rows="ssrRender" highlight="stencilrs" />
+
+Milliseconds per `renderToString`, median (p95) over {{ ssr.config.renders }} timed renders after {{ ssr.config.warmup }} warm-up renders. The HTML column is the size of the output.
+In declarative shadow DOM mode every component's styles are written into the page, which is why `list-50` is about a megabyte.
+
+### Express
+
+<div class="chart-grid">
+<BenchChart v-for="id in ['ssr-express-dsd', 'ssr-express-scoped']" :key="id" :chart="c[id]" />
+</div>
+
+<DataTable :head="ssrExpressHead" :rows="ssrExpress" highlight="stencilrs" />
+
+An Express app with one route that calls `renderToString` on the {{ ssr.config.express.page }} page and sends the result, under
+[autocannon](https://github.com/mcollina/autocannon) with {{ ssr.config.express.connections }} connections for {{ ssr.config.express.durationSeconds }} s. Rendering is CPU-bound and
+single-threaded, so requests per second is about one over the time per render.
+
+### Cold start and memory
+
+<div class="chart-grid">
+<BenchChart :chart="c['ssr-load']" />
+<BenchChart :chart="c['ssr-first-render']" />
+</div>
+<div class="chart-grid one"><BenchChart :chart="c['ssr-rss']" /></div>
+
+<DataTable :head="ssrColdHead" :rows="ssrCold" highlight="stencilrs" />
+
+A fresh process per row: `import()` of the hydrate app, then the very first render, with nothing cached. The patches help least here (the caches start empty), so do not
+read the warm rows as a startup number. Memory is the process's resident set after, and at the peak of, rendering every page and mode.
+
+### Reproduce
+
+```sh
+cd examples/ionic
+npm run build:ssr && npm run build:hydrate   # Stencil 5's hydrate app and stencilrs's
+npm run check:ssr                            # byte-for-byte parity of the two
+node bench-ssr.mjs --machine "my machine"    # writes ../../site/data/benchmarks-ionic-ssr.json; --help lists the options
+```
 
 ## Reproduce
 

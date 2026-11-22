@@ -18,6 +18,8 @@ npm run build:stencil4       # the stock Ionic 9 / Stencil 4.45.4 build -> dist-
 npm run build:stencilrs      # the same migrated/ source through @popcorn245/stencilrs/vite -> dist-stencilrs/
 npm run check                # both builds in headless Chrome: smoke, screenshots, all 94 components, no fallbacks
 npm run all                  # fetch, migrate, build:stencil, smoke
+npm run build:ssr            # stencil build with only { type: 'ssr' } -> dist/hydrate-stencil/index.js (hydrate app, for bench:ssr)
+npm run bench:ssr            # server-side rendering benchmark (below)
 npm run bench                # cold/warm build, dev server, watch rebuild, per-file transform, memory, size -> site/data/benchmarks-ionic.json
 ```
 
@@ -124,7 +126,7 @@ component upgrades the elements already in the page, and they read their mode at
 `ionicons/components/ion-icon.js`, and registers the 95 files that declare a component (the 94 tags of `docs.json` and the internal
 `ion-select-popover`); `css/`, Ionic's global stylesheets (compressed Sass, byte for byte what
 `build:stencil` writes). Sass for the `.ios.scss` / `.md.scss` mode styles is the plugin's own pipeline. The build
-takes about 5 s (`stencil build`: about 30 s) and the log says `compiled 95 component file(s); 0 left to
+takes about 5 s (`stencil build`: about 30 s) and the log says `compiled 95 component file(s), reused 0; 0 left to
 Stencil's compiler`.
 
 `npm run check` (`check/run.mjs`) needs both builds and a Chromium (`CHROME_PATH`, or `npx playwright install
@@ -164,6 +166,33 @@ twice, which Stencil's own minifier deduplicates). The Sass deprecations are sil
 `css.sass.silenceDeprecations` (`vite.config.ts`); `scripts/build.mjs` still filters them for the two
 `stencil build` targets, whose Sass plugin cannot be configured from here.
 
+## Ionic's hydrate app from stencilrs (`build:hydrate`, `check:ssr`)
+
+`npm run build:hydrate` builds the hydrate app (`renderToString` / `hydrateDocument`, what `stencil build` makes with an
+`ssr` output target, `npm run build:ssr`) from the same `migrated/` source compiled by stencilrs, to
+**`dist/hydrate-stencilrs/index.js`** (the SSR benchmark, `bench-ssr.mjs`, loads it from there). The assembly is
+`buildHydrate` of `@popcorn245/stencilrs/ssr` (`ssr.js`); `scripts/hydrate-options.mjs` is what is Ionic's: the tsconfig
+`paths` aliases, the global script, the preamble, the namespace, and `collections: ['ionicons']`: Stencil's `ssr`
+target also compiles `ion-icon` from the collection ionicons ships (plain JavaScript with the decorators gone), so the
+adapter in `ssr-collection.js` writes its decorators back from the static metadata. The app has 96 components: the 94 tags of
+`docs.json`, the internal `ion-select-popover` and `ion-icon` (the 95 files that declare a component, plus ionicons').
+
+Component styles go through the plugin's `css.minify: 'stencil'`: Stencil's own order (scope, autoprefix, its CSS
+serializer, newlines as spaces), which is what its hydrate app embeds; the plugin's default (lightningcss, whitespace
+only) is for the client bundle. With it the stylesheets are identical text, and so is the HTML.
+
+`npm run check:ssr` (`check/ssr-parity.mjs`) renders the bench pages (`ssr-pages.mjs`: fragment, list-50, kitchen-sink) in
+`declarative-shadow-dom` and `scoped` with both apps and asserts the HTML is byte-identical (also with
+`fastSerializer: false`), that every component is registered, and hydrates the kitchen-sink page in Chromium (content with
+JavaScript off, the server's elements adopted by the client bundle of `build:stencilrs`, a toggle clicked).
+
+On Windows, `config/stencil.config.ssr.ts` works around a Stencil 5 bug (#146). Stencil's `@stencil/core/app-globals`
+module imports the global script (`src/global/ionic-global.ts`) by a forward-slash absolute path (`J:/…`). The
+components' relative imports of the same file resolve to the backslash path (`J:\…`). The bundler keeps two copies, so
+`initialize()` sets the mode on a copy no component reads, and Stencil's hydrate app renders `class="undefined"`
+where it should render `class="md"`. A small `resolveId` plugin in that config rewrites a forward-slash absolute Windows
+path to its backslash form, and it does nothing on other platforms. stencilrs does not need it.
+
 ## Benchmark (`npm run bench`)
 
 `bench.mjs` times the three builds against each other and writes every raw sample, the machine and the versions to
@@ -173,3 +202,51 @@ It fetches, migrates and prepares the Stencil 4 toolchain itself if they are mis
 killed with its tree on exit, Ctrl-C or timeout (dev servers included); ports are chosen free; the edited `button.tsx` is restored on every exit path.
 For the benchmark the configs read `IONIC_STENCIL_CACHE=1` (Stencil's cache on, so a warm build can use it); `build:*` leave it off.
 `.bench/` (git-ignored) holds the outputs.
+
+Besides the three builds the bench has two like-for-like rows, for cold and warm builds only: `stencil-standalone` (`stencil build --config stencil.standalone.config.ts`,
+copied from `config/stencil.config.standalone.ts` by `npm run migrate`: only the `standalone` output target) and `stencilrs+check` (`vite build` with
+`IONIC_DTS=1`, i.e. `dts: true`, run beside `tsgo --noEmit` over `migrated/`; it installs `@typescript/native-preview` with `--no-save` when missing, and the
+bench also times `tsgo` and `tsc` alone). Run only those: `npm run bench -- --rows stencil,stencil-standalone,stencilrs,stencilrs+check --runs 3`.
+`node smoke/run.mjs stencilrs --out .bench/out/stencilrs+check` smoke-tests the check row's output.
+
+## SSR benchmark (`npm run bench:ssr`)
+
+`bench-ssr.mjs` benchmarks Stencil's built-in server rendering, `renderToString` of a hydrate app, on Ionic 9.0.12, one
+row per hydrate app. Each row runs in its own child processes (no state is shared between rows).
+
+| Row | Hydrate app | Needs |
+|---|---|---|
+| `ionic-published` | `@ionic/core@9.0.12/hydrate` from npm, built by Ionic with Stencil 4 (pinned in `package.json`; npm's latest is 9.0.13) | `npm ci` |
+| `stencil5` | `stencil build` with `{ type: 'ssr' }` over `migrated/` (`config/stencil.config.ssr.ts`, copied to `migrated/stencil.ssr.config.ts` by `migrate`) -> `dist/hydrate-stencil/index.js` | `npm run fetch && npm run migrate && npm run build:ssr` |
+| `stencilrs` | `dist/hydrate-stencilrs/index.js`, from stencilrs' output (issue #128) | skipped, with a message, while absent |
+
+Rows are data (`ssr-bench/rows.mjs`); `--row stencilrs=<path to a hydrate app>` points one at another file. The pages
+(`fragment`: one `ion-button`; `list-50`: `ion-app` / `ion-content` / `ion-list` with 50 `ion-item` holding a label, a
+badge and a toggle; `kitchen-sink`: header, toolbar, buttons, cards, inputs, segment, tabs, list) and the render options live
+in `ssr-pages.mjs`, which the stencilrs hydrate build imports too. Every row renders every page with `serializeShadowRoot`
+`'declarative-shadow-dom'` and `'scoped'`, `prettyHtml: false` and a fixed `buildId` (without it each render stamps a random
+`data-stencil-build` on `<html>`, so no two outputs could match); all other options are the defaults.
+
+Steps:
+
+1. **Equality, before any timing.** Each row renders every page and mode once. `stencil5` and `stencilrs` must be
+   byte-identical (a difference prints the page, mode and first differing byte, writes `<out>.failed.json` and exits 1 before
+   anything is timed). `ionic-published` (Stencil 4) against `stencil5` is reported, not failed: sizes and the first
+   differing offset.
+2. **Render timing** (`ssr-bench/render.mjs`, fresh process per row): module load (cold `import()`), first render (cold),
+   then per page and mode a first render, `--warmup` untimed renders and `--renders` timed ones: median and p95 ms/render, and
+   the HTML size. RSS (end and peak) of the process.
+3. **Express throughput** (`ssr-bench/server.mjs`, per row and mode): the same minimal app (`GET /` -> `renderToString(page)`
+   -> `res.send`, ETag off) under [autocannon](https://github.com/mcollina/autocannon): req/s and p99 latency.
+
+```sh
+npm run bench:ssr                                    # every row that exists; 20 renders, 3 warm-up, 4 connections, 5 s
+npm run bench:ssr -- --rows stencil5,stencilrs --renders 50 --connections 8 --duration 10
+npm run bench:ssr -- --pages list-50 --modes dsd --no-express
+```
+
+`--help` lists the options. The table is printed and the JSON (every number above, the equality results, machine, versions and
+the options used) is written to `../../site/data/benchmarks-ionic-ssr.json` (`--out`). Rendering is CPU-bound and single-threaded
+per row, so on a shared machine the numbers are noisy: the JSON records the load average at the start, and `--note` /
+`--machine` describe the run. `ion-range` is left out of the kitchen-sink page: it needs a shadow root and reports a
+render error in `scoped` mode on every row.

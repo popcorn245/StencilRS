@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -182,4 +182,165 @@ export class CmpToned { render() { return <div>x</div>; } }
   assert.match(await run('toned.tsx'), /color:\s*(?:red|#f00)/);
   write('_tone.scss', '$t: blue;');
   assert.match(await run('toned.tsx'), /color:\s*(?:blue|#00f)/);
+});
+
+test('a rebuild reuses what an unchanged component compiled to, until its source or a file it read changes', async () => {
+  const dir = join(project, 'memo');
+  mkdirSync(dir, { recursive: true });
+  const typesFile = join(dir, 'types.ts');
+  const cmpFile = join(dir, 'memo-cmp.tsx');
+  writeFileSync(typesFile, `export type Size = 'small' | 'large';\n`);
+  const source = `import { Component, Prop, h } from '@stencil/core';
+import { Size } from './types';
+@Component({ tag: 'memo-cmp' })
+export class MemoCmp {
+  @Prop() size: Size = 'small';
+  render() { return <div>{this.size}</div>; }
+}
+`;
+  writeFileSync(cmpFile, source);
+  const [plugin] = stencilrs();
+  plugin.configResolved({ command: 'build', root: project, plugins: [] });
+  const ctx = { addWatchFile() {}, warn() {}, error: (m) => assert.fail(m), info() {}, resolve: async () => null };
+  const compile = async (code = source) => {
+    await plugin.buildStart.call(ctx);
+    return plugin.transform.call(ctx, code, cmpFile, {});
+  };
+  const first = await compile();
+  assert.ok(first.code.includes('memo-cmp'));
+  assert.equal(await compile(), first, 'nothing changed: the same result');
+  const second = await compile(source.replace('<div>', '<section>').replace('</div>', '</section>'));
+  assert.notEqual(second, first);
+  assert.ok(second.code.includes('section'));
+  // The file the metadata came from changes (new size, new mtime): the component compiles again.
+  await new Promise((r) => setTimeout(r, 20));
+  writeFileSync(typesFile, `export type Size = 1 | 2;\n`);
+  const third = await compile(source);
+  assert.notEqual(third, first);
+  assert.notEqual(third.code, first.code, 'the metadata follows the edited type');
+  assert.equal(await compile(source), third, 'and is kept again');
+});
+
+test('serve pre-bundles the runtime imports the transform injects; Vite merges the user include', () => {
+  const run = (options, command, userConfig = {}) => stencilrs(options)[0].config(userConfig, { command, mode: 'development' });
+  const want = ['@stencil/core/app-data', '@stencil/core/runtime/client/standalone'];
+  assert.deepEqual(run({}, 'serve').optimizeDeps.include, want);
+  // Only the plugin's own entries: the user's `include` is left to Vite's array merge.
+  assert.deepEqual(run({}, 'serve', { optimizeDeps: { include: ['lodash'] } }).optimizeDeps.include, want);
+  assert.equal(run({}, 'build').optimizeDeps, undefined);
+  assert.equal(run({ componentExport: 'ssr' }, 'serve').optimizeDeps, undefined);
+  assert.equal(run({ mode: 'spec-page' }, 'serve').optimizeDeps, undefined);
+  // Discovery off: the user's include is the whole list, and nothing found on a request re-runs the optimizer.
+  assert.equal(run({}, 'serve', { optimizeDeps: { noDiscovery: true, include: [] } }).optimizeDeps, undefined);
+});
+
+test('a watch rebuild does not scan the stylesheets again, but a stylesheet that starts importing a virtual global is still handled', async () => {
+  const root = join(project, 'watch-scan');
+  mkdirSync(join(root, 'src'), { recursive: true });
+  const sheet = join(root, 'src', 'a.css');
+  writeFileSync(sheet, ':host { color: red; }');
+  const generated = join(root, 'node_modules', '.stencil', 'virtual-css', 'build');
+  const [plugin] = stencilrs();
+  plugin.configResolved({ command: 'build', root, plugins: [] });
+  const ctx = { addWatchFile() {}, warn() {}, error: (m) => assert.fail(m), info() {}, resolve: async () => null, meta: { watchMode: true } };
+  await plugin.buildStart.call(ctx);
+  assert.ok(!existsSync(generated), 'no stylesheet imports a virtual global: @stencil/unplugin stays unloaded');
+  // The file changes behind the plugin's back (no watchChange): proof that a rebuild does not read the project again.
+  writeFileSync(sheet, "@import 'stencil-css-components';");
+  await plugin.buildStart.call(ctx);
+  assert.ok(!existsSync(generated), 'the rebuild did not scan');
+  // A rebuild that reports the change.
+  plugin.watchChange.call(ctx, sheet, { event: 'update' });
+  await plugin.buildStart.call(ctx);
+  assert.ok(existsSync(generated), 'the stylesheet now imports a virtual global: generated before the build');
+});
+
+test('a stylesheet created after the first scan that imports a virtual global is handled when it is loaded', async () => {
+  const root = join(project, 'watch-new');
+  mkdirSync(join(root, 'src'), { recursive: true });
+  writeFileSync(join(root, 'src', 'a.css'), ':host { color: red; }');
+  const generated = join(root, 'node_modules', '.stencil', 'virtual-css', 'build');
+  const [plugin] = stencilrs();
+  plugin.configResolved({ command: 'build', root, plugins: [] });
+  const ctx = { addWatchFile() {}, warn() {}, error: (m) => assert.fail(m), info() {}, resolve: async () => null, meta: { watchMode: true } };
+  await plugin.buildStart.call(ctx);
+  writeFileSync(join(root, 'src', 'new.css'), "@import 'stencil-hydrate';");
+  assert.ok(!existsSync(generated));
+  // Not in the watch graph, so no watchChange; the build that imports it loads it.
+  await plugin.load.call(ctx, `\0stencil-css:${join(root, 'src', 'new')}?tag=x-y&encapsulation=none&__ext=css`);
+  assert.ok(existsSync(generated));
+});
+
+test('the verbose message counts the build it ends: compiled apart from reused', async () => {
+  const dir = join(project, 'counter');
+  mkdirSync(dir, { recursive: true });
+  const cmpFile = join(dir, 'counter-cmp.tsx');
+  writeFileSync(cmpFile, component('counter-cmp', 'CounterCmp'));
+  const [plugin] = stencilrs({ verbose: true });
+  plugin.configResolved({ command: 'build', root: project, plugins: [] });
+  const messages = [];
+  const ctx = { addWatchFile() {}, warn() {}, error: (m) => assert.fail(m), info: (m) => messages.push(m), resolve: async () => null };
+  const rebuild = async () => {
+    messages.length = 0;
+    await plugin.buildStart.call(ctx);
+    await plugin.transform.call(ctx, component('counter-cmp', 'CounterCmp'), cmpFile, {});
+    plugin.buildEnd.call(ctx);
+    return messages.join('\n');
+  };
+  assert.match(await rebuild(), /compiled 1 component file\(s\), reused 0;/);
+  assert.match(await rebuild(), /compiled 0 component file\(s\), reused 1;/);
+  assert.match(await rebuild(), /compiled 0 component file\(s\), reused 1;/, 'not accumulated over rebuilds');
+});
+
+test('a stylesheet is not read again by a rebuild while its stamp is unchanged', async () => {
+  const dir = join(project, 'stamp');
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, 'plain.css');
+  writeFileSync(file, ':host { color: red; }');
+  const old = new Date(Date.now() - 60_000);
+  utimesSync(file, old, old); // older than the 2 s racy window
+  const { createCssPipeline } = await import('../vite-css.js');
+  const load = createCssPipeline({ cache: 'memory' });
+  const id = `\0stencil-css:${join(dir, 'plain')}?tag=cmp-plain&encapsulation=none&__ext=css`;
+  const first = await load(id, false);
+  assert.match(first.code, /color:\s*(?:red|#f00)/);
+  // Same size and mtime, different text: only a re-read would notice.
+  writeFileSync(file, ':host { color: tan; }');
+  utimesSync(file, old, old);
+  assert.equal((await load(id, false)).code, first.code, 'unchanged stamp: the earlier text is used');
+  writeFileSync(file, ':host { color: green; margin: 0; }');
+  assert.match((await load(id, false)).code, /green/, 'a changed stamp reads the file again');
+});
+
+test('serve does not watch the folders `stencil build` writes into; merged with the user ignored (string, function, array)', async () => {
+  const { mergeConfig } = await import('vite');
+  const win = process.platform === 'win32';
+  const root = win ? 'C:\\proj (1)' : '/proj (1)';
+  const run = (options, command, userConfig = {}) => stencilrs(options)[0].config({ root, ...userConfig }, { command, mode: 'development' });
+  const [ignore] = run({}, 'serve').server.watch.ignored;
+  const p = (rel) => (win ? `C:\\proj (1)\\${rel}` : `/proj (1)/${rel}`);
+  for (const dir of ['www', 'dist', 'loader', 'hydrate', '.stencil']) {
+    assert.equal(ignore(p(dir)), true, dir);
+    assert.equal(ignore(p(`${dir}/build/app.js`)), true, `${dir}/...`);
+  }
+  // Source and look-alikes are never ignored; neither is a same-named folder deeper down.
+  for (const rel of ['src/components/a.tsx', 'src/dist/a.ts', 'index.html', 'wwwroot/a.js', 'distance.ts', 'docs.json']) assert.equal(ignore(p(rel)), false, rel);
+  assert.equal(ignore('/elsewhere/www/a.js'), false);
+
+  // Vite concatenates a string, a function or an array with the plugin's entry.
+  const userFn = () => false;
+  for (const user of ['**/mine/**', userFn, ['**/a/**', userFn]]) {
+    const merged = mergeConfig({ root, server: { watch: { ignored: user } } }, run({}, 'serve'));
+    const list = merged.server.watch.ignored;
+    assert.ok(Array.isArray(list) && list.length === [user].flat().length + 1, 'user entries kept, plugin entry added');
+    for (const u of [user].flat()) assert.ok(list.includes(u));
+  }
+
+  // Off, replaced, not for build, or a watcher the user turned off.
+  assert.equal(run({ watchIgnore: false }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: [] }, 'serve').server, undefined);
+  assert.equal(run({}, 'build').server, undefined);
+  assert.equal(run({}, 'serve', { server: { watch: null } }).server, undefined);
+  const [custom] = run({ watchIgnore: ['components', './out/'] }, 'serve').server.watch.ignored;
+  assert.deepEqual([custom(p('components/x.js')), custom(p('out/x.js')), custom(p('www/x.js'))], [true, true, false]);
 });

@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hello, <%= user %></title>
+</head>
+<body>
+<pop-card variant="outlined">
+  <h3>Hello, <%= user %></h3>
+  <pop-status-badge variant="success">Done</pop-status-badge>
+  <pop-switch label="Notify me" checked></pop-switch>
+  <pop-stat value="<%= open %>" label="Open tasks"></pop-stat>
+  <pop-address-autocomplete placeholder="Where"></pop-address-autocomplete>
+  <ul><% for (const t of tasks) { %><li><%= t %></li><% } %></ul>
+</pop-card>
+<script type="module" src="/client/components.js"></script>
+</body>
+</html>

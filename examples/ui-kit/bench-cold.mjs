@@ -42,6 +42,16 @@ const MARK = 'BENCH_COLD_MARK';
 const TIMEOUT_MS = { build: 180_000, dev: 90_000 };
 const WIN = process.platform === 'win32';
 
+// src/assets/svg: 1,339 static icons the dev server serves by URL and no module imports. The watcher opens one fs.watch for
+// each (~0.9 ms on Windows) for nothing. Both compilers' servers get the same ignore, so the comparison stays fair.
+const SVG_ASSETS = join(root, 'src/assets/svg').replaceAll('\\', '/');
+// .bench: the benchmarks' own output (bench.mjs leaves two full `stencil build`s in .bench/out, ~7,000 files). Not source, and
+// absent on a fresh clone; watched, its crawl ate ~1.5 s of the main thread in both rows on Windows.
+const BENCH_OUT = join(root, '.bench').replaceAll('\\', '/');
+const ignoreSvgAssets = (p) => {
+  const s = String(p).replaceAll('\\', '/');
+  return s.startsWith(SVG_ASSETS) || s === BENCH_OUT || s.startsWith(`${BENCH_OUT}/`);
+};
 const loadPlugin = async (compiler) =>
   compiler === 'stencilrs' ? (await import('@popcorn245/stencilrs/vite')).default() : (await import('@stencil/unplugin')).stencilVite();
 
@@ -64,7 +74,7 @@ if (args[0] === '--child') {
     console.log(MARK);
   } else {
     // port 0: the OS picks a free one
-    const server = await createServer({ ...common, server: { port: 0, host: '127.0.0.1' }, optimizeDeps: { noDiscovery: true, include: [] } });
+    const server = await createServer({ ...common, server: { port: 0, host: '127.0.0.1', watch: { ignored: [ignoreSvgAssets] } }, optimizeDeps: { noDiscovery: true, include: [] } });
     await server.listen();
     const res = await fetch(server.resolvedUrls.local[0].replace(/\/$/, '') + componentUrl);
     const body = await res.text();
@@ -108,6 +118,7 @@ const cold = (mode, compiler) =>
   new Promise((resolve, reject) => {
     const cacheDir = join(bench, 'cache');
     rmSync(cacheDir, { recursive: true, force: true });
+    rmSync(join(root, 'node_modules/.cache/stencilrs'), { recursive: true, force: true }); // stencilrs's Sass disk cache
     rmSync(join(bench, 'dist'), { recursive: true, force: true });
     let mark = null;
     let out = '';
@@ -175,7 +186,7 @@ const entry = {};
 if (res.build) {
   entry.coldBuild = {
     ...provenance,
-    what: `Fresh-process production vite build of all ${components.length} ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache cleared each run; median, min-max)`,
+    what: `Fresh-process production vite build of all ${components.length} ui-kit components as one library, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)`,
     runs,
     rows: compilers.map((c) => ({
       compiler: label[c],
@@ -190,7 +201,7 @@ if (res.build) {
 if (res.dev) {
   entry.coldDev = {
     ...provenance,
-    what: `Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache cleared each run; median, min-max)`,
+    what: `Fresh-process Vite dev server on the ui-kit: time from spawning node to the first 200 for a component module, including loading Vite and the compiler (examples/ui-kit/bench-cold.mjs, ${runs} runs, alternating, Vite cache and stencilrs Sass disk cache cleared each run; median, min-max)`,
     runs,
     rows: compilers.map((c) => ({
       compiler: label[c],
