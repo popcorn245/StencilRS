@@ -60,6 +60,7 @@
     "ssr-collection.js",
     "ssr.d.ts",
     "ssr-serializer.js",
+    "ssr-patches.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

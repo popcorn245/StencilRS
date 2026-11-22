@@ -23,6 +23,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { analyze } from './index.js';
 import { readCollections } from './ssr-collection.js';
+import { runtimePatchesPlugin } from './ssr-patches.js';
 import stencilrs from './vite.js';
 
 const SOURCE = readFileSync(new URL('./ssr-serializer.js', import.meta.url), 'utf8');
@@ -265,6 +266,7 @@ const buildRunner = async (factory, o) => {
         transform: (code) => (code.includes(`const ${MODE_RESOLVER_DECLARATION}`) ? code.replaceAll(`const ${MODE_RESOLVER_DECLARATION}`, '') : null),
       },
       ...(o.fastSerializer ? [fastSerializerPlugin()] : []),
+      ...(o.runtimePatches === false ? [] : [runtimePatchesPlugin(o.runtimePatches)]),
       ...o.runnerPlugins,
     ],
   });
@@ -307,6 +309,7 @@ const buildRunner = async (factory, o) => {
  * @param {import('vite').Plugin[]} [options.plugins] more Vite plugins for the component build (a CSS fix, a resolver).
  * @param {boolean} [options.minifyCss] minify component styles with Stencil's own minifier, as `stencil build` does (its `minifyCss`, on outside dev mode): scope, autoprefix and minify in Stencil's order (the plugin's `css.minify: 'stencil'`). Default `true`; `false` keeps what the plugin's `css` options give.
  * @param {boolean} [options.fastSerializer] swap mock-doc's serializer for `ssr-serializer.js` (`fastSerializerPlugin`). Default `true`; `false` keeps Stencil's own.
+ * @param {boolean | Record<string, boolean>} [options.runtimePatches] the byte-identical speed patches of `ssr-patches.js` (attribute lookups, selector parse cache, CSS rewrite cache, ...), applied to the runner and factory text at bundle time. Default `true`; `false` keeps Stencil's own code; `{ cssCache: false }` opts one out.
  * @param {object[]} [options.runnerPlugins] Rolldown plugins of the second pass, which bundles the runner: replace a module
  *   of the runner bundle (mock-doc's serializer, for example) with `resolveId` / `load` / `transform`.
  * @param {string} [options.logLevel] Vite's, default `'warn'`.
@@ -346,6 +349,7 @@ export const buildHydrate = async (options = {}) => {
     plugins: options.plugins ?? [],
     minifyCss: options.minifyCss ?? true,
     fastSerializer: options.fastSerializer ?? true,
+    runtimePatches: options.runtimePatches ?? true,
     runnerPlugins: options.runnerPlugins ?? [],
     logLevel: options.logLevel ?? 'warn',
   };
