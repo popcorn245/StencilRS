@@ -7,10 +7,15 @@
 //
 // Every page is a full document (what an SSR framework hands to renderToString), with the `lang` and mode-neutral
 // markup only: no random ids, dates or counters, so two correct renderers can produce the same bytes.
+//
+// Each page links Ionic's global stylesheet, as a real Ionic app does: without it `ion-app` / `ion-content` have no
+// height and the server-rendered page shows almost nothing before JavaScript runs. renderToString never fetches a
+// <link>, so it costs every row the same nothing; it is there so the HTML a row writes looks right when opened.
+export const IONIC_CSS = 'https://cdn.jsdelivr.net/npm/@ionic/core@9.0.12/css/ionic.bundle.css';
 
 const doc = (title, body) => `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>${title}</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><link rel="stylesheet" href="${IONIC_CSS}"></head>
 <body>
 ${body}
 </body>
