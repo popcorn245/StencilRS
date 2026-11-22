@@ -26,6 +26,8 @@ export interface BuildHydrateOptions {
    * `getSsrBuildConditionals` does, so the runtime skips branches no component needs. `'all'`: every feature on.
    */
   features?: 'derive' | 'all';
+  /** Replace the server runtime's `BUILD.<flag>` reads with the app's literal values, so dead branches are dropped. Default `true`. */
+  foldBuild?: boolean;
   /** Overrides of the runtime's `BUILD` flags, over the features. */
   buildConditionals?: Record<string, boolean>;
   /** Stencil's `env`. */

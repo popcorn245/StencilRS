@@ -180,6 +180,28 @@ const factoryEntry = (cmps) =>
     `export { ssrApp };`,
   ].join('\n');
 
+const RUNTIME_RE = /[\\/]@stencil[\\/]core[\\/]dist[\\/]runtime[\\/]server[\\/]index\.mjs$/;
+// A read of a flag: `BUILD.x` / `BUILD$1.x` (the runtime's two import names), not a member of something else, not a write.
+const BUILD_READ_RE = /(?<![.\w$])BUILD(?:\$\d+)?\.([A-Za-z_]\w*)\b(?!\s*(?:=(?!=)|\+\+|--|[-+*/|&^%]=))/g;
+
+/**
+ * Stencil's build replaces `BUILD.<flag>` in the runtime with the app's literal values (its `appDataPlugin`); the `BUILD`
+ * object here is a runtime value, which no bundler folds. This does the replacement on the server runtime of the factory
+ * pass (the runner pass keeps `@stencil/core`'s own defaults, which are not this app's). Reads of a key the final `BUILD`
+ * does not have are left alone. `o.buildValues` is the object the app-data module exports, filled in by `buildHydrate`.
+ */
+const foldBuildPlugin = (o) => ({
+  name: 'stencilrs-ssr-fold-build',
+  enforce: 'post',
+  transform(code, id) {
+    if (!RUNTIME_RE.test(id)) return null;
+    let folded = 0;
+    const out = code.replace(BUILD_READ_RE, (m, flag) => (typeof o.buildValues[flag] === 'boolean' ? (folded++, String(o.buildValues[flag])) : m));
+    if (!folded) throw new Error('stencilrs/ssr: no `BUILD.<flag>` read found in the server runtime; has @stencil/core changed? (foldBuild: false skips this step)');
+    return { code: out, map: null };
+  },
+});
+
 /** First pass: the components compiled by stencilrs plus the server runtime, one CommonJS body. */
 const buildFactory = async (o) => {
   const { build } = await import('vite');
@@ -225,6 +247,8 @@ export const globalStyles = ${JSON.stringify(o.globalStyles)};`;
           return null;
         },
       },
+      // `BUILD.<flag>` reads of the server runtime become literals, so the bundler drops the branches no component needs.
+      ...(o.foldBuild ? [foldBuildPlugin(o)] : []),
       stencilrs({ ...o.pluginOptions, css: { ...(o.minifyCss ? { minify: 'stencil' } : {}), ...o.pluginOptions.css }, componentExport: 'ssr' }),
       ...o.plugins,
     ],
@@ -293,6 +317,7 @@ const buildRunner = async (factory, o) => {
  * @param {string} [options.preamble] Stencil's `preamble`, as a banner comment.
  * @param {Record<string, string> | Array<{ find: string | RegExp, replacement: string }>} [options.alias] Vite `resolve.alias` of the component build.
  * @param {'derive' | 'all'} [options.features] which runtime features the app has (`BUILD`). `'derive'` (default): from the components, as Stencil's `getSsrBuildConditionals` does (`ssr-features.js`), so the runtime skips what no component uses. `'all'`: every feature on, the runtime's defaults under Stencil's ssr conditionals.
+ * @param {boolean} [options.foldBuild] replace the server runtime's `BUILD.<flag>` reads with the app's literal values, as Stencil's build does, so dead branches are dropped. Default `true`; `false` keeps them runtime reads.
  * @param {Record<string, boolean>} [options.buildConditionals] overrides of the runtime's `BUILD` flags, over the features.
  * @param {Record<string, unknown>} [options.env] Stencil's `env`.
  * @param {object} [options.stencilrs] options of the stencilrs Vite plugin (`componentExport` is always `'ssr'`).
@@ -337,6 +362,7 @@ export const buildHydrate = async (options = {}) => {
     globalStyles: options.globalStyles ?? '',
     preamble: options.preamble,
     features: SSR_BUILD,
+    foldBuild: options.foldBuild ?? true,
     buildConditionals: options.buildConditionals ?? {},
     env: options.env ?? {},
     pluginOptions: options.stencilrs ?? {},
@@ -355,6 +381,9 @@ export const buildHydrate = async (options = {}) => {
     ];
     o.features = ssrBuildConditionals(await readComponentMetadata(sources, o.alias));
   }
+  // The flags as the app-data module will export them: the runtime's defaults, then the features, then the overrides.
+  const { BUILD: defaults } = await import(pathToFileUrl(join(core, 'dist/app-data/index.js')));
+  o.buildValues = { ...defaults, ...o.features, ...o.buildConditionals };
   const code = await buildRunner(await buildFactory(o), o);
   let file = null;
   if (options.outDir) {

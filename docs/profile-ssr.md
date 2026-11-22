@@ -111,6 +111,9 @@ Differences from Stencil, both conservative (a flag may be on where Stencil has 
 vdom facts and tag names of every module a component imports (`updateComponentBuildConditionals`); stencilrs reads facts per
 class, so a local module that renders JSX turns all vdom flags, `slot` and `svg` on for its importer. And the Ionic `BUILD`
 is not constant-folded by either build (it is a runtime object in both), so a flag only skips a branch at run time.
+`buildHydrate` therefore also folds it (`foldBuild`, default on): the server runtime's `BUILD.<flag>` reads of the factory pass
+(not the runner pass, which keeps Stencil's defaults) become the app's literals before bundling, and Rolldown drops the dead
+branches. `foldBuild: false` keeps them runtime reads.
 
 Measured (container, 4 cores shared with other jobs, Node 22): byte-identical output on every page and mode
 (`check:ssr`, `bench-ssr.mjs` equality, ui-kit `test:ssr`, `node --test test/ssr-*.test.js`). Per render, 15 interleaved
@@ -120,6 +123,11 @@ control: `all` 30.2 / 20.3 / 30.1 / 20.4 ms, `all2` (identical file) +7.7% / -0.
 as much as the derived one differs from it: no measurable per-render gain. Bundle: 2,370,915 -> 2,372,417 bytes (+1.5 KB, the
 longer `BUILD` literal). It is kept for parity with `stencil build` (and for apps whose components lack features such as
 shadow DOM, where the runtime's branches differ), not for speed.
+
+With the reads folded (`fold`; derive without folding is `derive`), same 15 x 30 interleaved run with the noise control, byte-identical
+to `all`: list-50 dsd 31.3 ms (all2 -0.2%, derive -0.7%, fold -2.3%), kitchen-sink dsd 20.3 (+1.7%, -3.4%, +4.5%), list-50 scoped
+29.7 (+4.0%, -0.3%, +3.3%), kitchen-sink scoped 22.8 (-8.7%, -8.1%, -4.3%). All within the spread of the identical build against itself:
+no measurable gain. Bundle: 2,370,915 -> 2,332,377 bytes (-38.5 KB, -1.6%).
 
 ## Evaluated, not done
 
