@@ -1,20 +1,20 @@
 {
   "schema": 1,
   "preview": true,
-  "note": "container data: indicative only, replaced by the quiet Popcorn-Tower and M2 runs (issue #132)",
-  "finishedAt": "2026-11-22T04:36:55.036Z",
+  "note": null,
+  "finishedAt": "2026-11-22T07:50:02.066Z",
   "machine": {
-    "description": "Shared cloud build container, 4 vCPU",
-    "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+    "description": "shared 4-core build container (preview)",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.30GHz",
     "logicalCores": 4,
     "ramGiB": 16,
     "os": "Linux 6.18.44-fc-v726",
     "platform": "linux-x64",
     "node": "22.23.5",
     "loadavgAtStart": [
-      1.14,
-      0.98,
-      1.02
+      1.03,
+      0.3,
+      0.11
     ]
   },
   "versions": {
@@ -22,7 +22,7 @@
     "stencil5": "5.0.0-beta.25",
     "express": "5.3.0",
     "autocannon": "9.0.0",
-    "git": "f58a4e4932e9b7f5d600977dd948dd897f0b9467"
+    "git": "a9b4f049b4956073f099983c8c5f60305971f8ad"
   },
   "config": {
     "pages": [
@@ -50,7 +50,7 @@
   "rows": {
     "ionic-published": {
       "label": "@ionic/core 9.0.12 hydrate from npm (built by Ionic with Stencil 4)",
-      "hydrateApp": "node_modules/@ionic/core/hydrate/index.mjs"
+      "hydrateApp": "../../../wt-130/examples/ionic/node_modules/@ionic/core/hydrate/index.mjs"
     },
     "stencil5": {
       "label": "Stencil 5 hydrate app (`stencil build`, { type: 'ssr' }) of the migrated Ionic source",
@@ -68,8 +68,8 @@
         "mode": "declarative-shadow-dom",
         "identical": true,
         "bytes": {
-          "stencil5": 9708,
-          "stencilrs": 9708
+          "stencil5": 9875,
+          "stencilrs": 9875
         },
         "firstDifferenceAt": null,
         "context": null
@@ -79,8 +79,8 @@
         "mode": "declarative-shadow-dom",
         "identical": true,
         "bytes": {
-          "stencil5": 1014148,
-          "stencilrs": 1014148
+          "stencil5": 1014315,
+          "stencilrs": 1014315
         },
         "firstDifferenceAt": null,
         "context": null
@@ -90,8 +90,8 @@
         "mode": "declarative-shadow-dom",
         "identical": true,
         "bytes": {
-          "stencil5": 360386,
-          "stencilrs": 360386
+          "stencil5": 360553,
+          "stencilrs": 360553
         },
         "firstDifferenceAt": null,
         "context": null
@@ -101,8 +101,8 @@
         "mode": "scoped",
         "identical": true,
         "bytes": {
-          "stencil5": 13188,
-          "stencilrs": 13188
+          "stencil5": 13355,
+          "stencilrs": 13355
         },
         "firstDifferenceAt": null,
         "context": null
@@ -112,8 +112,8 @@
         "mode": "scoped",
         "identical": true,
         "bytes": {
-          "stencil5": 126751,
-          "stencilrs": 126751
+          "stencil5": 126918,
+          "stencilrs": 126918
         },
         "firstDifferenceAt": null,
         "context": null
@@ -123,8 +123,8 @@
         "mode": "scoped",
         "identical": true,
         "bytes": {
-          "stencil5": 240440,
-          "stencilrs": 240440
+          "stencil5": 240607,
+          "stencilrs": 240607
         },
         "firstDifferenceAt": null,
         "context": null
@@ -136,10 +136,10 @@
         "mode": "declarative-shadow-dom",
         "identical": false,
         "bytes": {
-          "stencil5": 9708,
-          "ionic-published": 11676
+          "stencil5": 9875,
+          "ionic-published": 11843
         },
-        "firstDifferenceAt": 218,
+        "firstDifferenceAt": 385,
         "context": {
           "stencil5": "md button button-solid ion-activatable ion-focusable hydrate",
           "ionic-published": "sc-ion-button-md-h md button button-solid ion-activatable io"
@@ -150,10 +150,10 @@
         "mode": "declarative-shadow-dom",
         "identical": false,
         "bytes": {
-          "stencil5": 1014148,
-          "ionic-published": 1159660
+          "stencil5": 1014315,
+          "ionic-published": 1159827
         },
-        "firstDifferenceAt": 268,
+        "firstDifferenceAt": 435,
         "context": {
           "stencil5": "color:var(--color);font-family:var(--ion-font-family, inheri",
           "ionic-published": "display:block;color:var(--color);font-family:var(--ion-font-"
@@ -164,10 +164,10 @@
         "mode": "declarative-shadow-dom",
         "identical": false,
         "bytes": {
-          "stencil5": 360386,
-          "ionic-published": 431251
+          "stencil5": 360553,
+          "ionic-published": 431418
         },
-        "firstDifferenceAt": 418,
+        "firstDifferenceAt": 585,
         "context": {
           "stencil5": ".6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--p",
           "ionic-published": "0.6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--"
@@ -178,10 +178,10 @@
         "mode": "scoped",
         "identical": false,
         "bytes": {
-          "stencil5": 13188,
-          "ionic-published": 15072
+          "stencil5": 13355,
+          "ionic-published": 15239
         },
-        "firstDifferenceAt": 456,
+        "firstDifferenceAt": 623,
         "context": {
           "stencil5": "width:auto;color:var(--color);font-family:var(--ion-font-fam",
           "ionic-published": "display:inline-block;width:auto;color:var(--color);font-fami"
@@ -192,10 +192,10 @@
         "mode": "scoped",
         "identical": false,
         "bytes": {
-          "stencil5": 126751,
-          "ionic-published": 148262
+          "stencil5": 126918,
+          "ionic-published": 148429
         },
-        "firstDifferenceAt": 269,
+        "firstDifferenceAt": 436,
         "context": {
           "stencil5": "color:var(--color);font-family:var(--ion-font-family, inheri",
           "ionic-published": "display:block;color:var(--color);font-family:var(--ion-font-"
@@ -206,10 +206,10 @@
         "mode": "scoped",
         "identical": false,
         "bytes": {
-          "stencil5": 240440,
-          "ionic-published": 278821
+          "stencil5": 240607,
+          "ionic-published": 278988
         },
-        "firstDifferenceAt": 418,
+        "firstDifferenceAt": 585,
         "context": {
           "stencil5": ".6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--p",
           "ionic-published": "0.6);--padding-top:0;--padding-end:0;--padding-bottom:8px;--"
@@ -220,152 +220,152 @@
   "diagnostics": {},
   "timing": {
     "ionic-published": {
-      "loadMs": 34.360362,
-      "firstRenderMs": 29.939697999999993,
-      "rssMb": 200.9,
-      "peakRssMb": 204.1,
+      "loadMs": 36.24601799999999,
+      "firstRenderMs": 31.325932,
+      "rssMb": 192.8,
+      "peakRssMb": 196.7,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 29.939697999999993,
-          "medianMs": 1.896464999999992,
-          "p95Ms": 3.5690529999999967,
-          "minMs": 1.650072999999992,
-          "htmlBytes": 11676
+          "firstMs": 31.325932,
+          "medianMs": 1.855078000000006,
+          "p95Ms": 3.842351000000008,
+          "minMs": 1.3186729999999898,
+          "htmlBytes": 11843
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 488.0869640000001,
-          "medianMs": 407.6371740000004,
-          "p95Ms": 438.5486799999999,
-          "minMs": 328.53895100000045,
-          "htmlBytes": 1159969
+          "firstMs": 442.99705,
+          "medianMs": 348.589618,
+          "p95Ms": 438.80095500000016,
+          "minMs": 321.8638009999995,
+          "htmlBytes": 1160136
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 189.08230699999876,
-          "medianMs": 78.34632500000043,
-          "p95Ms": 99.64453899999899,
-          "minMs": 72.08230199999889,
-          "htmlBytes": 431819
+          "firstMs": 143.8016609999995,
+          "medianMs": 64.4747550000011,
+          "p95Ms": 76.99383200000011,
+          "minMs": 61.505058999999164,
+          "htmlBytes": 431986
         },
         "fragment.scoped": {
-          "firstMs": 6.590401999999813,
-          "medianMs": 2.8994329999986803,
-          "p95Ms": 5.606415999998717,
-          "minMs": 2.5444100000004255,
-          "htmlBytes": 15087
+          "firstMs": 5.744673999999577,
+          "medianMs": 2.5263230000000476,
+          "p95Ms": 4.596874000000753,
+          "minMs": 2.280136000001221,
+          "htmlBytes": 15254
         },
         "list-50.scoped": {
-          "firstMs": 362.076998999999,
-          "medianMs": 285.368794,
-          "p95Ms": 331.44478700000036,
-          "minMs": 250.95828500000061,
-          "htmlBytes": 150100
+          "firstMs": 276.674943,
+          "medianMs": 259.5758910000004,
+          "p95Ms": 316.1537870000011,
+          "minMs": 233.21789100000024,
+          "htmlBytes": 150267
         },
         "kitchen-sink.scoped": {
-          "firstMs": 96.650744999999,
-          "medianMs": 79.98709400000007,
-          "p95Ms": 87.80040699999881,
-          "minMs": 73.81582100000014,
-          "htmlBytes": 280147
+          "firstMs": 82.574525,
+          "medianMs": 75.04504999999699,
+          "p95Ms": 88.64152699999977,
+          "minMs": 72.96205700000064,
+          "htmlBytes": 280314
         }
       }
     },
     "stencil5": {
-      "loadMs": 32.710187999999995,
-      "firstRenderMs": 43.759941000000005,
-      "rssMb": 192.7,
-      "peakRssMb": 195.5,
+      "loadMs": 29.511660999999997,
+      "firstRenderMs": 38.339017999999996,
+      "rssMb": 187.4,
+      "peakRssMb": 198.4,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 43.759941000000005,
-          "medianMs": 2.594161999999983,
-          "p95Ms": 4.875074999999995,
-          "minMs": 1.8268240000000162,
-          "htmlBytes": 9708
+          "firstMs": 38.339017999999996,
+          "medianMs": 2.137079,
+          "p95Ms": 4.028058999999999,
+          "minMs": 1.5902069999999924,
+          "htmlBytes": 9875
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 103.91804200000001,
-          "medianMs": 38.31639699999994,
-          "p95Ms": 49.966995999999995,
-          "minMs": 34.62782299999981,
-          "htmlBytes": 1014457
+          "firstMs": 74.39888299999998,
+          "medianMs": 40.24331100000006,
+          "p95Ms": 52.95928499999991,
+          "minMs": 34.59849500000007,
+          "htmlBytes": 1014624
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 40.77507300000002,
-          "medianMs": 24.205105999999887,
-          "p95Ms": 31.243556000000126,
-          "minMs": 19.607420000000047,
-          "htmlBytes": 360954
+          "firstMs": 73.21941700000002,
+          "medianMs": 21.69213999999988,
+          "p95Ms": 23.841190000000097,
+          "minMs": 18.176685000000134,
+          "htmlBytes": 361121
         },
         "fragment.scoped": {
-          "firstMs": 8.812373000000207,
-          "medianMs": 3.238851000000068,
-          "p95Ms": 5.4332509999999274,
-          "minMs": 2.5443149999998695,
-          "htmlBytes": 13203
+          "firstMs": 5.727038999999877,
+          "medianMs": 2.49368400000003,
+          "p95Ms": 5.013506000000007,
+          "minMs": 2.2980019999999968,
+          "htmlBytes": 13370
         },
         "list-50.scoped": {
-          "firstMs": 58.22081399999979,
-          "medianMs": 43.75002199999972,
-          "p95Ms": 52.09319400000004,
-          "minMs": 39.08433100000002,
-          "htmlBytes": 128589
+          "firstMs": 50.02489700000001,
+          "medianMs": 40.14687699999968,
+          "p95Ms": 45.47711500000014,
+          "minMs": 33.68385100000023,
+          "htmlBytes": 128756
         },
         "kitchen-sink.scoped": {
-          "firstMs": 45.89771099999962,
-          "medianMs": 42.674023000000034,
-          "p95Ms": 58.37565399999994,
-          "minMs": 39.63155599999982,
-          "htmlBytes": 241766
+          "firstMs": 63.62604300000021,
+          "medianMs": 38.607322999999724,
+          "p95Ms": 43.77181100000007,
+          "minMs": 35.45206499999995,
+          "htmlBytes": 241933
         }
       }
     },
     "stencilrs": {
-      "loadMs": 28.606716000000002,
-      "firstRenderMs": 36.334571999999994,
-      "rssMb": 208.5,
-      "peakRssMb": 223.7,
+      "loadMs": 29.152225,
+      "firstRenderMs": 41.13392700000001,
+      "rssMb": 201.4,
+      "peakRssMb": 213.9,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 36.334571999999994,
-          "medianMs": 1.9875609999999995,
-          "p95Ms": 3.8739550000000094,
-          "minMs": 1.4590619999999888,
-          "htmlBytes": 9708
+          "firstMs": 41.13392700000001,
+          "medianMs": 2.138542000000001,
+          "p95Ms": 3.883223000000001,
+          "minMs": 1.4486479999999915,
+          "htmlBytes": 9875
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 57.93379899999999,
-          "medianMs": 31.66844100000003,
-          "p95Ms": 37.40538000000004,
-          "minMs": 28.134907,
-          "htmlBytes": 1014457
+          "firstMs": 63.64485100000002,
+          "medianMs": 31.05271700000003,
+          "p95Ms": 59.264274000000114,
+          "minMs": 25.29033400000003,
+          "htmlBytes": 1014624
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 45.087089000000105,
-          "medianMs": 19.800568000000112,
-          "p95Ms": 24.952142999999978,
-          "minMs": 15.416099999999915,
-          "htmlBytes": 360954
+          "firstMs": 33.45659599999999,
+          "medianMs": 21.289714000000004,
+          "p95Ms": 27.824637999999823,
+          "minMs": 15.403939000000037,
+          "htmlBytes": 361121
         },
         "fragment.scoped": {
-          "firstMs": 5.676120000000083,
-          "medianMs": 1.2979400000001533,
-          "p95Ms": 1.430648999999903,
-          "minMs": 1.1834830000000238,
-          "htmlBytes": 13203
+          "firstMs": 10.626922999999806,
+          "medianMs": 1.4157839999998032,
+          "p95Ms": 1.577483999999913,
+          "minMs": 1.3383629999998448,
+          "htmlBytes": 13370
         },
         "list-50.scoped": {
-          "firstMs": 49.08515200000011,
-          "medianMs": 28.751732000000175,
-          "p95Ms": 48.283390000000054,
-          "minMs": 24.214733000000024,
-          "htmlBytes": 128589
+          "firstMs": 48.7581009999999,
+          "medianMs": 28.59324400000014,
+          "p95Ms": 41.200754999999845,
+          "minMs": 25.061213999999836,
+          "htmlBytes": 128756
         },
         "kitchen-sink.scoped": {
-          "firstMs": 37.6239700000001,
-          "medianMs": 21.65016000000014,
-          "p95Ms": 24.138952000000245,
-          "minMs": 17.317058999999972,
-          "htmlBytes": 241766
+          "firstMs": 37.36002899999994,
+          "medianMs": 20.22788999999966,
+          "p95Ms": 22.492367000000286,
+          "minMs": 16.07717599999978,
+          "htmlBytes": 241933
         }
       }
     }
@@ -373,68 +373,68 @@
   "throughput": {
     "ionic-published": {
       "declarative-shadow-dom": {
-        "reqPerSec": 2.4,
-        "p99Ms": 2527,
-        "p50Ms": 1262,
-        "requests": 12,
+        "reqPerSec": 2.6,
+        "p99Ms": 2362,
+        "p50Ms": 1158,
+        "requests": 13,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 1159636
+        "htmlChars": 1159803
       },
       "scoped": {
-        "reqPerSec": 3,
-        "p99Ms": 1942,
-        "p50Ms": 968,
-        "requests": 15,
+        "reqPerSec": 3.6,
+        "p99Ms": 1903,
+        "p50Ms": 814,
+        "requests": 18,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 147533
+        "htmlChars": 147700
       }
     },
     "stencil5": {
       "declarative-shadow-dom": {
-        "reqPerSec": 24.6,
-        "p99Ms": 322,
-        "p50Ms": 129,
-        "requests": 123,
+        "reqPerSec": 27.2,
+        "p99Ms": 286,
+        "p50Ms": 112,
+        "requests": 136,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 1014124
+        "htmlChars": 1014291
       },
       "scoped": {
-        "reqPerSec": 23.2,
-        "p99Ms": 311,
-        "p50Ms": 153,
-        "requests": 116,
+        "reqPerSec": 24.2,
+        "p99Ms": 309,
+        "p50Ms": 144,
+        "requests": 121,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 126022
+        "htmlChars": 126189
       }
     },
     "stencilrs": {
       "declarative-shadow-dom": {
-        "reqPerSec": 34.8,
-        "p99Ms": 212,
-        "p50Ms": 94,
-        "requests": 174,
+        "reqPerSec": 31.8,
+        "p99Ms": 278,
+        "p50Ms": 98,
+        "requests": 159,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 1014124
+        "htmlChars": 1014291
       },
       "scoped": {
-        "reqPerSec": 34.6,
-        "p99Ms": 241,
-        "p50Ms": 101,
-        "requests": 173,
+        "reqPerSec": 31.4,
+        "p99Ms": 247,
+        "p50Ms": 112,
+        "requests": 157,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
-        "htmlChars": 126022
+        "htmlChars": 126189
       }
     }
   }
