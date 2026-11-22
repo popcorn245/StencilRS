@@ -148,6 +148,12 @@ and so gets an attribute). stencilrs has both:
 npm run test:ssr        # node ssr/smoke.mjs [--no-reference]
 ```
 
+The runner pass swaps mock-doc's generator serializer for a single-pass one
+(`@popcorn245/stencilrs/ssr`, `fastSerializerPlugin()`, with the serializer in `ssr-serializer.js`;
+output is byte-identical, `test/ssr-serializer.test.js` checks that across an options matrix).
+`node ssr/bench-serializer.mjs` times it against Stencil's own, from two builds of this hydrate app
+(`STENCILRS_SLOW_SERIALIZER=1` keeps Stencil's).
+
 Builds the ui-kit's hydrate app from components stencilrs compiled with `componentExport: 'ssr'`
 (`ssr/build.mjs`, the same two Rolldown passes as Stencil's `ssr` output target), renders a page
 with `renderToString`, and checks the output equals Stencil v5's own hydrate app's. The client
