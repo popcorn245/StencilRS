@@ -7,6 +7,7 @@ import { after, describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { stencilEngine } from '@popcorn245/stencilrs/express';
+import ejs from 'ejs';
 
 import { createApp } from '../app.mjs';
 
@@ -150,5 +151,141 @@ describe('hydration in Chromium', opts, async () => {
     assert.deepEqual([r.click?.before, r.click?.after], ['true', 'false']);
     // Stencil 5.0.0-beta.25's client throws this on childless elements, with its own build too (see ui-kit/ssr/smoke.mjs).
     assert.deepEqual(r.errors.filter((e) => !/reading 'length'/.test(e)), []);
+  });
+});
+
+describe('worker pool', opts, () => {
+  const hydratePath = join(uiKit, 'dist/hydrate/index.js');
+  const engines = [];
+  const pooled = (config = {}) => {
+    const e = stencilEngine({ hydrate: hydratePath, workers: 2, ...config });
+    engines.push(e);
+    return e;
+  };
+  after(() => Promise.all(engines.map((e) => e.close())));
+  const run = (engine, view, locals = {}) => new Promise((ok) => engine(view, locals, (err, html) => ok({ err, html })));
+  const views = join(here, '../views');
+
+  test('output is byte-identical to in-process, DSD and scoped, EJS and plain HTML', async () => {
+    // Stencil numbers hydrated elements (s-id, c-id, <!--r.N-->, <!--o.N.N.c-->, <!--s.N.N.header-->) from a counter that runs on across the renders of a process,
+    // in-process too, so a worker that has rendered other pages numbers differently. The ids only have to be unique within a page: compare masked.
+    const mask = (h) => h.replace(/ [sc]-id="[\d.]+"/g, '').replace(/<!--[a-z]\.\d[\w.]*-->/g, '<!---->');
+    const renderOptions = { buildId: 'fixed' }; // else each render stamps a random data-stencil-build
+    const pool = pooled({ workers: 1, renderOptions });
+    const local = stencilEngine({ hydrate: hydratePath, renderOptions });
+    const ejsLocal = stencilEngine({ hydrate: hydratePath, engine: ejs.renderFile, renderOptions });
+    const ejsPool = pooled({ workers: 1, engine: ejs.renderFile, renderOptions });
+    await Promise.all([pool.ready, ejsPool.ready]);
+    const home = { user: 'Ada <a@b.c>', open: 42, tasks: ['Write', 'Ship'] };
+    for (const stencil of [undefined, { serializeShadowRoot: 'scoped' }]) {
+      const a = await run(ejsLocal, join(views, 'home.ejs'), { ...home, stencil });
+      const b = await run(ejsPool, join(views, 'home.ejs'), { ...home, stencil });
+      assert.equal(a.err, null);
+      assert.equal(b.err, null);
+      assert.equal(mask(b.html), mask(a.html));
+    }
+    for (const v of ['about.html', 'fragment.ejs']) {
+      if (!existsSync(join(views, v))) continue;
+      const a = await run(local, join(views, v));
+      const b = await run(pool, join(views, v));
+      assert.equal(mask(b.html), mask(a.html), v);
+    }
+  });
+
+  test('through Express, concurrent requests all succeed', async () => {
+    const app = createApp();
+    const e = pooled({ engine: ejs.renderFile });
+    app.engine('ejs', e);
+    const base = await listen(app);
+    const rs = await Promise.all(Array.from({ length: 8 }, () => get(base, '/')));
+    for (const r of rs) {
+      assert.equal(r.status, 200);
+      assert.match(r.text, /Hello, Ada/);
+    }
+  });
+
+  test('a module object is a clear error, not a hang', () => {
+    assert.throws(() => stencilEngine({ hydrate: { renderToString: async () => ({}) }, workers: 2 }), /path or URL/);
+    assert.throws(() => stencilEngine({ hydrate: hydratePath, workers: -1 }), /workers/);
+  });
+
+  test('an unloadable hydrate app rejects ready and every render', async () => {
+    const e = pooled({ hydrate: join(tmpdir(), 'no-such-hydrate-app.js'), workers: 1 });
+    await assert.rejects(e.ready);
+    const { err } = await run(e, join(views, 'about.html'));
+    assert.ok(err instanceof Error);
+  });
+
+  // Fake hydrate apps, written to disk: a worker imports them by path.
+  const fake = (name, body) => {
+    const file = join(mkdtempSync(join(tmpdir(), 'stencilrs-fake-')), name);
+    writeFileSync(file, body);
+    return file;
+  };
+  const page = fake('p.html', '<p>x</p>');
+
+  test('diagnostics: errors fail the render, warnings reach onDiagnostic once', async () => {
+    const hydrate = fake('d.mjs', `export const renderToString = async (html, o) => ({ html, diagnostics: [{ level: o.fail ? 'error' : 'warn', messageText: o.fail ? 'boom' : 'careful' }] });`);
+    const seen = [];
+    const e = pooled({ hydrate, onDiagnostic: (d) => seen.push(d.messageText), renderOptions: {} });
+    for (let i = 0; i < 3; i++) assert.equal((await run(e, page)).err, null);
+    assert.deepEqual(seen, ['careful']);
+    const { err } = await run(e, page, { stencil: { fail: true } });
+    assert.match(err.message, /boom/);
+    assert.equal(err.diagnostics.length, 1);
+  });
+
+  test('a throwing renderToString fails that render only', async () => {
+    const hydrate = fake('t.mjs', `export const renderToString = async (html, o) => { if (o.throw) throw new Error('nope'); return { html }; };`);
+    const e = pooled({ hydrate, workers: 1 });
+    assert.match((await run(e, page, { stencil: { throw: true } })).err.message, /nope/);
+    assert.equal((await run(e, page)).html, '<p>x</p>');
+  });
+
+  test('a crashed worker fails its render, is replaced, and the pool keeps serving', async () => {
+    const hydrate = fake('c.mjs', `export const renderToString = async (html, o) => { if (o.crash) process.exit(1); return { html }; };`);
+    const e = pooled({ hydrate, workers: 1 });
+    await e.ready;
+    const { err } = await run(e, page, { stencil: { crash: true } });
+    assert.equal(err.code, 'ESTENCIL_WORKER_CRASH');
+    assert.equal((await run(e, page)).html, '<p>x</p>');
+  });
+
+  test('a render past renderTimeout fails and the worker is replaced', async () => {
+    const hydrate = fake('s.mjs', `export const renderToString = async (html, o) => { if (o.hang) for (;;); return { html }; };`);
+    const e = pooled({ hydrate, workers: 1, renderTimeout: 200 });
+    const { err } = await run(e, page, { stencil: { hang: true } });
+    assert.equal(err.code, 'ESTENCIL_TIMEOUT');
+    assert.equal((await run(e, page)).html, '<p>x</p>');
+  });
+
+  test('a full queue rejects instead of growing', async () => {
+    const hydrate = fake('q.mjs', `export const renderToString = async (html) => { await new Promise((r) => setTimeout(r, 100)); return { html }; };`);
+    const e = pooled({ hydrate, workers: 1, maxQueue: 1 });
+    await e.ready;
+    const rs = await Promise.all([run(e, page), run(e, page), run(e, page)]); // one rendering, one queued, one over
+    assert.deepEqual(rs.map((r) => r.err?.code ?? 'ok').sort(), ['ESTENCIL_QUEUE_FULL', 'ok', 'ok']); // which request loses depends on who reads its file first
+  });
+
+  test('non-cloneable render options fail that render, not the worker', async () => {
+    const e = pooled({ workers: 1, renderOptions: { fn() {} } });
+    const { err } = await run(e, page);
+    assert.match(err.message, /cloneable/);
+  });
+
+  test('close() fails what is in flight and later renders; the process can exit', async () => {
+    const hydrate = fake('x.mjs', `export const renderToString = async (html) => { await new Promise((r) => setTimeout(r, 5000)); return { html }; };`);
+    const e = stencilEngine({ hydrate, workers: 1 });
+    await e.ready;
+    const inflight = run(e, page);
+    await e.close();
+    assert.equal((await inflight).err.code, 'ESTENCIL_CLOSED');
+    assert.equal((await run(e, page)).err.code, 'ESTENCIL_CLOSED');
+  });
+
+  test('without workers, ready resolves and close is a no-op', async () => {
+    const e = stencilEngine({ hydrate: { renderToString: async (html) => ({ html }) } });
+    await e.ready;
+    await e.close();
   });
 });

@@ -21,6 +21,7 @@ export type InnerEngine = (path: string, locals: Record<string, any>, callback: 
 
 export interface StencilEngineOptions {
   /** A hydrate app module, a path or URL to one, or a promise of either. */
+  /** With `workers`, only a path or URL: a module object cannot cross to a worker thread. */
   hydrate: HydrateApp | { default: HydrateApp } | string | URL | Promise<HydrateApp | { default: HydrateApp }>;
   /** `ejs.renderFile`, a consolidate engine, ...: fills in the locals. Omitted, a view is plain HTML. */
   engine?: InnerEngine;
@@ -28,6 +29,20 @@ export interface StencilEngineOptions {
   renderOptions?: StencilRenderOptions;
   /** Called once per unique warning; default `console.warn`. Errors go to the Express callback. */
   onDiagnostic?: (diagnostic: StencilDiagnostic) => void;
+  /** Render on a pool of `worker_threads`, each loading the hydrate app once. `'auto'` is available parallelism minus one; 0 or omitted renders in-process. The inner engine still runs on the main thread. */
+  workers?: number | 'auto';
+  /** Renders that may wait for a free worker (default 100); one more fails with `err.code === 'ESTENCIL_QUEUE_FULL'`. */
+  maxQueue?: number;
+  /** Milliseconds a pooled render may take (default 30000, 0 for no limit). Past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`. */
+  renderTimeout?: number;
 }
 
-export function stencilEngine(options: StencilEngineOptions): (path: string, options: object, callback: (err: Error | null, html?: string) => void) => void;
+export interface StencilExpressEngine {
+  (path: string, options: object, callback: (err: Error | null, html?: string) => void): void;
+  /** Resolves when every worker has loaded the hydrate app (at once without `workers`); rejects if one cannot. */
+  ready: Promise<void>;
+  /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */
+  close(): Promise<void>;
+}
+
+export function stencilEngine(options: StencilEngineOptions): StencilExpressEngine;

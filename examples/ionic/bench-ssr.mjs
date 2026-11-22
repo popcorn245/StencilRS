@@ -28,6 +28,9 @@
 //   --pages a,b           pages (all)        --modes dsd,scoped (both)
 //   --no-express          skip step 3
 //   --express-page <p>    page the Express app renders (list-50)
+//   --workers N           also measure each row through the stencilEngine worker pool (issue #140), as extra express rows
+//                         `<row>+workers` (N worker_threads, or 'auto'); the single-process rows are unchanged. Use
+//                         --connections of at least N: fewer connections than workers leaves workers idle
 //   --connections N       autocannon connections (4)        --duration S  seconds per run (5)
 //   --out <file>          JSON path (../../site/data/benchmarks-ionic-ssr.json)
 //   --note "<text>"       free text stored in the JSON      --machine "<text>"  machine description
@@ -50,7 +53,7 @@ const argv = process.argv.slice(2);
 const opt = (name, def) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : def);
 const flag = (name) => argv.includes(name);
 if (flag('--help') || flag('-h')) {
-  console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').filter((l, i) => i < 36 && l.startsWith('//')).map((l) => l.slice(3)).join('\n'));
+  console.log(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').filter((l, i) => i < 39 && l.startsWith('//')).map((l) => l.slice(3)).join('\n'));
   process.exit(0);
 }
 const num = (name, def) => {
@@ -63,6 +66,8 @@ const WARMUP = Number(opt('--warmup', 3));
 const CONNECTIONS = num('--connections', 4);
 const DURATION = num('--duration', 5);
 const EXPRESS = !flag('--no-express');
+const WORKERS = opt('--workers', null);
+if (WORKERS != null && WORKERS !== 'auto' && !(Number(WORKERS) >= 1)) throw new Error("--workers must be a number of at least 1, or 'auto'");
 const EXPRESS_PAGE = opt('--express-page', 'list-50');
 const OUT = resolve(opt('--out', join(root, '../../site/data/benchmarks-ionic-ssr.json')));
 const pickList = (name, all) => {
@@ -105,9 +110,9 @@ const freePort = () =>
     });
   });
 
-const express = async (file, mode) => {
+const express = async (file, mode, workers) => {
   const port = await freePort();
-  const server = spawn(process.execPath, [join(root, 'ssr-bench', 'server.mjs'), file, EXPRESS_PAGE, mode, String(port)], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const server = spawn(process.execPath, [join(root, 'ssr-bench', 'server.mjs'), file, EXPRESS_PAGE, mode, String(port), ...(workers ? [workers] : [])], { stdio: ['ignore', 'pipe', 'inherit'] });
   try {
     await new Promise((ok, fail) => {
       server.stdout.on('data', (d) => String(d).includes('listening') && ok());
@@ -190,6 +195,13 @@ if (EXPRESS) {
       log(`express + autocannon: ${r.id}, ${EXPRESS_PAGE}, ${mode} (${CONNECTIONS} connections, ${DURATION} s)`);
       throughput[r.id][mode] = await express(r.file, mode);
     }
+    if (WORKERS) {
+      throughput[`${r.id}+workers`] = {};
+      for (const mode of modes) {
+        log(`express + autocannon: ${r.id}+workers (${WORKERS}), ${EXPRESS_PAGE}, ${mode} (${CONNECTIONS} connections, ${DURATION} s)`);
+        throughput[`${r.id}+workers`][mode] = await express(r.file, mode, WORKERS);
+      }
+    }
   }
 }
 
@@ -210,10 +222,10 @@ table(
 if (EXPRESS) {
   table(
     `Express + autocannon (${EXPRESS_PAGE}, ${CONNECTIONS} connections, ${DURATION} s): req/s, p99 ms`,
-    ['mode', ...present.map((r) => r.id)],
-    modes.map((mode) => [mode === 'declarative-shadow-dom' ? 'dsd' : mode, ...present.map((r) => `${f(throughput[r.id][mode].reqPerSec)} req/s, p99 ${f(throughput[r.id][mode].p99Ms, 0)}`)])
+    ['mode', ...Object.keys(throughput)],
+    modes.map((mode) => [mode === 'declarative-shadow-dom' ? 'dsd' : mode, ...Object.values(throughput).map((t) => `${f(t[mode].reqPerSec)} req/s, p99 ${f(t[mode].p99Ms, 0)}`)])
   );
-  for (const r of present) for (const mode of modes) { const t = throughput[r.id][mode]; if (t.errors || t.non2xx || t.timeouts) lines.push(`WARNING ${r.id} ${mode}: ${t.errors} errors, ${t.non2xx} non-2xx, ${t.timeouts} timeouts`); }
+  for (const [id, byMode] of Object.entries(throughput)) for (const mode of modes) { const r = { id }; const t = byMode[mode]; if (t.errors || t.non2xx || t.timeouts) lines.push(`WARNING ${r.id} ${mode}: ${t.errors} errors, ${t.non2xx} non-2xx, ${t.timeouts} timeouts`); }
 }
 if (equality.publishedVsStencil5.length) {
   table('ionic-published vs stencil5 (reported, not failed)', ['page / mode', 'published B', 'stencil5 B', 'first difference at'], equality.publishedVsStencil5.map((c) => [`${c.page} / ${c.mode === 'declarative-shadow-dom' ? 'dsd' : c.mode}`, c.bytes['ionic-published'], c.bytes.stencil5, c.identical ? 'identical' : c.firstDifferenceAt]));
@@ -241,7 +253,7 @@ const doc = {
     loadavgAtStart: os.loadavg().map((x) => Number(x.toFixed(2))),
   },
   versions: { ionicCore: pkgVersion('@ionic/core'), stencil5: pkgVersion('@stencil/core'), express: pkgVersion('express'), autocannon: pkgVersion('autocannon'), git: git('rev-parse', 'HEAD') },
-  config: { pages, modes, renders: RENDERS, warmup: WARMUP, renderOptions: { prettyHtml: false, serializeShadowRoot: '<mode>', buildId: 'ionic-ssr-bench' }, express: EXPRESS ? { page: EXPRESS_PAGE, connections: CONNECTIONS, durationSeconds: DURATION } : null },
+  config: { pages, modes, renders: RENDERS, warmup: WARMUP, renderOptions: { prettyHtml: false, serializeShadowRoot: '<mode>', buildId: 'ionic-ssr-bench' }, express: EXPRESS ? { page: EXPRESS_PAGE, connections: CONNECTIONS, durationSeconds: DURATION, workers: WORKERS ? (WORKERS === 'auto' ? 'auto' : Number(WORKERS)) : null } : null },
   rows: Object.fromEntries(rows.map((r) => [r.id, { label: r.label, hydrateApp: r.file && relative(root, r.file).replace(/\\/g, '/'), skipped: r.file ? undefined : r.missing }])),
   equality,
   diagnostics,

@@ -229,6 +229,15 @@ app.get('/', (req, res) => res.render('home', { user }));
   and the flag reaches the inner engine as `cache`.
 - Diagnostics: an error-level diagnostic is passed to Express as the error (`next(err)`); warnings
   go to `onDiagnostic` (default `console.warn`), once per unique message.
+- `workers: n` (or `'auto'`, available parallelism minus one): render on a pool of `worker_threads`
+  instead of the request thread, since `renderToString` is CPU-bound and one process renders on one
+  core. Each worker loads the hydrate app once, so `hydrate` must be a path or URL (a module object
+  cannot cross threads). The inner engine still runs on the main thread; only the HTML and options
+  go in and `{ html, diagnostics }` comes out (about 1 ms of structured clone for a 1 MB page).
+  `maxQueue` (default 100) bounds the renders waiting for a worker, `renderTimeout` (default 30 s)
+  bounds one render; a crashed or timed-out worker is replaced and fails only its own render.
+  `engine.ready` resolves when the workers have loaded, `engine.close()` stops them. Without
+  `workers` nothing changes: renders run in-process.
 - A view that starts with a doctype or `<html>` is rendered as a document. Anything else is a
   fragment (`fullDocument: false`): its components render, but there is no `<head>`, so no styles.
 
