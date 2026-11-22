@@ -72,6 +72,11 @@ npm --prefix examples/ionic run check
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr
 
+step "Server rendering: the Express view engine over that hydrate app (EJS, plain HTML, cache, errors, Chromium)"
+npm --prefix examples/express ci
+npm --prefix examples/express run build
+npm --prefix examples/express test
+
 step "Site: VitePress (dead links fail it), then the ui-kit Storybook under /storybook/ (base ${SITE_BASE:-/})"
 npm --prefix site ci
 npm --prefix site run build:all
