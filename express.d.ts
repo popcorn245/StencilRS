@@ -33,13 +33,21 @@ export interface StencilEngineOptions {
   workers?: number | 'auto';
   /** Renders that may wait for a free worker (default 100); one more fails with `err.code === 'ESTENCIL_QUEUE_FULL'`. */
   maxQueue?: number;
+  /** Node's compile cache (`module.enableCompileCache`) for the hydrate app, in this process and in each worker: `true` (the default; a no-op on a Node without it), `false` to opt out, or a cache directory. It applies to modules loaded after the call, so give `hydrate` as a path or URL rather than an already imported module. */
+  compileCache?: boolean | string;
+  /**
+   * Render at startup so the first request is not JIT-cold: a list of view paths (run through the inner engine with no locals)
+   * and HTML strings (starting with `<`), or `{ views, times }` to run the list `times` times (default 1). Shape them like real traffic.
+   * In-process and on every worker, with the engine's `renderOptions`; `ready` resolves after it. (`true` is a TypeError.)
+   */
+  warmup?: string[] | { views: string[]; times?: number };
   /** Milliseconds a pooled render may take (default 30000, 0 for no limit). Past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`. */
   renderTimeout?: number;
 }
 
 export interface StencilExpressEngine {
   (path: string, options: object, callback: (err: Error | null, html?: string) => void): void;
-  /** Resolves when every worker has loaded the hydrate app (at once without `workers`); rejects if one cannot. */
+  /** Resolves once the hydrate app is loaded and warmed up on the engine and every worker (at once without `warmup` or `workers`). Rejects if the app cannot load or a warm-up render fails; after a failed warm-up the engine still renders. */
   ready: Promise<void>;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */
   close(): Promise<void>;

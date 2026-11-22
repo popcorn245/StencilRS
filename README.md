@@ -238,11 +238,26 @@ app.get('/', (req, res) => res.render('home', { user }));
   bounds one render; a crashed or timed-out worker is replaced and fails only its own render.
   `engine.ready` resolves when the workers have loaded, `engine.close()` stops them. Without
   `workers` nothing changes: renders run in-process.
+- `compileCache` (default `true`): Node's on-disk compile cache (`module.enableCompileCache()`, Node 22.1+), switched on
+  before the hydrate app loads, in this process and in each worker. The app is megabytes of JavaScript: on a warm cache
+  its load went from about 30 ms to 13 ms in our container. `false` opts out, a string picks the cache directory, and
+  Node's `NODE_DISABLE_COMPILE_CACHE` is honoured. It is process-wide (it also caches every module loaded after it), is a
+  no-op on a Node without the API, and needs `hydrate` as a path (a module you imported yourself is already compiled).
+  The first run writes the cache, so it pays off from the second start of a process (a restart, a new worker, a deploy
+  that keeps the directory).
+- `warmup`: render at startup, so the first request is not JIT-cold: a list of view paths (rendered through the inner
+  engine with no locals) and HTML strings (starting with `<`), or `{ views: [...], times: 3 }` to run the list several
+  times. It runs in-process and on every worker, with the engine's `renderOptions`, and `engine.ready` resolves after it
+  (a failed warm-up rejects `ready`; the engine still renders). Warm with pages shaped like your real traffic: the JIT
+  warms per code path, and the first list-50 render only reached its warm cost after warming with a list page, a few
+  times. A cold first render of a small page fell from 55 ms to 10 ms in our container. There is no "every component"
+  mode (`true` is a TypeError): bare tags are not what a page looks like, and a component that fails without props
+  could take the server down at boot. Await `engine.ready` before `listen()`.
 - A view that starts with a doctype or `<html>` is rendered as a document. Anything else is a
   fragment (`fullDocument: false`): its components render, but there is no `<head>`, so no styles.
 
 [`examples/express`](examples/express) is a working app on the ui-kit's hydrate app, with tests
-(EJS and plain HTML views, cache on and off, the override, the error path, hydration in Chromium).
+(EJS and plain HTML views, cache on and off, the override, the error path, warm-up and compile cache, hydration in Chromium).
 
 ## JavaScript API
 
