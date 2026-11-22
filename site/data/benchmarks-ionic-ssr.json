@@ -1,20 +1,20 @@
 {
   "schema": 1,
-  "preview": true,
+  "preview": false,
   "note": null,
-  "finishedAt": "2026-11-22T07:50:02.066Z",
+  "finishedAt": "2026-11-22T17:12:46.101Z",
   "machine": {
-    "description": "shared 4-core build container (preview)",
-    "cpu": "Intel(R) Xeon(R) Processor @ 2.30GHz",
-    "logicalCores": 4,
-    "ramGiB": 16,
-    "os": "Linux 6.18.44-fc-v726",
-    "platform": "linux-x64",
-    "node": "22.23.5",
+    "description": "Intel Core i9-10850K, 10 cores/20 threads, 64 GB RAM, Windows 11 Pro 10.0.26120, Node v26.12.1",
+    "cpu": "Intel(R) Core(TM) i9-10850K CPU @ 3.60GHz",
+    "logicalCores": 20,
+    "ramGiB": 64,
+    "os": "Windows_NT 10.0.26120",
+    "platform": "win32-x64",
+    "node": "26.12.1",
     "loadavgAtStart": [
-      1.03,
-      0.3,
-      0.11
+      0,
+      0,
+      0
     ]
   },
   "versions": {
@@ -22,7 +22,7 @@
     "stencil5": "5.0.0-beta.25",
     "express": "5.3.0",
     "autocannon": "9.0.0",
-    "git": "a9b4f049b4956073f099983c8c5f60305971f8ad"
+    "git": "255fa4b60eaefafd8dc7d7d9aa2bb8457abdd026"
   },
   "config": {
     "pages": [
@@ -34,8 +34,9 @@
       "declarative-shadow-dom",
       "scoped"
     ],
-    "renders": 20,
-    "warmup": 3,
+    "renders": 50,
+    "warmup": 5,
+    "coldRuns": 9,
     "renderOptions": {
       "prettyHtml": false,
       "serializeShadowRoot": "<mode>",
@@ -43,8 +44,9 @@
     },
     "express": {
       "page": "list-50",
-      "connections": 4,
-      "durationSeconds": 5
+      "connections": 8,
+      "durationSeconds": 10,
+      "workers": 8
     }
   },
   "rows": {
@@ -220,152 +222,271 @@
   "diagnostics": {},
   "timing": {
     "ionic-published": {
-      "loadMs": 36.24601799999999,
-      "firstRenderMs": 31.325932,
-      "rssMb": 192.8,
-      "peakRssMb": 196.7,
+      "loadMs": 55.3864,
+      "firstRenderMs": 58.20130000000002,
+      "rssMb": 240.6,
+      "peakRssMb": 284.5,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 31.325932,
-          "medianMs": 1.855078000000006,
-          "p95Ms": 3.842351000000008,
-          "minMs": 1.3186729999999898,
+          "firstMs": 58.20130000000002,
+          "medianMs": 2.8029000000000224,
+          "p95Ms": 5.780799999999999,
+          "minMs": 1.537499999999966,
           "htmlBytes": 11843
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 442.99705,
-          "medianMs": 348.589618,
-          "p95Ms": 438.80095500000016,
-          "minMs": 321.8638009999995,
-          "htmlBytes": 1160136
+          "firstMs": 618.5993,
+          "medianMs": 430.16510000000017,
+          "p95Ms": 655.5665000000008,
+          "minMs": 359.90439999999944,
+          "htmlBytes": 1160434
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 143.8016609999995,
-          "medianMs": 64.4747550000011,
-          "p95Ms": 76.99383200000011,
-          "minMs": 61.505058999999164,
-          "htmlBytes": 431986
+          "firstMs": 221.19380000000092,
+          "medianMs": 79.56009999999878,
+          "p95Ms": 123.59950000000026,
+          "minMs": 65.0109999999986,
+          "htmlBytes": 432482
         },
         "fragment.scoped": {
-          "firstMs": 5.744673999999577,
-          "medianMs": 2.5263230000000476,
-          "p95Ms": 4.596874000000753,
-          "minMs": 2.280136000001221,
-          "htmlBytes": 15254
+          "firstMs": 7.18579999999929,
+          "medianMs": 2.6939999999995052,
+          "p95Ms": 4.963599999999133,
+          "minMs": 2.0262000000002445,
+          "htmlBytes": 15265
         },
         "list-50.scoped": {
-          "firstMs": 276.674943,
-          "medianMs": 259.5758910000004,
-          "p95Ms": 316.1537870000011,
-          "minMs": 233.21789100000024,
-          "htmlBytes": 150267
+          "firstMs": 373.1967000000004,
+          "medianMs": 344.5584999999992,
+          "p95Ms": 551.6224999999977,
+          "minMs": 301.88239999999496,
+          "htmlBytes": 151477
         },
         "kitchen-sink.scoped": {
-          "firstMs": 82.574525,
-          "medianMs": 75.04504999999699,
-          "p95Ms": 88.64152699999977,
-          "minMs": 72.96205700000064,
+          "firstMs": 89.59070000000065,
+          "medianMs": 123.89429999999993,
+          "p95Ms": 133.443299999999,
+          "minMs": 76.15230000000156,
           "htmlBytes": 280314
         }
       }
     },
     "stencil5": {
-      "loadMs": 29.511660999999997,
-      "firstRenderMs": 38.339017999999996,
-      "rssMb": 187.4,
-      "peakRssMb": 198.4,
+      "loadMs": 29.7017,
+      "firstRenderMs": 45.4688,
+      "rssMb": 246.4,
+      "peakRssMb": 253,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 38.339017999999996,
-          "medianMs": 2.137079,
-          "p95Ms": 4.028058999999999,
-          "minMs": 1.5902069999999924,
+          "firstMs": 45.4688,
+          "medianMs": 2.080100000000016,
+          "p95Ms": 4.683199999999999,
+          "minMs": 1.3396999999999935,
           "htmlBytes": 9875
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 74.39888299999998,
-          "medianMs": 40.24331100000006,
-          "p95Ms": 52.95928499999991,
-          "minMs": 34.59849500000007,
-          "htmlBytes": 1014624
+          "firstMs": 87.90589999999997,
+          "medianMs": 50.603399999999965,
+          "p95Ms": 69.67420000000016,
+          "minMs": 37.7503999999999,
+          "htmlBytes": 1014922
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 73.21941700000002,
-          "medianMs": 21.69213999999988,
-          "p95Ms": 23.841190000000097,
-          "minMs": 18.176685000000134,
-          "htmlBytes": 361121
+          "firstMs": 75.24040000000014,
+          "medianMs": 25.448499999999967,
+          "p95Ms": 34.73160000000007,
+          "minMs": 19.72950000000037,
+          "htmlBytes": 361617
         },
         "fragment.scoped": {
-          "firstMs": 5.727038999999877,
-          "medianMs": 2.49368400000003,
-          "p95Ms": 5.013506000000007,
-          "minMs": 2.2980019999999968,
-          "htmlBytes": 13370
+          "firstMs": 7.962399999999434,
+          "medianMs": 2.7241000000003623,
+          "p95Ms": 5.184100000000399,
+          "minMs": 2.187300000000505,
+          "htmlBytes": 13381
         },
         "list-50.scoped": {
-          "firstMs": 50.02489700000001,
-          "medianMs": 40.14687699999968,
-          "p95Ms": 45.47711500000014,
-          "minMs": 33.68385100000023,
-          "htmlBytes": 128756
+          "firstMs": 63.71570000000065,
+          "medianMs": 47.50659999999971,
+          "p95Ms": 64.47940000000017,
+          "minMs": 39.40769999999975,
+          "htmlBytes": 129966
         },
         "kitchen-sink.scoped": {
-          "firstMs": 63.62604300000021,
-          "medianMs": 38.607322999999724,
-          "p95Ms": 43.77181100000007,
-          "minMs": 35.45206499999995,
+          "firstMs": 47.65410000000065,
+          "medianMs": 38.28189999999995,
+          "p95Ms": 62.76140000000123,
+          "minMs": 33.50959999999941,
           "htmlBytes": 241933
         }
       }
     },
     "stencilrs": {
-      "loadMs": 29.152225,
-      "firstRenderMs": 41.13392700000001,
-      "rssMb": 201.4,
-      "peakRssMb": 213.9,
+      "loadMs": 44.681999999999995,
+      "firstRenderMs": 63.1679,
+      "rssMb": 298.5,
+      "peakRssMb": 310.2,
       "results": {
         "fragment.declarative-shadow-dom": {
-          "firstMs": 41.13392700000001,
-          "medianMs": 2.138542000000001,
-          "p95Ms": 3.883223000000001,
-          "minMs": 1.4486479999999915,
+          "firstMs": 63.1679,
+          "medianMs": 2.632499999999993,
+          "p95Ms": 6.02000000000001,
+          "minMs": 1.7591999999999928,
           "htmlBytes": 9875
         },
         "list-50.declarative-shadow-dom": {
-          "firstMs": 63.64485100000002,
-          "medianMs": 31.05271700000003,
-          "p95Ms": 59.264274000000114,
-          "minMs": 25.29033400000003,
-          "htmlBytes": 1014624
+          "firstMs": 105.9214,
+          "medianMs": 51.58030000000008,
+          "p95Ms": 64.37059999999997,
+          "minMs": 42.52709999999979,
+          "htmlBytes": 1014922
         },
         "kitchen-sink.declarative-shadow-dom": {
-          "firstMs": 33.45659599999999,
-          "medianMs": 21.289714000000004,
-          "p95Ms": 27.824637999999823,
-          "minMs": 15.403939000000037,
-          "htmlBytes": 361121
+          "firstMs": 64.72600000000011,
+          "medianMs": 26.765199999999822,
+          "p95Ms": 39.8764000000001,
+          "minMs": 17.79370000000017,
+          "htmlBytes": 361617
         },
         "fragment.scoped": {
-          "firstMs": 10.626922999999806,
-          "medianMs": 1.4157839999998032,
-          "p95Ms": 1.577483999999913,
-          "minMs": 1.3383629999998448,
-          "htmlBytes": 13370
+          "firstMs": 7.769999999999527,
+          "medianMs": 1.298200000000179,
+          "p95Ms": 1.994499999999789,
+          "minMs": 1.0592999999998938,
+          "htmlBytes": 13381
         },
         "list-50.scoped": {
-          "firstMs": 48.7581009999999,
-          "medianMs": 28.59324400000014,
-          "p95Ms": 41.200754999999845,
-          "minMs": 25.061213999999836,
-          "htmlBytes": 128756
+          "firstMs": 61.907500000000255,
+          "medianMs": 36.98779999999988,
+          "p95Ms": 51.667199999999866,
+          "minMs": 27.309299999999894,
+          "htmlBytes": 129966
         },
         "kitchen-sink.scoped": {
-          "firstMs": 37.36002899999994,
-          "medianMs": 20.22788999999966,
-          "p95Ms": 22.492367000000286,
-          "minMs": 16.07717599999978,
+          "firstMs": 45.82389999999941,
+          "medianMs": 22.30490000000009,
+          "p95Ms": 33.17710000000079,
+          "minMs": 16.989400000000387,
           "htmlBytes": 241933
+        }
+      }
+    }
+  },
+  "cold": {
+    "runs": 9,
+    "variants": {
+      "ionic-published": {
+        "base": {
+          "readyMs": 0.25039999999999907,
+          "fragmentMs": 81.35079999999999,
+          "list50Ms": 693.1188999999999,
+          "firstResponseMs": 81.57419999999999
+        },
+        "cache": {
+          "readyMs": 0.4590999999999994,
+          "fragmentMs": 61.261500000000005,
+          "list50Ms": 711.3479,
+          "firstResponseMs": 61.887800000000006
+        },
+        "warmup": {
+          "readyMs": 95.0489,
+          "fragmentMs": 7.608400000000003,
+          "list50Ms": 539.8118999999999,
+          "firstResponseMs": 101.585
+        },
+        "cache+warmup": {
+          "readyMs": 68.23,
+          "fragmentMs": 7.278000000000006,
+          "list50Ms": 566.5584,
+          "firstResponseMs": 75.2696
+        },
+        "warmup-list3": {
+          "readyMs": 1723.6012,
+          "fragmentMs": 6.749900000000025,
+          "list50Ms": 457.8670000000002,
+          "firstResponseMs": 1730.3908999999999
+        },
+        "cache+warmup-list3": {
+          "readyMs": 1696.894,
+          "fragmentMs": 6.981899999999996,
+          "list50Ms": 458.82249999999976,
+          "firstResponseMs": 1704.1319999999998
+        }
+      },
+      "stencil5": {
+        "base": {
+          "readyMs": 0.28580000000000183,
+          "fragmentMs": 77.9762,
+          "list50Ms": 106.65320000000001,
+          "firstResponseMs": 78.2432
+        },
+        "cache": {
+          "readyMs": 0.45120000000000005,
+          "fragmentMs": 55.8519,
+          "list50Ms": 103.2202,
+          "firstResponseMs": 56.1983
+        },
+        "warmup": {
+          "readyMs": 118.18270000000001,
+          "fragmentMs": 11.300600000000003,
+          "list50Ms": 127.39240000000001,
+          "firstResponseMs": 131.3337
+        },
+        "cache+warmup": {
+          "readyMs": 65.1757,
+          "fragmentMs": 8.09389999999999,
+          "list50Ms": 95.3037,
+          "firstResponseMs": 73.66019999999999
+        },
+        "warmup-list3": {
+          "readyMs": 324.697,
+          "fragmentMs": 5.4184999999999945,
+          "list50Ms": 65.54320000000001,
+          "firstResponseMs": 330.47749999999996
+        },
+        "cache+warmup-list3": {
+          "readyMs": 308.3896,
+          "fragmentMs": 5.581800000000044,
+          "list50Ms": 64.93509999999998,
+          "firstResponseMs": 314.52219999999994
+        }
+      },
+      "stencilrs": {
+        "base": {
+          "readyMs": 0.23170000000000002,
+          "fragmentMs": 79.4172,
+          "list50Ms": 84.652,
+          "firstResponseMs": 79.6489
+        },
+        "cache": {
+          "readyMs": 0.5656999999999996,
+          "fragmentMs": 79.7869,
+          "list50Ms": 114.43570000000001,
+          "firstResponseMs": 80.3572
+        },
+        "warmup": {
+          "readyMs": 114.17229999999999,
+          "fragmentMs": 8.714699999999993,
+          "list50Ms": 77.76440000000002,
+          "firstResponseMs": 125.15270000000001
+        },
+        "cache+warmup": {
+          "readyMs": 74.3557,
+          "fragmentMs": 8.574700000000007,
+          "list50Ms": 82.94809999999998,
+          "firstResponseMs": 82.84349999999999
+        },
+        "warmup-list3": {
+          "readyMs": 321.1949,
+          "fragmentMs": 6.6655999999999835,
+          "list50Ms": 62.33250000000004,
+          "firstResponseMs": 327.8499
+        },
+        "cache+warmup-list3": {
+          "readyMs": 289.9168,
+          "fragmentMs": 7.961000000000013,
+          "list50Ms": 64.1114,
+          "firstResponseMs": 297.87780000000004
         }
       }
     }
@@ -373,20 +494,42 @@
   "throughput": {
     "ionic-published": {
       "declarative-shadow-dom": {
-        "reqPerSec": 2.6,
-        "p99Ms": 2362,
-        "p50Ms": 1158,
-        "requests": 13,
+        "reqPerSec": 1.5,
+        "p99Ms": 6882,
+        "p50Ms": 2971,
+        "requests": 15,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
         "htmlChars": 1159803
       },
       "scoped": {
-        "reqPerSec": 3.6,
-        "p99Ms": 1903,
-        "p50Ms": 814,
-        "requests": 18,
+        "reqPerSec": 1.3,
+        "p99Ms": 5811,
+        "p50Ms": 3414,
+        "requests": 13,
+        "errors": 3,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 147700
+      }
+    },
+    "ionic-published+workers": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 5.9,
+        "p99Ms": 2247,
+        "p50Ms": 1193,
+        "requests": 59,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1159803
+      },
+      "scoped": {
+        "reqPerSec": 7.7,
+        "p99Ms": 1788,
+        "p50Ms": 935,
+        "requests": 77,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
@@ -395,20 +538,42 @@
     },
     "stencil5": {
       "declarative-shadow-dom": {
-        "reqPerSec": 27.2,
-        "p99Ms": 286,
-        "p50Ms": 112,
-        "requests": 136,
+        "reqPerSec": 16.5,
+        "p99Ms": 1030,
+        "p50Ms": 441,
+        "requests": 165,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
         "htmlChars": 1014291
       },
       "scoped": {
-        "reqPerSec": 24.2,
-        "p99Ms": 309,
-        "p50Ms": 144,
-        "requests": 121,
+        "reqPerSec": 15.1,
+        "p99Ms": 1012,
+        "p50Ms": 485,
+        "requests": 151,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 126189
+      }
+    },
+    "stencil5+workers": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 78.8,
+        "p99Ms": 189,
+        "p50Ms": 97,
+        "requests": 788,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1014291
+      },
+      "scoped": {
+        "reqPerSec": 73.5,
+        "p99Ms": 274,
+        "p50Ms": 101,
+        "requests": 735,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
@@ -417,20 +582,42 @@
     },
     "stencilrs": {
       "declarative-shadow-dom": {
-        "reqPerSec": 31.8,
-        "p99Ms": 278,
-        "p50Ms": 98,
-        "requests": 159,
+        "reqPerSec": 21.5,
+        "p99Ms": 1198,
+        "p50Ms": 309,
+        "requests": 215,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
         "htmlChars": 1014291
       },
       "scoped": {
-        "reqPerSec": 31.4,
-        "p99Ms": 247,
-        "p50Ms": 112,
-        "requests": 157,
+        "reqPerSec": 26.1,
+        "p99Ms": 1502,
+        "p50Ms": 270,
+        "requests": 261,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 126189
+      }
+    },
+    "stencilrs+workers": {
+      "declarative-shadow-dom": {
+        "reqPerSec": 91.8,
+        "p99Ms": 186,
+        "p50Ms": 83,
+        "requests": 918,
+        "errors": 0,
+        "non2xx": 0,
+        "timeouts": 0,
+        "htmlChars": 1014291
+      },
+      "scoped": {
+        "reqPerSec": 105,
+        "p99Ms": 191,
+        "p50Ms": 71,
+        "requests": 1050,
         "errors": 0,
         "non2xx": 0,
         "timeouts": 0,
