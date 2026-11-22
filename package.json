@@ -36,6 +36,10 @@
   },
   "exports": {
     ".": "./index.js",
+    "./express": {
+      "types": "./express.d.ts",
+      "default": "./express.js"
+    },
     "./vite": "./vite.js",
     "./ssr": {
       "types": "./ssr.d.ts",
@@ -45,6 +49,8 @@
   "files": [
     "index.js",
     "binding.js",
+    "express.js",
+    "express.d.ts",
     "vite.js",
     "vite-css.js",
     "vite-types.js",
