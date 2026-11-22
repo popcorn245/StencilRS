@@ -94,6 +94,8 @@ console.log('(full stencil migrate output: logs/migrate.log)\n');
 
 // 4a''''. the standalone-only config of the benchmark's `stencil-standalone` row (it imports ./stencil.config).
 copyFileSync(join(root, 'config', 'stencil.config.standalone.ts'), join(dest, 'stencil.standalone.config.ts'));
+// 4a'''''. the ssr-only config of the SSR benchmark's `stencil5` row (bench-ssr.mjs; `npm run build:ssr`).
+copyFileSync(join(root, 'config', 'stencil.config.ssr.ts'), join(dest, 'stencil.ssr.config.ts'));
 
 // 4a'''. package.json: v5 validates it against the build output. Build outputs go to ../dist-stencil, so keep
 // a minimal one that points there (upstream's exports map, scripts and devDependencies are not used).
