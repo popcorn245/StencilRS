@@ -1,6 +1,7 @@
 // The builds of Ionic core, all into this folder:
 //   node scripts/build.mjs stencil    migrated/ (Stencil v5.0.0-beta.25)  ->  dist-stencil/
 //   node scripts/build.mjs stencilrs  migrated/ through stencilrs' Vite plugin (vite.config.ts)  ->  dist-stencilrs/
+//   node scripts/build.mjs ssr        migrated/ with only the `ssr` output target (stencil.ssr.config.ts)  ->  dist/hydrate-stencil/index.js
 //   node scripts/build.mjs stencil4   stock upstream (Stencil 4.45.4)     ->  dist-stencil4/
 // Each is a cold, uncached `stencil build` of the same component set with the same output targets
 // (lazy loader, standalone/custom-elements, docs-json). The full log goes to logs/<name>.log; the console
@@ -13,13 +14,13 @@ import { root } from './paths.mjs';
 import { copyCore } from './copy-core.mjs';
 
 const target = process.argv[2];
-if (!['stencil', 'stencil4', 'stencilrs'].includes(target)) {
-  console.error('usage: node scripts/build.mjs stencil|stencil4|stencilrs');
+if (!['stencil', 'stencil4', 'stencilrs', 'ssr'].includes(target)) {
+  console.error('usage: node scripts/build.mjs stencil|stencil4|stencilrs|ssr');
   process.exit(2);
 }
 
 const v5 = target !== 'stencil4';
-const outDir = join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs' }[target]);
+const outDir = join(root, { stencil: 'dist-stencil', stencil4: 'dist-stencil4', stencilrs: 'dist-stencilrs', ssr: join('dist', 'hydrate-stencil') }[target]);
 let cwd;
 // Each CLI is its JS entry run with node (not the node_modules/.bin shim, a .cmd on Windows that spawn cannot run).
 let bin;
@@ -70,10 +71,15 @@ if (v5) {
 }
 
 rmSync(outDir, { recursive: true, force: true });
+if (target === 'ssr') {
+  // migrated/package.json lists the other targets' folders in `files`, and v5 fails the build when one does not exist
+  // (it validates `files` whatever the output targets are). This build writes none of them: empty folders satisfy it.
+  for (const d of ['dist-stencil/dist', 'dist-stencil/components']) mkdirSync(join(root, d), { recursive: true });
+}
 mkdirSync(join(root, 'logs'), { recursive: true });
 const log = createWriteStream(join(root, 'logs', `${target}.log`));
 const started = performance.now();
-const child = spawn(process.execPath, [bin, ...(target === 'stencilrs' ? ['build', '--config', join(root, 'vite.config.ts')] : ['build'])], { cwd: target === 'stencilrs' ? root : cwd, env: { ...process.env, IONIC_OUT_DIR: outDir, FORCE_COLOR: '0' } });
+const child = spawn(process.execPath, [bin, ...(target === 'stencilrs' ? ['build', '--config', join(root, 'vite.config.ts')] : target === 'ssr' ? ['build', '--config', 'stencil.ssr.config.ts'] : ['build'])], { cwd: target === 'stencilrs' ? root : cwd, env: { ...process.env, IONIC_OUT_DIR: outDir, IONIC_SSR_DIR: outDir, FORCE_COLOR: '0' } });
 
 let noisy = false;
 const filter = (chunk) => {
@@ -96,6 +102,8 @@ child.on('exit', (code) => {
     // vite.config.ts writes css/ itself; `verbose: true` logs how many files stencilrs left to Stencil's compiler.
     const summary = readFileSync(join(root, 'logs', 'stencilrs.log'), 'utf8').match(/\[stencilrs\] compiled .*/)?.[0] ?? 'no [stencilrs] summary in the log';
     console.log(`${target}: ${summary.replace("[stencilrs] ", '')} -> ${outDir}`);
+  } else if (code === 0 && target === 'ssr') {
+    console.log(`${target}: hydrate app -> ${join(outDir, 'index.js')}`);
   } else if (code === 0) {
     // Ionic's global stylesheets (css/core.css, ...) are a separate Sass build in upstream (`npm run css.sass`)
     const sass = join(v5 ? root : join(root, 'stencil4'), 'node_modules', 'sass', 'sass.js');
