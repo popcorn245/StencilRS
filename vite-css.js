@@ -71,6 +71,38 @@ const importFromProject = async (name) => {
   }
 };
 
+/**
+ * Stencil's own `optimizeCss` (`@stencil/core/compiler`: autoprefix at its default targets, then its CSS parser and
+ * serializer as the whitespace-only minifier), loaded from the project. Only `minify: 'stencil'` needs it.
+ */
+let stencilOptimizeCss;
+const loadStencilOptimizeCss = () =>
+  (stencilOptimizeCss ??= (async () => {
+    const pkg = createRequire(join(process.cwd(), 'noop.js')).resolve('@stencil/core/package.json');
+    return (await import(pathToFileURL(join(dirname(pkg), 'dist/compiler/index.mjs')).href)).optimizeCss;
+  })());
+
+/** `stripCssComments` of Stencil's `css-to-esm`: the block comments outside strings. */
+const stripCssComments = (input) => {
+  let inside = null;
+  let out = '';
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (input[i - 1] !== '\\' && (c === '"' || c === "'")) {
+      if (inside === c) inside = null;
+      else if (!inside) inside = c;
+    }
+    if (!inside && c === '/' && input[i + 1] === '*') {
+      let j = i + 2;
+      while (j < input.length && !(input[j] === '*' && input[j + 1] === '/')) j++;
+      i = j + 1;
+      continue;
+    }
+    out += c;
+  }
+  return out;
+};
+
 /** @stencil/unplugin's `resolveStencilCss`. */
 export function resolveStencilCss(specifier, importer) {
   if (!STENCIL_CSS_RE.test(specifier)) return null;
@@ -167,12 +199,16 @@ export function createCssPipeline(options = {}) {
   // Default: Stencil's autoprefix targets. `minify`: `true` is lightningcss' minify (shortens values: `bold` to `700`,
   // `none` to `0 0`, `translate3d(x, 0, 0)` to `translate(x)`); `'whitespace'` (the default in a build) keeps the values
   // lightningcss prints without it and drops the whitespace, which is what `stencil build` ships (autoprefix, then its
-  // own whitespace-only minifier); `false` (the default in dev) leaves the output as printed.
+  // own whitespace-only minifier); `false` (the default in dev) leaves the output as printed. `'stencil'` is Stencil's
+  // own `transformCssToEsm` order and minifier, byte for byte: scopeCss, then its `optimizeCss` (autoprefix and its CSS
+  // serializer), newlines and tabs as spaces, comments stripped. What a hydrate app's styles are (`@popcorn245/stencilrs/ssr`).
+  // Needs `@stencil/core`.
+  // `transform`: `(css, file) => css | undefined`, run on the stylesheet after Sass / Less and before the rest of the chain.
   // `sass`: passed to Sass' `compileString` (silenceDeprecations, loadPaths, quietDeps, ...).
   // `cache`: results are reused while a stylesheet and every file Sass loaded for it (`loadedUrls`) are unchanged, so a
   // watch rebuild recompiles only what an edit touched. In memory always; also on disk (node_modules/.cache/stencilrs)
   // for the Sass step, unless `false` / 'memory', or the Sass options hold functions or importers (not hashable).
-  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {}, cache: cacheOption = true } = options;
+  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {}, cache: cacheOption = true, transform: transformOption } = options;
   const sassOptionsKey = (() => {
     if (sassOptions.functions || sassOptions.importers || sassOptions.logger) return null;
     try {
@@ -360,9 +396,28 @@ export function createCssPipeline(options = {}) {
     const outKey = sassKey ? sha(sassKey, id, isDev) : null;
     const memo = outKey && outputMemo.get(outKey);
     if (memo) return memo;
+    // `css.transform(css, file)`: a repair for a stylesheet the toolchain cannot take as it is (the `transform` of a Stencil CSS plugin). Pure: the output is memoized.
+    if (transformOption) css = (await transformOption(css, file)) ?? css;
     if (has.postcss) css = await runPostCss(css, file);
     const lightningTargets = has.lightningcss ? await resolveTargets() : null;
     const minify = minifyOption ?? (isDev ? false : 'whitespace');
+    if (minify === 'stencil') {
+      // Stencil scopes first, then autoprefixes and minifies (`transformCssToEsm`): not this chain's lightningcss.
+      if (encapsulation === 'scoped' && tag) {
+        try {
+          css = scopeCss(css, mode ? `sc-${tag}-${mode}` : `sc-${tag}`, false);
+        } catch {
+          return null; // a stylesheet stencilrs' scopeCss rejects: Stencil's decides
+        }
+      }
+      const { output, diagnostics } = await (await loadStencilOptimizeCss())({ input: css, filePath: file, autoprefixer: true, minify: true });
+      const failed = diagnostics.find((d) => d.level === 'error');
+      if (failed) throw new Error(`${file}: ${failed.messageText}`);
+      const text = stripCssComments(output.replace(/[\n\r\t]/g, ' '));
+      const stencilOut = { code: `export default () => ${JSON.stringify(text)};`, deps };
+      if (outKey) outputMemo.set(outKey, stencilOut);
+      return stencilOut;
+    }
     const lower = (code) => {
       const out = mods.lightningcss.transform({ filename: file, code: Buffer.from(code), minify: minify === true, ...(lightningTargets ? { targets: lightningTargets } : {}) }).code.toString();
       return minify === 'whitespace' ? compactWhitespace(out) : out;

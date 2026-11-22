@@ -10,6 +10,8 @@
     "build:stencil": "node scripts/build.mjs stencil",
     "build:stencilrs": "node scripts/build.mjs stencilrs",
     "build:ssr": "node scripts/build.mjs ssr",
+    "build:hydrate": "node scripts/build-hydrate.mjs",
+    "check:ssr": "node check/ssr-parity.mjs",
     "build:stencil4": "node scripts/build.mjs stencil4",
     "smoke": "node smoke/run.mjs",
     "check": "node check/run.mjs",
