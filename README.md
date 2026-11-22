@@ -186,13 +186,14 @@ stencilrs copies it on purpose ([`docs/quirks.md`](docs/quirks.md)). Design note
 
 stencilrs builds the hydrate app too: `buildHydrate` from `@popcorn245/stencilrs/ssr` turns your components into the module that
 `renderToString` runs from, with a single-pass serializer and guarded runtime patches (both on by default, each can be turned
-off). Its output is byte-identical to Stencil 5's `ssr` output target. On Ionic 9.0.12 (`list-50`, declarative shadow DOM), in
-the shared 4-core build container (**container figures**, indicative; the final numbers come from quiet runs on Popcorn-Tower and an M2):
+off). Its output is byte-identical to Stencil 5's `ssr` output target. On Ionic 9.0.12 (`list-50`, declarative shadow DOM), on a
+quiet Windows desktop (i9-10850K, 10 cores, Node 26; medians of 200 renders; Express at 8 connections):
 
 | | Ionic published (Stencil 4) | Stencil 5 | stencilrs |
 |---|---|---|---|
-| ms per render | 408 | 38 | **32** |
-| Express req/s | 2.4 | 24.6 | **34.8** |
+| ms per render | 338 | 33.7 | **24.9** |
+| Express req/s | 2.7 | 25.0 | **32.6** |
+| Express req/s, 8 workers | 11.1 | 104.8 | **122.0** |
 
 Most of the gap to Ionic's published hydrate app is Stencil 5 itself; stencilrs's part is the Stencil 5 column against its own.
 Guide: [Server-side rendering](https://popcorn245.github.io/StencilRS/guide/ssr.html); all pages, cold start and memory on the
