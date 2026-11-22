@@ -186,6 +186,13 @@ only) is for the client bundle. With it the stylesheets are identical text, and 
 `fastSerializer: false`), that every component is registered, and hydrates the kitchen-sink page in Chromium (content with
 JavaScript off, the server's elements adopted by the client bundle of `build:stencilrs`, a toggle clicked).
 
+On Windows, `config/stencil.config.ssr.ts` works around a Stencil 5 bug (#146). Stencil's `@stencil/core/app-globals`
+module imports the global script (`src/global/ionic-global.ts`) by a forward-slash absolute path (`J:/…`). The
+components' relative imports of the same file resolve to the backslash path (`J:\…`). The bundler keeps two copies, so
+`initialize()` sets the mode on a copy no component reads, and Stencil's hydrate app renders `class="undefined"`
+where it should render `class="md"`. A small `resolveId` plugin in that config rewrites a forward-slash absolute Windows
+path to its backslash form, and it does nothing on other platforms. stencilrs does not need it.
+
 ## Benchmark (`npm run bench`)
 
 `bench.mjs` times the three builds against each other and writes every raw sample, the machine and the versions to
