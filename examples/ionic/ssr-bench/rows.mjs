@@ -3,8 +3,10 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-export const root = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+// fileURLToPath, not URL#pathname: the final runs are on Windows, where pathname is `/J:/...`.
+export const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 
 export const ROWS = [
   {
