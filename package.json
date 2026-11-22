@@ -51,6 +51,8 @@
     "binding.js",
     "express.js",
     "express.d.ts",
+    "express-hydrate.js",
+    "express-worker.js",
     "vite.js",
     "vite-css.js",
     "vite-types.js",
