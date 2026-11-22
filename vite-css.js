@@ -82,7 +82,7 @@ const loadStencilOptimizeCss = () =>
     return (await import(pathToFileURL(join(dirname(pkg), 'dist/compiler/index.mjs')).href)).optimizeCss;
   })());
 
-/** `stripCssComments` of Stencil's `css-to-esm`: `/* */` comments outside strings. */
+/** `stripCssComments` of Stencil's `css-to-esm`: the block comments outside strings. */
 const stripCssComments = (input) => {
   let inside = null;
   let out = '';
@@ -203,11 +203,12 @@ export function createCssPipeline(options = {}) {
   // own `transformCssToEsm` order and minifier, byte for byte: scopeCss, then its `optimizeCss` (autoprefix and its CSS
   // serializer), newlines and tabs as spaces, comments stripped. What a hydrate app's styles are (`@popcorn245/stencilrs/ssr`).
   // Needs `@stencil/core`.
+  // `transform`: `(css, file) => css | undefined`, run on the stylesheet after Sass / Less and before the rest of the chain.
   // `sass`: passed to Sass' `compileString` (silenceDeprecations, loadPaths, quietDeps, ...).
   // `cache`: results are reused while a stylesheet and every file Sass loaded for it (`loadedUrls`) are unchanged, so a
   // watch rebuild recompiles only what an edit touched. In memory always; also on disk (node_modules/.cache/stencilrs)
   // for the Sass step, unless `false` / 'memory', or the Sass options hold functions or importers (not hashable).
-  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {}, cache: cacheOption = true } = options;
+  const { targets: targetsOption = STENCIL_CSS_TARGETS, minify: minifyOption, sass: sassOptions = {}, cache: cacheOption = true, transform: transformOption } = options;
   const sassOptionsKey = (() => {
     if (sassOptions.functions || sassOptions.importers || sassOptions.logger) return null;
     try {
@@ -395,6 +396,8 @@ export function createCssPipeline(options = {}) {
     const outKey = sassKey ? sha(sassKey, id, isDev) : null;
     const memo = outKey && outputMemo.get(outKey);
     if (memo) return memo;
+    // `css.transform(css, file)`: a repair for a stylesheet the toolchain cannot take as it is (the `transform` of a Stencil CSS plugin). Pure: the output is memoized.
+    if (transformOption) css = (await transformOption(css, file)) ?? css;
     if (has.postcss) css = await runPostCss(css, file);
     const lightningTargets = has.lightningcss ? await resolveTargets() : null;
     const minify = minifyOption ?? (isDev ? false : 'whitespace');

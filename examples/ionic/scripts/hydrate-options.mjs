@@ -18,6 +18,18 @@ export const ionicHydrateOptions = (root) => {
       { find: /^@utils\//, replacement: `${join(src, 'utils')}/` },
       { find: /^@global\//, replacement: `${join(src, 'global')}/` },
     ],
-    stencilrs: { css: { sass: { silenceDeprecations } }, watchIgnore: false },
+    // ionicons' `ion-icon`, which Stencil's `ssr` target compiles from the collection ionicons ships
+    collections: ['ionicons'],
+    stencilrs: {
+      watchIgnore: false,
+      css: {
+        sass: { silenceDeprecations },
+        // config/ionicons-css-fix.ts, the same repair for the same file: `not` needs parentheses before `and`
+        transform: (css, file) =>
+          /ionicons[\\/]dist[\\/]collection[\\/]components[\\/]icon[\\/]icon\.css$/.test(file)
+            ? css.replace('@supports not selector(:dir(rtl)) and selector(', '@supports (not selector(:dir(rtl))) and selector(')
+            : undefined,
+      },
+    },
   };
 };

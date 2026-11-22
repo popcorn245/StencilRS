@@ -57,6 +57,7 @@
     "vite-fallback.js",
     "vite-typecheck.js",
     "ssr.js",
+    "ssr-collection.js",
     "ssr.d.ts",
     "ssr-serializer.js",
     "LICENSE",

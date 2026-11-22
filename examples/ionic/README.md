@@ -166,6 +166,26 @@ twice, which Stencil's own minifier deduplicates). The Sass deprecations are sil
 `css.sass.silenceDeprecations` (`vite.config.ts`); `scripts/build.mjs` still filters them for the two
 `stencil build` targets, whose Sass plugin cannot be configured from here.
 
+## Ionic's hydrate app from stencilrs (`build:hydrate`, `check:ssr`)
+
+`npm run build:hydrate` builds the hydrate app (`renderToString` / `hydrateDocument`, what `stencil build` makes with an
+`ssr` output target, `npm run build:ssr`) from the same `migrated/` source compiled by stencilrs, to
+**`dist/hydrate-stencilrs/index.js`** (the SSR benchmark, `bench-ssr.mjs`, loads it from there). The assembly is
+`buildHydrate` of `@popcorn245/stencilrs/ssr` (`ssr.js`); `scripts/hydrate-options.mjs` is what is Ionic's: the tsconfig
+`paths` aliases, the global script, the preamble, the namespace, and `collections: ['ionicons']`: Stencil's `ssr`
+target also compiles `ion-icon` from the collection ionicons ships (plain JavaScript with the decorators gone), so the
+adapter in `ssr-collection.js` writes its decorators back from the static metadata. The app has 96 components: the 94 tags of
+`docs.json`, the internal `ion-select-popover` and `ion-icon` (the 95 files that declare a component, plus ionicons').
+
+Component styles go through the plugin's `css.minify: 'stencil'`: Stencil's own order (scope, autoprefix, its CSS
+serializer, newlines as spaces), which is what its hydrate app embeds; the plugin's default (lightningcss, whitespace
+only) is for the client bundle. With it the stylesheets are identical text, and so is the HTML.
+
+`npm run check:ssr` (`check/ssr-parity.mjs`) renders the bench pages (`ssr-pages.mjs`: fragment, list-50, kitchen-sink) in
+`declarative-shadow-dom` and `scoped` with both apps and asserts the HTML is byte-identical (also with
+`fastSerializer: false`), that every component is registered, and hydrates the kitchen-sink page in Chromium (content with
+JavaScript off, the server's elements adopted by the client bundle of `build:stencilrs`, a toggle clicked).
+
 ## Benchmark (`npm run bench`)
 
 `bench.mjs` times the three builds against each other and writes every raw sample, the machine and the versions to

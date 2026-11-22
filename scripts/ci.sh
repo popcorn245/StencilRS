@@ -68,6 +68,8 @@ npm --prefix examples/ionic run migrate
 npm --prefix examples/ionic run build:stencil
 npm --prefix examples/ionic run build:stencilrs
 npm --prefix examples/ionic run check
+npm --prefix examples/ionic run build:ssr
+npm --prefix examples/ionic run check:ssr
 
 step "Server rendering: ui-kit hydrate app from stencilrs, Node + happy-dom + Chromium (skipped when none)"
 npm --prefix examples/ui-kit run test:ssr

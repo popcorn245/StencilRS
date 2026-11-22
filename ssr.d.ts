@@ -7,6 +7,8 @@ export interface BuildHydrateOptions {
   srcDir?: string;
   /** The component files, instead of searching `srcDir`. */
   components?: string[];
+  /** Packages whose Stencil collection components are part of the app (`['ionicons']`). */
+  collections?: string[];
   /** Writes `<outDir>/index.js`. Leave it out to get the code only. */
   outDir?: string;
   /** Stencil's `fsNamespace` (the runtime's `NAMESPACE`): the config's `namespace`, lower-cased. */

@@ -22,6 +22,7 @@ import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 
 import { analyze } from './index.js';
+import { readCollections } from './ssr-collection.js';
 import stencilrs from './vite.js';
 
 const SOURCE = readFileSync(new URL('./ssr-serializer.js', import.meta.url), 'utf8');
@@ -202,8 +203,11 @@ const buildFactory = async (o) => {
       {
         name: 'stencilrs-ssr-factory',
         enforce: 'pre',
-        resolveId(id) {
+        resolveId(id, importer) {
           if (id === ENTRY_ID) return ENTRY_ID;
+          // A collection component's stylesheet and other relative imports are the original's neighbours.
+          if (importer && o.origin.has(importer) && /^\.{1,2}\//.test(id)) return this.resolve(id, o.origin.get(importer), { skipSelf: true });
+          if (o.virtual.has(id)) return id;
           if (id === APP_DATA_ID) return APP_DATA_VIRTUAL;
           if (id === APP_GLOBALS_ID) return APP_GLOBALS_VIRTUAL;
           // The ssr build's one runtime: `@stencil/core` imports of a file that is not a component (a util, the global
@@ -213,6 +217,7 @@ const buildFactory = async (o) => {
         },
         load(id) {
           if (id === ENTRY_ID) return factoryEntry(o.cmps);
+          if (o.virtual.has(id)) return o.virtual.get(id);
           // The runtime's defaults, with the ssr build's conditionals (`appDataPlugin`).
           if (id === APP_DATA_VIRTUAL) {
             return `import { BUILD as DEFAULTS, Env as DEFAULT_ENV, NAMESPACE as DEFAULT_NAMESPACE } from ${JSON.stringify(join(o.core, 'dist/app-data/index.js'))};
@@ -289,6 +294,7 @@ const buildRunner = async (factory, o) => {
  * @param {string} [options.root] the project root: where `@stencil/core`, `vite` and `rolldown` are resolved from, and Vite's root. Default `process.cwd()`.
  * @param {string} [options.srcDir] the folder searched for components (a `.tsx` with a `@Component`; specs and stories are skipped). Default `src`, under `root`.
  * @param {string[]} [options.components] the component files, instead of searching `srcDir`.
+ * @param {string[]} [options.collections] packages whose Stencil collection components are part of the app (`['ionicons']`), as Stencil's `ssr` target includes the collections the project imports.
  * @param {string} [options.outDir] writes `<outDir>/index.js`; leave it out to get the code only.
  * @param {string} [options.namespace] Stencil's `fsNamespace` (`NAMESPACE` of the runtime): the config's `namespace`, lower-cased.
  * @param {string} [options.globalScript] the global script (Stencil's `globalScript`), run at the start of each render.
@@ -312,11 +318,23 @@ export const buildHydrate = async (options = {}) => {
   const srcDir = resolve(root, options.srcDir ?? 'src');
   const files = options.components ?? walk(srcDir).filter((f) => SOURCE_RE.test(f) && !NOT_SOURCE_RE.test(f) && /@Component\s*\(/.test(readFileSync(f, 'utf8')));
   const cmps = discoverComponents(files.map((f) => resolve(root, f)));
+  // Components of collections (`ionicons`' `ion-icon`): decorated source rebuilt from the compiled collection.
+  const virtual = new Map();
+  const origin = new Map();
+  for (const c of readCollections(root, options.collections ?? [])) {
+    virtual.set(c.file, c.code);
+    origin.set(c.file, c.origin);
+    const [meta] = analyze(c.code, c.file).components;
+    cmps.push({ file: c.file, className: meta.componentClassName, tagName: meta.tagName });
+  }
+  cmps.sort((a, b) => (a.className < b.className ? -1 : a.className > b.className ? 1 : 0));
   if (!cmps.length) throw new Error(`stencilrs/ssr: no component found in ${options.components ? 'the given files' : srcDir}`);
   const o = {
     root,
     core,
     cmps,
+    virtual,
+    origin,
     alias: options.alias ?? {},
     namespace: options.namespace,
     globalScript: options.globalScript ? resolve(root, options.globalScript).replaceAll('\\', '/') : null,
