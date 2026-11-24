@@ -1,0 +1,68 @@
+{
+  "tag": "build-intl",
+  "properties": [
+    {
+      "name": "formatOptions",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "FormatOptions",
+        "resolved": "undefined | { date: DateTimeFormatOptions; time?: DateTimeFormatOptions | undefined; } | { date?: DateTimeFormatOptions | undefined; time: DateTimeFormatOptions; }",
+        "references": {
+          "FormatOptions": {
+            "location": "global",
+            "id": "global::FormatOptions"
+          }
+        }
+      }
+    },
+    {
+      "name": "numbers",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Intl.NumberFormatOptions[]",
+        "resolved": "NumberFormatOptions[]",
+        "references": {
+          "Intl": {
+            "location": "global",
+            "id": "global::Intl"
+          }
+        }
+      }
+    },
+    {
+      "name": "options",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Intl.DateTimeFormatOptions",
+        "resolved": "DateTimeFormatOptions | undefined",
+        "references": {
+          "Intl": {
+            "location": "global",
+            "id": "global::Intl"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [],
+  "slots": []
+}
