@@ -201,6 +201,14 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
 - `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
   parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
 
+A member with `stencilrs:` here is also what `docs` and `types` of the Vite plugin look at: a file whose
+metadata reports one gets its metadata (`docs`, `components.d.ts`) from Stencil's compiler, for that file only
+(`docs/vite-plugin.md`). One known difference in single-file mode (`resolveImports: false`), found comparing with
+@stencil/unplugin: for a return type such as `Promise<A | null>` Stencil lists `A` in a method's `references` after the
+parameters' types, stencilrs before them (ui-kit's `card-scanner`: `detectFrame`). The parity harness compares
+`references` without key order, so it did not show; it changes the order of `references` in docs-json and the manifest,
+nothing else.
+
 ## Props typed from their initializer (build-accurate mode)
 
 With `resolveImports`, a prop with no annotation is typed the way the checker infers it, as far as

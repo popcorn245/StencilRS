@@ -69,7 +69,10 @@ The plugin compiles component files, their stylesheets and the build flags with 
 loads neither `@stencil/unplugin` nor Stencil's compiler (TypeScript, ~700 ms) unless it has to. A
 file that uses something stencilrs hasn't ported yet falls back to Stencil's own compiler, loaded
 at that point, so a project never breaks for want of a feature
-([what is where](docs/vite-plugin.md)).
+([what is where](docs/vite-plugin.md)). The `docs`, `types`, `include` and `exclude` options are
+done the same way: `import cem from '@stencil/unplugin/docs'` and `components.d.ts` come from
+stencilrs' own metadata, and only a file with a type it hasn't ported yet takes its metadata
+from Stencil's compiler.
 
 ### Type declarations for a library
 
@@ -151,6 +154,8 @@ original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
+- the Vite plugin's `docs` and `types` for a project with CSS-only components (`@component` in a
+  stylesheet), or a `stencil.config` that can't be loaded: those go through `@stencil/unplugin`
 - in the lazy (`loader-bundle`), `ssr` and spec-page outputs, decorated base classes
   and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
 - `complexType` for types that need the checker: `keyof` of anything but an object literal, a
