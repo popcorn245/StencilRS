@@ -1,0 +1,12 @@
+{
+  "tag": "gen-tab",
+  "properties": [],
+  "events": [],
+  "methods": [],
+  "slots": [
+    {
+      "name": "",
+      "docs": "The default slot"
+    }
+  ]
+}
