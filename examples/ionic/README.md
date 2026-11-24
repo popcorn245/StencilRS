@@ -85,7 +85,11 @@ so an upstream change fails loudly):
 2. **`experimentalScopedSlotChanges`** is removed from the migrated config: `stencil migrate` leaves it in
    `compat`, but v5 has no such option.
 3. **tsconfig**: `baseUrl` is an error in TypeScript 6, so it is removed and `src/*` is mapped in `paths` (a
-   few files import `src/interface` bare).
+   few files import `src/interface` bare). `"stableTypeOrdering": true` is added: TypeScript's default order of
+   union members depends on what the checker met first, which stencilrs cannot know without the whole program;
+   with the option the order is a function of the types (it is the only order TypeScript 7 has), so stencilrs
+   reproduces it instead of leaving `present`, `insertPages`, `setPages` and `push` to Stencil. It changes 5
+   type strings in `docs.json` (ion-popover `present`, ion-route `beforeEnter`/`beforeLeave`, `SpinnerTypes`).
 4. **JSX is a `VNode`, not an `HTMLElement`.** Three places typed JSX as DOM nodes (`checkbox.tsx`
    `getSVGPath`, `spinner.tsx` `svgs`, `select-option-render.tsx` `renderOptionLabel`) now say `any`.
 5. **Invalid CSS that v4 passed through.** v5 parses styles with lightningcss and rejects what browsers

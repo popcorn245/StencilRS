@@ -48,6 +48,10 @@ console.log('(full stencil migrate output: logs/migrate.log)\n');
     .map(([k, v]) => `"${k}": ${JSON.stringify(v)},`)
     .join('\n      ');
   text = text.replace('"paths": {', `"paths": {\n      ${extra}`);
+  if (tsconfigPatches.stableTypeOrdering) {
+    if (!text.includes('"compilerOptions": {')) throw new Error('tsconfig.json: compilerOptions anchor not found');
+    text = text.replace('"compilerOptions": {', '"compilerOptions": {\n    "stableTypeOrdering": true,');
+  }
   writeFileSync(file, text);
 }
 
