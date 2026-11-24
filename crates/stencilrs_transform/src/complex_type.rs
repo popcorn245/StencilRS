@@ -50,18 +50,12 @@ pub struct ExportedType {
     pub def: Res<TypeDef>,
 }
 
+/// Interfaces of the lib's `Intl` namespace, printed by the checker without the qualifier. Only
+/// those declared in lib.es5.d.ts, so they exist whatever `lib` / `target` the project sets.
+const INTL_INTERFACES: &[&str] = &["DateTimeFormatOptions", "NumberFormatOptions", "CollatorOptions"];
+
 /// The type names of lib.d.ts the model prints by name (`Promise<T>`, `HTMLElement`). Generic
 /// ones need their arguments written (`CustomEvent` without any prints `CustomEvent<any>`).
-/// Interfaces of the lib's `Intl` namespace, printed by the checker without the qualifier.
-const INTL_INTERFACES: &[&str] = &[
-    "DateTimeFormatOptions",
-    "NumberFormatOptions",
-    "CollatorOptions",
-    "PluralRulesOptions",
-    "RelativeTimeFormatOptions",
-    "ListFormatOptions",
-];
-
 const LIB_INTERFACES: &[&str] = &[
     "Promise",
     "Map",
