@@ -26,7 +26,7 @@ use crate::meta::PropType;
 use crate::prop_type::{
     Flags, classify_annotation, function_return, infer_expression, keyof_name_flags, name_flags,
 };
-use crate::types::Registry;
+use crate::types::{Registry, Ty};
 
 #[derive(Clone, Copy, Debug)]
 pub struct TypeSummary {
@@ -60,6 +60,9 @@ pub struct ModuleSummary {
     pub values: Arc<FxHashMap<String, ValueSummary>>,
     /// The types it exports, for `complexType`.
     pub defs: FxHashMap<String, ExportedType>,
+    /// The return type a function it exports is declared with, when that is a type alias
+    /// (`export const getIonMode = (ref?: any): Mode => ...`), evaluated where it is written.
+    pub rets: FxHashMap<String, Ty>,
 }
 
 /// A module's exports while they are collected.
@@ -68,6 +71,7 @@ struct Collected {
     types: FxHashMap<String, TypeSummary>,
     values: FxHashMap<String, ValueSummary>,
     defs: FxHashMap<String, ExportedType>,
+    rets: FxHashMap<String, Ty>,
 }
 
 const MAX_DEPTH: u8 = 8;
@@ -177,6 +181,7 @@ impl Resolver {
                 types: exports.types,
                 values: exports.values,
                 defs: FxHashMap::default(),
+                rets: FxHashMap::default(),
             });
             self.merge(&deps, true);
             self.roots.borrow_mut().insert(
@@ -234,6 +239,7 @@ impl Resolver {
                 types: exports.types,
                 values: exports.values,
                 defs: FxHashMap::default(),
+                rets: FxHashMap::default(),
             });
             self.merge(&deps, true);
             self.cache.borrow_mut().insert(
@@ -305,6 +311,7 @@ impl Resolver {
                 types: Arc::new(out.types.clone()),
                 values: Arc::new(out.values.clone()),
                 defs: out.defs.clone(),
+                rets: out.rets.clone(),
             };
             slot.summary = Some(Rc::new(partial));
         }
@@ -547,6 +554,18 @@ fn summarize_local(
             out.defs.insert(exported.to_owned(), d);
         }
     }
+    if defs {
+        let ret = match locals.values.get(name) {
+            Some(LocalValue::Function(ret)) => *ret,
+            Some(LocalValue::Const(init)) => function_return(init),
+            _ => None,
+        };
+        if let Some(ret) = ret
+            && let Some(ty) = crate::complex_type::alias_return(env, ret)
+        {
+            out.rets.insert(exported.to_owned(), ty);
+        }
+    }
     match locals.values.get(name) {
         Some(LocalValue::Const(init)) => {
             let mut summary = value_summary(init, locals, source);
@@ -652,6 +671,7 @@ fn summarize_program(
         types: Arc::new(out.types),
         values: Arc::new(out.values),
         defs: out.defs,
+        rets: out.rets,
     }
 }
 
@@ -975,8 +995,16 @@ mod tests {
     #[test]
     fn a_cycle_member_reads_the_same_whichever_module_was_read_before_it() {
         let dir = folder("cycle-order");
-        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
-        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
+        write(
+            &dir.join("a.ts"),
+            "export { B } from './b'; export const A = 1;",
+            0,
+        );
+        write(
+            &dir.join("b.ts"),
+            "export { A } from './a'; export const B = 'b';",
+            0,
+        );
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         let r = Resolver::new(&importer, false);
         r.module(&importer, "./a").unwrap();
@@ -987,7 +1015,11 @@ mod tests {
             .module(&importer, "./b")
             .unwrap();
         assert!(Arc::ptr_eq(&b.values, &again.values));
-        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 'x';", 1);
+        write(
+            &dir.join("a.ts"),
+            "export { B } from './b'; export const A = 'x';",
+            1,
+        );
         let after = Resolver::new(&importer, false)
             .module(&importer, "./b")
             .unwrap();

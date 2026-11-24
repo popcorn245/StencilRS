@@ -6,8 +6,9 @@ use rustc_hash::FxHashMap;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
-    ClassElement, Declaration, MethodDefinitionKind, Expression, ImportDeclarationSpecifier, Program, Statement,
-    TSEnumDeclaration, TSSignature, TSType, TSTypeParameterDeclaration, VariableDeclarationKind,
+    ClassElement, Declaration, Expression, ImportDeclarationSpecifier, MethodDefinitionKind,
+    Program, Statement, TSEnumDeclaration, TSSignature, TSType, TSTypeParameterDeclaration,
+    VariableDeclarationKind,
 };
 
 use crate::complex_type::ExportedType;

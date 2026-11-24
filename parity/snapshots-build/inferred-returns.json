@@ -1,0 +1,204 @@
+{
+  "tag": "build-inferred-returns",
+  "properties": [
+    {
+      "name": "mode",
+      "flags": {
+        "attribute": "mode",
+        "reflect": false,
+        "mutable": true,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "\"ios\" | \"md\"",
+        "resolved": "\"ios\" | \"md\"",
+        "references": {
+          "Mode": {
+            "location": "global",
+            "id": "global::Mode"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "addRipple",
+      "complexType": {
+        "signature": "(x: number, y: number) => Promise<() => void>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "number",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "number",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<() => void>"
+      }
+    },
+    {
+      "name": "addRippleAsync",
+      "complexType": {
+        "signature": "(x: number) => Promise<() => number>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "number",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<() => number>"
+      }
+    },
+    {
+      "name": "count",
+      "complexType": {
+        "signature": "() => Promise<number>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<number>"
+      }
+    },
+    {
+      "name": "either",
+      "complexType": {
+        "signature": "(x: boolean) => Promise<boolean>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "boolean",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "enabled",
+      "complexType": {
+        "signature": "() => Promise<boolean>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "getLabel",
+      "complexType": {
+        "signature": "() => Promise<string>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string>"
+      }
+    },
+    {
+      "name": "getProgress",
+      "complexType": {
+        "signature": "() => Promise<number>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<number>"
+      }
+    },
+    {
+      "name": "isReady",
+      "complexType": {
+        "signature": "() => Promise<boolean>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "maybe",
+      "complexType": {
+        "signature": "(x: boolean) => Promise<true | undefined>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "boolean",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<true | undefined>"
+      }
+    },
+    {
+      "name": "pick",
+      "complexType": {
+        "signature": "(x: boolean) => Promise<1 | 2>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "boolean",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<1 | 2>"
+      }
+    }
+  ],
+  "slots": []
+}

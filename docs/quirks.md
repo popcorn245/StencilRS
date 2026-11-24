@@ -176,10 +176,17 @@ stencilrs reproduces `complexType` from the syntax. These cases need the type ch
 the caller compiles with Stencil. None can be reproduced without the whole program, and
 `parity/build.mjs` checks that the ones it can reproduce match a real build:
 
-- **A return type inferred from the body** (`getProgress() { return Promise.resolve(this.progress) }`,
-  `async addRipple() { return new Promise<() => void>(...) }`). It is the type of an expression
-  and of the class's fields; `async f() { return true }` is `Promise<boolean>` only because the
-  checker widens it. Ionic: refresher, ripple-effect, router, accordion-group.
+- **A return type inferred from the body**, beyond the shapes below. Ported: every `return` (the
+  last statement must be one) is a boolean literal, a `this.field` of type `number`, `string` or
+  `boolean` (annotated, or initialised by a non-`readonly` literal), `Promise.resolve(<one of those>)`
+  or `new Promise<T>(...)` with `T` a type the model prints; `async` wraps the result in a `Promise`
+  unless it already is one, and all the returns must print the same. A number or string literal
+  counts only when it is the only `return` (two different ones keep their literal types, `1 | 2`),
+  and a path that falls off the end adds `undefined`: both stay with Stencil. The inferred
+  type is a node of its own, so `references` starts with `Promise` and then names what `T` names.
+  Fixture: `build/src/components/inferred-returns.tsx`. Left: `getAccordions` (`Array.from(...) as
+  HTMLIonAccordionElement[]`, a type the build generates) and ion-router `canTransition`
+  (`canProceed.redirect` after a `typeof` narrowing).
 - **A union the checker orders by when it first met its members**, printed whole: a method
   parameter or return type is `string | Function | HTMLElement | null` for
   `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on
@@ -193,11 +200,13 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
 - **`typeof` written in a prop's annotation** (`@Prop() x: keyof typeof y`): Stencil adds the
   classes and enums such a query names to `references`, which is not modelled. The same `keyof
   typeof y` behind a local `type` alias works.
-- **A prop typed from a call that returns an alias** (`@Prop({ mutable: true }) mode = getIonMode(this)`
-  where `getIonMode = (ref?: any): Mode`). The runtime flag is ported (string, 1025), but Stencil
-  prints the inferred type with the alias expanded (`"ios" | "md"`) and adds `Mode` to `references`
-  as a `global` one, from a declaration in another file; stencilrs reports the prop's
-  `complexType` as not ported. Ionic: ion-router-outlet `mode`.
+- **A prop typed from a call**, when the callee is not an alias of string literals declared in a
+  relatively imported module (`@Prop({ mutable: true }) mode = getIonMode(this)` where
+  `getIonMode = (ref?: any): Mode`, `type Mode = 'ios' | 'md'`). That one is ported: Stencil prints
+  the alias expanded (`"ios" | "md"`, also as `original`) and adds `Mode` to `references` by the
+  name alone, so it is `global` unless the component's own file imports or declares `Mode`. The
+  alias is evaluated in the module that declares the function (`ModuleSummary::rets`). Any other
+  inferred type that is not one word is still reported. Fixture: `build/src/components/inferred-returns.tsx`.
 - `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
   parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
 

@@ -617,7 +617,13 @@ fn identifier_flags(name: &str, args: &[TSType], locals: &Locals, depth: u8) -> 
     }
     let first_arg = args.first();
     // A type parameter of the generic alias being evaluated stands for its type argument.
-    if let Some((_, f)) = locals.bindings.borrow().iter().rev().find(|(n, _)| n == name) {
+    if let Some((_, f)) = locals
+        .bindings
+        .borrow()
+        .iter()
+        .rev()
+        .find(|(n, _)| n == name)
+    {
         return *f;
     }
     match locals.types.get(name) {
