@@ -187,7 +187,13 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   that mentions them). Props are unaffected: Stencil sorts their parts as text. Ionic:
   `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)`, `setRoot(root: ComponentRef)`.
 - **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
-  `src/components.d.ts`, which Stencil writes, so the source tree does not have them.
+  `src/components.d.ts`, which Stencil writes. With `resolveImports`, `HTML<Pascal>Element` is
+  printed as written and referenced as `global` when a `@Component` under the `src` folder next to
+  the governing tsconfig has the tag it stands for (`ion-tab`); that file becomes a dependency of
+  the result. Names of one word or with digits or acronyms (`HTMLHRElement`), and the lib's own
+  multi-word interfaces, are not read. A tag nothing declares stays unported: a build fails on
+  it (`Cannot find name`). Two element types in one union (`HTMLIonTabElement | HTMLElement`) fall
+  under the type-id ordering above.
 - **An intersection with a union** is distributed as the checker does (`A & (B | C)` is
   `A & B | A & C`, the cross product made last union fastest, aliases inside it expanded and
   flattened: `{ date: string } & DatetimeHighlightStyle` is three `{ date } & { ...opt } & { x }`
