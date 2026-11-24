@@ -994,6 +994,19 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 })),
             })));
         }
+        // `HTMLIonTabElement`: an element type the build generates into `src/components.d.ts`.
+        if args.is_empty()
+            && self
+                .locals
+                .resolver
+                .is_some_and(|r| r.generated_element(self.file, name))
+        {
+            return Ok(Ty::new(K::Ref {
+                name: name.to_owned(),
+                args,
+                id: self.reg.intern(&format!("generated {name}")),
+            }));
+        }
         unsupported(format!("the global type `{name}`"))
     }
 }

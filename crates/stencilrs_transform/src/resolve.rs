@@ -1061,4 +1061,148 @@ mod tests {
         fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
         assert!(!strict_in(&dir));
     }
+
+    #[test]
+    fn a_generated_element_name_reads_back_as_its_tag() {
+        assert_eq!(generated_element_tag("HTMLIonTabElement").as_deref(), Some("ion-tab"));
+        assert_eq!(
+            generated_element_tag("HTMLIonSelectPopoverElement").as_deref(),
+            Some("ion-select-popover")
+        );
+        // The lib's own interfaces, one word, or a word of one letter: not read.
+        for name in [
+            "HTMLElement",
+            "HTMLDivElement",
+            "HTMLTextAreaElement",
+            "HTMLTableCellElement",
+            "HTMLOrSVGElement",
+            "HTMLHRElement",
+            "HTMLIonTab",
+        ] {
+            assert_eq!(generated_element_tag(name), None, "{name}");
+        }
+    }
+
+    #[test]
+    fn the_tag_index_follows_the_files() {
+        let dir = folder("tag-index");
+        let src = dir.join("src");
+        fs::create_dir_all(src.join("tab")).unwrap();
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-tab' }) export class Tab {}",
+            0,
+        );
+        write(&src.join("util.ts"), "export const tag = 'ion-nope';", 0);
+        let found = cache::component_with_tag(&src, "ion-tab", component_tags);
+        assert_eq!(found, Some(src.join("tab").join("tab.tsx")));
+        // Not a component's tag: there is no `@Component` in that file.
+        assert_eq!(cache::component_with_tag(&src, "ion-nope", component_tags), None);
+        // The tag is renamed: the file that declared it is checked on every use.
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-pane' }) export class Tab {}",
+            1,
+        );
+        assert_eq!(cache::component_with_tag(&src, "ion-tab", component_tags), None);
+        assert_eq!(
+            cache::component_with_tag(&src, "ion-pane", component_tags),
+            Some(src.join("tab").join("tab.tsx"))
+        );
+    }
+}
+
+/// The tag a generated element type name stands for: `HTMLIonTabElement` -> `ion-tab`. Stencil
+/// writes `HTML${dashToPascalCase(tag)}Element` into `components.d.ts`; only names that map back
+/// to one tag are read (two or more words, letters only), and the lib's own multi-word element
+/// interfaces are left out.
+fn generated_element_tag(name: &str) -> Option<String> {
+    const LIB: &[&str] = &[
+        "TableCaption", "TableCell", "TableCol", "TableRow", "TableSection", "OptGroup", "DataList",
+        "FieldSet", "OList", "UList", "DList", "IFrame", "BaseFont", "FrameSet", "TextArea",
+        "TableDataCell", "TableHeaderCell", "OrSVG",
+    ];
+    let pascal = name.strip_prefix("HTML")?.strip_suffix("Element")?;
+    if LIB.contains(&pascal) || !pascal.chars().all(|c| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    let mut words: Vec<String> = Vec::new();
+    for c in pascal.chars() {
+        if c.is_ascii_uppercase() {
+            words.push(c.to_ascii_lowercase().to_string());
+        } else {
+            words.last_mut()?.push(c);
+        }
+    }
+    // A single letter word (`HTMLIonTAbElement`, `HTMLHRElement`) is ambiguous.
+    if words.len() < 2 || words.iter().any(|w| w.len() < 2) {
+        return None;
+    }
+    Some(words.join("-"))
+}
+
+/// The `tag: '...'` values of the `@Component` declarations in a source text.
+fn component_tags(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    if !text.contains("@Component") {
+        return out;
+    }
+    let mut rest = text;
+    while let Some(i) = rest.find("tag") {
+        let after = rest[i + 3..].trim_start();
+        rest = &rest[i + 3..];
+        let before_ok = i == 0 || !rest_prev_is_ident(text, text.len() - rest.len() - 3);
+        let Some(after) = after.strip_prefix(':') else { continue };
+        let after = after.trim_start();
+        let Some(q) = after.chars().next().filter(|c| matches!(c, '\'' | '"' | '`')) else {
+            continue;
+        };
+        if let Some(end) = after[1..].find(q) {
+            if before_ok {
+                out.push(after[1..1 + end].to_owned());
+            }
+        }
+    }
+    out
+}
+
+fn rest_prev_is_ident(text: &str, at: usize) -> bool {
+    text[..at]
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '$')
+}
+
+fn find_tsconfig_dir(file: &str) -> Option<PathBuf> {
+    let abs = std::env::current_dir().ok()?.join(file);
+    let mut dir = abs.parent();
+    while let Some(d) = dir {
+        if d.join("tsconfig.json").is_file() {
+            return Some(d.to_owned());
+        }
+        dir = d.parent();
+    }
+    None
+}
+
+impl Resolver {
+    /// Whether `name` is an element type Stencil generates into `src/components.d.ts`
+    /// (`HTMLIonTabElement`): some `@Component` of the project (the `src` folder next to the
+    /// governing tsconfig) has the tag it stands for, by the project's tag index
+    /// (`cache::component_with_tag`). The declaring file becomes a dependency of the result. A tag
+    /// nothing declares is not found: its type is an error type in a build, which the model does
+    /// not reproduce.
+    pub fn generated_element(&self, importer: &str, name: &str) -> bool {
+        let Some(tag) = generated_element_tag(name) else {
+            return false;
+        };
+        let Some(root) = find_tsconfig_dir(importer) else {
+            return false;
+        };
+        let Some(path) = cache::component_with_tag(&root.join("src"), &tag, component_tags) else {
+            return false;
+        };
+        self.merge(&[Dep::of(&path)], true);
+        true
+    }
 }
