@@ -69,10 +69,17 @@ const walk = (dir) =>
  */
 export const BUILD_SUITE = 'build';
 
+/**
+ * The build suites, each a project with its own tsconfig and `snapshots-<name>/`.
+ * `build-stable` sets `stableTypeOrdering`, which orders unions by `compareTypes` (the order
+ * TypeScript 7 always has) instead of by type id.
+ */
+export const BUILD_SUITES = [BUILD_SUITE, 'build-stable'];
+
 /** Every fixture as { suite, rel, file, id }, sorted; `id` is the forward-slash path under fixtures/. */
 export const listFixtures = (suiteFilter) =>
   readdirSync(fixturesDir)
-    .filter((suite) => (suiteFilter ? suite === suiteFilter : suite !== BUILD_SUITE))
+    .filter((suite) => (suiteFilter ? suite === suiteFilter : !BUILD_SUITES.includes(suite)))
     .flatMap((suite) =>
       walk(join(fixturesDir, suite))
         .filter((f) => f.endsWith('.tsx') || f.endsWith('.ts'))

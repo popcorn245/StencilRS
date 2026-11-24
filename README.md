@@ -165,7 +165,10 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   than a promise of a boolean, a primitive `this.field`, `Promise.resolve(x)` or
   `new Promise<T>()`, inferred object types, types from packages or
   tsconfig `paths`, and unions whose member order depends on the whole
-  program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
+  program (`docs/quirks.md`, quirk 18; TypeScript's default sorts union members by type id, which
+  depends on what the checker saw first, but with `stableTypeOrdering: true` in the tsconfig, the
+  only order TypeScript 7 has, the order is a function of the types and stencilrs reproduces it).
+  Object, interface, branded-primitive and `Record<never,
   never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and
   generic aliases and interfaces with defaults work, as do the element types Stencil generates
   (`HTMLIonTabElement`, when a component of the project has the tag). `analyze(..., { complexTypes: true })` reports each

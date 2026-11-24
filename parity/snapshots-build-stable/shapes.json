@@ -1,0 +1,236 @@
+{
+  "tag": "stable-shapes",
+  "properties": [
+    {
+      "name": "fn",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Callback | Item",
+        "resolved": "((value: string) => void) | Item | undefined",
+        "references": {
+          "Callback": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Callback",
+            "referenceLocation": "Callback"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        }
+      }
+    },
+    {
+      "name": "keyed",
+      "flags": {
+        "attribute": "keyed",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "keyof { zeta: string; alpha: number; beta: boolean }",
+        "resolved": "\"alpha\" | \"beta\" | \"zeta\" | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "keyedOrNumber",
+      "flags": {
+        "attribute": "keyed-or-number",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "number | keyof { zeta: string; alpha: number } | boolean",
+        "resolved": "\"alpha\" | \"zeta\" | boolean | number | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "obj",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Item | { a: string }",
+        "resolved": "Item | undefined | { a: string; }",
+        "references": {
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        }
+      }
+    },
+    {
+      "name": "pair",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "[Item, Row] | [Row, Item]",
+        "resolved": "[Item, Row] | [Row, Item] | undefined",
+        "references": {
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        }
+      }
+    },
+    {
+      "name": "tuple",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "[string, number] | [number, string] | [string]",
+        "resolved": "[number, string] | [string, number] | [string] | undefined",
+        "references": {}
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "keys",
+      "complexType": {
+        "signature": "(key: keyof Item | keyof Row | \"other\") => Promise<void>",
+        "parameters": [
+          {
+            "name": "key",
+            "type": "\"cells\" | \"id\" | \"other\"",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "literalKeys",
+      "complexType": {
+        "signature": "(key: keyof { zeta: string; alpha: number; beta: boolean; }) => Promise<void>",
+        "parameters": [
+          {
+            "name": "key",
+            "type": "\"alpha\" | \"beta\" | \"zeta\"",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "objects",
+      "complexType": {
+        "signature": "(value: Item | Row | undefined) => Promise<void>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "Item | Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "tuples",
+      "complexType": {
+        "signature": "(value: [number, number] | [string, string, string] | string[]) => Promise<void>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "string[] | [number, number] | [string, string, string]",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

@@ -1,0 +1,186 @@
+{
+  "tag": "stable-generics",
+  "properties": [
+    {
+      "name": "box",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Box<string> | Box<number>",
+        "resolved": "Box<number> | Box<string> | undefined",
+        "references": {
+          "Box": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Box",
+            "referenceLocation": "Box"
+          }
+        }
+      }
+    },
+    {
+      "name": "boxes",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Box<Row> | Box<Item> | Box",
+        "resolved": "Box<Item> | Box<Row> | Box<any> | undefined",
+        "references": {
+          "Box": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Box",
+            "referenceLocation": "Box"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "both",
+      "complexType": {
+        "signature": "(a: Promise<string> | Promise<number>, b: Zed | Item | Row) => Promise<void>",
+        "parameters": [
+          {
+            "name": "a",
+            "type": "Promise<string> | Promise<number>",
+            "docs": ""
+          },
+          {
+            "name": "b",
+            "type": "Item | Row | Zed",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "fetch",
+      "complexType": {
+        "signature": "() => Promise<Box<Zed> | Item | Row>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Box": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Box",
+            "referenceLocation": "Box"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Box<Zed> | Item | Row>"
+      }
+    },
+    {
+      "name": "records",
+      "complexType": {
+        "signature": "(r: Record<string, number> | Item | Partial<Row>) => Promise<void>",
+        "parameters": [
+          {
+            "name": "r",
+            "type": "Item | Partial<Row> | Record<string, number>",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Record": {
+            "location": "global",
+            "id": "global::Record"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Partial": {
+            "location": "global",
+            "id": "global::Partial"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}
