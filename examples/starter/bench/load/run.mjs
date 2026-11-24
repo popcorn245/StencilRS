@@ -50,9 +50,12 @@ async function load(browser, url, profile) {
     await cdp.send('Network.enable');
     await cdp.send('Network.emulateNetworkConditions', profile.net);
   }
-  // Qwik's loader announces itself with `qinit`; stencilrs's bundle sets __interactive itself.
+  // Interactive: each page's inline loader catches events from then on (Qwik's announces itself
+  // with `qinit`, stencilrs's with `rsinit`); stencilrs's bundle sets __interactive when a page
+  // has no loader.
   await page.addInitScript(() => {
     document.addEventListener('qinit', () => (window.__interactive ??= performance.now()));
+    document.addEventListener('rsinit', () => (window.__interactive ??= performance.now()));
     // Total blocking time: the part of each long task (> 50 ms) past 50 ms.
     window.__tbt = 0;
     new PerformanceObserver((l) => {

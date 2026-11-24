@@ -61,11 +61,13 @@ their styles inlined; scoped styles are written as `<style sty-id>` tags. Each h
 
 **Hydration keeps the server's nodes.** Every node a render needs later (an instance's top-level
 nodes, the nodes its parts bind to, the text and markers of holes and list entries) is claimed in
-creation order with a number per host. The server writes the numbers out: `r:n="<host>.<n>"` on
-elements, and a `<!--^1.3-->` comment for a marker, or before a text node (`<!--^t1.7-->`). A
-child that a light-DOM host moved into one of its slots also carries `r:l="<host>"`, and a host
-holding such children carries `r:s`. A component's client scan only enters other components that
-hold slotted content.
+creation order with a number per host. The server writes the numbers out: `r:n="<n>"` on
+elements, and a `<!--^3-->` comment for a marker, or before a text node (`<!--^t7-->`). A bare
+number belongs to the component the node is written in (its element or shadow root); a claim of
+another component carries its id (`r:n="1.5"`, a parent's node slotted into a child). A child that
+a light-DOM host moved into one of its slots also carries `r:l="<host>"`, and a host holding such
+children carries `r:s`. A component's client scan only enters other components that hold slotted
+content, and there reads only marks with its id.
 
 On the client, a host with `s-rs` renders once with a map of those numbers. Instead of cloning a
 template it looks up the nodes the server made, binds its parts to them (event listeners,
@@ -79,7 +81,7 @@ the host falls back: it empties what it rendered, keeps its slotted children, an
 scratch.
 
 With `runtime: 'stencilrs'`, Vite SSR builds (`transformOptions.ssr`) also compile for this
-runtime. One renderer renders one page at a time. The marks cost bytes: roughly 15 per dynamic
+runtime. One renderer renders one page at a time. The marks cost bytes: roughly 8 per dynamic
 node.
 
 **Check:** `test/runtime-ssr.test.js` renders in happy-dom and hydrates in Chromium. It checks
@@ -89,26 +91,44 @@ that the page is interactive, and that a tampered page falls back and still work
 ### Resuming: components that wait for an event
 
 By default (`createRenderer(load, { resumable: true })`) the page also carries each component's
-state, in one `<script type="rs/state">`: the members that differ from a fresh instance, and the
-DOM events it listens to. Each element with a handler carries `r:e="<host>:click"`.
+state, in one `<script type="rs/state" e="click">`: per component id, the members that differ
+from a fresh instance; `e` lists the events the page delegates. Each element with a handler
+carries `r:e="click"` (bare when the handler is the nearest component's, `r:e="1:click"`
+otherwise). A component whose state can't go through JSON, or that listens to a DOM event the
+document doesn't delegate, carries `s-rh`: it hydrates on load.
 
-On the client, a component that can wait doesn't render on load. It takes its state from that
-script, and its element stays as the server wrote it. It hydrates in place when something needs
-it:
+On the client, a component that can wait doesn't render on load, and its element stays as the
+server wrote it. The state script is parsed the first time anything needs it. A component takes
+its state then, whether or not it waits (a parent that waits won't pass it its props). It hydrates
+in place when something needs it:
 
-- an event that reaches one of its handlers (one capture listener per event type on the document
-  wakes the component before the event gets to the element, so nothing is replayed)
+- an event that reaches one of its handlers (one capture listener per delegated event type on the
+  document wakes the component before the event gets to the element)
 - a change to a property or state
 - `forceUpdate`, or `componentOnReady()`
 - an event a child emits to one of its handlers
 
 A component waits only if nothing in it has to run on load. That means no `componentWillLoad`,
-`componentDidLoad` or `connectedCallback`, no window or document listeners, no signals, no listener
-for a DOM event the document doesn't delegate, and state that goes through JSON. Anything else
-hydrates on load as before.
+`componentDidLoad` or `connectedCallback`, no window or document listeners, no signals, and no
+`s-rh`. Anything else hydrates on load as before.
+
+**Interactive before the runtime arrives.** After the state, the server writes a 300-byte inline
+script that catches the page's delegated events from the moment the HTML is parsed, and fires
+`rsinit`. When the runtime loads it stops the catcher; once the components are defined, each
+caught event wakes the components on its path and their handlers run along it, innermost first
+(`stopPropagation` is honoured). A handler then sees `currentTarget` as null, and the event's
+default action has already happened, as with Qwik's loader.
+
+**Lists that wait inside a woken component.** A list whose render ran nothing that the client
+needs (no events, refs or slots of its component, no props that aren't plain values, and every
+component in it has its own state) gets `~<last claim>:<node count>` on its first node's mark
+(`<!--^t6~2005:1500-->`). When its component wakes, the scan steps over those nodes without
+reading them, and the render keeps the list's value instead of adopting it. While each render
+gives an equal value (same templates, keys and values), the list stays as the server left it. The
+first different value adopts the server's nodes in place, then updates them as usual.
 
 This is Qwik's resumability, adapted: Qwik also skips running components on load and wakes code on
-events. Unlike Qwik, the component's code is already loaded (7.8 KB gzip for the whole runtime),
+events. Unlike Qwik, the component's code is already loaded (9.1 KB gzip for the whole runtime),
 so waking it costs a render, not a network round trip.
 
 ## Page-load benchmark against Qwik
@@ -121,20 +141,30 @@ cache, and the server gzips. Two profiles: desktop (no throttling) and mobile (4
 
 | | stencilrs desktop | Qwik desktop | stencilrs mobile | Qwik mobile |
 |---|---:|---:|---:|---:|
-| HTML (KB gzip) | 28.8 | 20.6 | 28.8 | 20.6 |
-| JS before interactive (KB gzip) | 7.8 | 22.9 | 7.8 | 22.9 |
-| First contentful paint (ms) | 56 | 60 | 280 | 304 |
-| Interactive (ms) | 47 | 50 | 410 | 374 |
-| Main-thread JS during load (ms) | 6 | 2 | 28 | 9 |
+| HTML (KB gzip) | 15.9 | 20.6 | 15.9 | 20.6 |
+| JS during load (KB gzip) | 8.9 | 22.9 | 8.9 | 22.9 |
+| First contentful paint (ms) | 60 | 52 | 284 | 300 |
+| Interactive (ms) | 20 | 45 | 339 | 374 |
+| Main-thread JS during load (ms) | 5 | 2 | 20 | 11 |
 | Total blocking time (ms) | 0 | 0 | 0 | 0 |
-| First click on a card → DOM (ms) | 6.5 | 22.7 | 39.2 | 75.8 |
-| Next click, another card (ms) | 0.8 | 10.8 | 5.0 | 27.5 |
-| Click on the header counter (ms) | 8.3 | 12.6 | 44.7 | 25.0 |
+| First click on a card → DOM (ms) | 7.6 | 15.7 | 38.0 | 77.4 |
+| Next click, another card (ms) | 1.2 | 13.1 | 6.1 | 31.4 |
+| Click on the header counter (ms) | 1.4 | 14.1 | 15.8 | 25.0 |
 
-Before resuming (hydrating every component on load), stencilrs on mobile spent 188 ms of
-main-thread JS during load, with 183 ms of blocking time. The header counter is the one case
-Qwik wins. Its click wakes the page component, which renders all 500 cards' values again;
-Qwik's signals update the one text node without running the page component.
+Interactive is when each page's inline loader catches events (`rsinit`, Qwik's `qinit`).
+
+Where the gains came from, mobile, in order:
+
+| Step | What changed | Result |
+|---|---|---|
+| Resuming | components wait instead of hydrating on load | main-thread JS 188 → 28 ms, blocking 183 → 0 ms |
+| Lists that wait | the counter's render keeps the 500-card list as the server left it | counter click 44.7 → 7.5 ms |
+| Marks relative to their component | `r:n="1"` instead of `r:n="2.1"` | HTML 28.8 → 15.9 KB gzip |
+| Inline catcher with replay | interactive once the HTML is parsed | interactive 410 → 339 ms |
+| State parsed on demand, `s-rh`, `e` | nothing parsed or reflected per component on load | main-thread JS 28 → 20 ms |
+
+Qwik still runs less script during load (11 ms against 20 ms on mobile). Most of the rest is the
+browser upgrading the 500 card elements, which every custom element pays once its tag is defined.
 
 Run it:
 
@@ -161,24 +191,24 @@ Chrome (Linux, cloud container), median of 15 runs, in milliseconds.
 
 | Case | Stencil work | stencilrs work | Stencil total | stencilrs total | Qwik total |
 |---|---:|---:|---:|---:|---:|
-| create 1,000 rows | 12.1 | 6.3 | 25.6 | 6.7 | 8.1 |
-| replace 1,000 rows | 23.9 | 8.7 | 37.1 | 9.0 | 10.3 |
-| update every 10th row | 3.4 | 0.6 | 16.4 | 0.8 | 4.2 |
-| select a row | 3.5 | 0.4 | 17.0 | 0.4 | 4.1 |
-| swap two rows | 3.5 | 0.5 | 15.6 | 0.5 | 5.0 |
-| remove a row | 7.2 | 0.5 | 17.7 | 0.5 | 4.4 |
-| create 10,000 rows | 135.1 | 49.3 | 136.9 | 51.3 | 92.0 |
-| append 1,000 to 1,000 rows | 14.3 | 5.1 | 25.3 | 5.2 | 10.5 |
-| clear 1,000 rows | 7.7 | 3.9 | 19.4 | 3.9 | 5.2 |
-| 1,000 components: create | | | 12.8 | 9.0 | 10.5 |
-| 1,000 components: change a prop on each | | | 17.0 | 14.6 | 14.5 |
+| create 1,000 rows | 10.8 | 6.4 | 25.6 | 6.6 | 7.4 |
+| replace 1,000 rows | 23.5 | 8.6 | 35.4 | 8.8 | 10.6 |
+| update every 10th row | 3.2 | 0.6 | 12.2 | 0.7 | 4.4 |
+| select a row | 3.2 | 0.5 | 15.9 | 0.5 | 4.0 |
+| swap two rows | 3.0 | 0.5 | 15.4 | 0.6 | 4.1 |
+| remove a row | 6.3 | 0.5 | 13.9 | 0.6 | 4.3 |
+| create 10,000 rows | 119.2 | 48.6 | 125.3 | 50.6 | 78.8 |
+| append 1,000 to 1,000 rows | 13.6 | 4.9 | 24.8 | 5.1 | 11.4 |
+| clear 1,000 rows | 7.6 | 3.8 | 19.6 | 3.9 | 5.2 |
+| 1,000 components: create | | | 13.1 | 6.9 | 10.5 |
+| 1,000 components: change a prop on each | | | 18.1 | 14.5 | 14.7 |
 
 Bundle JS:
 
 | Runtime | Raw | Gzip |
 |---|---:|---:|
 | Stencil | 81.7 KB | 27.6 KB |
-| stencilrs (hydration in place and resuming included) | 22.5 KB | 8.2 KB |
+| stencilrs (hydration in place and resuming included) | 25.5 KB | 9.1 KB |
 | Qwik | 56.8 KB | 24.6 KB |
 
 Stencil's figure is its standalone runtime as the Vite plugin builds it, with every feature flag on.

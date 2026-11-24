@@ -508,7 +508,8 @@ export function stencilrs(options = {}) {
         handled.add(file);
         fileToTag.set(file, fine.components[0].tagName);
         // Hot reload: the module accepts itself; `define` moves the new class onto the registered one.
-        return { code: isDev ? `${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
+        // The runtime keeps live instances only when hot reload is on (`__RS_HOT__`).
+        return { code: isDev ? `if (import.meta.hot) globalThis.__RS_HOT__ = true;\n${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
       }
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 

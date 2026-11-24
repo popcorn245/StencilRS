@@ -42,6 +42,18 @@ export class SsrList {
     </ssr-card>;
   }
 }`,
+  'ssr-shop': `import { Component, Prop, State, h } from '@stencil/core';
+@Component({ tag: 'ssr-shop', encapsulation: { type: 'scoped' } })
+export class SsrShop {
+  @Prop() items = 'a,bb,ccc';
+  @State() count = 0;
+  render() {
+    return <div>
+      <button onClick={() => this.count++}>{this.count}</button>
+      <ul>{this.items.split(',').map((i) => <li key={i}><ssr-badge count={i.length} />{i}</li>)}</ul>
+    </div>;
+  }
+}`,
 };
 
 /** The fixtures compiled, with the runtime import replaced by `runtime` (a URL or path). */

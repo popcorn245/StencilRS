@@ -9,8 +9,9 @@
 // come out as declarative shadow DOM (`<template shadowrootmode="open">`) with their styles
 // inlined; scoped and unencapsulated styles come out as `<style sty-id>` tags. Each component
 // host carries `s-rs="<id>"`. Each node a render claimed (see `claim` in runtime.js) carries its
-// numbers, `r:n="<host>.<n>"`, and each child a light-DOM host moved into a slot carries
-// `r:l="<host>"`; text and comments carry the same in a `<!--^...-->` comment (see `parseMark`).
+// numbers, `r:n="<n>"` (bare for the component it is written in, `<host>.<n>` for another), and
+// each child a light-DOM host moved into a slot carries `r:l="<host>"`; text and comments carry
+// the same in a `<!--^...-->` comment (see `parseMark`).
 // The client's first render looks the claimed nodes up and keeps them (hydration in place).
 //
 // One window per renderer, renders one at a time: the runtime keeps per-document state.
@@ -56,27 +57,49 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
     const ids = new WeakMap();
     let next = 0;
     const state = resume ? {} : null;
+    // Components that must hydrate on load so far: a list holding one can't be skipped on the client.
+    let stateless = 0;
+    const types = new Set();
+    const delegated = globalThis.__RS_DELEGATED__;
     const nextId = (host) => {
       const id = ++next;
+      let now = false;
       if (state) {
         const entry = stateEntry(host, document);
-        if (entry) state[id] = entry;
+        // A component waits only when its state goes through JSON and the page delegates its events.
+        for (const type of host.__evs || []) {
+          if (delegated.has(type)) types.add(type);
+          else if (`on${type}` in window.HTMLElement.prototype) now = true;
+        }
+        if (entry === null) {
+          now = true;
+          stateless++;
+        } else if (entry) state[id] = entry;
       }
+      nextId.now = now;
       return id;
     };
+    nextId.stateless = () => (state ? stateless : -1);
     let out = '';
-    for (let n = document.body.firstChild; n; n = n.nextSibling) out += serialize(n, ids, nextId);
+    out += serializeKids(document.body.firstChild, ids, nextId, null);
     document.body.replaceChildren();
     // Each component's state, for resuming without rendering (see Resuming in runtime.js).
-    if (state) out += `<script type="rs/state">${JSON.stringify(state).replace(/</g, '\\u003c')}</script>`;
+    // `e`: the events to delegate, for the components that wait.
+    if (state) {
+      const e = [...types].join(',');
+      out += `<script type="rs/state" e="${e}">${JSON.stringify(state).replace(/</g, '\\u003c')}</script>`;
+      // Interactive before the runtime arrives: this catches those events until it does (which
+      // replays them, see `replay` in runtime.js), and says so with an `rsinit` event.
+      if (e) out += `<script>(d=>{const q=[],t="${e}".split(","),f=e=>q.push([e,e.composedPath()]);for(const k of t)d.addEventListener(k,f,!0);d.__rsq={q,off(){for(const k of t)d.removeEventListener(k,f,!0)}};d.dispatchEvent(new Event("rsinit"))})(document)</script>`;
+    }
     return styles + out;
   };
   return (html, opts) => (queue = queue.then(() => render(html, opts), () => render(html, opts)));
 }
 
 // A component's state as the page should resume it: its members that differ from a fresh
-// instance's, plus the DOM events it listens to. null when a value can't go through JSON (the
-// component then hydrates on load, as without resuming).
+// instance's (undefined when none do). null when a value can't go through JSON (the component
+// then hydrates on load, `s-rh`).
 const fresh = new Map();
 const plain = (v) => {
   if (v === null || typeof v === 'string' || typeof v === 'boolean') return true;
@@ -100,10 +123,7 @@ function stateEntry(host, document) {
     s[name] = v;
     any = true;
   }
-  const entry = {};
-  if (any) entry.s = s;
-  if (host.__evs) entry.e = [...host.__evs];
-  return entry;
+  return any ? s : undefined;
 }
 
 /** Waits until every component in the tree has loaded and no render is queued. */
@@ -126,12 +146,16 @@ async function settle(root, rounds) {
   }
 }
 
-/** The hydration marks of a node: its claim numbers (`n`) and the host it is a logical child of (`l`). */
-function marks(node, ids) {
+/**
+ * The hydration marks of a node: its claim numbers (`n`) and the host it is a logical child of
+ * (`l`). A claim of `ctx`, the component whose element or shadow root the node is written in,
+ * is a bare number; another component's carries its id (`2.6`).
+ */
+function marks(node, ids, ctx) {
   let m = null;
   if (node.__rsn && ids.has(node.__rsh)) {
-    const h = ids.get(node.__rsh);
-    m = { n: node.__rsn.map((k) => `${h}.${k}`).join(',') };
+    const h = node.__rsh === ctx ? '' : `${ids.get(node.__rsh)}.`;
+    m = { n: node.__rsn.map((k) => h + k).join(',') };
   }
   if (node.__lp && ids.has(node.__lp)) {
     m ||= {};
@@ -143,15 +167,48 @@ function marks(node, ids) {
 
 const markData = (node, m) => `^${node.nodeType === 3 ? 't' : ''}${m.n ?? ''}${m.l ? `@${m.l}` : ''}${m.h ? '!' : ''}`;
 
-function serialize(node, ids, nextId) {
+/**
+ * Siblings in order. A list the client may keep as the server left it (see `setList` in
+ * runtime.js) gets its last claim on its first node's mark (`<!--^t1.6~2005-->`), once its
+ * marker shows that: its host rendered once, resuming is on, every component in it got a state
+ * entry, and its first node is a plain mark in the same parent.
+ */
+function serializeKids(first, ids, nextId, ctx) {
+  const out = [];
+  let open = null;
+  let count = 0; // nodes the browser will parse from what is written so far
+  let prevText = false;
+  for (let n = first; n; n = n.nextSibling) {
+    if (n.__rsdOf) (open ||= new Map()).set(n.__rsdOf, { i: out.length, s: nextId.stateless(), c: count });
+    const o = open && open.get(n);
+    if (o) {
+      // `~<last claim>:<nodes before the marker>`, so the client steps over them without reading.
+      const r = n.__rsr;
+      const s = nextId.stateless();
+      if (r && n.__rsh.__rc === 1 && s >= 0 && s === o.s && !o.merged && /^<!--\^t[\d.,]+-->$/.test(out[o.i])) out[o.i] = `${out[o.i].slice(0, -3)}~${r[1]}:${count - o.c}-->`;
+      open.delete(n);
+    }
+    const html = serialize(n, ids, nextId, ctx);
+    out.push(html);
+    if (html === '') continue;
+    // Count the nodes: a text the parser would merge into the one before it doesn't count.
+    const startsText = html[0] !== '<';
+    if (startsText && prevText && open) for (const v of open.values()) v.merged = true;
+    count += n.nodeType === 3 ? (html.startsWith('<!--') ? (html.endsWith('-->') ? 1 : 2) : 1) : 1;
+    prevText = !html.endsWith('>') || n.nodeType === 3 && !html.endsWith('-->');
+  }
+  return out.join('');
+}
+
+function serialize(node, ids, nextId, ctx) {
   if (node.nodeType === 3) {
-    const m = marks(node, ids);
+    const m = marks(node, ids, ctx);
     const pre = m ? `<!--${markData(node, m)}-->` : '';
     const parent = node.parentNode;
     return pre + (parent && RAW.has(parent.localName) ? node.data : escText(node.data));
   }
   if (node.nodeType === 8) {
-    const m = marks(node, ids);
+    const m = marks(node, ids, ctx);
     if (m) return `<!--${markData(node, m)}-->`;
     return node.data === '' || node.data === 'rs' ? '' : `<!--${node.data}-->`;
   }
@@ -159,7 +216,7 @@ function serialize(node, ids, nextId) {
   const tag = node.localName;
   let attrs = '';
   for (const a of node.attributes) attrs += a.value === '' ? ` ${a.name}` : ` ${a.name}="${escAttr(a.value)}"`;
-  const m = marks(node, ids);
+  const m = marks(node, ids, ctx);
   if (m) {
     if (m.n) attrs += ` r:n="${m.n}"`;
     if (m.l) attrs += ` r:l="${m.l}"${m.h ? ' r:h' : ''}`;
@@ -168,23 +225,24 @@ function serialize(node, ids, nextId) {
   if (isHost(node)) {
     const id = nextId(node);
     ids.set(node, id);
-    attrs += ` s-rs="${id}"`;
+    attrs += ` s-rs="${id}"${nextId.now ? ' s-rh' : ''}`;
   }
   // The events this element listens to, and the id of the component listening (it may be the
   // element itself, for `<Host onClick>`).
-  if (node.__rse && ids.has(node.__rseh)) attrs += ` r:e="${ids.get(node.__rseh)}:${[...node.__rse].join(',')}"`;
+  // Bare when it is `ctx`, the nearest component around the element.
+  if (node.__rse && ids.has(node.__rseh)) attrs += ` r:e="${node.__rseh === ctx && node !== ctx ? '' : `${ids.get(node.__rseh)}:`}${[...node.__rse].join(',')}"`;
   // A component with slotted content: the client's scan for another component goes inside.
   if (isHost(node) && node.__slotted && node.__slotted.size) attrs += ' r:s';
   if (isHost(node)) {
     if (node.shadowRoot) {
       const df = node.constructor.__meta.delegatesFocus ? ' shadowrootdelegatesfocus' : '';
       inner += `<template shadowrootmode="open"${df}>`;
-      for (let n = node.shadowRoot.firstChild; n; n = n.nextSibling) inner += serialize(n, ids, nextId);
+      inner += serializeKids(node.shadowRoot.firstChild, ids, nextId, node);
       inner += '</template>';
     }
   }
   if (VOID.has(tag)) return `<${tag}${attrs}>`;
   const kids = tag === 'template' ? node.content : node;
-  for (let n = kids.firstChild; n; n = n.nextSibling) inner += serialize(n, ids, nextId);
+  inner += serializeKids(kids.firstChild, ids, nextId, isHost(node) ? node : ctx);
   return `<${tag}${attrs}>${inner}</${tag}>`;
 }
