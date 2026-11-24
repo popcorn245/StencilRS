@@ -52,6 +52,16 @@ pub struct ExportedType {
 
 /// The type names of lib.d.ts the model prints by name (`Promise<T>`, `HTMLElement`). Generic
 /// ones need their arguments written (`CustomEvent` without any prints `CustomEvent<any>`).
+/// Interfaces of the lib's `Intl` namespace, printed by the checker without the qualifier.
+const INTL_INTERFACES: &[&str] = &[
+    "DateTimeFormatOptions",
+    "NumberFormatOptions",
+    "CollatorOptions",
+    "PluralRulesOptions",
+    "RelativeTimeFormatOptions",
+    "ListFormatOptions",
+];
+
 const LIB_INTERFACES: &[&str] = &[
     "Promise",
     "Map",
@@ -895,6 +905,20 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     && !self.locals.imports.contains_key("globalThis")
                 {
                     return self.lib_type(q.right.name.as_str(), args);
+                }
+                // `Intl.DateTimeFormatOptions` is the lib's interface, printed without the qualifier.
+                if left.name == "Intl"
+                    && self.resolving()
+                    && args.is_empty()
+                    && INTL_INTERFACES.contains(&q.right.name.as_str())
+                    && self.local_def("Intl").is_none()
+                    && !self.locals.imports.contains_key("Intl")
+                {
+                    return Ok(Ty::new(K::Ref {
+                        name: q.right.name.to_string(),
+                        args,
+                        id: self.reg.intern(&format!("lib Intl.{}<>", q.right.name)),
+                    }));
                 }
                 match self.local_def(left.name.as_str()) {
                     Some(Ok(TypeDef::UnionEnum(e))) => match e
