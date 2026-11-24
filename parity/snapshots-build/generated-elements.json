@@ -1,0 +1,136 @@
+{
+  "tag": "gen-tabs",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "each",
+      "complexType": {
+        "signature": "(tabs: HTMLGenTabElement[], first: HTMLGenTabElement) => Promise<void>",
+        "parameters": [
+          {
+            "name": "tabs",
+            "type": "HTMLGenTabElement[]",
+            "docs": ""
+          },
+          {
+            "name": "first",
+            "type": "HTMLGenTabElement",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "either",
+      "complexType": {
+        "signature": "(el: HTMLGenTabElement | HTMLElement) => Promise<void>",
+        "parameters": [
+          {
+            "name": "el",
+            "type": "HTMLElement | HTMLGenTabElement",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          },
+          "HTMLElement": {
+            "location": "global",
+            "id": "global::HTMLElement"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "getTab",
+      "complexType": {
+        "signature": "(tab: string | HTMLGenTabElement) => Promise<HTMLGenTabElement | undefined>",
+        "parameters": [
+          {
+            "name": "tab",
+            "type": "string | HTMLGenTabElement",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          }
+        },
+        "return": "Promise<HTMLGenTabElement | undefined>"
+      }
+    },
+    {
+      "name": "parent",
+      "complexType": {
+        "signature": "() => Promise<HTMLGenTabsElement | null>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabsElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabsElement"
+          }
+        },
+        "return": "Promise<HTMLGenTabsElement | null>"
+      }
+    },
+    {
+      "name": "select",
+      "complexType": {
+        "signature": "(tab: string | HTMLGenTabElement) => Promise<boolean>",
+        "parameters": [
+          {
+            "name": "tab",
+            "type": "string | HTMLGenTabElement",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    }
+  ],
+  "slots": [
+    {
+      "name": "",
+      "docs": "The default slot"
+    }
+  ]
+}
