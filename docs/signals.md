@@ -10,7 +10,7 @@ import { Computed, Signal, signal } from '@popcorn245/stencilrs/signals';
 
 export const total = signal(0); // a plain TC39 Signal.State, shareable with anything
 
-@Component({ tag: 'my-counter', shadow: true })
+@Component({ tag: 'my-counter', encapsulation: { type: 'shadow' } })
 export class MyCounter {
   @Prop() step = 1;
   @Signal() count = 0;                                   // Signal.State per instance

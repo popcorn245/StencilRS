@@ -48,6 +48,10 @@
     "./signals": {
       "types": "./signals.d.ts",
       "default": "./signals.js"
+    },
+    "./runtime": {
+      "types": "./runtime.d.ts",
+      "default": "./runtime.js"
     }
   },
   "files": [
@@ -70,7 +74,9 @@
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "signals.js",
-    "signals.d.ts"
+    "signals.d.ts",
+    "runtime.js",
+    "runtime.d.ts"
   ],
   "publishConfig": {
     "access": "public"

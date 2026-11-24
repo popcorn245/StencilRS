@@ -173,7 +173,7 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, ...stencilOptions } = options;
+  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -450,6 +450,22 @@ export function stencilrs(options = {}) {
         return kept.result;
       }
 
+      // Experimental: `runtime: 'stencilrs'` compiles client components for the stencilrs runtime
+      // (compiled templates, no virtual DOM). No fallback: Stencil's compiler targets its own runtime.
+      if (runtime === 'stencilrs' && !ssr && !specPage && !transformOpts?.ssr) {
+        const fine = await transpileAsync(code, { file, resolveImports, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
+        const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
+        if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        if (!fine.components.length) return null;
+        for (const base of fine.baseClasses) {
+          baseClasses.add(base);
+          this.addWatchFile(base);
+        }
+        counts.stencilrs++;
+        handled.add(file);
+        fileToTag.set(file, fine.components[0].tagName);
+        return { code: fine.code, map: null };
+      }
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
@@ -572,7 +588,8 @@ export function stencilrs(options = {}) {
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
       const code = readFileSync(file, 'utf8');
-      const result = transpile(code, { file, resolveImports, componentExport, useDefineForClassFields, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
+      const baseExport = runtime === 'stencilrs' && !ssr && !specPage ? 'stencilrs' : componentExport;
+      const result = transpile(code, { file, resolveImports, componentExport: baseExport, useDefineForClassFields, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
       if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
         // As @stencil/unplugin's `transpileBaseClass`.

@@ -101,3 +101,24 @@ import { Signal } from './elsewhere';
 export class CmpT { @Signal() count = 0; render() { return <b />; } }`;
   assert.doesNotMatch(transpile(src, { ...options, useDefineForClassFields: true }).code, /Signal\(\)\(CmpT\.prototype/);
 });
+
+test("componentExport: 'stencilrs' (experimental) compiles JSX to hoisted templates and parts", () => {
+  const src = `import { Component, Host, Prop, State, h } from '@stencil/core';
+@Component({ tag: 'cmp-f', encapsulation: { type: 'shadow' } })
+export class CmpF {
+  @Prop() label = 'Hi';
+  @State() items: string[] = [];
+  render() {
+    return <Host class={{ on: true }}><p title={this.label}>{this.label}!</p>{this.items.map((i) => <li key={i}>{i}</li>)}</Host>;
+  }
+}`;
+  const { code, diagnostics } = transpile(src, { file: 'cmp-f.tsx', componentExport: 'stencilrs' });
+  assert.deepEqual(diagnostics, []);
+  assert.match(code, /from "@popcorn245\/stencilrs\/runtime"/);
+  assert.doesNotMatch(code, /@stencil\/core/);
+  assert.match(code, /export class CmpF extends __rs_Base/);
+  assert.match(code, /__rs_template\("<p rs><!--rs-->!<\/p><!--rs-->"/);
+  assert.match(code, /__rs_template\("<li><!--rs--><\/li>"/);
+  assert.match(code, /__rs_t\(__rs_tmpl\d, \[i\], i\)/);
+  assert.match(code, /__rs_define\(CmpF, \{\s*tag: "cmp-f",\s*shadow: true/);
+});

@@ -34,6 +34,8 @@ const trackers = new WeakMap();
 /** instance → Signal.State bumped by every render, so props and @State reach `@Computed()` too */
 const ticks = new WeakMap();
 const PATCHED = Symbol.for('stencilrs.signals.patched');
+// The stencilrs runtime's elements schedule themselves; Stencil's go through its forceUpdate.
+const rerender = (inst) => (inst.__schedule ? inst.__schedule() : forceUpdate(inst));
 
 const tickOf = (inst) => {
   let t = ticks.get(inst);
@@ -85,7 +87,7 @@ const track = (inst, render) => {
     t.queued = true;
     queueMicrotask(() => {
       t.queued = false;
-      if (t.connected) forceUpdate(inst);
+      if (t.connected) rerender(inst);
     });
   });
   trackers.set(inst, t);
@@ -111,17 +113,19 @@ const patch = (proto) => {
       }
     };
   }
-  const connected = proto.connectedCallback;
+  // Own callbacks only: an inherited one is the base class's, which calls the component's.
+  const own = (k) => (Object.prototype.hasOwnProperty.call(proto, k) ? proto[k] : undefined);
+  const connected = own('connectedCallback');
   proto.connectedCallback = function () {
     const t = trackers.get(this);
     if (t && !t.connected) {
       t.connected = true;
       t.watcher.watch(t.comp);
-      forceUpdate(this); // something may have changed while it was away
+      rerender(this); // something may have changed while it was away
     }
     return connected?.call(this);
   };
-  const disconnected = proto.disconnectedCallback;
+  const disconnected = own('disconnectedCallback');
   proto.disconnectedCallback = function () {
     const t = trackers.get(this);
     if (t) {
