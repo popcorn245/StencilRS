@@ -168,6 +168,17 @@ nav, nav-link, popover and modal. Fixture: `parity/fixtures/build/src/components
 - An `async @Method()` with no return annotation, in a full program, has the inferred return type
   `Promise<void>` and Stencil reads its references from that type node: `references` starts with
   `Promise`. (In single-file mode `Promise` does not resolve and there is none, quirk 1.)
+- A method's `references` list first the names of the return type node the checker builds from the
+  type, then those of the whole declaration. A name the printed type lost (an unresolved import in
+  a union with `null` is `any`, an alias that merged into a union, `Array<T>` printed `T[]`) is met
+  only later, in the walk of the declaration, so `Promise<A | null>` is `Promise, <parameters>, A`.
+  An object or function type keeps the annotations it was written with (the node builder reuses
+  them, an index signature excepted), so a member's `A | null` still names `A` there. A written
+  object or function type that cannot be matched to its printed one (members the checker lists in
+  another order, two of one shape naming different things) is left to Stencil. The comparisons of
+  the parity harness compare the order of the keys of `references`. Props and events read the
+  written declaration; a type argument that is a plain reference is added right after its parent,
+  before the references inside the arguments (`Map<X<C>, A>` is `Map, X, A, C`).
 
 ## 18. What `complexType` still leaves to Stencil
 

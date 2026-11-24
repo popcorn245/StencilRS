@@ -1,0 +1,928 @@
+import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+export const ReferenceOrderMembers = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+        this.e0 = __stencil_createEvent(this, "e0", 7);
+        this.e1 = __stencil_createEvent(this, "e1", 7);
+        this.e2 = __stencil_createEvent(this, "e2", 7);
+        this.e3 = __stencil_createEvent(this, "e3", 7);
+        this.e4 = __stencil_createEvent(this, "e4", 7);
+        this.e5 = __stencil_createEvent(this, "e5", 7);
+        this.e6 = __stencil_createEvent(this, "e6", 7);
+        this.e7 = __stencil_createEvent(this, "e7", 7);
+        this.e8 = __stencil_createEvent(this, "e8", 7);
+        this.e9 = __stencil_createEvent(this, "e9", 7);
+        this.e10 = __stencil_createEvent(this, "e10", 7);
+        this.e11 = __stencil_createEvent(this, "e11", 7);
+        this.e12 = __stencil_createEvent(this, "e12", 7);
+    }
+    p0;
+    p1;
+    p2;
+    p3;
+    p4;
+    p5;
+    p6;
+    p7;
+    p8;
+    p9;
+    p10;
+    p11;
+    p12;
+    e0;
+    e1;
+    e2;
+    e3;
+    e4;
+    e5;
+    e6;
+    e7;
+    e8;
+    e9;
+    e10;
+    e11;
+    e12;
+    render() {
+        return h("div", { key: '0' });
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "reference-order-members",
+        "componentClassName": "ReferenceOrderMembers",
+        "elementRef": null,
+        "encapsulation": "none",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "p0",
+                "type": "any",
+                "attribute": "p-0",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "A | null",
+                    "resolved": "any",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p1",
+                "type": "any",
+                "attribute": "p-1",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Map<X<C>, A>",
+                    "resolved": "any",
+                    "references": {
+                        "Map": {
+                            "location": "global",
+                            "id": "global::Map"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p2",
+                "type": "any",
+                "attribute": "p-2",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Map<X<C>, A | null>",
+                    "resolved": "any",
+                    "references": {
+                        "Map": {
+                            "location": "global",
+                            "id": "global::Map"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p3",
+                "type": "any",
+                "attribute": "p-3",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Foo<Bar<C>, A, Baz<B>>",
+                    "resolved": "any",
+                    "references": {
+                        "Foo": {
+                            "location": "global",
+                            "id": "global::Foo"
+                        },
+                        "Bar": {
+                            "location": "global",
+                            "id": "global::Bar"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "Baz": {
+                            "location": "global",
+                            "id": "global::Baz"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p4",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "{ a: A | null; b: C }",
+                    "resolved": "undefined | { a: any; b: C; }",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p5",
+                "type": "any",
+                "attribute": "p-5",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Array<A | null>",
+                    "resolved": "any",
+                    "references": {
+                        "Array": {
+                            "location": "global",
+                            "id": "global::Array"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p6",
+                "type": "any",
+                "attribute": "p-6",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Local | A",
+                    "resolved": "any",
+                    "references": {
+                        "Local": {
+                            "location": "global",
+                            "id": "global::Local"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p7",
+                "type": "any",
+                "attribute": "p-7",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "L",
+                    "resolved": "any",
+                    "references": {
+                        "L": {
+                            "location": "global",
+                            "id": "global::L"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p8",
+                "type": "any",
+                "attribute": "p-8",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Record<string, X<A>>",
+                    "resolved": "any",
+                    "references": {
+                        "Record": {
+                            "location": "global",
+                            "id": "global::Record"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p9",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "(x: A | null) => C",
+                    "resolved": "((x: any) => C) | undefined",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p10",
+                "type": "any",
+                "attribute": "p-1-0",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "X<A, X<B>>",
+                    "resolved": "any",
+                    "references": {
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p11",
+                "type": "any",
+                "attribute": "p-1-1",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Promise<X<C>>",
+                    "resolved": "any",
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "p12",
+                "type": "any",
+                "attribute": "p-1-2",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "A[] | B",
+                    "resolved": "any",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [],
+        "listeners": [],
+        "events": [{
+                "name": "e0",
+                "method": "e0",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "A | null",
+                    "resolved": "any",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e1",
+                "method": "e1",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Map<X<C>, A>",
+                    "resolved": "A | C",
+                    "references": {
+                        "Map": {
+                            "location": "global",
+                            "id": "global::Map"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e2",
+                "method": "e2",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Map<X<C>, A | null>",
+                    "resolved": "C | any",
+                    "references": {
+                        "Map": {
+                            "location": "global",
+                            "id": "global::Map"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e3",
+                "method": "e3",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Foo<Bar<C>, A, Baz<B>>",
+                    "resolved": "A | B | C",
+                    "references": {
+                        "Foo": {
+                            "location": "global",
+                            "id": "global::Foo"
+                        },
+                        "Bar": {
+                            "location": "global",
+                            "id": "global::Bar"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "Baz": {
+                            "location": "global",
+                            "id": "global::Baz"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e4",
+                "method": "e4",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "{ a: A | null; b: C }",
+                    "resolved": "{ a: any; b: C; }",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e5",
+                "method": "e5",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Array<A | null>",
+                    "resolved": "any",
+                    "references": {
+                        "Array": {
+                            "location": "global",
+                            "id": "global::Array"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e6",
+                "method": "e6",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Local | A",
+                    "resolved": "any",
+                    "references": {
+                        "Local": {
+                            "location": "global",
+                            "id": "global::Local"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e7",
+                "method": "e7",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "L",
+                    "resolved": "any",
+                    "references": {
+                        "L": {
+                            "location": "global",
+                            "id": "global::L"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e8",
+                "method": "e8",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Record<string, X<A>>",
+                    "resolved": "A | string",
+                    "references": {
+                        "Record": {
+                            "location": "global",
+                            "id": "global::Record"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e9",
+                "method": "e9",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "(x: A | null) => C",
+                    "resolved": "(x: any) => C",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e10",
+                "method": "e10",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "X<A, X<B>>",
+                    "resolved": "A | B",
+                    "references": {
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e11",
+                "method": "e11",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "Promise<X<C>>",
+                    "resolved": "C",
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "X": {
+                            "location": "global",
+                            "id": "global::X"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "e12",
+                "method": "e12",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "A[] | B",
+                    "resolved": "any",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    }
+                },
+                "internal": false
+            }],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": true,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": false,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": false,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": false,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": false,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": false,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key"],
+        "htmlTagNames": ["div"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=reference-order-members.js.map

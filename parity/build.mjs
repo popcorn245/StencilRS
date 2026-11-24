@@ -110,7 +110,12 @@ const snapshot = async () => {
 const diff = (a, b, path = '') => {
   if (JSON.stringify(a) === JSON.stringify(b)) return [];
   if (a && b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)) {
-    return [...new Set([...Object.keys(a), ...Object.keys(b)])].flatMap((k) => diff(a[k], b[k], path ? `${path}.${k}` : k));
+    const leaves = [...new Set([...Object.keys(a), ...Object.keys(b)])].flatMap((k) => diff(a[k], b[k], path ? `${path}.${k}` : k));
+    // `references` objects are written in the order Stencil meets the names: compare the order of their keys too.
+    if (!leaves.length && !Array.isArray(a) && /(^|\.)references$/.test(path) && Object.keys(a).join('\0') !== Object.keys(b).join('\0')) {
+      return [{ path: `${path} (key order)`, expected: Object.keys(a), actual: Object.keys(b) }];
+    }
+    return leaves;
   }
   return [{ path, expected: a, actual: b }];
 };
