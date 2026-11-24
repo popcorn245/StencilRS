@@ -6,5 +6,10 @@
  */
 export declare function createRenderer(
   load: () => Promise<unknown>,
-  options?: { url?: string; settleRounds?: number },
-): Promise<(html: string) => Promise<string>>;
+  options?: {
+    url?: string;
+    settleRounds?: number;
+    /** Write each component's state so components resume without rendering on load (default true). */
+    resumable?: boolean;
+  },
+): Promise<(html: string, options?: { resumable?: boolean }) => Promise<string>>;

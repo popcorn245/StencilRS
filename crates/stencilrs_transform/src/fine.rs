@@ -147,7 +147,8 @@ pub fn generate(
         if let Some(cmp) = cmp {
             contexts.push(JsxContext {
                 span: class.span,
-                scope: (cmp.encapsulation == Encapsulation::Scoped).then(|| format!("sc-{}", cmp.tag_name)),
+                // The scope classes only serve the component's own scoped CSS: none without styles.
+                scope: (cmp.encapsulation == Encapsulation::Scoped && !styles_of(cmp).is_empty()).then(|| format!("sc-{}", cmp.tag_name)),
                 emulate_slots: cmp.encapsulation != Encapsulation::Shadow,
             });
         }

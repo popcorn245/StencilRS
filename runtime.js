@@ -68,7 +68,7 @@ const prepare = (tmpl) => {
 // Every node a render creates and later needs (an instance's first and top-level nodes, the
 // nodes its parts bind to, the text and markers of holes and lists) is "claimed" in creation
 // order with a number per host. On the server the number goes on the node and the serializer
-// writes it out (`rs-n="<host>.<n>"`, or a `<!--rs ...-->` comment for text and comments). On
+// writes it out (`r:n="<host>.<n>"`, or a `<!--^...-->` comment for text and comments). On
 // the client, the first render of a server-rendered host looks each claimed node up by its
 // number instead of creating it, so the server's DOM is kept as it is. Any disagreement (a
 // missing number, another tag) throws MISMATCH and the host renders again from scratch.
@@ -96,7 +96,7 @@ const instantiate = (tmpl, host) => {
   if (adopting(host)) return adoptInstance(tmpl, host);
   const inst = cloneInstance(tmpl, host);
   if (SERVER && host) {
-    for (const n of inst.top) claim(host, 0, () => n);
+    for (const n of inst.top) if (n !== inst.start) claim(host, 0, () => n);
     for (const p of inst.marked) claim(host, 0, () => p);
   }
   inst.marked = null;
@@ -104,9 +104,10 @@ const instantiate = (tmpl, host) => {
 };
 
 const adoptInstance = (tmpl, host) => {
-  const top = tmpl.topShape.map(() => null);
-  const start = claim(host, 3, null);
-  for (let i = 0; i < top.length; i++) top[i] = claim(host, tmpl.topShape[i], null);
+  const top = tmpl.topShape.map((shape) => claim(host, shape, null));
+  // The range's empty first node is not worth a mark: a new one goes where it was.
+  const start = document.createTextNode('');
+  ins(top[0].parentNode, start, top[0]);
   top.unshift(start);
   const marked = tmpl.markShape.map((shape) => claim(host, shape, null));
   const parts = tmpl.parts.map(([m, type, name]) => makePart(type, marked[m], name, marked[m].namespaceURI === SVG_NS, host));
@@ -232,7 +233,18 @@ const makePart = (type, node, name, svg, host) => {
   switch (type) {
     case 0: return new NodePart(node, host);
     case 1: return new AttrPart(node, name, svg);
-    case 2: return new EventPart(node, name);
+    case 2: {
+      const p = new EventPart(node, name);
+      // The server lists the events each component listens to, for resuming (see `resumable`).
+      // and, on each element, what it listens to and for whom (`r:e`), so an event wakes only
+      // the component whose handler it reaches.
+      if (SERVER && host) {
+        (host.__evs ||= new Set()).add(p.type);
+        (node.__rse ||= new Set()).add(p.type);
+        node.__rseh = host;
+      }
+      return p;
+    }
     case 3: return new ClassPart(node);
     case 4: return new StylePart(node);
     case 5: return new RefPart(node);
@@ -648,50 +660,56 @@ const injectStyle = (root, Cstr, style) => {
   into.prepend(el);
 };
 
-/** `rs t n=1.3,1.7 l=2 h` → { t: true, n: '1.3,1.7', l: '2', h: true } */
-const tokens = (data) => {
-  const o = {};
-  for (const p of data.split(' ')) {
-    const i = p.indexOf('=');
-    if (i < 0) o[p] = true;
-    else o[p.slice(0, i)] = p.slice(i + 1);
-  }
-  return o;
+/**
+ * A hydration mark in a comment: `^` then `t` when it stands for the text node after it, the
+ * claim numbers (`1.3,1.7`), `@<host>` for a logical child of that host, `!` when hidden.
+ * `^t1.9` · `^1.3` · `^t@2` · `^1.4,1.5@2`
+ */
+const parseMark = (d) => {
+  const t = d.charCodeAt(1) === 116; // t
+  let end = d.length;
+  const h = d.charCodeAt(end - 1) === 33; // !
+  if (h) end--;
+  const at = d.indexOf('@');
+  const ids = d.slice(t ? 2 : 1, at < 0 ? end : at);
+  return { t, n: ids || null, l: at < 0 ? null : d.slice(at + 1, end), h };
 };
 
 /**
  * Reads the hydration marks the server left for host `id` (see runtime-server.js): the claimed
- * nodes by number, and the host's logical children (`l=`), in document order. A `<!--rs t ...-->`
- * comment stands for the text node after it (an empty one is made when the text was empty) and
- * is removed, whichever host gets to it first.
+ * nodes by number, and the host's logical children, in document order. A `<!--^t...-->` comment
+ * stands for the text node after it (an empty one is made when the text was empty) and is
+ * removed, whichever host gets to it first. Another component's element is not entered unless
+ * it holds slotted content (`r:s`), since none of this host's nodes can be inside otherwise.
  */
 const scan = (root, id) => {
   const map = new Map();
   const logical = [];
   const pre = `${id}.`;
-  const read = (n, tok) => {
-    if (tok.n) for (const k of tok.n.split(',')) if (k.startsWith(pre)) map.set(+k.slice(pre.length), n);
-    if (tok.l === id) logical.push(n);
+  const read = (n, ids, l) => {
+    if (ids) for (const k of ids.split(',')) if (k.startsWith(pre)) map.set(+k.slice(pre.length), n);
+    if (l === id) logical.push(n);
   };
   const visit = (parent) => {
     for (let n = parent.firstChild; n; n = n.nextSibling) {
       if (n.nodeType === 1) {
-        const nn = n.getAttribute('rs-n');
-        const l = n.getAttribute('rs-l');
-        if (nn !== null || l !== null) read(n, { n: nn, l });
-        visit(n);
-      } else if (n.nodeType === 8 && n.data.startsWith('rs ')) {
-        const tok = tokens(n.data);
-        if (tok.t) {
+        const ids = n.getAttribute('r:n');
+        const l = n.getAttribute('r:l');
+        if (ids !== null || l !== null) read(n, ids, l);
+        const other = n.getAttribute('s-rs');
+        if (other === null || other === id || n.hasAttribute('r:s')) visit(n);
+      } else if (n.nodeType === 8 && n.data.charCodeAt(0) === 94 /* ^ */) {
+        const m = parseMark(n.data);
+        if (m.t) {
           let text = n.nextSibling;
-          if (!text || text.nodeType !== 3 || text.__rsTok !== undefined) text = ins(parent, document.createTextNode(''), n.nextSibling);
-          text.__rsTok = tok;
+          if (!text || text.nodeType !== 3 || text.__rsMark !== undefined) text = ins(parent, document.createTextNode(''), n.nextSibling);
+          text.__rsMark = m;
           detach(n);
           n = text;
         }
-        read(n, tok);
-      } else if (n.nodeType === 3 && n.__rsTok) {
-        read(n, n.__rsTok);
+        read(n, m.n, m.l);
+      } else if (n.nodeType === 3 && n.__rsMark) {
+        read(n, n.__rsMark.n, n.__rsMark.l);
       }
     }
   };
@@ -699,14 +717,15 @@ const scan = (root, id) => {
   return { map, logical };
 };
 
+const MARK_ATTRS = ['r:n', 'r:e'];
 /** After hydration: the host's own marks go. */
 const unmark = (map, logical) => {
-  for (const n of map.values()) if (n.nodeType === 1) n.removeAttribute('rs-n');
+  for (const n of map.values()) if (n.nodeType === 1) for (const a of MARK_ATTRS) n.removeAttribute(a);
   for (const n of logical) {
     if (n.nodeType !== 1) continue;
-    n.removeAttribute('rs-l');
-    if (n.hasAttribute('rs-h')) {
-      n.removeAttribute('rs-h');
+    n.removeAttribute('r:l');
+    if (n.hasAttribute('r:h')) {
+      n.removeAttribute('r:h');
       if (n.hidden) n.__hid = true;
     }
   }
@@ -725,13 +744,79 @@ const rehydrate = (host, shadow, id) => {
   const { logical } = scan(host, id);
   for (const n of logical) {
     if (n.nodeType !== 1) continue;
-    n.removeAttribute('rs-l');
-    if (n.hasAttribute('rs-h')) {
-      n.removeAttribute('rs-h');
+    n.removeAttribute('r:l');
+    if (n.hasAttribute('r:h')) {
+      n.removeAttribute('r:h');
       n.hidden = false;
     }
   }
   host.replaceChildren(...logical);
+};
+
+// ---------------------------------------------------------------------------------------------
+// Resuming (lazy hydration)
+//
+// A server-rendered page carries each component's state (`<script type="rs/state">`, see
+// runtime-server.js). A component that can wait doesn't render on load: it takes its state from
+// there and stays as the server left it. It hydrates (in place, see `__hydrate`) when something
+// needs it: an event inside it (one capture listener per event type on the document hydrates
+// every waiting component on the event's path before the event reaches them, so nothing is
+// replayed), a property or state change, `forceUpdate`, `componentOnReady`, or an event a
+// child emits to it. A component waits only if nothing in it has to run on load: no
+// `componentWillLoad`/`componentDidLoad`/`connectedCallback`, no window or document listeners,
+// no signals, and no listeners for DOM events the document doesn't delegate.
+
+const DELEGATED = new Set(['click', 'dblclick', 'auxclick', 'contextmenu', 'input', 'change', 'beforeinput', 'submit', 'reset', 'keydown', 'keyup', 'keypress', 'pointerdown', 'pointerup', 'pointerover', 'pointerenter', 'pointerleave', 'pointerout', 'mousedown', 'mouseup', 'mouseover', 'mouseenter', 'mouseleave', 'mouseout', 'touchstart', 'touchend', 'focus', 'blur', 'focusin', 'focusout', 'paste', 'copy', 'cut', 'dragstart', 'drop']);
+const SIGNALS = Symbol.for('stencilrs.signals.patched');
+let pageState;
+const stateOf = (id) => {
+  if (pageState === undefined) {
+    const el = document.querySelector('script[type="rs/state"]');
+    pageState = el ? JSON.parse(el.textContent) : null;
+  }
+  return pageState && pageState[id];
+};
+const canWait = new WeakMap();
+const classCanWait = (Cstr) => {
+  let ok = canWait.get(Cstr);
+  if (ok === undefined) {
+    const p = Cstr.prototype;
+    const meta = Cstr.__meta;
+    ok = !p.componentWillLoad && !p.componentDidLoad && !p.__connected && !p[SIGNALS] && !meta.listeners.some(([, , target]) => target);
+    canWait.set(Cstr, ok);
+  }
+  return ok;
+};
+const isDomEvent = (type) => `on${type}` in HTMLElement.prototype;
+let delegating = false;
+/** Waiting components by their server id. */
+const waiting = new Map();
+/** Wakes the components whose handlers for `type` sit on `path` (innermost first), outermost first. */
+const wakeFor = (type, path) => {
+  let up = null;
+  for (const n of path) {
+    if (n.nodeType !== 1) continue;
+    const a = n.getAttribute('r:e');
+    if (a === null) continue;
+    const i = a.indexOf(':');
+    if (!a.slice(i + 1).split(',').includes(type)) continue;
+    const host = waiting.get(a.slice(0, i));
+    if (host) (up ||= []).push(host);
+  }
+  if (up) for (let i = up.length - 1; i >= 0; i--) up[i].__resume();
+};
+const wake = (e) => wakeFor(e.type, e.composedPath());
+const delegate = () => {
+  if (delegating) return;
+  delegating = true;
+  for (const type of DELEGATED) document.addEventListener(type, wake, { capture: true, passive: true });
+};
+/** Wakes the waiting components with a handler for an event `el` is about to dispatch. */
+const wakeAncestors = (el, type) => {
+  if (!waiting.size) return;
+  const path = [];
+  for (let n = el; n; n = n.parentNode || n.host) path.push(n);
+  wakeFor(type, path);
 };
 
 const HAS_LOADED = 1, QUEUED = 2, RENDERING = 4, CONNECTED_ONCE = 8, REFLECTING = 16, DIRTY = 32;
@@ -759,7 +844,24 @@ export class Base extends HTMLElement {
     track(this);
   }
   componentOnReady() {
+    this.__resume();
     return this.__onReady;
+  }
+  /** The server's state for this component, when it can wait to hydrate (see Resuming). */
+  __resumable(meta) {
+    if (SERVER) return null;
+    const id = this.getAttribute('s-rs');
+    if (id === null || !classCanWait(this.constructor)) return null;
+    const entry = stateOf(id);
+    if (!entry) return null;
+    if (entry.e) for (const type of entry.e) if (!DELEGATED.has(type) && isDomEvent(type)) return null;
+    return entry.s || {};
+  }
+  __resume() {
+    if (!this.__lazy) return;
+    this.__lazy = false;
+    waiting.delete(this.getAttribute('s-rs'));
+    this.__load();
   }
   /** A logical child, from another component's render or the page: into the slot it names. */
   __adopt(node, ref) {
@@ -826,6 +928,8 @@ export class Base extends HTMLElement {
     const meta = this.constructor.__meta;
     if (!(this.__f & CONNECTED_ONCE)) {
       this.__f |= CONNECTED_ONCE;
+      const resumed = this.__resumable(meta);
+      if (resumed) for (const k in resumed) this.__v.set(k, resumed[k]);
       if (this.__early) {
         for (const [k, v] of this.__early) this[k] = v;
         this.__early = null;
@@ -836,7 +940,13 @@ export class Base extends HTMLElement {
         t.addEventListener(ev, (e) => this[method](e));
       }
       this.__connected?.();
-      this.__load();
+      if (resumed) {
+        this.__lazy = true;
+        waiting.set(this.getAttribute('s-rs'), this);
+        delegate();
+      } else {
+        this.__load();
+      }
     } else {
       this.__connected?.();
     }
@@ -885,7 +995,7 @@ export class Base extends HTMLElement {
     if (this.__f & DIRTY) this.__schedule();
     // As Stencil: a component finishes loading after the components it rendered.
     const pending = [];
-    for (const el of this.__target.querySelectorAll('*')) if (el instanceof Base && !(el.__f & HAS_LOADED)) pending.push(el.__onReady);
+    for (const el of this.__target.querySelectorAll('*')) if (el instanceof Base && !(el.__f & HAS_LOADED) && !el.__lazy) pending.push(el.__onReady);
     if (pending.length) await Promise.all(pending);
     this.classList.add('hydrated');
     try {
@@ -933,6 +1043,8 @@ export class Base extends HTMLElement {
       this.__adoptMap = null;
     }
     unmark(map, logical);
+    this.removeAttribute('r:e');
+    this.removeAttribute('r:s');
     this.__f |= HAS_LOADED;
     return true;
   }
@@ -987,6 +1099,7 @@ export class Base extends HTMLElement {
     }
   }
   __schedule() {
+    if (this.__lazy) return this.__resume();
     if (!(this.__f & HAS_LOADED)) {
       this.__f |= DIRTY;
       return;
@@ -1113,6 +1226,7 @@ export const define = (Cstr, meta, register = true) => {
         if (flags & PROP) value = parseProp(value, flags);
         const old = this.__v.get(name);
         if (old === value || (Number.isNaN(old) && Number.isNaN(value))) return;
+        if (this.__lazy) this.__resume(); // it renders what the server did, then this change
         this.__v.set(name, value);
         // Attributes can't be written from a constructor: before the first connect, reflecting waits.
         if (reflects && this.__f & CONNECTED_ONCE) reflect(this, name, value);
@@ -1171,6 +1285,7 @@ const hotSwap = (Old, New, meta) => {
 /** Stencil's `createEvent`: `this.changed.emit(detail)`. */
 export const createEvent = (el, name, flags) => ({
   emit: (detail) => {
+    if (!SERVER) wakeAncestors(el, name);
     const ev = new CustomEvent(name, { bubbles: !!(flags & 4), composed: !!(flags & 2), cancelable: !!(flags & 1), detail });
     el.dispatchEvent(ev);
     return ev;

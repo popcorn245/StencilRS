@@ -11,26 +11,27 @@ import { compiledSources, compileFixtures } from './runtime-ssr-fixture.mjs';
 const render = await createRenderer(compileFixtures());
 const PAGE = '<ssr-card heading="Hi"><b slot="title">T</b>body <i>text</i></ssr-card>';
 
-const strip = (html) => html.replace(/<!--rs [^>]*-->/g, '').replace(/ rs-n="[^"]*"/g, '');
+const strip = (html) => html.replace(/<!--\^[^>]*-->/g, '').replace(/ r:[nes](="[^"]*")?/g, '').replace(/<script type="rs\/state">.*<\/script>$/, '');
 
 test('server: declarative shadow DOM, inlined styles, slots filled', async () => {
   const html = strip(await render(PAGE));
   assert.match(html, /^<style sty-id="ssr-card">\.card\{border:1px solid\}<\/style>/);
   assert.match(html, /<ssr-card heading="Hi" class="sc-ssr-card-h hydrated" s-rs="1">/);
-  assert.match(html, /<header class="sc-ssr-card sc-ssr-card-s"><b slot="title" rs-l="1">T<\/b><\/header>/);
-  assert.match(html, /<main class="sc-ssr-card sc-ssr-card-s">body <i rs-l="1">text<\/i><\/main>/);
+  assert.match(html, /<header class="sc-ssr-card sc-ssr-card-s"><b slot="title" r:l="1">T<\/b><\/header>/);
+  assert.match(html, /<main class="sc-ssr-card sc-ssr-card-s">body <i r:l="1">text<\/i><\/main>/);
   assert.match(html, /<ssr-badge class="sc-ssr-card hydrated" s-rs="2"><template shadowrootmode="open"><style sty-id="ssr-badge">:host\{color:red\}<\/style><span class="n">0<\/span><\/template><\/ssr-badge>/);
 });
 
 test('server: every node a render claimed is numbered for hydration', async () => {
   const html = await render(PAGE);
-  assert.match(html, /<span class="n" rs-n="2\.2"><!--rs t n=2\.4-->0<!--rs n=2\.3--><\/span>/);
-  assert.match(html, /<main class="sc-ssr-card sc-ssr-card-s"><!--rs t l=1-->body <i rs-l="1">text<\/i><!--rs n=1\.7--><\/main>/);
+  assert.match(html, /<span class="n" r:n="2\.1"><!--\^t2\.3-->0<!--\^2\.2--><\/span>/);
+  assert.match(html, /<main class="sc-ssr-card sc-ssr-card-s"><!--\^t@1-->body <i r:l="1">text<\/i><!--\^1\.6--><\/main>/);
+  assert.match(html, /<button class="sc-ssr-card" r:n="1\.5" r:e="1:click">\+<\/button>/);
 });
 
 test('server: renders are independent', async () => {
   await render(PAGE);
-  const html = strip(await render('<ssr-badge count="3"></ssr-badge>'));
+  const html = strip(await render('<ssr-badge count="3"></ssr-badge>', { resumable: false }));
   assert.equal(html, '<ssr-badge count="3" class="hydrated" s-rs="1"><template shadowrootmode="open"><style sty-id="ssr-badge">:host{color:red}</style><span class="n">3</span></template></ssr-badge>');
 });
 
@@ -72,7 +73,7 @@ async function hydrateInChromium(html) {
       cards: card.querySelectorAll('.card').length,
       title: card.querySelector('header').textContent,
       main: card.querySelector('main').textContent,
-      marks: document.querySelectorAll('[s-rs],[rs-l],[rs-n]').length + badge.shadowRoot.querySelectorAll('[rs-n]').length,
+      marks: document.querySelectorAll('[s-rs],[r\\:l],[r\\:n],[r\\:e],[r\\:s]').length + badge.shadowRoot.querySelectorAll('[r\\:n]').length,
       styles: document.querySelectorAll('style[sty-id="ssr-card"]').length + badge.shadowRoot.querySelectorAll('style').length,
       count: badge.shadowRoot.querySelector('.n').textContent,
     };
@@ -89,7 +90,7 @@ async function hydrateInChromium(html) {
 const chromiumOnly = { skip: !chromium && 'playwright not installed' };
 
 test('client: hydrates in place, keeping every server node, and takes over', chromiumOnly, async () => {
-  const state = await hydrateInChromium(await render(PAGE));
+  const state = await hydrateInChromium(await render(PAGE, { resumable: false }));
   assert.deepEqual(state, {
     kept: [true, true, true, true, true, true],
     cards: 1,
@@ -105,7 +106,7 @@ test('client: hydrates in place, keeping every server node, and takes over', chr
 
 test('client: a mismatch falls back to rendering again, and still takes over', chromiumOnly, async () => {
   // Drop one claimed number: the card can't find its button and renders from scratch.
-  const html = (await render(PAGE)).replace(/<button([^>]*) rs-n="1\.6"/, '<button$1');
+  const html = (await render(PAGE, { resumable: false })).replace(/<button([^>]*) r:n="1\.5"/, '<button$1');
   const state = await hydrateInChromium(html);
   assert.deepEqual(state.kept, [false, false, true, true, false, false]); // only the slotted children survive
   assert.equal(state.cards, 1);
@@ -116,7 +117,7 @@ test('client: a mismatch falls back to rendering again, and still takes over', c
 });
 
 test('client: a component rendering into another one\'s slots hydrates in place, lists included', chromiumOnly, async () => {
-  const html = await render('<ssr-list items="a,b,c"></ssr-list>');
+  const html = await render('<ssr-list items="a,b,c"></ssr-list>', { resumable: false });
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -147,6 +148,50 @@ test('client: a component rendering into another one\'s slots hydrates in place,
       cards: document.querySelectorAll('.card').length,
     }));
     assert.deepEqual(after, { lis: ['c', 'a'], sameA: true, title: '2 items', cards: 1 });
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('server: resumable pages carry each component\'s state and events', async () => {
+  const html = await render(PAGE);
+  const state = JSON.parse(html.match(/<script type="rs\/state">(.*)<\/script>$/)[1]);
+  assert.deepEqual(state, { 1: { s: { heading: 'Hi' }, e: ['click'] }, 2: {} });
+});
+
+test('client: resuming hydrates nothing on load, then only what an event reaches', chromiumOnly, async () => {
+  const html = await render('<ssr-list items="a,b,c"></ssr-list><ssr-card heading="Other"></ssr-card>');
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    const files = { '/runtime.js': readFileSync(new URL('../runtime.js', import.meta.url), 'utf8') };
+    const sources = compiledSources('/runtime.js');
+    for (const tag in sources) files[`/${tag}.js`] = sources[tag];
+    await page.route('http://rs.test/**', (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === '/') return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head></head><body>${html}</body></html>` });
+      return route.fulfill({ contentType: 'text/javascript', body: files[path] ?? '' });
+    });
+    await page.goto('http://rs.test/');
+    await page.evaluate(() => (window.before = [...document.querySelectorAll('li')]));
+    await page.evaluate(() => Promise.all(['/ssr-badge.js', '/ssr-card.js', '/ssr-list.js'].map((f) => import(f))));
+    const waiting = () => page.evaluate(() => [...document.querySelectorAll('ssr-list, ssr-card, ssr-badge')].map((e) => `${e.localName}:${e.__lazy ? 'waiting' : 'awake'}`));
+    assert.deepEqual(await waiting(), ['ssr-list:waiting', 'ssr-card:waiting', 'ssr-badge:waiting', 'ssr-card:waiting', 'ssr-badge:waiting']);
+    // State came from the page: no render needed to read it.
+    assert.equal(await page.evaluate(() => document.querySelectorAll('ssr-card')[1].heading), 'Other');
+    // A click in the second card wakes that card (and nothing else) before its handler runs.
+    await page.click('ssr-card:nth-of-type(2) button, body > ssr-card button');
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 10)));
+    assert.deepEqual(await waiting(), ['ssr-list:waiting', 'ssr-card:waiting', 'ssr-badge:waiting', 'ssr-card:awake', 'ssr-badge:awake']);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('ssr-badge')[1].shadowRoot.querySelector('.n').textContent), '1');
+    // A property change wakes a component too; the nodes are still the server's.
+    await page.evaluate(() => (document.querySelector('ssr-list').items = 'c,a'));
+    await page.evaluate(() => new Promise((r) => setTimeout(r, 10)));
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('ssr-list li')].map((li) => li.textContent)), ['c', 'a']);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('ssr-list li')[1] === window.before[0]), true);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();
