@@ -44,6 +44,10 @@
     "./ssr": {
       "types": "./ssr.d.ts",
       "default": "./ssr.js"
+    },
+    "./signals": {
+      "types": "./signals.d.ts",
+      "default": "./signals.js"
     }
   },
   "files": [
@@ -64,7 +68,9 @@
     "ssr-serializer.js",
     "ssr-patches.js",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "signals.js",
+    "signals.d.ts"
   ],
   "publishConfig": {
     "access": "public"
@@ -84,6 +90,7 @@
   "peerDependencies": {
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
+    "signal-polyfill": "^0.2.3",
     "vite": ">=8"
   },
   "devDependencies": {
@@ -93,6 +100,7 @@
     "@stencil/unplugin": "5.0.0-beta.25",
     "sass": "^1.99.0",
     "semantic-release": "^25.0.9",
+    "signal-polyfill": "^0.2.3",
     "vite": "8.3.4"
   },
   "release": {
@@ -118,5 +126,10 @@
         }
       ]
     ]
+  },
+  "peerDependenciesMeta": {
+    "signal-polyfill": {
+      "optional": true
+    }
   }
 }

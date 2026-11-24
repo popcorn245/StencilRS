@@ -30,6 +30,7 @@
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
@@ -52,6 +53,10 @@ const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
 const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
+// `@popcorn245/stencilrs/signals` (experimental). Its own imports resolve from the project root, so a
+// linked or nested copy of this package still shares the project's Stencil runtime and polyfill.
+const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
+const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
 // `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
 // watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
@@ -502,6 +507,10 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      if (importer === SIGNALS_FILE && SIGNALS_PEERS.has(id)) {
+        importer = join(root, 'index.js');
+        if (id !== '@stencil/core' || ssr) return this.resolve(id, importer, { skipSelf: true });
+      }
       // As @stencil/unplugin: one platform instance for the whole test file.
       if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
       // A file that is not a component (a util, a global script) importing `getMode`, `setMode`, `writeTask`,

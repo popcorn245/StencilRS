@@ -52,6 +52,8 @@ use crate::scope_css::{scope_css, scope_id};
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 /// What `ComponentExport::Ssr` imports the runtime from (`STENCIL_INTERNAL_SSR_PLATFORM_ID`).
 pub const SSR_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/server";
+/// The module `@Signal()` comes from (experimental; see `signals.js`).
+pub const SIGNALS_MODULE: &str = "@popcorn245/stencilrs/signals";
 
 #[derive(Debug, Clone)]
 pub enum Jsx {
@@ -253,6 +255,7 @@ fn generate_pass(
         .iter()
         .map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned()))
         .collect();
+    let signal_decorator = signal_decorator_local(program);
     let component_decorator = aliases
         .get("Component")
         .cloned()
@@ -441,6 +444,8 @@ fn generate_pass(
         let mut element_replaced = false;
         // `useDefineForClassFields: false`: instance field initializers, to run in the constructor.
         let mut field_assignments: Vec<String> = Vec::new();
+        // `@Signal()` fields, applied after the class as a legacy property decorator would be.
+        let mut signal_calls: Vec<String> = Vec::new();
         let mut ctor: Option<&MethodDefinition> = None;
         let mut connected: Option<&MethodDefinition> = None;
         for el in &class.body.body {
@@ -456,6 +461,33 @@ fn generate_pass(
                 }
                 _ => continue,
             };
+            // `@Signal()` (experimental): the field becomes a constructor assignment whatever
+            // `useDefineForClassFields` says (a class field would shadow the accessor the
+            // decorator defines on the prototype), and the decorator is called after the class.
+            if let (ClassElement::PropertyDefinition(p), Some(sig), Some(field)) =
+                (el, signal_decorator.as_deref(), key_name.as_deref())
+            {
+                let sig_decorators: Vec<&Decorator> = p
+                    .decorators
+                    .iter()
+                    .filter(|d| decorator_name(d) == Some(sig))
+                    .collect();
+                if !sig_decorators.is_empty() && !p.r#static && !p.computed {
+                    for d in sig_decorators {
+                        signal_calls.push(format!(
+                            "{}({name}.prototype, {});",
+                            text(d.expression.span()),
+                            json(field)
+                        ));
+                    }
+                    ed.remove(p.span.start, p.span.end);
+                    if let Some(value) = &p.value {
+                        field_assignments
+                            .push(format!("this[{}] = {};", json(field), text(value.span())));
+                    }
+                    continue;
+                }
+            }
             for d in decorators.iter().filter(|d| {
                 decorator_name(d).is_some_and(|n| remove_decorators.iter().any(|r| r == n))
             }) {
@@ -517,6 +549,10 @@ fn generate_pass(
                 }
                 _ => {}
             }
+        }
+
+        if !signal_calls.is_empty() {
+            ed.insert(stmt_span.end, format!("\n{}", signal_calls.join("\n")));
         }
 
         // `updateLazyComponentConstructor`
@@ -891,6 +927,26 @@ fn generate_pass(
 
 fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
     decorators.iter().any(|d| decorator_name(d) == Some(name))
+}
+
+/// The local name `Signal` is imported as from [`SIGNALS_MODULE`], if it is.
+fn signal_decorator_local(program: &Program) -> Option<String> {
+    program.body.iter().find_map(|stmt| {
+        let Statement::ImportDeclaration(imp) = stmt else {
+            return None;
+        };
+        if imp.source.value.as_str() != SIGNALS_MODULE || imp.import_kind.is_type() {
+            return None;
+        }
+        imp.specifiers.iter().flatten().find_map(|s| match s {
+            ImportDeclarationSpecifier::ImportSpecifier(s)
+                if s.imported.name() == "Signal" && !s.import_kind.is_type() =>
+            {
+                Some(s.local.name.to_string())
+            }
+            _ => None,
+        })
+    })
 }
 
 fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {

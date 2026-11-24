@@ -73,3 +73,31 @@ export class CmpF {
   assert.match(dflt, /^\s*mode = "md";/m);
   assert.doesNotMatch(dflt, /this\.mode = "md"/);
 });
+
+test('@Signal() (experimental): a constructor assignment and a decorator call after the class, in every output', () => {
+  const src = `import { Component, h } from '@stencil/core';
+import { Signal as S } from '@popcorn245/stencilrs/signals';
+@Component({ tag: 'cmp-s' })
+export class CmpS {
+  @S({ equals: Object.is }) count = 0;
+  @S() later: number;
+  render() { return <b>{this.count}</b>; }
+}`;
+  for (const componentExport of ['customelement', 'lazy', 'ssr']) {
+    for (const useDefineForClassFields of [false, true]) {
+      const { code, diagnostics } = transpile(src, { ...options, componentExport, useDefineForClassFields });
+      assert.deepEqual(diagnostics, []);
+      assert.match(code, /this\["count"\] = 0;/, `${componentExport}/${useDefineForClassFields}`);
+      assert.doesNotMatch(code, /@S\(|^\s*count = 0;|^\s*later;/m);
+      assert.match(code, /\};?\s*S\(\{ equals: Object\.is \}\)\(CmpS\.prototype, "count"\);\nS\(\)\(CmpS\.prototype, "later"\);/);
+    }
+  }
+});
+
+test('a decorator named Signal from anywhere else is left alone', () => {
+  const src = `import { Component, h } from '@stencil/core';
+import { Signal } from './elsewhere';
+@Component({ tag: 'cmp-t' })
+export class CmpT { @Signal() count = 0; render() { return <b />; } }`;
+  assert.doesNotMatch(transpile(src, { ...options, useDefineForClassFields: true }).code, /Signal\(\)\(CmpT\.prototype/);
+});
