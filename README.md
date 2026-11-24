@@ -155,8 +155,8 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
 - `complexType` for types that need the checker: `keyof` of anything but an object literal, a
   `const` object or an alias of those, `typeof` in an annotation, mapped and conditional types,
-  intersections with a union, `any`, literal or `{}` member (the checker distributes or collapses
-  those), return types inferred from the body, inferred object types, types from packages or
+  intersections with a `null`, `any`, literal or `{}` member (the checker collapses those; an
+  intersection with a union of objects is distributed), return types inferred from the body, inferred object types, types from packages or
   tsconfig `paths`, types Stencil generates, and unions whose member order depends on the whole
   program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
   never>` intersections, generic methods, `keyof typeof const` and generic aliases and interfaces

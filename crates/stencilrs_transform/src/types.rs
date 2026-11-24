@@ -385,6 +385,28 @@ fn named_unions(types: &[Ty], out: &mut Vec<Ty>) {
     }
 }
 
+/// The origin a union made by distributing an intersection over a union carries (the checker
+/// prints `A & (B | C)` for it where it is printed whole): one part, the intersection.
+pub fn distribution_origin(typeset: Vec<Ty>, id: u32) -> Vec<Ty> {
+    vec![Ty::new(K::Anon(Anon {
+        id,
+        shape: Shape::Intersection(typeset),
+        alias: None,
+    }))]
+}
+
+fn is_distribution(origin: &Option<Vec<Ty>>) -> bool {
+    matches!(origin.as_deref(), Some([t]) if t.is_intersection())
+}
+
+/// The members a union is listed by: its origin's parts, unless that is a distribution.
+fn shown_members<'a>(ms: &'a [Ty], origin: &'a Option<Vec<Ty>>) -> &'a [Ty] {
+    match origin {
+        Some(o) if !is_distribution(origin) => o,
+        _ => ms,
+    }
+}
+
 /// `getUnionType` with literal reduction. `strict` is `strictNullChecks`: without it `null` and
 /// `undefined` vanish from a union that has other members.
 pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
@@ -488,6 +510,14 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
             parts.sort_by_key(Ty::id);
             origin = Some(parts);
         }
+    }
+    // A union made from one that is a distribution is printed by that origin too, which is not
+    // modelled (`Printer` reports it).
+    if origin.is_none() {
+        origin = types.iter().find_map(|t| match &*t.0 {
+            K::Union(_, None, o) if is_distribution(o) => o.clone(),
+            _ => None,
+        });
     }
     Ty::new(K::Union(flat, alias, origin))
 }
@@ -600,6 +630,9 @@ impl Printer {
             }
             K::Union(ms, alias, origin) => match alias {
                 Some(a) if !top => self.alias(a)?,
+                _ if is_distribution(origin) => {
+                    return unsupported("an intersection distributed over a union, printed whole");
+                }
                 _ => self.union(origin.as_deref().unwrap_or(ms))?,
             },
             K::Array(el, _) => {
@@ -959,7 +992,7 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     fn walk(ty: &Ty, nested: bool, top: bool) -> bool {
         match &*ty.0 {
             K::Union(ms, alias, origin) => {
-                let shown = origin.as_deref().unwrap_or(ms);
+                let shown = shown_members(ms, origin);
                 if alias.is_some() && nested && !top {
                     // The alias is printed by name, but its object members are still ordered by
                     // when the checker first built them, which is not the order they are written in.
@@ -997,13 +1030,22 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     }
     // `resolveType` takes the top-level union apart and sorts the parts as text, so only
     // unions nested in what is printed count.
+    // `parseDocsType` also sorts the element parts of an array as text, so a union written
+    // as an array's element (`(A | B)[]`, reached through the top-level parts) has no order to
+    // depend on; only what its members print does.
+    fn parsed(ty: &Ty) -> bool {
+        match &*ty.0 {
+            K::Union(ms, _, origin) => shown_members(ms, origin).iter().any(parsed),
+            K::Array(el, _) => parsed(el),
+            _ => walk(ty, true, false),
+        }
+    }
     match &*ty.0 {
         _ if whole => walk(ty, true, true),
-        K::Union(ms, _, origin) => origin
-            .as_deref()
-            .unwrap_or(ms)
-            .iter()
-            .any(|m| walk(m, true, false)),
+        K::Union(ms, _, origin) => shown_members(ms, origin).iter().any(|m| match &*m.0 {
+            K::Array(..) => parsed(m),
+            _ => walk(m, true, false),
+        }),
         _ => walk(ty, false, true),
     }
 }
