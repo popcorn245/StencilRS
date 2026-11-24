@@ -1,0 +1,474 @@
+{
+  "tag": "stable-mixed",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "aliasAndObject",
+      "complexType": {
+        "signature": "(v: Zed | Size | Item) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Item | Zed | Size",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "arrayAndBool",
+      "complexType": {
+        "signature": "(v: string[] | boolean | Item[]) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "boolean | string[] | Item[]",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "boolAndObject",
+      "complexType": {
+        "signature": "(v: Item | boolean) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "boolean | Item",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "boolObjectString",
+      "complexType": {
+        "signature": "(v: Zed | boolean | string | null | Item) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "string | boolean | Item | Zed | null",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "element",
+      "complexType": {
+        "signature": "(v: HTMLElement | string | Element | Node | boolean) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "string | boolean | Element | HTMLElement | Node",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLElement": {
+            "location": "global",
+            "id": "global::HTMLElement"
+          },
+          "Element": {
+            "location": "global",
+            "id": "global::Element"
+          },
+          "Node": {
+            "location": "global",
+            "id": "global::Node"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "enumAndObject",
+      "complexType": {
+        "signature": "(v: Item | Level | Kind) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Item | Kind | Level",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Level": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Level",
+            "referenceLocation": "Level"
+          },
+          "Kind": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Kind",
+            "referenceLocation": "Kind"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "fnAndNamed",
+      "complexType": {
+        "signature": "(v: Callback | Zed | (() => void)) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Callback | Zed | (() => void)",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Callback": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Callback",
+            "referenceLocation": "Callback"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "hook",
+      "complexType": {
+        "signature": "(v: Zed | HookResult) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Zed | HookResult",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "HookResult": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "libs",
+      "complexType": {
+        "signature": "(v: Set<string> | Map<string, number> | Date | RegExp | Error) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Date | Error | Map<string, number> | RegExp | Set<string>",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Set": {
+            "location": "global",
+            "id": "global::Set"
+          },
+          "Map": {
+            "location": "global",
+            "id": "global::Map"
+          },
+          "Date": {
+            "location": "global",
+            "id": "global::Date"
+          },
+          "RegExp": {
+            "location": "global",
+            "id": "global::RegExp"
+          },
+          "Error": {
+            "location": "global",
+            "id": "global::Error"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "nested",
+      "complexType": {
+        "signature": "(v: Array<Item | boolean> | Promise<Zed | Item | string>) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "(boolean | Item)[] | Promise<string | Item | Zed>",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Array": {
+            "location": "global",
+            "id": "global::Array"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "promiseAndBool",
+      "complexType": {
+        "signature": "(v: Promise<void> | boolean | undefined) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "boolean | Promise<void> | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "returns",
+      "complexType": {
+        "signature": "() => Promise<Zed | boolean | Item | null>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          }
+        },
+        "return": "Promise<boolean | Item | Zed | null>"
+      }
+    },
+    {
+      "name": "sameGeneric",
+      "complexType": {
+        "signature": "(v: Box<string> | Box<number> | Box<boolean> | Box) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "Box<any> | Box<string> | Box<number> | Box<boolean>",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Box": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Box",
+            "referenceLocation": "Box"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "trueAndObject",
+      "complexType": {
+        "signature": "(v: Item | true | \"a\" | 2) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "\"a\" | 2 | true | Item",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "typeParam",
+      "complexType": {
+        "signature": "<T extends Item>(v: T | Zed | boolean) => Promise<void>",
+        "parameters": [
+          {
+            "name": "v",
+            "type": "boolean | T | Zed",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "T": {
+            "location": "global",
+            "id": "global::T"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Zed",
+            "referenceLocation": "Zed"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

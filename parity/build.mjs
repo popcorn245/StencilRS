@@ -1,7 +1,7 @@
 // The type-checked half of the parity harness: a small project built by real Stencil v5, compared
 // with stencilrs' build-accurate metadata (`resolveImports: true`).
 //
-//   node build.mjs --snapshot    rewrite snapshots-build/ from a full Stencil build
+//   node build.mjs --snapshot    rewrite snapshots-build/ and snapshots-build-stable/ from full Stencil builds
 //   node build.mjs [--verbose]   compare stencilrs against snapshots-build/
 //
 // `transpileSync` (every other suite) sees one file with no lib.d.ts, so a type from another
@@ -16,11 +16,18 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 
 import { analyze } from '../index.js';
-import { BUILD_SUITE, root } from './lib.mjs';
+import { BUILD_SUITES, root } from './lib.mjs';
 
-const project = join(root, 'fixtures', BUILD_SUITE);
-const snapshotsDir = join(root, 'snapshots-build');
 const verbose = process.argv.includes('--verbose');
+// The project and snapshots of the suite being run (see `BUILD_SUITES`; `snapshots-build` for `build`).
+let project;
+let snapshotsDir;
+let suiteName;
+const useSuite = (name) => {
+  suiteName = name;
+  project = join(root, 'fixtures', name);
+  snapshotsDir = join(root, `snapshots-${name}`);
+};
 
 const walk = (dir) =>
   readdirSync(dir).flatMap((name) => {
@@ -93,7 +100,7 @@ const snapshot = async () => {
       writeFileSync(out, `${JSON.stringify({ tag: c.tag, ...fromDocs(c, base) }, null, 2)}\n`);
       n++;
     }
-    console.log(`build: ${n} components snapshotted with Stencil ${version}`);
+    console.log(`${suiteName}: ${n} components snapshotted with Stencil ${version}`);
   } finally {
     process.chdir(cwd);
     rmSync(dir, { recursive: true, force: true });
@@ -109,7 +116,7 @@ const diff = (a, b, path = '') => {
 };
 
 const compare = () => {
-  if (!existsSync(snapshotsDir)) throw new Error('no snapshots-build/: run `node build.mjs --snapshot`');
+  if (!existsSync(snapshotsDir)) throw new Error(`no snapshots-${suiteName}/: run \`node build.mjs --snapshot\``);
   const cwd = process.cwd();
   process.chdir(project);
   let members = 0;
@@ -150,11 +157,14 @@ const compare = () => {
   } finally {
     process.chdir(cwd);
   }
-  console.log(`build: ${matched}/${members} members match Stencil's full build, ${fallbacks.length} left to Stencil (stencilrs: errors), ${failures.length} mismatches`);
+  console.log(`${suiteName}: ${matched}/${members} members match Stencil's full build, ${fallbacks.length} left to Stencil (stencilrs: errors), ${failures.length} mismatches`);
   if (fallbacks.length) for (const f of verbose ? fallbacks : fallbacks.slice(0, 20)) console.log(`  fallback ${f}`);
   for (const f of failures) console.log(`  MISMATCH ${f}`);
   if (failures.length) process.exitCode = 1;
 };
 
-if (process.argv.includes('--snapshot')) await snapshot();
-else compare();
+for (const name of BUILD_SUITES) {
+  useSuite(name);
+  if (process.argv.includes('--snapshot')) await snapshot();
+  else compare();
+}

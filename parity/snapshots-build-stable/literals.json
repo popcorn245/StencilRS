@@ -1,0 +1,185 @@
+{
+  "tag": "stable-literals",
+  "properties": [
+    {
+      "name": "bool",
+      "flags": {
+        "attribute": "bool",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "boolean | string | number",
+        "resolved": "boolean | number | string | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "flags",
+      "flags": {
+        "attribute": "flags",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "true | false | 'yes'",
+        "resolved": "\"yes\" | boolean | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "kind",
+      "flags": {
+        "attribute": "kind",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Kind | 'z' | 1",
+        "resolved": "\"z\" | 1 | Kind.A | Kind.B | undefined",
+        "references": {
+          "Kind": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Kind",
+            "referenceLocation": "Kind"
+          }
+        }
+      }
+    },
+    {
+      "name": "level",
+      "flags": {
+        "attribute": "level",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Level | string",
+        "resolved": "Level.High | Level.Low | Level.Mid | string | undefined",
+        "references": {
+          "Level": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Level",
+            "referenceLocation": "Level"
+          }
+        }
+      }
+    },
+    {
+      "name": "mixed",
+      "flags": {
+        "attribute": "mixed",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "'b' | 3 | true | 'a' | 1 | false | null",
+        "resolved": "\"a\" | \"b\" | 1 | 3 | boolean | null | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "numbers",
+      "flags": {
+        "attribute": "numbers",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "3 | 1 | 2 | -1 | 1.5",
+        "resolved": "-1 | 1 | 1.5 | 2 | 3 | undefined",
+        "references": {}
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "enums",
+      "complexType": {
+        "signature": "(value: Kind.B | Kind.A | Level.High | Level.Low) => Promise<void>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "Level.Low | Level.High | Kind",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Kind": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Kind",
+            "referenceLocation": "Kind"
+          },
+          "Level": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Level",
+            "referenceLocation": "Level"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "primitives",
+      "complexType": {
+        "signature": "(value: symbol | bigint | number | string | boolean | object) => Promise<void>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "string | number | bigint | symbol | boolean | object",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "set",
+      "complexType": {
+        "signature": "(value: \"c\" | \"a\" | \"b\" | 10 | 2 | null | undefined) => Promise<void>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "\"a\" | \"b\" | \"c\" | 2 | 10 | null | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

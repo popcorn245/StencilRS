@@ -147,6 +147,7 @@ pub struct TypeEnv<'e, 'a, 'b> {
 
 impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     pub fn new(locals: &'e Locals<'a, 'b>, reg: &'e Registry, strict: bool, file: &'e str) -> Self {
+        reg.activate();
         TypeEnv {
             locals,
             reg,
@@ -235,14 +236,18 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 .borrow_mut()
                 .push(((*p).to_owned(), Ty::new(K::Param(i))));
         }
+        self.reg.enter_alias();
         let ty = self.eval(node);
+        self.reg.leave_alias();
         self.params.borrow_mut().truncate(depth);
         let ty = ty?;
         let args = (0..names.len()).map(|i| Ty::new(K::Param(i))).collect();
+        let alias_id = self.reg.fresh();
+        self.reg.set_symbol(alias_id, format!("{}::{name}", self.file));
         let alias = Rc::new(Alias {
             name: name.to_owned(),
             args,
-            id: self.reg.fresh(),
+            id: alias_id,
             declared: names.iter().map(|n| (*n).to_owned()).collect(),
         });
         // `keyof X` is made by `getIndexType`, which does not give the union the alias it is declared as.
@@ -357,10 +362,12 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     "ref {decl_file}::{name}<{}>",
                     args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
                 );
+                let id = self.reg.intern(&key);
+                self.reg.set_symbol(id, format!("{decl_file}::{name}"));
                 Ok(Ty::new(K::Ref {
                     name: name.clone(),
                     args,
-                    id: self.reg.intern(&key),
+                    id,
                 }))
             }
         }
@@ -397,7 +404,9 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 }
                 // A tuple type has a `length`, which is the literal type of its arity.
                 self.number_literal(elems.len().to_string());
-                self.anon(Shape::Tuple(elems))
+                let tuple = self.anon(Shape::Tuple(elems));
+                self.reg.note_created(tuple.id());
+                tuple
             }
             TSType::TSFunctionType(f) => {
                 if f.type_parameters.is_some() || f.this_param.is_some() {
@@ -710,6 +719,7 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
 
     fn array(&self, el: Ty) -> Ty {
         let id = self.reg.intern(&format!("array<{}>", el.key()));
+        self.reg.note_created(id);
         if self.resolving() {
             Ty::new(K::Array(el, id))
         } else {
@@ -953,10 +963,12 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     && self.local_def("Intl").is_none()
                     && !self.locals.imports.contains_key("Intl")
                 {
+                    let id = self.reg.intern(&format!("lib Intl.{}<>", q.right.name));
+                    self.reg.set_symbol(id, format!("lib Intl.{}", q.right.name));
                     return Ok(Ty::new(K::Ref {
                         name: q.right.name.to_string(),
                         args,
-                        id: self.reg.intern(&format!("lib Intl.{}<>", q.right.name)),
+                        id,
                     }));
                 }
                 match self.local_def(left.name.as_str()) {
@@ -1018,14 +1030,17 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             return Ok(self.array(args[0].clone()));
         }
         if LIB_INTERFACES.contains(&name) {
+            let id = self.reg.intern(&format!("lib {key}"));
+            self.reg.set_symbol(id, format!("lib {name}"));
             return Ok(Ty::new(K::Ref {
                 name: name.to_owned(),
                 args,
-                id: self.reg.intern(&format!("lib {key}")),
+                id,
             }));
         }
         if LIB_ALIASES.contains(&name) && !args.is_empty() {
             let id = self.reg.intern(&format!("lib {key}"));
+            self.reg.set_symbol(id, format!("lib {name}"));
             return Ok(Ty::new(K::Anon(Anon {
                 id,
                 shape: Shape::Opaque,
