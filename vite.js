@@ -9,9 +9,11 @@
 // `@stencil/unplugin` nor `@stencil/core/compiler` (which loads TypeScript, ~700 ms) is imported
 // until something needs it (vite-fallback.js): a file that uses something stencilrs has not
 // ported yet (serializers, @AttachInternals, …) is compiled by Stencil's own compiler through
-// @stencil/unplugin. So are `docs`, `types`, `include` / `exclude`, and the virtual global
-// stylesheets (`@import 'stencil-hydrate'`). Pass `{ fallback: false }` to make a file that
-// needs the fallback an error instead. What @stencil/unplugin does, and where it went, is in
+// @stencil/unplugin, and so are the virtual global stylesheets (`@import 'stencil-hydrate'`).
+// `docs`, `types`, `include` and `exclude` are done here (vite-project.js, vite-docs.js) from stencilrs'
+// metadata; only a file with something not ported yet takes its metadata from Stencil's compiler, and a
+// project with CSS-only components or a `stencil.config` that can't be loaded is left to @stencil/unplugin.
+// Pass `{ fallback: false }` to make a file that needs the fallback an error instead. What @stencil/unplugin does, and where it went, is in
 // docs/vite-plugin.md.
 //
 // `componentExport: 'ssr'` compiles the components for Stencil's hydrate (server-side rendering)
@@ -35,6 +37,7 @@ import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
 import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
+import { createFileFilter, createProject } from './vite-project.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -177,9 +180,19 @@ export function stencilrs(options = {}) {
   // Component source files seen by this build, for the declaration file.
   const dtsSources = new Map();
   const specPage = stencilOptions.mode === 'spec-page';
-  // Options that need @stencil/unplugin's project scan, or its file filter: it is loaded up
-  // front, and compiles every TypeScript file we don't (as it did before it was lazy).
-  const needsUnplugin = !!(stencilOptions.docs || stencilOptions.types || stencilOptions.include || stencilOptions.exclude);
+  // `docs`, `types`, `include` and `exclude` are done here (vite-project.js), without @stencil/unplugin. It is loaded up front,
+  // and compiles every TypeScript file we don't (as it did before it was lazy), only when the project has something this
+  // can't do (CSS-only components, a stencil.config that can't be loaded): `project.unsupported`, known once it has been scanned.
+  let needsUnplugin = false;
+  const userFilter = stencilOptions.include || stencilOptions.exclude ? createFileFilter(stencilOptions.include ?? [/\.tsx?$/], stencilOptions.exclude ?? ['node_modules/**']) : null;
+  const project = stencilOptions.docs || stencilOptions.types || userFilter ? createProject({ stencil: stencilOptions, resolveImports }) : null;
+  const DOCS_ID = '@stencil/unplugin/docs';
+  const DOCS_MODULE = '\0stencil-docs:';
+  const notifyDocsChanged = (server) => {
+    const mod = server.moduleGraph.getModuleById?.(DOCS_MODULE) ?? server.moduleGraph.idToModuleMap?.get(DOCS_MODULE);
+    if (mod) server.moduleGraph.invalidateModule(mod, new Set(), Date.now(), true);
+    server.ws.send({ type: 'custom', event: 'stencil:docs-update' });
+  };
   let foldFlags = !specPage;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
@@ -256,10 +269,9 @@ export function stencilrs(options = {}) {
   const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
   // Files ancestor classes were read from, served as base-class virtual modules.
   const baseClasses = new Set();
-  // Component stylesheets served here. `docs` reads @stencil/unplugin's stylesheet bookkeeping,
-  // so with it the stylesheets stay with @stencil/unplugin.
-  const serveCss = !stencilOptions.docs;
-  const loadCss = serveCss ? createCssPipeline(cssOptions) : null;
+  // Component stylesheets served here.
+  const serveCss = true;
+  const loadCss = createCssPipeline(cssOptions);
   // For HMR, as @stencil/unplugin's cssFileToTagNames / cssRealToVirtualIds.
   const cssFileToTags = new Map();
   const cssFileToIds = new Map();
@@ -323,6 +335,7 @@ export function stencilrs(options = {}) {
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
       root = config.root;
+      project?.setRoot(root);
       isServe = config.command === 'serve';
       logger = config.logger;
       deferCheck = !!dtsFileName && !specPage && !ssr && config.build.write !== false;
@@ -347,6 +360,15 @@ export function stencilrs(options = {}) {
           checkTimer = setTimeout(checkInBackground, 300);
         };
         for (const event of ['add', 'change', 'unlink']) server.watcher.on(event, recheck);
+      }
+      if (project) {
+        // A component, or a stylesheet, added or deleted: docs and `components.d.ts` follow (a change is `handleHotUpdate`'s).
+        const onAddedOrDeleted = async (file) => {
+          if (needsUnplugin) return;
+          if (await project.changed(file)) notifyDocsChanged(server);
+        };
+        server.watcher.on('add', onAddedOrDeleted);
+        server.watcher.on('unlink', onAddedOrDeleted);
       }
       server.watcher.on('add', async (file) => {
         if (!STYLE_FILE_RE.test(file)) return;
@@ -374,6 +396,13 @@ export function stencilrs(options = {}) {
             this.error(e.message);
           }
           void checker.start();
+        }
+      }
+      if (project) {
+        await project.start();
+        if (project.unsupported) {
+          needsUnplugin = true;
+          logger?.warn(`[stencilrs] docs / types / include / exclude are left to @stencil/unplugin: ${project.unsupported}`);
         }
       }
       stamps = new Map();
@@ -408,6 +437,8 @@ export function stencilrs(options = {}) {
       }
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
+      // @stencil/unplugin's `transformInclude`.
+      if (userFilter && !userFilter(file)) return null;
       // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
       // it gets the file as it came in, and folds the build flags itself.
       const original = code;
@@ -423,6 +454,9 @@ export function stencilrs(options = {}) {
         const folded = foldBuildFlags(code, file, { isBrowser: true, isServer: false });
         return folded === null ? null : { code: folded, map: null };
       }
+
+      // A component the project scan did not see (outside the working directory) is added to the docs.
+      if (project && !needsUnplugin && !transformOpts?.ssr && !id.startsWith(BASE_PREFIX)) await project.note(file, original);
 
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
@@ -502,6 +536,7 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      if (id === DOCS_ID && project && stencilOptions.docs && !needsUnplugin) return DOCS_MODULE;
       // As @stencil/unplugin: one platform instance for the whole test file.
       if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
       // A file that is not a component (a util, a global script) importing `getMode`, `setMode`, `writeTask`,
@@ -530,6 +565,10 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      if (id === DOCS_MODULE && project && !needsUnplugin) {
+        await project.start();
+        return `export default ${project.manifestJson()}`;
+      }
       // A stylesheet the scan has not seen (created since, and not reported by a watcher): it may be the first to import a
       // virtual global stylesheet, which has to be generated before it is compiled.
       const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
@@ -577,6 +616,7 @@ export function stencilrs(options = {}) {
     },
 
     async handleHotUpdate(ctx) {
+      if (project && !needsUnplugin && (await project.changed(ctx.file))) notifyDocsChanged(ctx.server);
       const mine = hotUpdate(ctx);
       // A stylesheet that starts importing a virtual global stylesheet: @stencil/unplugin generates it.
       if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(ctx.file) && mentionsVirtualGlobalImport(ctx.file)) await fallbackPlugin.ensure(this);
