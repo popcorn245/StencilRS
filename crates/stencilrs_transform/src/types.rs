@@ -25,6 +25,26 @@ pub fn unsupported<T>(what: impl Into<String>) -> Res<T> {
     Err(Unsupported(what.into()))
 }
 
+/// Without `stableTypeOrdering` TypeScript orders some unions by which member the checker met
+/// first across the whole program. That is left to Stencil on purpose (docs/quirks.md, quirk 18),
+/// so the member is not "not ported yet": its message says why and names the remedy. The Vite
+/// plugin (`vite-hint.js`) recognises the message by `UNION_ORDER_LEFT_TO_STENCIL`.
+pub const UNION_ORDER_PROGRAM_REASON: &str = "a union whose order depends on the whole program";
+pub const UNION_ORDER_LEFT_TO_STENCIL: &str = "is left to Stencil's compiler. Add \"stableTypeOrdering\": true to the tsconfig to compile it with stencilrs.";
+/// With the option on, a union the comparator cannot order from what the model has: the remedy
+/// would be false, so this one stays "not ported yet".
+pub const UNION_ORDER_UNDECIDABLE_REASON: &str =
+    "a union whose member order the `stableTypeOrdering` comparator cannot decide";
+
+/// The reason a union whose order `order_depends_on_program` says cannot be reproduced is given.
+pub fn union_order_unsupported<T>() -> Res<T> {
+    unsupported(if union_order::enabled() {
+        UNION_ORDER_UNDECIDABLE_REASON
+    } else {
+        UNION_ORDER_PROGRAM_REASON
+    })
+}
+
 /// Type ids. TypeScript sorts a union's members by id (the order the checker created the
 /// types), so the order of nested unions follows from it. The intrinsics come first, in the
 /// order the checker creates them; everything else is numbered as it is first evaluated.

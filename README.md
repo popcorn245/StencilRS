@@ -165,15 +165,32 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   than a promise of a boolean, a primitive `this.field`, `Promise.resolve(x)`,
   `new Promise<T>()`, `x as T` and the awaited results of annotated methods of the class
   (quirk 18), inferred object types, types from packages or
-  tsconfig `paths`, and unions whose member order depends on the whole
-  program (`docs/quirks.md`, quirk 18; TypeScript's default sorts union members by type id, which
-  depends on what the checker saw first, but with `stableTypeOrdering: true` in the tsconfig, the
-  only order TypeScript 7 has, the order is a function of the types and stencilrs reproduces it).
-  Object, interface, branded-primitive and `Record<never,
+  tsconfig `paths`. Object, interface, branded-primitive and `Record<never,
   never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and
   generic aliases and interfaces with defaults work, as do the element types Stencil generates
   (`HTMLIonTabElement`, when a component of the project has the tag). `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
+
+### Why did this file go to Stencil? Unions whose order depends on the whole program
+
+Without the `stableTypeOrdering` option, TypeScript orders the members of some unions (a method
+parameter or return type such as `MouseEvent | TouchEvent | PointerEvent`) by which member the checker
+met first across the whole program. stencilrs never prints a union in an order Stencil would not print
+for the same tsconfig, so it does not guess here: the file is left to Stencil's compiler, on purpose, and
+the diagnostic says so (``stencilrs: the type of method `present` (a union whose order depends on the whole
+program) is left to Stencil's compiler. Add "stableTypeOrdering": true to the tsconfig to compile it with
+stencilrs.``). The fix is one line in `tsconfig.json`:
+
+```json
+{ "compilerOptions": { "stableTypeOrdering": true } }
+```
+
+With it (a TypeScript 6 option, and the only order TypeScript 7 has) the order is a function of the
+types, stencilrs reproduces it, and nothing falls back for this reason. The option changes some type
+strings (Ionic: 5 in `docs.json`), so it is your choice to make; stencilrs follows it. The Vite plugin
+prints one line, once per plugin instance, through Vite's logger at info level when files go to Stencil
+for this reason (`[stencilrs] 3 files have a union TypeScript orders by which member it met first; ...`).
+Details: `docs/quirks.md`, quirk 18.
 
 ## How it works
 

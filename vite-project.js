@@ -237,7 +237,7 @@ function createStyleTools(getRoot) {
  * @param {boolean} options.resolveImports follow imports for prop and event types, as `stencil build` does
  * @param {boolean} [options.generatedTags] docs carry the `@default` and `@readonly` tags `stencil build` adds (docs-json has them); false: as @stencil/unplugin's
  */
-export function createProject({ stencil, root = process.cwd(), resolveImports, generatedTags = true }) {
+export function createProject({ stencil, root = process.cwd(), resolveImports, generatedTags = true, onUnported }) {
   const filter = createFileFilter(stencil.include ?? [/\.tsx?$/], stencil.exclude ?? ['node_modules/**']);
   const docsOn = !!stencil.docs;
   const typesOn = !!stencil.types;
@@ -257,7 +257,7 @@ export function createProject({ stencil, root = process.cwd(), resolveImports, g
 
   /** The metadata of the components of one file: stencilrs', or Stencil's for a file stencilrs does not port yet. */
   async function metaOf(file, code) {
-    const own = stencilrsMeta(file, code, { resolveImports });
+    const own = stencilrsMeta(file, code, { resolveImports, onUnported });
     if (own) {
       counts.stencilrs++;
       return own;

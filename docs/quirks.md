@@ -268,6 +268,12 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   tuples declared inside a type alias (their nodes are compared), unions the checker keeps an
   origin for, and intersections without an alias. Fixture: `build-stable/` (its own tsconfig, snapshots
   in `snapshots-build-stable/`); `build/` is the option off and stays as it was.
+  **Decision (#151): exact parity over coverage.** Without the option the order is not reproduced, on
+  purpose: those members keep reporting `stencilrs:` and go to Stencil's compiler, and the remedy is one
+  tsconfig line. The alternative, always printing the stable order, would differ from Stencil's text for
+  the same tsconfig. The diagnostic says so (`is left to Stencil's compiler. Add "stableTypeOrdering": true
+  to the tsconfig ...`, `UNION_ORDER_LEFT_TO_STENCIL` in `types.rs`) and the Vite plugin prints one hint line
+  (`vite-hint.js`); with the option on, a union the comparator cannot order stays "not ported yet", without the hint.
 - **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
   `src/components.d.ts`, which Stencil writes. With `resolveImports`, `HTML<Pascal>Element` is
   printed as written and referenced as `global` when a `@Component` under the `src` folder next to
