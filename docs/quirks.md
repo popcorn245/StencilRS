@@ -188,9 +188,24 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   field counts only when the method mentions it once and uses `this` in no other way than
   `this.name`. The inferred
   type is a node of its own, so `references` starts with `Promise` and then names what `T` names.
-  Fixture: `build/src/components/inferred-returns.tsx`. Left: `getAccordions` (`Array.from(...) as
-  HTMLIonAccordionElement[]`, a type the build generates) and ion-router `canTransition`
-  (`canProceed.redirect` after a `typeof` narrowing).
+  Also ported: `return <expr> as T` (or `<T>expr`) as the only `return`, for `T` an array or a
+  named type (`as HTMLIonAccordionElement[]`: the type is `T` whatever `<expr>` is; `as const`, a
+  literal type, `x as unknown as T` and a union stay with Stencil); and a local `const r = await
+  this.m(...)` where `m` is a method of the same class that is neither generic nor overloaded and
+  is declared `Promise<X>`. Then `return r` is `boolean` when `X` is `boolean` and `r` is mentioned
+  only in `if (r) { ... }` blocks that contain no `return`, `throw`, `break`, `continue` nor a call
+  other than `this.m()` of a method not declared `never` (`const ok = await w(); if (!ok) return
+  false; return ok` is `boolean` where `ok` stays `true`-or-`false` flow-wise, but `if (ok) throw`
+  is `false`: any other mention keeps the fallback). And `return r.p` is `string` when `X` is
+  a union of `true`, `false` and interfaces that have nothing but properties (declared once, no
+  `extends`, no type parameters), exactly one has `p`, it is not optional and written `string`,
+  and `r` is mentioned only as `r.p`, `r === true` or `typeof r === '...'`: those only remove
+  members of the union, so wherever `r.p` type-checks `r` is that one interface. Returns of `string`
+  and booleans combine to `string | boolean` when the booleans are `boolean` or both literals
+  (`string | true` keeps the literal and stays with Stencil). `stableTypeOrdering` makes no
+  difference to these (checked with real Stencil both ways). Fixtures:
+  `build/src/components/inferred-returns.tsx` and `inferred-calls.tsx`, which also hold the
+  near-misses that stay with Stencil. Ionic: `getAccordions`, `canTransition` and `push` match.
 - **A union the checker orders by when it first met its members**, printed whole: a method
   parameter or return type is `string | Function | HTMLElement | null` for
   `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on

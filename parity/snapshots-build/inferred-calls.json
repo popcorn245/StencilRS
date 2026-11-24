@@ -1,0 +1,282 @@
+{
+  "tag": "build-inferred-calls",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "aliased",
+      "complexType": {
+        "signature": "() => Promise<false | import(\"../hooks\").HookOptions>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<false | HookOptions>"
+      }
+    },
+    {
+      "name": "canTransition",
+      "complexType": {
+        "signature": "() => Promise<string | boolean>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | boolean>"
+      }
+    },
+    {
+      "name": "constant",
+      "complexType": {
+        "signature": "() => Promise<readonly [\"a\", \"b\"]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "const": {
+            "location": "global",
+            "id": "global::const"
+          }
+        },
+        "return": "Promise<readonly [\"a\", \"b\"]>"
+      }
+    },
+    {
+      "name": "genericCallee",
+      "complexType": {
+        "signature": "() => Promise<string | false>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | false>"
+      }
+    },
+    {
+      "name": "getTabs",
+      "complexType": {
+        "signature": "() => Promise<HTMLGenTabElement[]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          }
+        },
+        "return": "Promise<HTMLGenTabElement[]>"
+      }
+    },
+    {
+      "name": "handed",
+      "complexType": {
+        "signature": "() => Promise<string | false>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | false>"
+      }
+    },
+    {
+      "name": "jumping",
+      "complexType": {
+        "signature": "(path: string) => Promise<false>",
+        "parameters": [
+          {
+            "name": "path",
+            "type": "string",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<false>"
+      }
+    },
+    {
+      "name": "literal",
+      "complexType": {
+        "signature": "() => Promise<\"a\">",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<\"a\">"
+      }
+    },
+    {
+      "name": "narrowedBoolean",
+      "complexType": {
+        "signature": "(path: string) => Promise<boolean>",
+        "parameters": [
+          {
+            "name": "path",
+            "type": "string",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "neverCall",
+      "complexType": {
+        "signature": "(path: string) => Promise<false>",
+        "parameters": [
+          {
+            "name": "path",
+            "type": "string",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<false>"
+      }
+    },
+    {
+      "name": "optionalRedirect",
+      "complexType": {
+        "signature": "() => Promise<string | false | undefined>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | false | undefined>"
+      }
+    },
+    {
+      "name": "overloadedCallee",
+      "complexType": {
+        "signature": "() => Promise<string | false>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | false>"
+      }
+    },
+    {
+      "name": "push",
+      "complexType": {
+        "signature": "(path: string) => Promise<boolean>",
+        "parameters": [
+          {
+            "name": "path",
+            "type": "string",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "redirectOrTrue",
+      "complexType": {
+        "signature": "() => Promise<string | true>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | true>"
+      }
+    },
+    {
+      "name": "sharedRedirect",
+      "complexType": {
+        "signature": "() => Promise<string | false>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | false>"
+      }
+    },
+    {
+      "name": "twice",
+      "complexType": {
+        "signature": "() => Promise<HTMLGenTabElement[]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HTMLGenTabElement": {
+            "location": "global",
+            "id": "global::HTMLGenTabElement"
+          }
+        },
+        "return": "Promise<HTMLGenTabElement[]>"
+      }
+    },
+    {
+      "name": "unannotatedCallee",
+      "complexType": {
+        "signature": "() => Promise<void>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

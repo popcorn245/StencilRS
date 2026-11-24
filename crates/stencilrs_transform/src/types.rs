@@ -45,6 +45,17 @@ const FIRST_ID: u32 = 100;
 pub struct Registry {
     next: Cell<u32>,
     interned: RefCell<FxHashMap<String, u32>>,
+    /// The properties of the plain interfaces seen so far, by the id of their `K::Ref`.
+    pub ref_props: RefCell<FxHashMap<u32, Rc<Vec<IfaceProp>>>>,
+}
+
+/// A property of a plain interface, as far as the return type of a member access needs it.
+#[derive(Debug)]
+pub struct IfaceProp {
+    pub name: String,
+    pub optional: bool,
+    /// Written as the keyword `string`.
+    pub string_typed: bool,
 }
 
 impl Registry {

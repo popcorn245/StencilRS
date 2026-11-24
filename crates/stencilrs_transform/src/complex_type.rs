@@ -38,6 +38,8 @@ pub enum TypeDef {
     Named {
         name: String,
         defaults: Vec<Option<Ty>>,
+        /// The properties of an interface that has nothing but properties, declared once.
+        props: Option<Rc<Vec<IfaceProp>>>,
     },
 }
 
@@ -216,9 +218,37 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
             self.params.borrow_mut().truncate(depth);
             result?;
         }
+        let mut props = None;
+        if let Some(LocalType::Interface(body)) = self.locals.types.get(name)
+            && self.locals.plain_interfaces.contains(name)
+            && !self.locals.merged_types.contains(name)
+        {
+            let mut list = Vec::new();
+            let mut plain = true;
+            for m in body.iter() {
+                match m {
+                    TSSignature::TSPropertySignature(p) if !p.computed => {
+                        match property_key_name(&p.key) {
+                            Some(key) => list.push(IfaceProp {
+                                name: key,
+                                optional: p.optional,
+                                string_typed: matches!(
+                                    p.type_annotation.as_ref().map(|t| &t.type_annotation),
+                                    Some(TSType::TSStringKeyword(_))
+                                ),
+                            }),
+                            None => plain = false,
+                        }
+                    }
+                    _ => plain = false,
+                }
+            }
+            props = plain.then(|| Rc::new(list));
+        }
         Ok(TypeDef::Named {
             name: name.to_owned(),
             defaults,
+            props,
         })
     }
 
@@ -269,6 +299,7 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
         let named = TypeDef::Named {
             name: name.clone(),
             defaults: Vec::new(),
+            props: None,
         };
         let mut members = Vec::new();
         for m in &decl.body.members {
@@ -335,7 +366,7 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                 Ok(applied)
             }
             TypeDef::UnionEnum(e) => Ok(Ty::new(K::Enum(e.clone()))),
-            TypeDef::Named { name, defaults } => {
+            TypeDef::Named { name, defaults, props } => {
                 // A type argument left out is its default (`Box` for `Box<T = any>` is `Box<any>`).
                 let mut args = args;
                 if args.len() > defaults.len() {
@@ -357,10 +388,14 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     "ref {decl_file}::{name}<{}>",
                     args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
                 );
+                let id = self.reg.intern(&key);
+                if let Some(props) = props {
+                    self.reg.ref_props.borrow_mut().insert(id, props.clone());
+                }
                 Ok(Ty::new(K::Ref {
                     name: name.clone(),
                     args,
-                    id: self.reg.intern(&key),
+                    id,
                 }))
             }
         }
@@ -1662,10 +1697,12 @@ fn inferred_return(env: &TypeEnv, func: &Function, names: &mut Vec<String>) -> R
     let mut texts: Vec<(String, Vec<String>)> = Vec::new();
     let mut this_uses = ThisUses::default();
     this_uses.visit_function_body(body);
+    let vars = locals_of_calls(env, func, body);
     let mut walker = ReturnTexts {
         env,
         total,
         this_uses: &this_uses,
+        vars: &vars,
         texts: &mut texts,
         failed: None,
     };
@@ -1673,12 +1710,9 @@ fn inferred_return(env: &TypeEnv, func: &Function, names: &mut Vec<String>) -> R
     if let Some(e) = walker.failed {
         return Err(e);
     }
-    let Some((first, first_names)) = texts.first().cloned() else {
+    let Some((first, first_names)) = combine_returns(&texts) else {
         return unsupported(why);
     };
-    if texts.iter().any(|(t, _)| *t != first) {
-        return unsupported(why);
-    }
     // `async` unwraps a returned promise and wraps the rest.
     let text = if first.starts_with("Promise<") {
         first
@@ -1720,6 +1754,7 @@ struct ReturnTexts<'t, 'e, 'a, 'b> {
     env: &'t TypeEnv<'e, 'a, 'b>,
     total: usize,
     this_uses: &'t ThisUses,
+    vars: &'t FxHashMap<String, ReturnVar>,
     texts: &'t mut Vec<(String, Vec<String>)>,
     failed: Option<Unsupported>,
 }
@@ -1744,6 +1779,49 @@ impl<'t, 'e, 'a, 'b, 'c> Visit<'c> for ReturnTexts<'t, 'e, 'a, 'b> {
 }
 
 impl ReturnTexts<'_, '_, '_, '_> {
+    /// `x as T`: the type is `T`, whatever `x` is. Only a lone return of an array or an
+    /// interface type: a literal type, a union or `as const` take their own rules, and
+    /// `x as unknown as T` is left alone.
+    fn asserted(&self, inner: &Expression, ty: &TSType) -> Res<(String, Vec<String>)> {
+        let why = || unsupported("a return type inferred from the body");
+        let mut inner = inner;
+        while let Expression::ParenthesizedExpression(p) = inner {
+            inner = &p.expression;
+        }
+        if self.total != 1
+            || matches!(
+                inner,
+                Expression::TSAsExpression(_)
+                    | Expression::TSTypeAssertion(_)
+                    | Expression::TSSatisfiesExpression(_)
+                    | Expression::TSNonNullExpression(_)
+            )
+        {
+            return why();
+        }
+        let ty_node = match ty {
+            TSType::TSArrayType(_) | TSType::TSTypeReference(_) => ty,
+            _ => return why(),
+        };
+        if matches!(ty_node, TSType::TSTypeReference(r) if matches!(&r.type_name,
+            TSTypeName::IdentifierReference(i) if i.name == "const"))
+        {
+            return why();
+        }
+        let evaluated = self.env.eval(ty_node)?;
+        if !matches!(&*evaluated.0, K::Array(..) | K::Ref { .. })
+            || print_order_depends_on_program(&evaluated)
+        {
+            return why();
+        }
+        let mut refs = RefNames::default();
+        refs.visit_ts_type(ty_node);
+        if refs.type_query {
+            return why();
+        }
+        Ok((type_to_string(&evaluated)?, refs.names))
+    }
+
     /// The widened type of an expression as the checker prints it, and the type names it has.
     fn expression(&self, e: &Expression) -> Res<(String, Vec<String>)> {
         let why = || unsupported("a return type inferred from the body");
@@ -1758,7 +1836,8 @@ impl ReturnTexts<'_, '_, '_, '_> {
         };
         match e {
             Expression::ParenthesizedExpression(p) => self.expression(&p.expression),
-            Expression::BooleanLiteral(_) => primitive("boolean"),
+            // Kept apart from `boolean`: `string | true` is not `string | boolean`.
+            Expression::BooleanLiteral(b) => Ok((b.value.to_string(), vec![])),
             Expression::NumericLiteral(_) => primitive("number"),
             Expression::StringLiteral(_) => primitive("string"),
             Expression::StaticMemberExpression(m)
@@ -1796,6 +1875,21 @@ impl ReturnTexts<'_, '_, '_, '_> {
                     _ => why(),
                 }
             }
+            Expression::Identifier(id) => match self.vars.get(id.name.as_str()) {
+                Some(ReturnVar::Bool) => Ok(("boolean".to_owned(), vec![])),
+                _ => why(),
+            },
+            Expression::StaticMemberExpression(m) => match (&m.object, &m.property) {
+                (Expression::Identifier(id), p) => match self.vars.get(id.name.as_str()) {
+                    Some(ReturnVar::Options(strings)) if strings.contains(p.name.as_str()) => {
+                        Ok(("string".to_owned(), vec![]))
+                    }
+                    _ => why(),
+                },
+                _ => why(),
+            },
+            Expression::TSAsExpression(a) => self.asserted(&a.expression, &a.type_annotation),
+            Expression::TSTypeAssertion(a) => self.asserted(&a.expression, &a.type_annotation),
             Expression::CallExpression(call) => {
                 let is_resolve = matches!(&call.callee, Expression::StaticMemberExpression(m)
                     if m.property.name == "resolve"
@@ -1810,6 +1904,10 @@ impl ReturnTexts<'_, '_, '_, '_> {
                     return why();
                 };
                 let (inner, _) = self.expression(arg)?;
+                let inner = match inner.as_str() {
+                    "true" | "false" => "boolean".to_owned(),
+                    _ => inner,
+                };
                 // `Promise.resolve(1)` is a `Promise<number>`, whatever the number.
                 let inner = match (inner.as_str(), arg) {
                     ("number" | "string", _) if self.total != 1 => return why(),
@@ -1842,6 +1940,319 @@ impl ReturnTexts<'_, '_, '_, '_> {
             _ => why(),
         }
     }
+}
+
+/// What a local that is returned, or read a property of at a `return`, is known to be there.
+enum ReturnVar {
+    /// `const r = await this.m()` where `m` is declared to return `Promise<boolean>`, and `r` is
+    /// only ever tested with a plain `if (r) { ... }` that cannot jump: it is `boolean` again
+    /// once the branches meet.
+    Bool,
+    /// `const r = await this.m()` where `m` is declared to return a promise of `true`, `false`
+    /// and plain interfaces, and `r` is only narrowed by comparing it to a boolean or `typeof`:
+    /// wherever `r.p` type-checks, `r` is the one member that has `p`. The properties that are
+    /// plain `string`s there.
+    Options(rustc_hash::FxHashSet<String>),
+}
+
+/// Combines the types of the returned expressions: they must all be the same, but for booleans
+/// (`true`, `false` and `boolean` give `boolean`, a lone one of them too) and a `string` next to
+/// a boolean that is not one literal alone (`string | true` keeps the literal).
+fn combine_returns(texts: &[(String, Vec<String>)]) -> Option<(String, Vec<String>)> {
+    let (first, names) = texts.first()?.clone();
+    if texts.iter().all(|(t, _)| *t == first) && !matches!(first.as_str(), "true" | "false") {
+        return Some((first, names));
+    }
+    let (mut has_true, mut has_false, mut has_bool, mut has_string) = (false, false, false, false);
+    for (t, n) in texts {
+        if !n.is_empty() {
+            return None;
+        }
+        match t.as_str() {
+            "true" => has_true = true,
+            "false" => has_false = true,
+            "boolean" => has_bool = true,
+            "string" => has_string = true,
+            _ => return None,
+        }
+    }
+    let boolean = has_bool || has_true || has_false;
+    if !has_string {
+        return boolean.then(|| ("boolean".to_owned(), vec![]));
+    }
+    // `string | true` is a union of a string and a literal; `true | false` is `boolean`.
+    (has_bool || (has_true && has_false)).then(|| ("string | boolean".to_owned(), vec![]))
+}
+
+/// The locals of a method body that are `const x = await this.m(...)`, and what each is known to
+/// be at a `return` (see `ReturnVar`). A variable whose uses are not all understood is left out.
+fn locals_of_calls(
+    env: &TypeEnv,
+    func: &Function,
+    body: &oxc::ast::ast::FunctionBody,
+) -> FxHashMap<String, ReturnVar> {
+    let mut out = FxHashMap::default();
+    let Some(class) = env.locals.current_class.borrow().clone() else {
+        return out;
+    };
+    if env.locals.values.contains_key("Promise") || env.locals.types.contains_key("Promise") {
+        return out;
+    }
+    for stmt in &body.statements {
+        let Statement::VariableDeclaration(decl) = stmt else {
+            continue;
+        };
+        if decl.kind != oxc::ast::ast::VariableDeclarationKind::Const {
+            continue;
+        }
+        for d in &decl.declarations {
+            let (Some(name), None, Some(Expression::AwaitExpression(aw))) =
+                (d.id.get_identifier_name(), &d.type_annotation, &d.init)
+            else {
+                continue;
+            };
+            let Expression::CallExpression(call) = &aw.argument else {
+                continue;
+            };
+            let Expression::StaticMemberExpression(callee) = &call.callee else {
+                continue;
+            };
+            if !matches!(callee.object, Expression::ThisExpression(_))
+                || call.type_arguments.is_some()
+                || call.optional
+                || callee.optional
+            {
+                continue;
+            }
+            let method = callee.property.name.as_str();
+            if env
+                .locals
+                .ambiguous_methods
+                .get(class.as_str())
+                .is_some_and(|s| s.contains(method))
+            {
+                continue;
+            }
+            let Some(ThisMember::Method(Some(ret))) = env
+                .locals
+                .members
+                .get(class.as_str())
+                .and_then(|m| m.get(method))
+            else {
+                continue;
+            };
+            let TSType::TSTypeReference(r) = ret else {
+                continue;
+            };
+            let (TSTypeName::IdentifierReference(id), Some(args)) = (&r.type_name, &r.type_arguments)
+            else {
+                continue;
+            };
+            if id.name != "Promise" || args.params.len() != 1 {
+                continue;
+            }
+            let promised = &args.params[0];
+            let kind = if matches!(promised, TSType::TSBooleanKeyword(_)) {
+                ReturnVar::Bool
+            } else if let Some(strings) = options_of(env, promised) {
+                ReturnVar::Options(strings)
+            } else {
+                continue;
+            };
+            let boolean = matches!(kind, ReturnVar::Bool);
+            if uses_are_understood(env, &class, func, name.as_str(), boolean) {
+                out.insert(name.to_string(), kind);
+            }
+        }
+    }
+    out
+}
+
+/// For a type that is a union of `true`, `false` and plain interfaces: the names of the
+/// properties that exactly one interface has, non-optional and written `string`.
+fn options_of(env: &TypeEnv, node: &TSType) -> Option<rustc_hash::FxHashSet<String>> {
+    let ty = env.eval(node).ok()?;
+    let K::Union(members, _, _) = &*ty.0 else {
+        return None;
+    };
+    let mut interfaces: Vec<Rc<Vec<IfaceProp>>> = Vec::new();
+    for m in members {
+        match &*m.0 {
+            K::True | K::False => {}
+            K::Ref { id, .. } => interfaces.push(env.reg.ref_props.borrow().get(id)?.clone()),
+            _ => return None,
+        }
+    }
+    let mut out = rustc_hash::FxHashSet::default();
+    for list in &interfaces {
+        if list.iter().any(|p| p.name == "then") {
+            return None;
+        }
+        for p in list.iter() {
+            let owners = interfaces
+                .iter()
+                .filter(|l| l.iter().any(|q| q.name == p.name))
+                .count();
+            if owners == 1 && !p.optional && p.string_typed {
+                out.insert(p.name.clone());
+            }
+        }
+    }
+    Some(out)
+}
+
+/// Whether `var` is bound once in `func` and every mention of it is one that cannot change the
+/// type it has where it is returned (`boolean`: `if (var)` with nothing that can jump, and
+/// `return var`) or read a property of (otherwise: `var.p`, `var === true`, `typeof var === 's'`).
+fn uses_are_understood(env: &TypeEnv, class: &str, func: &Function, var: &str, boolean: bool) -> bool {
+    struct Uses<'e, 'a, 'b, 'v> {
+        env: &'e TypeEnv<'e, 'a, 'b>,
+        class: &'v str,
+        var: &'v str,
+        boolean: bool,
+        bindings: usize,
+        mentions: usize,
+        understood: usize,
+    }
+    /// A statement that cannot leave the enclosing flow early (`return`, `throw`, `break`,
+    /// `continue`), nor call something that might never return: a call is understood when it
+    /// is `this.m()` of a method that is not declared to return `never` or a type predicate.
+    struct Jumps<'e, 'a, 'b, 'v> {
+        env: &'e TypeEnv<'e, 'a, 'b>,
+        class: &'v str,
+        found: bool,
+    }
+    impl<'c> Visit<'c> for Jumps<'_, '_, '_, '_> {
+        fn visit_return_statement(&mut self, _: &ReturnStatement<'c>) {
+            self.found = true;
+        }
+        fn visit_throw_statement(&mut self, _: &oxc::ast::ast::ThrowStatement<'c>) {
+            self.found = true;
+        }
+        fn visit_break_statement(&mut self, _: &oxc::ast::ast::BreakStatement<'c>) {
+            self.found = true;
+        }
+        fn visit_continue_statement(&mut self, _: &oxc::ast::ast::ContinueStatement<'c>) {
+            self.found = true;
+        }
+        fn visit_labeled_statement(&mut self, _: &oxc::ast::ast::LabeledStatement<'c>) {
+            self.found = true;
+        }
+        fn visit_call_expression(&mut self, it: &oxc::ast::ast::CallExpression<'c>) {
+            let plain = match &it.callee {
+                Expression::StaticMemberExpression(m)
+                    if matches!(m.object, Expression::ThisExpression(_)) =>
+                {
+                    match self
+                        .env
+                        .locals
+                        .members
+                        .get(self.class)
+                        .and_then(|c| c.get(m.property.name.as_str()))
+                    {
+                        Some(ThisMember::Method(None)) => true,
+                        Some(ThisMember::Method(Some(t))) => matches!(
+                            t,
+                            TSType::TSVoidKeyword(_)
+                                | TSType::TSBooleanKeyword(_)
+                                | TSType::TSStringKeyword(_)
+                                | TSType::TSNumberKeyword(_)
+                        ),
+                        _ => false,
+                    }
+                }
+                _ => false,
+            };
+            if !plain {
+                self.found = true;
+            }
+            oxc::ast_visit::walk::walk_call_expression(self, it);
+        }
+    }
+    impl Uses<'_, '_, '_, '_> {
+        fn jump_free(&self, s: &Statement) -> bool {
+            let mut v = Jumps {
+                env: self.env,
+                class: self.class,
+                found: false,
+            };
+            v.visit_statement(s);
+            !v.found
+        }
+    }
+    impl<'c> Visit<'c> for Uses<'_, '_, '_, '_> {
+        fn visit_binding_identifier(&mut self, it: &oxc::ast::ast::BindingIdentifier<'c>) {
+            if it.name == self.var {
+                self.bindings += 1;
+            }
+        }
+        fn visit_identifier_reference(&mut self, it: &oxc::ast::ast::IdentifierReference<'c>) {
+            if it.name == self.var {
+                self.mentions += 1;
+            }
+        }
+        fn visit_if_statement(&mut self, it: &oxc::ast::ast::IfStatement<'c>) {
+            if self.boolean
+                && matches!(&it.test, Expression::Identifier(i) if i.name == self.var)
+                && self.jump_free(&it.consequent)
+                && it.alternate.as_ref().is_none_or(|a| self.jump_free(a))
+            {
+                self.understood += 1;
+            }
+            oxc::ast_visit::walk::walk_if_statement(self, it);
+        }
+        fn visit_return_statement(&mut self, it: &ReturnStatement<'c>) {
+            if self.boolean
+                && matches!(&it.argument, Some(Expression::Identifier(i)) if i.name == self.var)
+            {
+                self.understood += 1;
+            }
+            oxc::ast_visit::walk::walk_return_statement(self, it);
+        }
+        fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'c>) {
+            if !self.boolean && matches!(&it.object, Expression::Identifier(i) if i.name == self.var) {
+                self.understood += 1;
+            }
+            oxc::ast_visit::walk::walk_static_member_expression(self, it);
+        }
+        fn visit_binary_expression(&mut self, it: &oxc::ast::ast::BinaryExpression<'c>) {
+            use oxc::ast::ast::BinaryOperator as B;
+            if !self.boolean
+                && matches!(
+                    it.operator,
+                    B::StrictEquality | B::StrictInequality | B::Equality | B::Inequality
+                )
+            {
+                let var = self.var;
+                let is_var = |e: &Expression| matches!(e, Expression::Identifier(i) if i.name == var);
+                let is_typeof = |e: &Expression| {
+                    matches!(e, Expression::UnaryExpression(u)
+                        if matches!(u.operator, UnaryOperator::Typeof) && is_var(&u.argument))
+                };
+                let boolean = |e: &Expression| matches!(e, Expression::BooleanLiteral(_));
+                let string = |e: &Expression| matches!(e, Expression::StringLiteral(_));
+                if (is_var(&it.left) && boolean(&it.right))
+                    || (is_var(&it.right) && boolean(&it.left))
+                    || (is_typeof(&it.left) && string(&it.right))
+                    || (is_typeof(&it.right) && string(&it.left))
+                {
+                    self.understood += 1;
+                }
+            }
+            oxc::ast_visit::walk::walk_binary_expression(self, it);
+        }
+    }
+    let mut uses = Uses {
+        env,
+        class,
+        var,
+        boolean,
+        bindings: 0,
+        mentions: 0,
+        understood: 0,
+    };
+    uses.visit_function(func, ScopeFlags::Function);
+    uses.bindings == 1 && uses.mentions == uses.understood
 }
 
 /// A `@Method()`'s `complexType` (`parseMethodDecorator`).

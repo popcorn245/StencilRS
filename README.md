@@ -157,8 +157,9 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   `const` object or an alias of those, `typeof` in an annotation, mapped and conditional types,
   intersections with a `null`, `any`, literal or `{}` member (the checker collapses those; an
   intersection with a union of objects is distributed), return types inferred from the body other
-  than a promise of a boolean, a primitive `this.field`, `Promise.resolve(x)` or
-  `new Promise<T>()`, inferred object types, types from packages or
+  than a promise of a boolean, a primitive `this.field`, `Promise.resolve(x)`,
+  `new Promise<T>()`, `x as T` and the awaited results of annotated methods of the class
+  (quirk 18), inferred object types, types from packages or
   tsconfig `paths`, and unions whose member order depends on the whole
   program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
   never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and
