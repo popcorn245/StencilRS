@@ -194,8 +194,14 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   multi-word interfaces, are not read. A tag nothing declares stays unported: a build fails on
   it (`Cannot find name`). Two element types in one union (`HTMLIonTabElement | HTMLElement`) fall
   under the type-id ordering above.
-- **An intersection with a union** (`{ date: string } & DatetimeHighlightStyle` where the style is
-  a union): the checker distributes it into a new union with synthesized members.
+- **An intersection with a union** is distributed as the checker does (`A & (B | C)` is
+  `A & B | A & C`, the cross product made last union fastest, aliases inside it expanded and
+  flattened: `{ date: string } & DatetimeHighlightStyle` is three `{ date } & { ...opt } & { x }`
+  members). A union with a literal, `null`, `undefined`, `any` or `{}` member, a generic one, or a
+  product over 256 members is still left to Stencil, since the checker collapses those. A distributed
+  union printed on its own (not as an array's element, which Stencil sorts as text) is ordered by type
+  id, which stencilrs cannot know, so it still falls back. Ionic: ion-datetime `highlightedDates`
+  now matches. Fixture: `build/src/components/intersection-unions.tsx`.
 - **`typeof` written in a prop's annotation** (`@Prop() x: keyof typeof y`): Stencil adds the
   classes and enums such a query names to `references`, which is not modelled. The same `keyof
   typeof y` behind a local `type` alias works.
