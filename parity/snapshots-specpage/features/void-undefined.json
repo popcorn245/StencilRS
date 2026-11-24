@@ -1,0 +1,858 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "void-undefined",
+      "componentClassName": "VoidUndefined",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [
+        {
+          "name": "a",
+          "type": "string",
+          "attribute": "a",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "string | void",
+            "resolved": "string | undefined | void",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "b",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "void | undefined",
+            "resolved": "undefined | void",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "c",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "void | null",
+            "resolved": "null | undefined | void",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "d",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "void",
+            "resolved": "undefined | void",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "e",
+          "type": "string",
+          "attribute": "e",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "V",
+            "resolved": "string | undefined | void",
+            "references": {
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "f",
+          "type": "number",
+          "attribute": "f",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "U | void",
+            "resolved": "number | undefined | void",
+            "references": {
+              "U": {
+                "location": "global",
+                "id": "global::U"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "g",
+          "type": "string",
+          "attribute": "g",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "V | undefined",
+            "resolved": "string | undefined | void",
+            "references": {
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "h",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "{ a?: string | void }",
+            "resolved": "{ a?: string | void | undefined; }",
+            "references": {}
+          },
+          "docs": {
+            "tags": [],
+            "text": "An optional member inside a type prints the `undefined` it adds."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "i",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "(y?: V) => void",
+            "resolved": "((y?: V | undefined) => void) | undefined",
+            "references": {
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "j",
+          "type": "string",
+          "attribute": "j",
+          "reflect": false,
+          "mutable": false,
+          "required": true,
+          "optional": false,
+          "complexType": {
+            "original": "M<string>",
+            "resolved": "string | void",
+            "references": {
+              "M": {
+                "location": "global",
+                "id": "global::M"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": "A generic alias is instantiated with the same reduction as a written union."
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "k",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "Opt<void>",
+            "resolved": "undefined | void",
+            "references": {
+              "Opt": {
+                "location": "global",
+                "id": "global::Opt"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        },
+        {
+          "name": "l",
+          "type": "unknown",
+          "reflect": false,
+          "mutable": false,
+          "required": false,
+          "optional": true,
+          "complexType": {
+            "original": "N",
+            "resolved": "null | undefined | void",
+            "references": {
+              "N": {
+                "location": "global",
+                "id": "global::N"
+              }
+            }
+          },
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "internal": false,
+          "getter": false,
+          "setter": false
+        }
+      ],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [
+        {
+          "name": "m1",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: string | void, y?: string | void | undefined) => Promise<string | void>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "string | void",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "string | void | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<string | void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m2",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: void | undefined) => Promise<void | undefined>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "void | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void | undefined>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m3",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: V, y?: V | undefined) => Promise<V>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "string | void",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "V | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            },
+            "return": "Promise<V>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m4",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: U | void) => Promise<U | void>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "void | U",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "U": {
+                "location": "global",
+                "id": "global::U"
+              }
+            },
+            "return": "Promise<void | U>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m5",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(y?: void | null | undefined, z?: void | undefined) => Promise<void | null>",
+            "parameters": [
+              {
+                "name": "y",
+                "type": "void | null | undefined",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "void | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              }
+            },
+            "return": "Promise<void | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m6",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(y?: V | undefined, z?: U) => Promise<void>",
+            "parameters": [
+              {
+                "name": "y",
+                "type": "V | undefined",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "number | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              },
+              "U": {
+                "location": "global",
+                "id": "global::U"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m8",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: M<string>, y?: M<string> | undefined) => Promise<M<string>>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "string | void",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "M<string> | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "M": {
+                "location": "global",
+                "id": "global::M"
+              }
+            },
+            "return": "Promise<M<string>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m9",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: Opt<void>, y?: Opt<void>) => Promise<Opt<void>>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "void | undefined",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "void | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Opt": {
+                "location": "global",
+                "id": "global::Opt"
+              }
+            },
+            "return": "Promise<Opt<void>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m10",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(x: (y?: string | void) => void, y?: { a?: V; }) => Promise<{ a?: string | void; }>",
+            "parameters": [
+              {
+                "name": "x",
+                "type": "(y?: string | void | undefined) => void",
+                "docs": ""
+              },
+              {
+                "name": "y",
+                "type": "{ a?: V | undefined; } | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            },
+            "return": "Promise<{ a?: string | void | undefined; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m11",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(y?: N | undefined, z?: void | undefined, w?: void | {} | undefined) => Promise<N>",
+            "parameters": [
+              {
+                "name": "y",
+                "type": "N | undefined",
+                "docs": ""
+              },
+              {
+                "name": "z",
+                "type": "void | undefined",
+                "docs": ""
+              },
+              {
+                "name": "w",
+                "type": "void | {} | undefined",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "N": {
+                "location": "global",
+                "id": "global::N"
+              }
+            },
+            "return": "Promise<N>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [
+        {
+          "name": "ev1",
+          "method": "ev1",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "void | undefined",
+            "resolved": "undefined | void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "ev2",
+          "method": "ev2",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ a: void | undefined }",
+            "resolved": "{ a: void | undefined; }",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "ev3",
+          "method": "ev3",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "(x: void | undefined) => void | undefined",
+            "resolved": "(x: void | undefined) => void | undefined",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "ev4",
+          "method": "ev4",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "string | void",
+            "resolved": "string | void",
+            "references": {}
+          },
+          "internal": false
+        },
+        {
+          "name": "ev5",
+          "method": "ev5",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "V",
+            "resolved": "string | void",
+            "references": {
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "ev6",
+          "method": "ev6",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "{ a?: V; m(y?: void): void }",
+            "resolved": "{ a?: V | undefined; m(y?: void | undefined): void; }",
+            "references": {
+              "V": {
+                "location": "global",
+                "id": "global::V"
+              }
+            }
+          },
+          "internal": false
+        },
+        {
+          "name": "ev7",
+          "method": "ev7",
+          "bubbles": true,
+          "cancelable": true,
+          "composed": true,
+          "docs": {
+            "tags": [],
+            "text": ""
+          },
+          "complexType": {
+            "original": "M<U>",
+            "resolved": "number | undefined | void",
+            "references": {
+              "M": {
+                "location": "global",
+                "id": "global::M"
+              },
+              "U": {
+                "location": "global",
+                "id": "global::U"
+              }
+            }
+          },
+          "internal": false
+        }
+      ],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": true,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": true,
+      "hasAttribute": true,
+      "hasProp": true,
+      "hasPropNumber": true,
+      "hasPropBoolean": false,
+      "hasPropString": true,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "div"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": true,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "`void` next to `undefined`: a written union keeps both, only an inferred return union drops `undefined`."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}

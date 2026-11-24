@@ -522,19 +522,19 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
             return Ty::new(K::Undefined);
         }
     }
-    // `removeRedundantLiteralTypes`: a primitive absorbs its literals, `void` absorbs `undefined`.
+    // `removeRedundantLiteralTypes`: a primitive absorbs its literals. `void` does not absorb
+    // `undefined` here: that is `reduceVoidUndefined`, which only subtype reduction runs (the union of
+    // inferred returns, which no caller of `union_of` builds); a written union keeps both.
     let has = |f: &dyn Fn(&K) -> bool, flat: &[Ty]| flat.iter().any(|t| f(&t.0));
     // (bigint literal types fall back to Stencil, so `bigint` has none to absorb.)
-    let (string, number, void) = (
+    let (string, number) = (
         has(&|k| matches!(k, K::String), &flat),
         has(&|k| matches!(k, K::Number), &flat),
-        has(&|k| matches!(k, K::Void), &flat),
     );
     flat.retain(|t| match &*t.0 {
         K::Str(..) => !string,
         K::Num(..) => !number,
         K::EnumLit(e, i) => !(if e.members[*i].1 { string } else { number }),
-        K::Undefined => !void,
         _ => true,
     });
     if union_order::enabled() {
