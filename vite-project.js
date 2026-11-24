@@ -61,8 +61,39 @@ function globToRegExp(glob) {
   return new RegExp(`^${re}$`);
 }
 
-/** `createFilter(include, exclude)`: a path passes when it matches `include` (all, if empty) and not `exclude`. */
+/**
+ * `createFilter` of @rollup/pluginutils itself, which @stencil/unplugin filters with: found from where unplugin is
+ * (it depends on it; resolving does not load unplugin), then from the working directory. Null when it is not installed.
+ */
+let pluginutilsCreateFilter;
+function findCreateFilter() {
+  if (pluginutilsCreateFilter !== undefined) return pluginutilsCreateFilter;
+  pluginutilsCreateFilter = null;
+  for (const base of [() => import.meta.resolve('@stencil/unplugin'), () => join(process.cwd(), 'noop.js'), () => import.meta.url]) {
+    try {
+      const { createFilter } = createRequire(base())('@rollup/pluginutils');
+      if (typeof createFilter === 'function') {
+        pluginutilsCreateFilter = createFilter;
+        break;
+      }
+    } catch {}
+  }
+  return pluginutilsCreateFilter;
+}
+
+/**
+ * `createFilter(include, exclude)`: a path passes when it matches `include` (all, if empty) and not `exclude`. This is
+ * @rollup/pluginutils' own filter when it can be found, so every glob reads as it does for @stencil/unplugin; the
+ * matcher written here (`globFileFilter`) covers `*`, `**`, `?`, `[a-z]` and `{a,b}` for an install without it.
+ */
 export function createFileFilter(include, exclude, base = process.cwd()) {
+  const createFilter = findCreateFilter();
+  if (!createFilter) return globFileFilter(include, exclude, base);
+  const filter = createFilter(include, exclude, { resolve: base });
+  return (id) => filter(id);
+}
+
+export function globFileFilter(include, exclude, base = process.cwd()) {
   const toList = (v) => (v == null ? [] : Array.isArray(v) ? v : [v]);
   const toMatcher = (pattern) => {
     if (pattern instanceof RegExp) {

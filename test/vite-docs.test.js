@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { build } from 'vite';
 
-import { createFileFilter } from '../vite-project.js';
+import { createFileFilter, globFileFilter } from '../vite-project.js';
 import stencilrs from '../vite.js';
 
 const repo = fileURLToPath(new URL('..', import.meta.url));
@@ -87,6 +87,8 @@ export class DocPlain {
 `,
 );
 write('src/excluded/skipped.tsx', `import { Component, h } from '@stencil/core';\n@Component({ tag: 'doc-skipped' })\nexport class DocSkipped { render() { return <p>skipped</p>; } }\n`);
+// A decorated class that is no component (a base class): nothing to document, and no reason to ask Stencil's compiler.
+write('src/base/base.ts', `import { Prop } from '@stencil/core';\nexport class DocBase {\n  @Prop() shared?: string;\n}\n`);
 write('entry.js', `import cem from '@stencil/unplugin/docs';\nexport default cem;\n`);
 
 const bundle = async (plugins, entry = 'entry.js') => {
@@ -120,6 +122,21 @@ const withoutGeneratedTags = (value) => {
 
 test('include and exclude filter as @rollup/pluginutils does', () => {
   const root = process.cwd().replaceAll('\\', '/');
+  // The filter is @rollup/pluginutils' own when it is installed; the matcher written for an install without it agrees with it.
+  const paths = ['src/a.tsx', 'src/a/b.tsx', 'src/a/b.spec.tsx', 'src/legacy/b.tsx', 'lib/b.tsx', 'lib/special.ts', 'src/b/c.ts', 'src/c/c.ts', 'src/.hidden/a.tsx', 'node_modules/x/a.tsx', 'src/a.d.ts'].map((p) => `${root}/${p}`);
+  const cases = [
+    [[/\.tsx?$/], ['node_modules/**']],
+    [['src/**/*.tsx', /special\.ts$/], ['**/*.spec.tsx', 'src/legacy/**']],
+    ['src/{a,b}/*.ts', undefined],
+    ['src/**', ['**/*.d.ts', 'src/[a-b]/**']],
+    [undefined, 'src/?/*.ts'],
+    ['./src/*.tsx', undefined],
+  ];
+  for (const [include, exclude] of cases) {
+    const real = createFileFilter(include, exclude);
+    const own = globFileFilter(include, exclude);
+    for (const p of [...paths, '\0virtual']) assert.equal(own(p), real(p), `${JSON.stringify([String(include), String(exclude)])} on ${p}`);
+  }
   const both = createFileFilter([/\.tsx?$/], ['node_modules/**']);
   assert.equal(both(`${root}/src/a.tsx`), true);
   assert.equal(both(`${root}/node_modules/x/a.tsx`), false, 'node_modules/** is the default exclude');
@@ -159,10 +176,11 @@ test('docs and types: stencilrs writes what @stencil/unplugin writes', async () 
 });
 
 test('docs and types never import TypeScript, Stencil\'s compiler or @stencil/unplugin when every file compiles in Rust', () => {
-  // A module resolve hook sees every ESM import; CommonJS goes through `require.cache`.
-  const hook = `export async function resolve(specifier, context, next) {
-    if (/typescript|@stencil[\\\\/]core[\\\\/](dist[\\\\/])?compiler|@stencil[\\\\/]unplugin/.test(specifier)) process.stderr.write('IMPORTED ' + specifier + '\\n');
-    return next(specifier, context);
+  // A module load hook sees every ESM module that is loaded (finding where @stencil/unplugin is, to reach the
+  // @rollup/pluginutils it depends on, loads nothing); CommonJS goes through `require.cache`.
+  const hook = `export async function load(url, context, next) {
+    if (/[\\\\/]node_modules[\\\\/]typescript[\\\\/]|@stencil[\\\\/]core[\\\\/](dist[\\\\/])?compiler|@stencil[\\\\/]unplugin[\\\\/]dist[\\\\/]/.test(url)) process.stderr.write('IMPORTED ' + url + '\\n');
+    return next(url, context);
   }`;
   const script = `
     import { register, createRequire } from 'node:module';
@@ -174,7 +192,7 @@ test('docs and types never import TypeScript, Stencil\'s compiler or @stencil/un
       plugins: [stencilrs({ docs: true, types: true, include: [/\\.tsx?$/], exclude: ['node_modules/**'] })],
       build: { write: false, lib: { entry: ${JSON.stringify(join(project, 'entry.js'))}, formats: ['es'], fileName: 'out' }, rollupOptions: { external: [/^@stencil\\/core/] } } });
     const require = createRequire(import.meta.url);
-    const loaded = Object.keys(require.cache).filter((f) => /[\\\\/]node_modules[\\\\/]typescript[\\\\/]/.test(f));
+    const loaded = Object.keys(require.cache).filter((f) => /[\\\\/]node_modules[\\\\/]typescript[\\\\/]|@stencil[\\\\/]core[\\\\/](dist[\\\\/])?compiler|@stencil[\\\\/]unplugin[\\\\/]dist[\\\\/]/.test(f));
     process.stderr.write('CJS ' + loaded.length + ' ' + ([out].flat()[0].output[0].code.includes('doc-panel') ? 'docs-ok' : 'docs-missing') + '\\n');
   `;
   const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: repo, encoding: 'utf8' });

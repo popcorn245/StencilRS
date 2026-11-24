@@ -140,6 +140,8 @@ export function stencilrsMeta(file, source, { resolveImports = true } = {}) {
   file = normalizePath(file, false);
   const analysis = analyze(source, file, { resolveImports, complexTypes: true });
   if (analysis.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) return null;
+  // Decorators, but no component (a base class, a mixin): nothing to document, as Stencil's compiler finds.
+  if (!analysis.components.length) return [];
   const result = transpile(source, { file, resolveImports, componentExport: null, componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null, jsx: 'classic' });
   if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) return null;
   const metas = [];
