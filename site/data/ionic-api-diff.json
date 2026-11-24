@@ -98,5 +98,5 @@
     ],
     "note": "docs-json lists a CSS declaration that follows a doc comment as a custom property, with the comment as its docs. Not a stencilrs difference."
   },
-  "typeFallbacks": 11
+  "typeFallbacks": 0
 }
