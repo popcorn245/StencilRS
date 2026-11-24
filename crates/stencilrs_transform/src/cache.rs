@@ -159,5 +159,11 @@ pub fn store_tsconfig(dir: &Path, strict: bool, deps: Arc<Vec<Dep>>) {
     if tsconfigs.len() >= MAX_TSCONFIGS {
         tsconfigs.clear();
     }
-    tsconfigs.insert(dir.to_owned(), TsconfigEntry { strict, deps });
+    tsconfigs.insert(
+        dir.to_owned(),
+        TsconfigEntry {
+            strict,
+            deps,
+        },
+    );
 }
