@@ -1,9 +1,10 @@
 import { Component, Element, Method, h } from '@stencil/core';
-import type { HookResult, OptionalResult, SharedResult } from '../hooks';
+import type { HookResult, Later, OptionalResult, Row, SharedResult } from '../hooks';
 
 @Component({ tag: 'build-inferred-calls' })
 export class BuildInferredCalls {
   @Element() el!: HTMLElement;
+  private pending: any;
 
   private async guards(from?: string): Promise<HookResult> {
     return true;
@@ -180,6 +181,60 @@ export class BuildInferredCalls {
   @Method()
   async literal() {
     return 'a' as 'a';
+  }
+  /** The property compared to a literal is that literal where it is returned: left to Stencil. */
+  @Method()
+  async equalityNarrowed() {
+    const canProceed = await this.guards();
+    if (typeof canProceed === 'object') {
+      if (canProceed.redirect === '/home') {
+        return canProceed.redirect;
+      }
+      return false;
+    }
+    return true;
+  }
+  /** The property read twice, the first time in a test that narrows nothing. */
+  @Method()
+  async readTwice() {
+    const canProceed = await this.guards();
+    if (typeof canProceed === 'object') {
+      if (canProceed.redirect) {
+        return canProceed.redirect;
+      }
+      return false;
+    }
+    return true;
+  }
+  /** An assertion to a plain interface. */
+  @Method()
+  async asRow() {
+    return this.pending as Row;
+  }
+  /** An assertion to a promise is awaited. */
+  @Method()
+  async asPromise() {
+    return this.pending as Promise<Row>;
+  }
+  /** An assertion to something with a `then` is awaited: left to Stencil. */
+  @Method()
+  async asThenable() {
+    return this.pending as Later;
+  }
+  /** A promise of a promise is awaited all the way: left to Stencil. */
+  @Method()
+  async asNestedPromise() {
+    return this.pending as Promise<Promise<Row>>;
+  }
+  /** `PromiseLike` is awaited too: left to Stencil. */
+  @Method()
+  async asPromiseLike() {
+    return this.pending as PromiseLike<Row>;
+  }
+  /** An array of promises is not awaited. */
+  @Method()
+  async asPromises() {
+    return this.pending as Promise<Row>[];
   }
   render() {
     return <div />;

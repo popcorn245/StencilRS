@@ -1779,9 +1779,9 @@ impl<'t, 'e, 'a, 'b, 'c> Visit<'c> for ReturnTexts<'t, 'e, 'a, 'b> {
 }
 
 impl ReturnTexts<'_, '_, '_, '_> {
-    /// `x as T`: the type is `T`, whatever `x` is. Only a lone return of an array or an
-    /// interface type: a literal type, a union or `as const` take their own rules, and
-    /// `x as unknown as T` is left alone.
+    /// `x as T`: the type is `T`, whatever `x` is. Only a lone return of an array, a plain
+    /// interface, a generated element type or a promise of one of those: a literal type, a
+    /// union or `as const` take their own rules, and `x as unknown as T` is left alone.
     fn asserted(&self, inner: &Expression, ty: &TSType) -> Res<(String, Vec<String>)> {
         let why = || unsupported("a return type inferred from the body");
         let mut inner = inner;
@@ -1809,9 +1809,23 @@ impl ReturnTexts<'_, '_, '_, '_> {
             return why();
         }
         let evaluated = self.env.eval(ty_node)?;
-        if !matches!(&*evaluated.0, K::Array(..) | K::Ref { .. })
-            || print_order_depends_on_program(&evaluated)
-        {
+        let text = type_to_string(&evaluated)?;
+        // `async` awaits what is returned (`x as Later` is a `Promise<number>` when `Later` has
+        // a `then`, `x as Promise<Promise<T>>` a `Promise<T>`): `T` stays itself only where it
+        // is known to have no `then`.
+        let stays = match &*evaluated.0 {
+            // `Promise<T>[]` is an array, but its text reads as a promise further on.
+            K::Array(..) => !text.starts_with("Promise<"),
+            K::Ref { name, args, .. } if name == "Promise" => {
+                let locals = self.env.locals;
+                args.len() == 1
+                    && !locals.values.contains_key("Promise")
+                    && !locals.types.contains_key("Promise")
+                    && self.await_inert(&args[0], true)
+            }
+            _ => self.await_inert(&evaluated, false),
+        };
+        if !stays || print_order_depends_on_program(&evaluated) {
             return why();
         }
         let mut refs = RefNames::default();
@@ -1819,7 +1833,30 @@ impl ReturnTexts<'_, '_, '_, '_> {
         if refs.type_query {
             return why();
         }
-        Ok((type_to_string(&evaluated)?, refs.names))
+        Ok((text, refs.names))
+    }
+
+    /// Whether awaiting a value of this type gives the type itself, because it has no `then`:
+    /// known for an array, an element type the build generates and an interface with nothing but
+    /// properties (none of them `then`), and for the primitives inside a `Promise<...>`.
+    fn await_inert(&self, ty: &Ty, primitives: bool) -> bool {
+        match &*ty.0 {
+            K::Array(..) => true,
+            K::Ref { name, args, id } => {
+                let reg = self.env.reg;
+                args.is_empty()
+                    && (reg.interned_id(&format!("generated {name}")) == Some(*id)
+                        || reg
+                            .ref_props
+                            .borrow()
+                            .get(id)
+                            .is_some_and(|props| props.iter().all(|p| p.name != "then")))
+            }
+            K::String | K::Number | K::BigInt | K::Boolean | K::Void | K::Undefined | K::Null => {
+                primitives
+            }
+            _ => false,
+        }
     }
 
     /// The widened type of an expression as the checker prints it, and the type names it has.
@@ -2060,12 +2097,42 @@ fn locals_of_calls(
                 continue;
             };
             let boolean = matches!(kind, ReturnVar::Bool);
-            if uses_are_understood(env, &class, func, name.as_str(), boolean) {
-                out.insert(name.to_string(), kind);
+            if !uses_are_understood(env, &class, func, name.as_str(), boolean) {
+                continue;
             }
+            // A property read more than once may be narrowed where it is returned
+            // (`if (r.p === '/home') return r.p` returns the literal): only one read once is known.
+            let kind = match kind {
+                ReturnVar::Options(mut strings) => {
+                    let mut reads = PropReads {
+                        var: name.as_str(),
+                        counts: FxHashMap::default(),
+                    };
+                    reads.visit_function(func, ScopeFlags::Function);
+                    strings.retain(|p| reads.counts.get(p.as_str()) == Some(&1));
+                    ReturnVar::Options(strings)
+                }
+                kind => kind,
+            };
+            out.insert(name.to_string(), kind);
         }
     }
     out
+}
+
+/// How often each `var.p` is written in a function.
+struct PropReads<'v> {
+    var: &'v str,
+    counts: FxHashMap<String, usize>,
+}
+
+impl<'c> Visit<'c> for PropReads<'_> {
+    fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'c>) {
+        if matches!(&it.object, Expression::Identifier(i) if i.name == self.var) {
+            *self.counts.entry(it.property.name.to_string()).or_default() += 1;
+        }
+        oxc::ast_visit::walk::walk_static_member_expression(self, it);
+    }
 }
 
 /// For a type that is a union of `true`, `false` and plain interfaces: the names of the

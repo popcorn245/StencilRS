@@ -17,3 +17,10 @@ export interface SharedB {
   b: number;
 }
 export type SharedResult = boolean | SharedA | SharedB;
+
+export interface Row {
+  id: string;
+}
+export interface Later {
+  then(done: (value: number) => void): void;
+}

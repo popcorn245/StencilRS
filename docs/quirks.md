@@ -188,9 +188,13 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   field counts only when the method mentions it once and uses `this` in no other way than
   `this.name`. The inferred
   type is a node of its own, so `references` starts with `Promise` and then names what `T` names.
-  Also ported: `return <expr> as T` (or `<T>expr`) as the only `return`, for `T` an array or a
-  named type (`as HTMLIonAccordionElement[]`: the type is `T` whatever `<expr>` is; `as const`, a
-  literal type, `x as unknown as T` and a union stay with Stencil); and a local `const r = await
+  Also ported: `return <expr> as T` (or `<T>expr`) as the only `return`, for `T` an array, an
+  element type the build generates, an interface with nothing but properties, or a `Promise` of
+  one of those or of a primitive (`as HTMLIonAccordionElement[]`: the type is `T` whatever
+  `<expr>` is). `async` awaits what is returned, so `T` has to be known to have no `then`:
+  `x as Later` is a `Promise<number>` when `Later` has a `then`, and `x as Promise<Promise<T>>` a
+  `Promise<T>`. Those, any other named type, `as const`, a literal type, `x as unknown as T` and
+  a union stay with Stencil. And a local `const r = await
   this.m(...)` where `m` is a method of the same class that is neither generic nor overloaded and
   is declared `Promise<X>`. Then `return r` is `boolean` when `X` is `boolean` and `r` is mentioned
   only in `if (r) { ... }` blocks that contain no `return`, `throw`, `break`, `continue` nor a call
@@ -198,8 +202,9 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   any other mention keeps the fallback). And `return r.p` is `string` when `X` is
   a union of `true`, `false` and interfaces that have nothing but properties (declared once, no
   `extends`, no type parameters), exactly one has `p`, it is not optional and written `string`,
-  and `r` is mentioned only as `r.p`, `r === true` or `typeof r === '...'`: those only remove
-  members of the union, so wherever `r.p` type-checks `r` is that one interface. Returns of `string`
+  `r` is mentioned only as `r.p`, `r === true` or `typeof r === '...'` (those only remove
+  members of the union, so wherever `r.p` type-checks `r` is that one interface), and `r.p` is
+  written once (`if (r.p === '/home') return r.p` returns the literal `"/home"`). Returns of `string`
   and booleans combine to `string | boolean` when the booleans are `boolean` or both literals
   (`string | true` keeps the literal and stays with Stencil). `stableTypeOrdering` makes no
   difference to these (checked with real Stencil both ways). Fixtures:

@@ -18,6 +18,130 @@
       }
     },
     {
+      "name": "asNestedPromise",
+      "complexType": {
+        "signature": "() => Promise<Row>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Row>"
+      }
+    },
+    {
+      "name": "asPromise",
+      "complexType": {
+        "signature": "() => Promise<Row>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Row>"
+      }
+    },
+    {
+      "name": "asPromiseLike",
+      "complexType": {
+        "signature": "() => Promise<Row>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "PromiseLike": {
+            "location": "global",
+            "id": "global::PromiseLike"
+          }
+        },
+        "return": "Promise<Row>"
+      }
+    },
+    {
+      "name": "asPromises",
+      "complexType": {
+        "signature": "() => Promise<Promise<Row>[]>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Promise<Row>[]>"
+      }
+    },
+    {
+      "name": "asRow",
+      "complexType": {
+        "signature": "() => Promise<Row>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Row>"
+      }
+    },
+    {
+      "name": "asThenable",
+      "complexType": {
+        "signature": "() => Promise<number>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Later": {
+            "location": "import",
+            "path": "../hooks",
+            "id": "src/hooks.ts::Later",
+            "referenceLocation": "Later"
+          }
+        },
+        "return": "Promise<number>"
+      }
+    },
+    {
       "name": "canTransition",
       "complexType": {
         "signature": "() => Promise<string | boolean>",
@@ -47,6 +171,20 @@
           }
         },
         "return": "Promise<readonly [\"a\", \"b\"]>"
+      }
+    },
+    {
+      "name": "equalityNarrowed",
+      "complexType": {
+        "signature": "() => Promise<boolean | \"/home\">",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<boolean | \"/home\">"
       }
     },
     {
@@ -215,6 +353,20 @@
           }
         },
         "return": "Promise<boolean>"
+      }
+    },
+    {
+      "name": "readTwice",
+      "complexType": {
+        "signature": "() => Promise<string | boolean>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | boolean>"
       }
     },
     {

@@ -74,6 +74,11 @@ impl Registry {
         self.interned.borrow_mut().insert(key.to_owned(), id);
         id
     }
+
+    /// The id `intern` gave this key, if it was ever asked for (asking here makes no type).
+    pub fn interned_id(&self, key: &str) -> Option<u32> {
+        self.interned.borrow().get(key).copied()
+    }
 }
 
 #[derive(Clone, Debug)]
