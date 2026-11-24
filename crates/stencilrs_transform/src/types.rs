@@ -46,11 +46,22 @@ const FIRST_ID: u32 = 100;
 pub struct Registry {
     next: Cell<u32>,
     interned: RefCell<FxHashMap<String, u32>>,
+    /// The properties of the plain interfaces seen so far, by the id of their `K::Ref`.
+    pub ref_props: RefCell<FxHashMap<u32, Rc<Vec<IfaceProp>>>>,
     /// Which registry this is, for the state `union_order` keeps about it.
     generation: u64,
     /// `stableTypeOrdering` is on in the program's tsconfig: unions are ordered by
     /// `compareTypes` (`union_order.rs`) and not by type id.
     pub stable: Cell<bool>,
+}
+
+/// A property of a plain interface, as far as the return type of a member access needs it.
+#[derive(Debug)]
+pub struct IfaceProp {
+    pub name: String,
+    pub optional: bool,
+    /// Written as the keyword `string`.
+    pub string_typed: bool,
 }
 
 impl Default for Registry {
@@ -59,6 +70,7 @@ impl Default for Registry {
         Registry {
             next: Cell::new(0),
             interned: RefCell::default(),
+            ref_props: RefCell::default(),
             generation: GENERATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             stable: Cell::new(false),
         }
@@ -108,6 +120,11 @@ impl Registry {
         let id = self.fresh();
         self.interned.borrow_mut().insert(key.to_owned(), id);
         id
+    }
+
+    /// The id `intern` gave this key, if it was ever asked for (asking here makes no type).
+    pub fn interned_id(&self, key: &str) -> Option<u32> {
+        self.interned.borrow().get(key).copied()
     }
 }
 
