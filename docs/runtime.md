@@ -31,23 +31,21 @@ render() { return __rs_t(__rs_tmpl0, [this.label, this.label]); }
 `@Watch`, `@Listen`, `@AttachInternals` (form-associated), `@PropSerialize`, `@AttrDeserialize`,
 inheritance and `Mixin()`, `<Host>`, the load, render and update lifecycle, `componentOnReady`,
 `forceUpdate`, shadow or light DOM, adopted stylesheets, SVG, and `@Signal()` fields
-(`docs/signals.md`).
+(`docs/signals.md`). Also: scoped CSS (`sc-<tag>` classes, styles injected per root node), slots
+outside shadow DOM (relocation, nested and late slotting, unslotted children kept hidden in the
+host as Stencil does), functional components and dynamic tags, `h()` called directly,
+child-before-parent load order, `Env`, `setMode`/`getMode`, asset paths, and HMR (`hotSwap`).
 
-**Check:** the starter's 27 browser tests pass unchanged on both runtimes
-(`npx vitest run --config vitest.rs.config.ts`).
+**Check:** the ui-kit's 874 specs pass on this runtime (`COMPILER=runtime npx vitest run` in
+`examples/ui-kit`, 107 files), and the starter's 27 browser tests pass unchanged on both
+runtimes (`npx vitest run --config vitest.rs.config.ts`).
 
 ## Not yet
 
-- scoped CSS, and slots outside shadow DOM
-- functional components (`<Foo />` for a function)
-- server rendering and hydration
-- the lazy loader and child-before-parent load ordering
-- hot module replacement
-- `h()` called directly
-- Stencil's `Env`, `setMode` and `getMode`
-
-The compiler reports each of these as an error; there is no fallback to Stencil's compiler for
-this target.
+- server rendering and hydration (server builds still use Stencil)
+- the lazy loader (not needed: Vite splits code)
+- on the host of a non-shadow component, `innerHTML`, `textContent` and `replaceChildren` are not
+  routed to slots (`appendChild`, `insertBefore`, `append`, `prepend`, `removeChild` are)
 
 ## Benchmark
 
@@ -61,19 +59,19 @@ milliseconds.
 
 | Case | Stencil work | stencilrs work | Stencil total | stencilrs total |
 |---|---:|---:|---:|---:|
-| create 1,000 rows | 10.9 | 5.0 | 25.9 | 5.1 |
-| replace 1,000 rows | 23.4 | 7.8 | 35.2 | 8.0 |
-| update every 10th row | 3.1 | 0.6 | 8.6 | 0.7 |
-| select a row | 3.3 | 0.3 | 13.9 | 0.4 |
-| swap two rows | 3.2 | 0.5 | 8.7 | 0.5 |
-| remove a row | 6.6 | 0.3 | 19.2 | 0.3 |
-| create 10,000 rows | 125.9 | 44.3 | 128.3 | 46.3 |
-| append 1,000 to 1,000 rows | 13.3 | 4.6 | 25.4 | 4.9 |
-| clear 1,000 rows | 6.9 | 3.9 | 20.0 | 3.9 |
-| 1,000 components: create | | | 12.0 | 6.4 |
-| 1,000 components: change a prop on each | | | 17.7 | 14.6 |
+| create 1,000 rows | 13.9 | 6.5 | 28.2 | 6.8 |
+| replace 1,000 rows | 25.4 | 9.1 | 35.4 | 9.3 |
+| update every 10th row | 3.1 | 0.7 | 10.9 | 0.8 |
+| select a row | 3.2 | 0.4 | 13.8 | 0.4 |
+| swap two rows | 3.6 | 0.5 | 15.7 | 0.6 |
+| remove a row | 7.4 | 0.5 | 18.3 | 0.5 |
+| create 10,000 rows | 128.9 | 50.1 | 131.6 | 52.1 |
+| append 1,000 to 1,000 rows | 14.7 | 4.9 | 24.2 | 5.1 |
+| clear 1,000 rows | 7.8 | 3.6 | 18.1 | 3.6 |
+| 1,000 components: create | | | 13.7 | 8.0 |
+| 1,000 components: change a prop on each | | | 18.5 | 14.4 |
 
-Bundle JS: Stencil 81.7 KB (27.6 KB gzip), stencilrs 12.1 KB (4.8 KB gzip). Stencil's figure is
+Bundle JS: Stencil 81.7 KB (27.6 KB gzip), stencilrs 16.9 KB (6.3 KB gzip, with scoped CSS, slots and HMR). Stencil's figure is
 its standalone runtime as the Vite plugin builds it, with every feature flag on. `stencil build`
 tree-shakes unused features, so the real size gap is smaller than this.
 

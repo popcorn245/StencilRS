@@ -9,8 +9,8 @@
 // Covered: @Prop (attribute parsing, reflect, mutable), @State, @Event, @Element, @Method, @Watch,
 // @Listen, the load/update/render lifecycle, componentOnReady, forceUpdate, shadow or light DOM,
 // adopted styles, keyed and unkeyed lists, class/style objects, refs, spreads, events.
-// Not covered: scoped CSS, slot emulation outside shadow DOM, functional components, SSR and
-// hydration, the lazy loader, child-before-parent load ordering.
+// Also: scoped CSS, slot relocation outside shadow DOM, functional components, child-before-parent
+// load order, modes/Env, HMR. Not covered: SSR and hydration; the lazy loader (Vite splits code).
 
 // ---------------------------------------------------------------------------------------------
 // Templates
