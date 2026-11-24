@@ -424,7 +424,7 @@ export function stencilrs(options = {}) {
       };
       // `runtime: 'stencilrs'`: JSX outside components (functional components, helpers) is
       // compiled to templates too.
-      if (runtime === 'stencilrs' && !ssr && !specPage && !transformOpts?.ssr && file.endsWith('.tsx') && !DECORATORS_RE.test(code) && !id.startsWith(BASE_PREFIX) && /<[A-Za-z>]/.test(code)) {
+      if (runtime === 'stencilrs' && !ssr && !specPage && file.endsWith('.tsx') && !DECORATORS_RE.test(code) && !id.startsWith(BASE_PREFIX) && /<[A-Za-z>]/.test(code)) {
         const fine = await transpileAsync(code, { file, resolveImports: false, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
         const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
         if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
@@ -461,7 +461,7 @@ export function stencilrs(options = {}) {
 
       // Experimental: `runtime: 'stencilrs'` compiles client components for the stencilrs runtime
       // (compiled templates, no virtual DOM). No fallback: Stencil's compiler targets its own runtime.
-      if (runtime === 'stencilrs' && !ssr && !specPage && !transformOpts?.ssr) {
+      if (runtime === 'stencilrs' && !ssr && !specPage) {
         const fine = await transpileAsync(code, { file, resolveImports, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
         const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
         if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);

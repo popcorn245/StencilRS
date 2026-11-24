@@ -10,12 +10,15 @@
 // @Listen, the load/update/render lifecycle, componentOnReady, forceUpdate, shadow or light DOM,
 // adopted styles, keyed and unkeyed lists, class/style objects, refs, spreads, events.
 // Also: scoped CSS, slot relocation outside shadow DOM, functional components, child-before-parent
-// load order, modes/Env, HMR. Not covered: SSR and hydration; the lazy loader (Vite splits code).
+// load order, modes/Env, HMR, and hydration of server markup (runtime-server.js). Not covered: the
+// lazy loader (Vite splits code).
 
 // ---------------------------------------------------------------------------------------------
 // Templates
 
 const MARK = 'rs';
+// Set by `@popcorn245/stencilrs/runtime/server` before this module loads.
+const SERVER = !!globalThis.__RS_SERVER__;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
@@ -84,10 +87,18 @@ const update = (inst, values, offset = 0) => {
   for (let i = 0; i < parts.length; i++) parts[i].set(values[i + offset]);
 };
 
+// Native removal: a host's patched removeChild must not see the runtime's own work (and
+// happy-dom implements `remove()` through the parent's removeChild).
+const nativeRemove = Node.prototype.removeChild;
+const detach = (n) => {
+  const p = n.parentNode;
+  if (p) nativeRemove.call(p, n);
+};
+
 const removeRange = (start, end) => {
   for (let n = start; ; ) {
     const next = n.nextSibling;
-    n.remove();
+    detach(n);
     if (n === end || !next) break;
     n = next;
   }
@@ -105,7 +116,7 @@ const place = (node, ref) => {
   else lp.__adopt(node, ref);
 };
 const drop = (n) => {
-  n.remove();
+  detach(n);
   const lp = n.__lp;
   if (lp !== undefined) {
     lp.__slotted.delete(n);
@@ -542,21 +553,64 @@ const sheetFor = (Cstr, css) => {
   return s;
 };
 
-const canAdopt = typeof CSSStyleSheet === 'function' && 'replaceSync' in CSSStyleSheet.prototype && typeof ShadowRoot === 'function' && 'adoptedStyleSheets' in ShadowRoot.prototype;
+// On the server a `<style>` in the shadow root serializes with it; adopted sheets would not.
+const canAdopt = !SERVER && typeof CSSStyleSheet === 'function' && 'replaceSync' in CSSStyleSheet.prototype && typeof ShadowRoot === 'function' && 'adoptedStyleSheets' in ShadowRoot.prototype;
 const shadowStyle = (root, Cstr, style) => {
   if (canAdopt) root.adoptedStyleSheets = [sheetFor(Cstr, style)];
   else root.prepend(Object.assign(document.createElement('style'), { textContent: cssOf(style) }));
 };
 /** Scoped and unencapsulated styles: once per document or shadow root the component is in. */
-const injected = new WeakMap();
+// Kept on the root (not in this module) so the server renderer can reset it between requests.
 const injectStyle = (root, Cstr, style) => {
-  let done = injected.get(root);
-  if (!done) injected.set(root, (done = new Set()));
+  const done = (root.__rsStyles ||= new Set());
   if (done.has(Cstr)) return;
   done.add(Cstr);
+  const tag = Cstr.__meta.tag;
+  const into = root.nodeType === 9 ? root.head : root;
+  if (root.querySelector(`style[sty-id="${tag}"]`)) return; // server-rendered
   const el = Object.assign(document.createElement('style'), { textContent: cssOf(style) });
-  el.setAttribute('sty-id', Cstr.__meta.tag);
-  (root.nodeType === 9 ? root.head : root).prepend(el);
+  el.setAttribute('sty-id', tag);
+  into.prepend(el);
+};
+
+/**
+ * Hydration of server-rendered markup (see runtime-server.js). The client renders again over it:
+ * a shadow host empties its declarative shadow root; a light-DOM host takes back its logical
+ * children, which the server marked `rs-l="<host id>"` (text: a `<!--rs-l:<id>-->` before it),
+ * and drops the rest. Runs just before the first render, so the server markup stays on screen
+ * while `componentWillLoad` is pending.
+ */
+const hydrate = (host, shadow) => {
+  const id = host.getAttribute('s-rs');
+  if (id === null) return;
+  host.removeAttribute('s-rs');
+  if (shadow) {
+    host.shadowRoot?.replaceChildren();
+    return;
+  }
+  const logical = [];
+  const mark = `rs-l:${id}`;
+  const collect = (parent) => {
+    for (let n = parent.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 1) {
+        if (n.getAttribute('rs-l') === id) {
+          n.removeAttribute('rs-l');
+          if (n.hasAttribute('rs-h')) {
+            n.removeAttribute('rs-h');
+            n.hidden = false;
+          }
+          logical.push(n);
+        } else {
+          collect(n);
+        }
+      } else if (n.nodeType === 8 && n.data === mark && n.nextSibling?.nodeType === 3) {
+        n = n.nextSibling;
+        logical.push(n);
+      }
+    }
+  };
+  collect(host);
+  host.replaceChildren(...logical);
 };
 
 const HAS_LOADED = 1, QUEUED = 2, RENDERING = 4, CONNECTED_ONCE = 8, REFLECTING = 16, DIRTY = 32;
@@ -616,8 +670,8 @@ export class Base extends HTMLElement {
         n.__hid = true;
       }
       if (n.parentNode !== this) ins(this, n, this.firstChild);
-    } else if (n.parentNode) {
-      n.remove();
+    } else {
+      detach(n);
     }
   }
   // Outside shadow DOM, children added after the first render go to their slot too.
@@ -676,6 +730,7 @@ export class Base extends HTMLElement {
       console.error(e);
     }
     const meta = this.constructor.__meta;
+    hydrate(this, !!meta.shadow);
     if (meta.shadow) {
       const root = this.shadowRoot || this.attachShadow({ mode: 'open', delegatesFocus: !!meta.delegatesFocus });
       if (meta.style) shadowStyle(root, this.constructor, meta.style);
@@ -833,7 +888,7 @@ export { noDecorator as Component, noDecorator as Prop, noDecorator as State, no
 export const Mixin = (...mixins) => mixins.reduceRight((acc, mixin) => mixin(acc), Base);
 
 /** Stencil's `Build`, as the browser sees it. */
-export const Build = { isBrowser: true, isServer: false, isDev: false, isTesting: false };
+export const Build = { isBrowser: !SERVER, isServer: SERVER, isDev: false, isTesting: false };
 /** Stencil's `getElement`: a component here is its element. */
 export const getElement = (ref) => ref;
 export const writeTask = (cb) => requestAnimationFrame(cb);

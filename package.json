@@ -52,6 +52,10 @@
     "./runtime": {
       "types": "./runtime.d.ts",
       "default": "./runtime.js"
+    },
+    "./runtime/server": {
+      "types": "./runtime-server.d.ts",
+      "default": "./runtime-server.js"
     }
   },
   "files": [
@@ -76,7 +80,9 @@
     "signals.js",
     "signals.d.ts",
     "runtime.js",
-    "runtime.d.ts"
+    "runtime.d.ts",
+    "runtime-server.js",
+    "runtime-server.d.ts"
   ],
   "publishConfig": {
     "access": "public"
@@ -97,13 +103,15 @@
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
     "signal-polyfill": "^0.2.3",
-    "vite": ">=8"
+    "vite": ">=8",
+    "happy-dom": ">=20"
   },
   "devDependencies": {
     "@napi-rs/cli": "3.10.8",
     "@semantic-release/exec": "^7.1.0",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
+    "happy-dom": "^21.0.1",
     "sass": "^1.99.0",
     "semantic-release": "^25.0.9",
     "signal-polyfill": "^0.2.3",
@@ -135,6 +143,9 @@
   },
   "peerDependenciesMeta": {
     "signal-polyfill": {
+      "optional": true
+    },
+    "happy-dom": {
       "optional": true
     }
   }

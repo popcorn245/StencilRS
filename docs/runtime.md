@@ -42,10 +42,35 @@ runtimes (`npx vitest run --config vitest.rs.config.ts`).
 
 ## Not yet
 
-- server rendering and hydration (server builds still use Stencil)
 - the lazy loader (not needed: Vite splits code)
 - on the host of a non-shadow component, `innerHTML`, `textContent` and `replaceChildren` are not
   routed to slots (`appendChild`, `insertBefore`, `append`, `prepend`, `removeChild` are)
+
+## Server rendering and hydration
+
+```js
+import { createRenderer } from '@popcorn245/stencilrs/runtime/server';
+const render = await createRenderer(() => import('./dist-server/components.js'));
+const html = await render('<my-card heading="Hi"><b slot="title">T</b></my-card>');
+```
+
+The server runs the same runtime in a [happy-dom](https://github.com/capricorn86/happy-dom)
+window (an optional peer dependency). Shadow roots are written as declarative shadow DOM with
+their styles inlined; scoped styles are written as `<style sty-id>` tags. Each host gets
+`s-rs="<id>"`, and each child a light-DOM host moved into a slot gets `rs-l="<id>"` (text gets a
+`<!--rs-l:<id>-->` before it).
+
+On the client, a host with `s-rs` hydrates just before its first render. A shadow host empties
+its declarative shadow root; a light-DOM host takes back its marked children and drops the rest.
+It then renders as usual. This is re-render hydration: the server markup is on screen until the
+scripts run, but its DOM nodes are replaced rather than adopted. Adopting them in place is the
+next step.
+
+With `runtime: 'stencilrs'`, Vite SSR builds (`transformOptions.ssr`) also compile for this
+runtime. One renderer renders one page at a time.
+
+**Check:** `test/runtime-ssr.test.js` renders in happy-dom, loads the markup in Chromium,
+hydrates, and clicks through.
 
 ## Benchmark
 
