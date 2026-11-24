@@ -752,18 +752,19 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     }
 
     fn array(&self, el: Ty) -> Ty {
-        let id = self.reg.intern(&format!("array<{}>", el.key()));
-        self.reg.note_created(id);
-        if self.resolving() {
-            Ty::new(K::Array(el, id))
-        } else {
-            // Without the lib `Array` is an empty generic type, which prints as `{}`.
-            Ty::new(K::Anon(Anon {
-                id,
+        if !self.resolving() {
+            // Without the lib `Array` is an empty generic type, and every array type is the
+            // checker's one empty object type: it prints as `{}`, two of them in a union are
+            // one member, and it sorts before every type the program makes.
+            return Ty::new(K::Anon(Anon {
+                id: crate::types::ID_EMPTY_OBJECT,
                 shape: Shape::Text("{}".into()),
                 alias: None,
-            }))
+            }));
         }
+        let id = self.reg.intern(&format!("array<{}>", el.key()));
+        self.reg.note_created(id);
+        Ty::new(K::Array(el, id))
     }
 
     fn literal(&self, lit: &TSLiteral) -> Res<Ty> {
@@ -1109,9 +1110,25 @@ pub struct RefNames {
     pub names: Vec<String>,
     /// A `typeof X` query: Stencil adds classes and enums it names, which is not modelled.
     pub type_query: bool,
+    /// Reading a printed type: the names of the written object and function types, which the
+    /// printed ones are replaced by (shape, names, met).
+    reuse: Option<Vec<(String, Vec<String>, bool)>>,
+    unaligned: bool,
 }
 
 impl<'a> Visit<'a> for RefNames {
+    fn visit_ts_type_literal(&mut self, it: &oxc::ast::ast::TSTypeLiteral<'a>) {
+        if !self.reused(shape_of_literal(it)) {
+            oxc::ast_visit::walk::walk_ts_type_literal(self, it);
+        }
+    }
+
+    fn visit_ts_function_type(&mut self, it: &oxc::ast::ast::TSFunctionType<'a>) {
+        if !self.reused(shape_of_function(it)) {
+            oxc::ast_visit::walk::walk_ts_function_type(self, it);
+        }
+    }
+
     fn visit_ts_type_reference(&mut self, it: &TSTypeReference<'a>) {
         let mut name = &it.type_name;
         while let TSTypeName::QualifiedName(q) = name {
@@ -1120,12 +1137,161 @@ impl<'a> Visit<'a> for RefNames {
         if let TSTypeName::IdentifierReference(id) = name {
             self.names.push(id.name.to_string());
         }
+        // `getAllTypeReferences` also adds each type argument that is a plain reference at once,
+        // before it walks the children (which meet them again).
+        if let Some(args) = &it.type_arguments {
+            for arg in &args.params {
+                if let TSType::TSTypeReference(r) = arg
+                    && let TSTypeName::IdentifierReference(id) = &r.type_name
+                {
+                    self.names.push(id.name.to_string());
+                }
+            }
+        }
         oxc::ast_visit::walk::walk_ts_type_reference(self, it);
     }
 
     fn visit_ts_type_query(&mut self, it: &oxc::ast::ast::TSTypeQuery<'a>) {
         self.type_query = true;
         oxc::ast_visit::walk::walk_ts_type_query(self, it);
+    }
+}
+
+impl RefNames {
+    /// The names in the return type node `typeToTypeNode` builds for `method`: the printed
+    /// type, except that an object or function type keeps the annotations it was written with
+    /// (the node builder reuses them), so those are read from `written`.
+    pub fn of_printed(text: &str, written: &TSType) -> Res<Self> {
+        let mut found = ReuseTable::default();
+        found.visit_ts_type(written);
+        let allocator = oxc::allocator::Allocator::default();
+        let source = format!("type T = {text};");
+        let parsed = oxc::parser::Parser::new(&allocator, &source, oxc::span::SourceType::ts()).parse();
+        let mut names = RefNames::default();
+        match parsed.program.body.first() {
+            Some(Statement::TSTypeAliasDeclaration(alias)) if parsed.diagnostics.is_empty() => {
+                names.reuse = Some(found.table);
+                names.visit_ts_type(&alias.type_annotation);
+            }
+            _ => return unsupported(format!("the printed return type `{text}`")),
+        }
+        // A printed object or function type that cannot be told from its written one.
+        if names.unaligned {
+            return unsupported("an object or function type in a return type");
+        }
+        names.reuse = None;
+        Ok(names)
+    }
+
+    /// A printed object or function type with shape `sig`: it holds the names of the
+    /// annotations it was written with.
+    fn reused(&mut self, sig: Option<String>) -> bool {
+        let Some(table) = &self.reuse else {
+            return false;
+        };
+        // `{}` is what an array of an unknown type prints as: it names nothing.
+        if sig.as_deref() == Some("{}") {
+            return true;
+        }
+        // Written types of one shape that name the same things are not told apart, and need not be.
+        let mut hits = table.iter().filter(|(s, _, _)| Some(s) == sig.as_ref());
+        let first = hits.next();
+        match first {
+            Some((_, names, query)) if hits.all(|(_, n, q)| n == names && q == query) => {
+                let (names, query) = (names.clone(), *query);
+                self.names.extend(names);
+                self.type_query |= query;
+            }
+            _ => self.unaligned = true,
+        }
+        true
+    }
+}
+
+/// What identifies an object or function type across its written and printed forms: the kinds
+/// and names of its members, or the names of its parameters. `None` when the checker could
+/// order the members differently from the source.
+fn shape_of_literal(it: &oxc::ast::ast::TSTypeLiteral) -> Option<String> {
+    let mut keys = Vec::new();
+    let mut rank = 0;
+    for m in &it.members {
+        // The checker lists call signatures, construct signatures, index signatures, then properties.
+        let (r, key) = match m {
+            TSSignature::TSCallSignatureDeclaration(c) if c.type_parameters.is_none() && c.this_param.is_none() => {
+                (0, format!("({})", param_names(&c.params)?))
+            }
+            TSSignature::TSConstructSignatureDeclaration(_) => return None,
+            TSSignature::TSIndexSignature(_) => (2, "[]".to_owned()),
+            TSSignature::TSPropertySignature(p) if !p.computed => (3, property_key_name(&p.key)?),
+            TSSignature::TSMethodSignature(p) if !p.computed && p.type_parameters.is_none() && p.this_param.is_none() => {
+                (3, format!("{}({})", property_key_name(&p.key)?, param_names(&p.params)?))
+            }
+            _ => return None,
+        };
+        if r < rank {
+            return None;
+        }
+        rank = r;
+        keys.push(key);
+    }
+    Some(format!("{{{}}}", keys.join(";")))
+}
+
+fn param_names(params: &FormalParameters) -> Option<String> {
+    let mut names = Vec::new();
+    for p in &params.items {
+        match &p.pattern {
+            oxc::ast::ast::BindingPattern::BindingIdentifier(id) => names.push(id.name.to_string()),
+            _ => return None,
+        }
+    }
+    if let Some(rest) = &params.rest {
+        match &rest.rest.argument {
+            oxc::ast::ast::BindingPattern::BindingIdentifier(id) => names.push(format!("...{}", id.name)),
+            _ => return None,
+        }
+    }
+    Some(names.join(","))
+}
+
+fn shape_of_function(it: &oxc::ast::ast::TSFunctionType) -> Option<String> {
+    if it.type_parameters.is_some() || it.this_param.is_some() {
+        return None;
+    }
+    Some(format!("({})=>", param_names(&it.params)?))
+}
+
+/// The written object and function types of an annotation (the outermost ones): shape, the
+/// names each holds, and whether it holds a `typeof`.
+#[derive(Default)]
+struct ReuseTable {
+    table: Vec<(String, Vec<String>, bool)>,
+}
+
+impl ReuseTable {
+    fn add(&mut self, sig: Option<String>, names: RefNames) {
+        if let Some(sig) = sig {
+            self.table.push((sig, names.names, names.type_query));
+        }
+    }
+}
+
+impl<'a> Visit<'a> for ReuseTable {
+    fn visit_ts_type_literal(&mut self, it: &oxc::ast::ast::TSTypeLiteral<'a>) {
+        let mut names = RefNames::default();
+        // An index signature's type is built from the type, not reused.
+        for m in &it.members {
+            if !matches!(m, TSSignature::TSIndexSignature(_)) {
+                names.visit_ts_signature(m);
+            }
+        }
+        self.add(shape_of_literal(it), names);
+    }
+
+    fn visit_ts_function_type(&mut self, it: &oxc::ast::ast::TSFunctionType<'a>) {
+        let mut names = RefNames::default();
+        oxc::ast_visit::walk::walk_ts_function_type(&mut names, it);
+        self.add(shape_of_function(it), names);
     }
 }
 
@@ -2470,16 +2636,18 @@ fn method_type_in_scope(
         None if func.r#async => ("Promise<void>".to_owned(), "Promise<void>".to_owned()),
         None => ("void".to_owned(), "void".to_owned()),
     };
+    let printed_return = returned.clone();
     // A method that returns nothing is made to return a promise (with a warning).
     let was_void = returned == "void";
     if was_void {
         returned = "Promise<void>".to_owned();
     }
 
-    // Stencil reads the return type's references before those of the whole method.
+    // Stencil reads the references of the return type node it builds from the type (what is
+    // printed, not what was written) before those of the whole method.
     let mut names = RefNames::default();
-    if let Some(ret) = &func.return_type {
-        names.visit_ts_type_annotation(ret);
+    if func.return_type.is_some() {
+        names = RefNames::of_printed(&printed_return, &func.return_type.as_ref().unwrap().type_annotation)?;
     } else if !inferred_names.is_empty() {
         // The inferred return type is a type node of its own, built from the type.
         names.names.append(&mut inferred_names);

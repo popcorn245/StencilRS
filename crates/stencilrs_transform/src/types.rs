@@ -40,6 +40,9 @@ const ID_SYMBOL: u32 = 24;
 const ID_VOID: u32 = 25;
 const ID_NEVER: u32 = 26;
 const ID_OBJECT: u32 = 29;
+/// The checker's one empty object type, made right after the intrinsics. Without the lib every
+/// array type is this type (`Array` is an empty generic type there).
+pub const ID_EMPTY_OBJECT: u32 = 30;
 const FIRST_ID: u32 = 100;
 
 /// Ids for the types created while one file (and the modules it imports) is analysed.
