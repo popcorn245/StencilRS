@@ -2,6 +2,21 @@
   "tag": "build-inferred-returns",
   "properties": [
     {
+      "name": "limit",
+      "flags": {
+        "attribute": "limit",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "number",
+        "resolved": "number | undefined",
+        "references": {}
+      }
+    },
+    {
       "name": "mode",
       "flags": {
         "attribute": "mode",
@@ -132,6 +147,20 @@
       }
     },
     {
+      "name": "getLimit",
+      "complexType": {
+        "signature": "() => Promise<number | undefined>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<number | undefined>"
+      }
+    },
+    {
       "name": "getProgress",
       "complexType": {
         "signature": "() => Promise<number>",
@@ -143,6 +172,20 @@
           }
         },
         "return": "Promise<number>"
+      }
+    },
+    {
+      "name": "handed",
+      "complexType": {
+        "signature": "() => Promise<string>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string>"
       }
     },
     {
@@ -177,6 +220,20 @@
           }
         },
         "return": "Promise<true | undefined>"
+      }
+    },
+    {
+      "name": "narrowed",
+      "complexType": {
+        "signature": "() => Promise<true>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<true>"
       }
     },
     {

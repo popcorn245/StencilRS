@@ -62,6 +62,26 @@ export class BuildInferredReturns {
       return true;
     }
   }
+  /** An optional field is `undefined` too: left to Stencil. */
+  @Prop() limit?: number;
+  @Method()
+  getLimit() {
+    return Promise.resolve(this.limit);
+  }
+  /** The guard narrows the field where it is returned: left to Stencil. */
+  @Method()
+  async narrowed() {
+    if (!this.ready) {
+      throw new Error('not ready');
+    }
+    return this.ready;
+  }
+  /** `this` is handed to something else: left to Stencil. */
+  @Method()
+  async handed() {
+    Object.freeze(this);
+    return this.label;
+  }
   render() {
     return <div />;
   }

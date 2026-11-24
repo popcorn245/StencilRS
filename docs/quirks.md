@@ -182,7 +182,11 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   or `new Promise<T>(...)` with `T` a type the model prints; `async` wraps the result in a `Promise`
   unless it already is one, and all the returns must print the same. A number or string literal
   counts only when it is the only `return` (two different ones keep their literal types, `1 | 2`),
-  and a path that falls off the end adds `undefined`: both stay with Stencil. The inferred
+  and a path that falls off the end adds `undefined`: both stay with Stencil. So does a
+  `this.field` that is optional (`number | undefined`), or that something in the method could
+  narrow: `if (!this.ready) throw ...; return this.ready` returns `true`, not `boolean`, so the
+  field counts only when the method mentions it once and uses `this` in no other way than
+  `this.name`. The inferred
   type is a node of its own, so `references` starts with `Promise` and then names what `T` names.
   Fixture: `build/src/components/inferred-returns.tsx`. Left: `getAccordions` (`Array.from(...) as
   HTMLIonAccordionElement[]`, a type the build generates) and ion-router `canTransition`

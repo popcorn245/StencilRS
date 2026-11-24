@@ -262,6 +262,7 @@ fn this_field(name: &str, locals: &Locals, source: &str, depth: u8) -> (PropType
         annotation,
         init,
         readonly,
+        ..
     }) = class
         .as_deref()
         .and_then(|c| locals.members.get(c))

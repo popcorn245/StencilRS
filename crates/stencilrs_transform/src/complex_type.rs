@@ -12,8 +12,8 @@ use std::rc::Rc;
 
 use oxc::ast::ast::{
     ArrowFunctionExpression, Class, Expression, FormalParameters, Function, MethodDefinition,
-    Program, ReturnStatement, Statement, TSEnumDeclaration, TSEnumMemberName, TSLiteral,
-    TSSignature, TSTupleElement, TSType, TSTypeName, TSTypeOperatorOperator, TSTypeReference,
+    Program, ReturnStatement, StaticMemberExpression, Statement, TSEnumDeclaration, TSEnumMemberName, TSLiteral,
+    TSSignature, TSTupleElement, ThisExpression, TSType, TSTypeName, TSTypeOperatorOperator, TSTypeReference,
     UnaryOperator,
 };
 use oxc::ast_visit::Visit;
@@ -1586,9 +1586,12 @@ fn inferred_return(env: &TypeEnv, func: &Function, names: &mut Vec<String>) -> R
     count.visit_function_body(body);
     let total = count.0;
     let mut texts: Vec<(String, Vec<String>)> = Vec::new();
+    let mut this_uses = ThisUses::default();
+    this_uses.visit_function_body(body);
     let mut walker = ReturnTexts {
         env,
         total,
+        this_uses: &this_uses,
         texts: &mut texts,
         failed: None,
     };
@@ -1615,10 +1618,34 @@ fn inferred_return(env: &TypeEnv, func: &Function, names: &mut Vec<String>) -> R
     Ok(text)
 }
 
+/// How a function body uses `this`, nested functions included: how often each `this.name` is
+/// mentioned, and whether `this` appears any other way (`this[x]`, `f(this)`, `{ x } = this`).
+/// A `this.name` that is mentioned once has nothing that could narrow it where it is returned
+/// (`if (!this.flag) throw ...; return this.flag` returns `true`, not the field's `boolean`).
+#[derive(Default)]
+struct ThisUses {
+    members: rustc_hash::FxHashMap<String, usize>,
+    other: bool,
+}
+
+impl<'a> Visit<'a> for ThisUses {
+    fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
+        if matches!(it.object, Expression::ThisExpression(_)) {
+            *self.members.entry(it.property.name.to_string()).or_default() += 1;
+        } else {
+            oxc::ast_visit::walk::walk_static_member_expression(self, it);
+        }
+    }
+    fn visit_this_expression(&mut self, _: &ThisExpression) {
+        self.other = true;
+    }
+}
+
 /// The type of each `return <expr>` of a function (see `inferred_return`).
 struct ReturnTexts<'t, 'e, 'a, 'b> {
     env: &'t TypeEnv<'e, 'a, 'b>,
     total: usize,
+    this_uses: &'t ThisUses,
     texts: &'t mut Vec<(String, Vec<String>)>,
     failed: Option<Unsupported>,
 }
@@ -1668,6 +1695,7 @@ impl ReturnTexts<'_, '_, '_, '_> {
                     annotation,
                     init,
                     readonly,
+                    optional,
                 }) = class
                     .as_deref()
                     .and_then(|c| self.env.locals.members.get(c))
@@ -1675,6 +1703,13 @@ impl ReturnTexts<'_, '_, '_, '_> {
                 else {
                     return why();
                 };
+                // The field's declared type is what is returned only where nothing narrowed it,
+                // and an optional field is `undefined` too.
+                let narrowable = self.this_uses.other
+                    || self.this_uses.members.get(m.property.name.as_str()) != Some(&1);
+                if *optional || narrowable {
+                    return why();
+                }
                 match (annotation, init) {
                     (Some(t), _) => primitive(&type_to_string(&self.env.eval(t)?)?),
                     // A `readonly` field keeps the literal type of its initializer.

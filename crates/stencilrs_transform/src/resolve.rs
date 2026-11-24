@@ -965,16 +965,8 @@ mod tests {
     #[test]
     fn an_import_cycle_does_not_leave_a_cut_short_summary_behind() {
         let dir = folder("cycle");
-        write(
-            &dir.join("a.ts"),
-            "export { B } from './b'; export const A = 1;",
-            0,
-        );
-        write(
-            &dir.join("b.ts"),
-            "export { A } from './a'; export const B = 'b';",
-            0,
-        );
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
+        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         // Read from a, b is summarised while a is in progress, and lacks a's exports.
         let a = Resolver::new(&importer, false)
@@ -995,16 +987,8 @@ mod tests {
     #[test]
     fn a_cycle_member_reads_the_same_whichever_module_was_read_before_it() {
         let dir = folder("cycle-order");
-        write(
-            &dir.join("a.ts"),
-            "export { B } from './b'; export const A = 1;",
-            0,
-        );
-        write(
-            &dir.join("b.ts"),
-            "export { A } from './a'; export const B = 'b';",
-            0,
-        );
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
+        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         let r = Resolver::new(&importer, false);
         r.module(&importer, "./a").unwrap();
@@ -1015,11 +999,7 @@ mod tests {
             .module(&importer, "./b")
             .unwrap();
         assert!(Arc::ptr_eq(&b.values, &again.values));
-        write(
-            &dir.join("a.ts"),
-            "export { B } from './b'; export const A = 'x';",
-            1,
-        );
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 'x';", 1);
         let after = Resolver::new(&importer, false)
             .module(&importer, "./b")
             .unwrap();

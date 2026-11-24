@@ -1536,10 +1536,7 @@ fn docs_slots(class: &Class, docs: &Docs) -> Vec<SlotDoc> {
         let spaced = format!(" {text}");
         let mut parts = spaced.split(" - ");
         let name = parts.next().unwrap_or_default().trim().to_owned();
-        push(
-            name,
-            parts.collect::<Vec<_>>().join(" - ").trim().to_owned(),
-        );
+        push(name, parts.collect::<Vec<_>>().join(" - ").trim().to_owned());
     }
     for name in scan.0 {
         let docs = if name.is_empty() {
