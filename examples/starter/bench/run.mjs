@@ -1,9 +1,11 @@
-// Runtime benchmark: the same components on Stencil's runtime and on the stencilrs runtime.
+// Runtime benchmark: the same components on Stencil's runtime, on the stencilrs runtime, and
+// written for Qwik (bench/qwik, client-rendered).
 //   npx vite build --config bench/vite.stencil.config.ts
 //   npx vite build --config bench/vite.stencilrs.config.ts
+//   (cd bench/qwik && npm install && npx vite build)   # optional: skipped when dist-qwik is missing
 //   node bench/run.mjs [runs]
 import { createServer } from 'node:http';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { chromium } from 'playwright';
@@ -67,6 +69,52 @@ async function measure(page, setup, op) {
   }, op);
 }
 
+// Qwik has no lifecycle hook to time a render by: `total` is from the call to the last DOM
+// mutation of the change (a MutationObserver), and there is no `work` column.
+const FRAME = 'new Promise((r) => requestAnimationFrame(() => setTimeout(r)))';
+async function measureQwik(page, setup, op) {
+  await page.evaluate(async ([setup, FRAME]) => {
+    while (!window.bench) await new Promise((r) => setTimeout(r, 10));
+    window.bench.clear();
+    await eval(FRAME);
+    if (setup) eval(`window.bench.${setup}`);
+    await eval(FRAME);
+    await eval(FRAME);
+  }, [setup, FRAME]);
+  return page.evaluate(async ([op, FRAME]) => {
+    let last = 0;
+    const mo = new MutationObserver(() => (last = performance.now()));
+    mo.observe(document.getElementById('app'), { subtree: true, childList: true, characterData: true, attributes: true });
+    const t = performance.now();
+    eval(`window.bench.${op}`);
+    for (let i = 0; i < 100; i++) {
+      const seen = last;
+      await eval(FRAME);
+      if (last && last === seen) break; // a frame with no further change
+    }
+    mo.disconnect();
+    return { work: null, total: last - t };
+  }, [op, FRAME]);
+}
+
+async function cellsQwik(page) {
+  return page.evaluate(async (FRAME) => {
+    window.bench.cells(0);
+    await eval(FRAME);
+    let t = performance.now();
+    window.bench.cells(1000);
+    while (document.querySelectorAll('#cells b').length < 1000) await new Promise((r) => setTimeout(r, 0));
+    const create = performance.now() - t;
+    await eval(FRAME);
+    t = performance.now();
+    window.bench.bump();
+    const last = () => document.querySelector('#cells > div:last-child b').textContent;
+    do await eval(FRAME);
+    while (last() !== '1000');
+    return { create, update: performance.now() - t };
+  }, FRAME);
+}
+
 async function cells(page) {
   return page.evaluate(async () => {
     const host = document.getElementById('cells');
@@ -94,8 +142,10 @@ async function cells(page) {
 
 const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : { channel: 'chrome' });
 const results = {};
-for (const runtime of ['stencil', 'stencilrs']) {
+const runtimes = ['stencil', 'stencilrs', ...(existsSync(join(here, 'dist-qwik')) ? ['qwik'] : [])];
+for (const runtime of runtimes) {
   const dir = join(here, `dist-${runtime}`);
+  const qwik = runtime === 'qwik';
   const js = readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.js'));
   const bytes = js.reduce((n, f) => n + readFileSync(join(dir, 'assets', f)).length, 0);
   const gz = js.reduce((n, f) => n + gzipSync(readFileSync(join(dir, 'assets', f))).length, 0);
@@ -106,14 +156,14 @@ for (const runtime of ['stencil', 'stencilrs']) {
   for (const [name, [setup, op]] of Object.entries(CASES)) {
     const work = [], total = [];
     for (let i = 0; i < RUNS + 2; i++) {
-      const m = await measure(page, setup, op);
+      const m = qwik ? await measureQwik(page, setup, op) : await measure(page, setup, op);
       if (i >= 2) { work.push(m.work); total.push(m.total); } // 2 warm-up runs
     }
     r.cases[name] = { work: median(work), total: median(total) };
   }
   const c = [], u = [];
   for (let i = 0; i < Math.max(5, RUNS >> 1) + 1; i++) {
-    const m = await cells(page);
+    const m = qwik ? await cellsQwik(page) : await cells(page);
     if (i) { c.push(m.create); u.push(m.update); }
   }
   r.cases['1,000 components: create'] = { total: median(c) };
@@ -125,10 +175,12 @@ for (const runtime of ['stencil', 'stencilrs']) {
 await browser.close();
 
 const fmt = (x) => (x == null ? '' : x.toFixed(1));
-console.log(`| Case (median of ${RUNS}, ms) | Stencil work | stencilrs work | Stencil total | stencilrs total | total ratio |`);
-console.log('|---|---:|---:|---:|---:|---:|');
+const q = results.qwik;
+console.log(`| Case (median of ${RUNS}, ms) | Stencil work | stencilrs work | Stencil total | stencilrs total |${q ? ' Qwik total |' : ''} Stencil ÷ stencilrs |${q ? ' Qwik ÷ stencilrs |' : ''}`);
+console.log(`|---|---:|---:|---:|---:|${q ? '---:|' : ''}---:|${q ? '---:|' : ''}`);
 for (const name of Object.keys(results.stencil.cases)) {
-  const a = results.stencil.cases[name], b = results.stencilrs.cases[name];
-  console.log(`| ${name} | ${fmt(a.work)} | ${fmt(b.work)} | ${fmt(a.total)} | ${fmt(b.total)} | ${(a.total / b.total).toFixed(2)}× |`);
+  const a = results.stencil.cases[name], b = results.stencilrs.cases[name], c = q?.cases[name];
+  console.log(`| ${name} | ${fmt(a.work)} | ${fmt(b.work)} | ${fmt(a.total)} | ${fmt(b.total)} |${q ? ` ${fmt(c.total)} |` : ''} ${(a.total / b.total).toFixed(2)}× |${q ? ` ${(c.total / b.total).toFixed(2)}× |` : ''}`);
 }
-console.log(`\nJS: Stencil ${results.stencil.bytes} B (${results.stencil.gz} B gzip), stencilrs ${results.stencilrs.bytes} B (${results.stencilrs.gz} B gzip)`);
+const size = (r) => `${r.bytes} B (${r.gz} B gzip)`;
+console.log(`\nJS: Stencil ${size(results.stencil)}, stencilrs ${size(results.stencilrs)}${q ? `, Qwik ${size(q)} (every chunk, though Qwik loads them lazily)` : ''}`);
