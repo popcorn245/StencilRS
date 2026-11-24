@@ -752,18 +752,19 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     }
 
     fn array(&self, el: Ty) -> Ty {
-        let id = self.reg.intern(&format!("array<{}>", el.key()));
-        self.reg.note_created(id);
-        if self.resolving() {
-            Ty::new(K::Array(el, id))
-        } else {
-            // Without the lib `Array` is an empty generic type, which prints as `{}`.
-            Ty::new(K::Anon(Anon {
-                id,
+        if !self.resolving() {
+            // Without the lib `Array` is an empty generic type, and every array type is the
+            // checker's one empty object type: it prints as `{}`, two of them in a union are
+            // one member, and it sorts before every type the program makes.
+            return Ty::new(K::Anon(Anon {
+                id: crate::types::ID_EMPTY_OBJECT,
                 shape: Shape::Text("{}".into()),
                 alias: None,
-            }))
+            }));
         }
+        let id = self.reg.intern(&format!("array<{}>", el.key()));
+        self.reg.note_created(id);
+        Ty::new(K::Array(el, id))
     }
 
     fn literal(&self, lit: &TSLiteral) -> Res<Ty> {

@@ -1,0 +1,750 @@
+import { registerInstance as __stencil_registerInstance, createEvent as __stencil_createEvent } from "@stencil/core/testing";
+import { h } from "@stencil/core/testing";
+var Kind;
+(function (Kind) {
+    Kind[Kind["One"] = 0] = "One";
+    Kind[Kind["Two"] = 1] = "Two";
+})(Kind || (Kind = {}));
+export const ArrayUnions = class {
+    constructor(hostRef) {
+        __stencil_registerInstance(this, hostRef);
+        this.objectsChange = __stencil_createEvent(this, "objectsChange", 7);
+        this.tupleChange = __stencil_createEvent(this, "tupleChange", 7);
+    }
+    objects;
+    primitives;
+    withTuple;
+    withLiteral;
+    objectsChange;
+    tupleChange;
+    async objectArrays(x) {
+        return [];
+    }
+    async primitiveArrays(x) {
+        return [];
+    }
+    async nullable(x) {
+        return null;
+    }
+    async tuple(x) {
+        return [];
+    }
+    async withObject(x) {
+        return [];
+    }
+    async withLiterals(x, y, z) {
+        return [];
+    }
+    async withString(x) {
+        return [];
+    }
+    async withEmpty(x, y) {
+        return [];
+    }
+    async withFunction(x, y) {
+        return [];
+    }
+    async withObjects(x, y) { }
+    async nested(x, y, z) { }
+    async withLocals(x, y, z, w) { }
+    async withEnum(x, y) { }
+    async tuples(x, y) {
+        return [];
+    }
+    render() {
+        return h("div", { key: '0' });
+    }
+    static get COMPILER_META() { return {
+        "attachInternalsMemberName": null,
+        "attachInternalsCustomStates": [],
+        "formAssociated": false,
+        "tagName": "array-unions",
+        "componentClassName": "ArrayUnions",
+        "elementRef": null,
+        "encapsulation": "none",
+        "shadowDelegatesFocus": false,
+        "shadowClonable": false,
+        "shadowSerializable": false,
+        "shadowMode": null,
+        "slotAssignment": null,
+        "patches": null,
+        "properties": [{
+                "name": "objects",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "{ a: A }[] | { c: C }[]",
+                    "resolved": "undefined | {}",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "primitives",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "string[] | number[]",
+                    "resolved": "undefined | {}",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "withTuple",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "[A, B] | C[]",
+                    "resolved": "[A, B] | undefined | {}",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "withLiteral",
+                "type": "string",
+                "attribute": "with-literal",
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "'a' | A[]",
+                    "resolved": "\"a\" | undefined | {}",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }],
+        "virtualProperties": [],
+        "states": [],
+        "methods": [{
+                "name": "objectArrays",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: { a: A; }[] | { c: C; }[]) => Promise<{ a: A; }[] | { c: C; }[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    },
+                    "return": "Promise<{}>"
+                },
+                "internal": false
+            }, {
+                "name": "primitiveArrays",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: string[] | number[]) => Promise<string[] | number[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        }
+                    },
+                    "return": "Promise<{}>"
+                },
+                "internal": false
+            }, {
+                "name": "nullable",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: A[] | B[]) => Promise<A[] | B[] | null>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        }
+                    },
+                    "return": "Promise<{} | null>"
+                },
+                "internal": false
+            }, {
+                "name": "tuple",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: [A, B] | C[]) => Promise<[A, B] | C[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | [A, B]",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    },
+                    "return": "Promise<{} | [A, B]>"
+                },
+                "internal": false
+            }, {
+                "name": "withObject",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: object | A[]) => Promise<object | A[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "object | {}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<object | {}>"
+                },
+                "internal": false
+            }, {
+                "name": "withLiterals",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: \"a\" | A[], y: A[] | 1 | 2, z: true | A[]) => Promise<\"a\" | A[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | \"a\"",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | 2 | 1",
+                            "docs": ""
+                        }, {
+                            "name": "z",
+                            "type": "true | {}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<{} | \"a\">"
+                },
+                "internal": false
+            }, {
+                "name": "withString",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: A[] | string) => Promise<A[] | string>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "string | {}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<string | {}>"
+                },
+                "internal": false
+            }, {
+                "name": "withEmpty",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: A[] | {}, y: {} | A[]) => Promise<A[] | {}>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | {}",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | {}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<{} | {}>"
+                },
+                "internal": false
+            }, {
+                "name": "withFunction",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: A[] | (() => void), y: (() => void) | A[]) => Promise<A[] | (() => void)>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | (() => void)",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | (() => void)",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<{} | (() => void)>"
+                },
+                "internal": false
+            }, {
+                "name": "withObjects",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: A[] | { a: string; } | { b: number; }, y: { a: string; } | A[] | { b: number; }) => Promise<void>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | { a: string; } | { b: number; }",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | { a: string; } | { b: number; }",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<void>"
+                },
+                "internal": false
+            }, {
+                "name": "nested",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: string[][] | number[], y: { x: string[] | number[]; }, z: (x: string[] | number[]) => void) => Promise<void>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{}",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{ x: {}; }",
+                            "docs": ""
+                        }, {
+                            "name": "z",
+                            "type": "(x: {}) => void",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        }
+                    },
+                    "return": "Promise<void>"
+                },
+                "internal": false
+            }, {
+                "name": "withLocals",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: Local | A[], y: A[] | Local, z: LocalAlias | A[], w: A[] | LocalUnion) => Promise<void>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | Local",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | Local",
+                            "docs": ""
+                        }, {
+                            "name": "z",
+                            "type": "{} | LocalAlias",
+                            "docs": ""
+                        }, {
+                            "name": "w",
+                            "type": "{} | LocalUnion",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "Local": {
+                            "location": "global",
+                            "id": "global::Local"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "LocalAlias": {
+                            "location": "global",
+                            "id": "global::LocalAlias"
+                        },
+                        "LocalUnion": {
+                            "location": "global",
+                            "id": "global::LocalUnion"
+                        }
+                    },
+                    "return": "Promise<void>"
+                },
+                "internal": false
+            }, {
+                "name": "withEnum",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: Kind | A[], y: A[] | Kind.One) => Promise<void>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "{} | Kind",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{} | Kind.One",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "Kind": {
+                            "location": "global",
+                            "id": "global::Kind"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<void>"
+                },
+                "internal": false
+            }, {
+                "name": "tuples",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: [string[], number[]], y: A[][]) => Promise<string[]>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "[{}, {}]",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{}",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        }
+                    },
+                    "return": "Promise<{}>"
+                },
+                "internal": false
+            }],
+        "listeners": [],
+        "events": [{
+                "name": "objectsChange",
+                "method": "objectsChange",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "{ a: A }[] | { c: C }[]",
+                    "resolved": "{}",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "tupleChange",
+                "method": "tupleChange",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "[A, B] | C[]",
+                    "resolved": "[A, B] | {}",
+                    "references": {
+                        "A": {
+                            "location": "global",
+                            "id": "global::A"
+                        },
+                        "B": {
+                            "location": "global",
+                            "id": "global::B"
+                        },
+                        "C": {
+                            "location": "global",
+                            "id": "global::C"
+                        }
+                    }
+                },
+                "internal": false
+            }],
+        "watchers": [],
+        "doesExtend": false,
+        "styles": [],
+        "globalStyles": [],
+        "internal": false,
+        "sourceMapPath": null,
+        "serializers": [],
+        "deserializers": [],
+        "hasAttributeChangedCallbackFn": false,
+        "hasComponentWillLoadFn": false,
+        "hasComponentDidLoadFn": false,
+        "hasComponentShouldUpdateFn": false,
+        "hasComponentWillUpdateFn": false,
+        "hasComponentDidUpdateFn": false,
+        "hasComponentWillRenderFn": false,
+        "hasComponentDidRenderFn": false,
+        "hasConnectedCallbackFn": false,
+        "hasDeserializer": false,
+        "hasDisconnectedCallbackFn": false,
+        "hasElement": false,
+        "hasEvent": true,
+        "hasLifecycle": false,
+        "hasListener": false,
+        "hasListenerTarget": false,
+        "hasListenerTargetWindow": false,
+        "hasListenerTargetDocument": false,
+        "hasListenerTargetBody": false,
+        "hasMember": true,
+        "hasMethod": true,
+        "hasMode": false,
+        "hasModernPropertyDecls": true,
+        "hasAttribute": true,
+        "hasProp": true,
+        "hasPropNumber": false,
+        "hasPropBoolean": false,
+        "hasPropString": true,
+        "hasPropMutable": false,
+        "hasReflect": false,
+        "hasRenderFn": true,
+        "hasSerializer": false,
+        "hasSlot": false,
+        "hasState": false,
+        "hasStyle": false,
+        "hasVdomAttribute": true,
+        "hasVdomXlink": false,
+        "hasVdomClass": false,
+        "hasVdomFunctional": false,
+        "hasVdomKey": true,
+        "hasVdomListener": false,
+        "hasVdomPropOrAttr": false,
+        "hasVdomPropOrAttrPrefix": false,
+        "hasVdomRef": false,
+        "hasVdomRender": true,
+        "hasVdomStyle": false,
+        "hasVdomText": false,
+        "hasSignalsImport": false,
+        "hasWatchCallback": false,
+        "isPlain": false,
+        "htmlAttrNames": ["key"],
+        "htmlTagNames": ["div"],
+        "htmlParts": [],
+        "htmlSlots": [],
+        "isUpdateable": true,
+        "dependents": [],
+        "directDependents": [],
+        "directDependencies": [],
+        "hasPatchAll": false,
+        "hasPatchChildren": false,
+        "hasPatchClone": false,
+        "hasPatchInsert": false
+    }; }
+};
+//# sourceMappingURL=array-unions.js.map

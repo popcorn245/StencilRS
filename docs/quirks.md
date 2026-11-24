@@ -179,6 +179,10 @@ nav, nav-link, popover and modal. Fixture: `parity/fixtures/build/src/components
   the parity harness compare the order of the keys of `references`. Props and events read the
   written declaration; a type argument that is a plain reference is added right after its parent,
   before the references inside the arguments (`Map<X<C>, A>` is `Map, X, A, C`).
+- In single-file mode there is no lib, `Array` is an empty generic type, and every array type is
+  the checker's one empty object type. So `string[] | number[]` is one member, `{}`, and it comes
+  before every type the program makes (`[A, B] | C[]` is `{} | [A, B]`). Fixture:
+  `features/array-unions.tsx`.
 
 ## 18. What `complexType` still leaves to Stencil
 
@@ -284,11 +288,7 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
 
 A member with `stencilrs:` here is also what `docs` and `types` of the Vite plugin look at: a file whose
 metadata reports one gets its metadata (`docs`, `components.d.ts`) from Stencil's compiler, for that file only
-(`docs/vite-plugin.md`). One known difference in single-file mode (`resolveImports: false`), found comparing with
-@stencil/unplugin: for a return type such as `Promise<A | null>` Stencil lists `A` in a method's `references` after the
-parameters' types, stencilrs before them (ui-kit's `card-scanner`: `detectFrame`). The parity harness compares
-`references` without key order, so it did not show; it changes the order of `references` in docs-json and the manifest,
-nothing else.
+(`docs/vite-plugin.md`).
 
 ## Props typed from their initializer (build-accurate mode)
 
