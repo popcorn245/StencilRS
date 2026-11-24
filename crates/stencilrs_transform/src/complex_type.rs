@@ -11,16 +11,18 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use oxc::ast::ast::{
-    Expression, FormalParameters, MethodDefinition, Program, Statement, TSEnumDeclaration,
-    TSEnumMemberName, TSLiteral, TSSignature, TSTupleElement, TSType, TSTypeName,
-    TSTypeOperatorOperator, TSTypeReference, UnaryOperator,
+    ArrowFunctionExpression, Class, Expression, FormalParameters, Function, MethodDefinition,
+    Program, ReturnStatement, StaticMemberExpression, Statement, TSEnumDeclaration, TSEnumMemberName, TSLiteral,
+    TSSignature, TSTupleElement, ThisExpression, TSType, TSTypeName, TSTypeOperatorOperator, TSTypeReference,
+    UnaryOperator,
 };
 use oxc::ast_visit::Visit;
+use oxc::syntax::scope::ScopeFlags;
 
 use crate::analyze::returns_value;
 use crate::eval::property_key_name;
 use crate::jsdoc::{JsDoc, param_docs};
-use crate::locals::{LocalType, Locals};
+use crate::locals::{LocalType, Locals, ThisMember};
 use crate::meta::{MethodComplexType, MethodParameter, References, TypeReference};
 use crate::resolve::Resolver;
 use crate::types::*;
@@ -1100,6 +1102,17 @@ enum StmtInfo {
 }
 
 impl FileInfo {
+    /// The module and exported name a named import `local` comes from.
+    pub fn named_import(&self, local: &str) -> Option<(&String, &String)> {
+        self.stmts.iter().find_map(|s| match s {
+            StmtInfo::Import { source, named, .. } => named
+                .iter()
+                .find(|(l, _)| l == local)
+                .map(|(_, imported)| (source, imported)),
+            _ => None,
+        })
+    }
+
     pub fn collect(program: &Program) -> Self {
         use oxc::ast::ast::{
             Declaration, ExportDefaultDeclarationKind, ImportDeclarationSpecifier,
@@ -1598,6 +1611,239 @@ impl TypeEnv<'_, '_, '_> {
     }
 }
 
+/// The type a function is declared to return, when that is a plain alias of string literals
+/// (`(ref?: any): Mode`), evaluated in the scope of the module that wrote it.
+pub fn alias_return(env: &TypeEnv, ret: &TSType) -> Option<Ty> {
+    let TSType::TSTypeReference(r) = ret else {
+        return None;
+    };
+    if r.type_arguments.is_some() || !matches!(r.type_name, TSTypeName::IdentifierReference(_)) {
+        return None;
+    }
+    let ty = env.eval(ret).ok()?;
+    match &*ty.0 {
+        K::Union(members, _, _) if members.iter().all(|m| matches!(&*m.0, K::Str(..))) => Some(ty),
+        _ => None,
+    }
+}
+
+/// The return type the checker infers for a method from the expressions it returns, for the
+/// shapes whose type is known from the syntax: a boolean, `this.field` of a primitive type,
+/// `Promise.resolve(<primitive>)` and `new Promise<T>(...)`, in a method every path of which
+/// ends in a `return` that agrees with the others. `names` gets the type names its type node
+/// has. Anything else is left to Stencil's compiler.
+fn inferred_return(env: &TypeEnv, func: &Function, names: &mut Vec<String>) -> Res<String> {
+    let why = "a return type inferred from the body";
+    if !env.resolving() || func.generator {
+        return unsupported(why);
+    }
+    let Some(body) = &func.body else {
+        return unsupported(why);
+    };
+    // A path that falls off the end returns `undefined` too: the last statement must return.
+    let Some(Statement::ReturnStatement(last)) = body.statements.last() else {
+        return unsupported(why);
+    };
+    if last.argument.is_none() {
+        return unsupported(why);
+    }
+    struct Count(usize);
+    impl<'a> Visit<'a> for Count {
+        fn visit_return_statement(&mut self, _: &ReturnStatement<'a>) {
+            self.0 += 1;
+        }
+        fn visit_function(&mut self, _: &Function<'a>, _: ScopeFlags) {}
+        fn visit_arrow_function_expression(&mut self, _: &ArrowFunctionExpression<'a>) {}
+        fn visit_class(&mut self, _: &Class<'a>) {}
+    }
+    let mut count = Count(0);
+    count.visit_function_body(body);
+    let total = count.0;
+    let mut texts: Vec<(String, Vec<String>)> = Vec::new();
+    let mut this_uses = ThisUses::default();
+    this_uses.visit_function_body(body);
+    let mut walker = ReturnTexts {
+        env,
+        total,
+        this_uses: &this_uses,
+        texts: &mut texts,
+        failed: None,
+    };
+    walker.visit_function_body(body);
+    if let Some(e) = walker.failed {
+        return Err(e);
+    }
+    let Some((first, first_names)) = texts.first().cloned() else {
+        return unsupported(why);
+    };
+    if texts.iter().any(|(t, _)| *t != first) {
+        return unsupported(why);
+    }
+    // `async` unwraps a returned promise and wraps the rest.
+    let text = if first.starts_with("Promise<") {
+        first
+    } else if func.r#async {
+        format!("Promise<{first}>")
+    } else {
+        return unsupported(why);
+    };
+    names.push("Promise".to_owned());
+    names.extend(first_names);
+    Ok(text)
+}
+
+/// How a function body uses `this`, nested functions included: how often each `this.name` is
+/// mentioned, and whether `this` appears any other way (`this[x]`, `f(this)`, `{ x } = this`).
+/// A `this.name` that is mentioned once has nothing that could narrow it where it is returned
+/// (`if (!this.flag) throw ...; return this.flag` returns `true`, not the field's `boolean`).
+#[derive(Default)]
+struct ThisUses {
+    members: rustc_hash::FxHashMap<String, usize>,
+    other: bool,
+}
+
+impl<'a> Visit<'a> for ThisUses {
+    fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
+        if matches!(it.object, Expression::ThisExpression(_)) {
+            *self.members.entry(it.property.name.to_string()).or_default() += 1;
+        } else {
+            oxc::ast_visit::walk::walk_static_member_expression(self, it);
+        }
+    }
+    fn visit_this_expression(&mut self, _: &ThisExpression) {
+        self.other = true;
+    }
+}
+
+/// The type of each `return <expr>` of a function (see `inferred_return`).
+struct ReturnTexts<'t, 'e, 'a, 'b> {
+    env: &'t TypeEnv<'e, 'a, 'b>,
+    total: usize,
+    this_uses: &'t ThisUses,
+    texts: &'t mut Vec<(String, Vec<String>)>,
+    failed: Option<Unsupported>,
+}
+
+impl<'t, 'e, 'a, 'b, 'c> Visit<'c> for ReturnTexts<'t, 'e, 'a, 'b> {
+    fn visit_return_statement(&mut self, it: &ReturnStatement<'c>) {
+        if self.failed.is_some() {
+            return;
+        }
+        let result = match &it.argument {
+            Some(e) => self.expression(e),
+            None => unsupported("a return type inferred from the body"),
+        };
+        match result {
+            Ok(t) => self.texts.push(t),
+            Err(e) => self.failed = Some(e),
+        }
+    }
+    fn visit_function(&mut self, _: &Function<'c>, _: ScopeFlags) {}
+    fn visit_arrow_function_expression(&mut self, _: &ArrowFunctionExpression<'c>) {}
+    fn visit_class(&mut self, _: &Class<'c>) {}
+}
+
+impl ReturnTexts<'_, '_, '_, '_> {
+    /// The widened type of an expression as the checker prints it, and the type names it has.
+    fn expression(&self, e: &Expression) -> Res<(String, Vec<String>)> {
+        let why = || unsupported("a return type inferred from the body");
+        // Distinct literals of one kind keep their literal types (`1 | 2`), so a number or a
+        // string is only known when it is the one thing returned.
+        let primitive = |t: &str| -> Res<(String, Vec<String>)> {
+            match t {
+                "boolean" => Ok((t.to_owned(), vec![])),
+                "number" | "string" if self.total == 1 => Ok((t.to_owned(), vec![])),
+                _ => why(),
+            }
+        };
+        match e {
+            Expression::ParenthesizedExpression(p) => self.expression(&p.expression),
+            Expression::BooleanLiteral(_) => primitive("boolean"),
+            Expression::NumericLiteral(_) => primitive("number"),
+            Expression::StringLiteral(_) => primitive("string"),
+            Expression::StaticMemberExpression(m)
+                if matches!(m.object, Expression::ThisExpression(_)) =>
+            {
+                let class = self.env.locals.current_class.borrow().clone();
+                let Some(ThisMember::Field {
+                    annotation,
+                    init,
+                    readonly,
+                    optional,
+                }) = class
+                    .as_deref()
+                    .and_then(|c| self.env.locals.members.get(c))
+                    .and_then(|members| members.get(m.property.name.as_str()))
+                else {
+                    return why();
+                };
+                // The field's declared type is what is returned only where nothing narrowed it,
+                // and an optional field is `undefined` too.
+                let narrowable = self.this_uses.other
+                    || self.this_uses.members.get(m.property.name.as_str()) != Some(&1);
+                if *optional || narrowable {
+                    return why();
+                }
+                match (annotation, init) {
+                    (Some(t), _) => primitive(&type_to_string(&self.env.eval(t)?)?),
+                    // A `readonly` field keeps the literal type of its initializer.
+                    (None, Some(init)) if !*readonly => match init {
+                        Expression::NumericLiteral(_) => primitive("number"),
+                        Expression::StringLiteral(_) => primitive("string"),
+                        Expression::BooleanLiteral(_) => primitive("boolean"),
+                        _ => why(),
+                    },
+                    _ => why(),
+                }
+            }
+            Expression::CallExpression(call) => {
+                let is_resolve = matches!(&call.callee, Expression::StaticMemberExpression(m)
+                    if m.property.name == "resolve"
+                        && matches!(&m.object, Expression::Identifier(id) if id.name == "Promise")
+                        && call.type_arguments.is_none());
+                let promise_declared = self.env.locals.values.contains_key("Promise")
+                    || self.env.locals.types.contains_key("Promise");
+                if !is_resolve || promise_declared || call.arguments.len() != 1 {
+                    return why();
+                }
+                let Some(arg) = call.arguments[0].as_expression() else {
+                    return why();
+                };
+                let (inner, _) = self.expression(arg)?;
+                // `Promise.resolve(1)` is a `Promise<number>`, whatever the number.
+                let inner = match (inner.as_str(), arg) {
+                    ("number" | "string", _) if self.total != 1 => return why(),
+                    _ => inner,
+                };
+                Ok((format!("Promise<{inner}>"), vec![]))
+            }
+            Expression::NewExpression(n) => {
+                let promise_declared = self.env.locals.values.contains_key("Promise")
+                    || self.env.locals.types.contains_key("Promise");
+                let (Expression::Identifier(id), Some(args)) = (&n.callee, &n.type_arguments)
+                else {
+                    return why();
+                };
+                if id.name != "Promise" || promise_declared || args.params.len() != 1 {
+                    return why();
+                }
+                let arg = &args.params[0];
+                let ty = self.env.eval(arg)?;
+                if print_order_depends_on_program(&ty) {
+                    return why();
+                }
+                let mut refs = RefNames::default();
+                refs.visit_ts_type(arg);
+                if refs.type_query {
+                    return why();
+                }
+                Ok((format!("Promise<{}>", type_to_string(&ty)?), refs.names))
+            }
+            _ => why(),
+        }
+    }
+}
+
 /// A `@Method()`'s `complexType` (`parseMethodDecorator`).
 pub fn method_type(
     env: &TypeEnv,
@@ -1717,12 +1963,16 @@ fn method_type_in_scope(
         shown.push(format!("...{name}: {text}"));
     }
 
+    let mut inferred_names = Vec::new();
     let (mut returned, shown_return) = match &func.return_type {
         Some(t) => (
             check(&env.eval(&t.type_annotation)?)?,
             env.node_text(&t.type_annotation)?,
         ),
-        None if returns_value(func) => return unsupported("a return type inferred from the body"),
+        None if returns_value(func) => {
+            let text = inferred_return(env, func, &mut inferred_names)?;
+            (text.clone(), text)
+        }
         // `async` without a return type: `any` where `Promise` is missing (the single-file program).
         None if func.r#async && !env.resolving() => ("any".to_owned(), "any".to_owned()),
         None if func.r#async => ("Promise<void>".to_owned(), "Promise<void>".to_owned()),
@@ -1738,6 +1988,9 @@ fn method_type_in_scope(
     let mut names = RefNames::default();
     if let Some(ret) = &func.return_type {
         names.visit_ts_type_annotation(ret);
+    } else if !inferred_names.is_empty() {
+        // The inferred return type is a type node of its own, built from the type.
+        names.names.append(&mut inferred_names);
     } else if func.r#async && env.resolving() {
         // The inferred `Promise<void>` is a type node of its own: it names `Promise`.
         names.names.push("Promise".to_owned());

@@ -467,7 +467,7 @@ fn ionic_shaped_types_resolve_across_files() {
                @Component({ tag: 'cmp-b' })\n\
                export class CmpB {\n\
                  @Method() async present(e?: MouseEvent | TouchEvent): Promise<void> {}\n\
-                 @Method() async progress() { return Promise.resolve(1); }\n\
+                 @Method() async progress() { return [1].length; }\n\
                }";
     let result = analyze_with(src, &file, true, true);
     let messages: Vec<_> = result
