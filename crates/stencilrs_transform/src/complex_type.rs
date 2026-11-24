@@ -2546,6 +2546,18 @@ pub fn method_type(
     result
 }
 
+/// Whether a type is `void` or a union that has `void` but not `undefined`.
+fn void_without_undefined(ty: &Ty) -> bool {
+    match &*ty.0 {
+        K::Void => true,
+        K::Union(ms, _, _) => {
+            ms.iter().any(|m| matches!(&*m.0, K::Void))
+                && !ms.iter().any(|m| matches!(&*m.0, K::Undefined))
+        }
+        _ => false,
+    }
+}
+
 fn method_type_in_scope(
     env: &TypeEnv,
     site: &Site,
@@ -2583,14 +2595,21 @@ fn method_type_in_scope(
                 _ => return unsupported("a parameter typed by its default value"),
             },
         };
+        // The checker prints an optional parameter's written type node as it is, unless the type
+        // is `void` or a union with `void` and no `undefined`: the `undefined` the parameter adds
+        // does not strip back off (`void` has the facts of `undefined`), so the type is printed
+        // with it (`y?: string | void | undefined`, `y?: V | undefined`).
+        let adds_to_void = p.optional && env.strict && void_without_undefined(&ty);
         let ty = if p.optional {
             env.with_undefined(ty)
         } else {
             ty
         };
+        let type_text = check(&ty)?;
+        let text = if adds_to_void { type_text.clone() } else { text };
         parameters.push(MethodParameter {
             name: name.to_string(),
-            type_text: check(&ty)?,
+            type_text,
             docs: param_docs(docs, name.as_str()),
         });
         shown.push(format!(

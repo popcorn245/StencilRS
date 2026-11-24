@@ -1,0 +1,351 @@
+{
+  "tag": "build-void-undefined",
+  "properties": [
+    {
+      "name": "a",
+      "flags": {
+        "attribute": "a",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "string | void",
+        "resolved": "string | undefined | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "b",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": true
+      },
+      "complexType": {
+        "original": "void | undefined",
+        "resolved": "undefined | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "c",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "void | null",
+        "resolved": "null | undefined | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "d",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "void",
+        "resolved": "undefined | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "e",
+      "flags": {
+        "attribute": "e",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "V",
+        "resolved": "string | undefined | void",
+        "references": {
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        }
+      }
+    },
+    {
+      "name": "f",
+      "flags": {
+        "attribute": "f",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": true
+      },
+      "complexType": {
+        "original": "U | void",
+        "resolved": "number | undefined | void",
+        "references": {
+          "U": {
+            "location": "global",
+            "id": "global::U"
+          }
+        }
+      }
+    },
+    {
+      "name": "g",
+      "flags": {
+        "attribute": "g",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": true
+      },
+      "complexType": {
+        "original": "V | undefined",
+        "resolved": "string | undefined | void",
+        "references": {
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ev1",
+      "complexType": {
+        "original": "void | undefined",
+        "resolved": "undefined | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "ev2",
+      "complexType": {
+        "original": "{ a: void | undefined }",
+        "resolved": "{ a: void | undefined; }",
+        "references": {}
+      }
+    },
+    {
+      "name": "ev3",
+      "complexType": {
+        "original": "(x: void | undefined) => void | undefined",
+        "resolved": "(x: void | undefined) => void | undefined",
+        "references": {}
+      }
+    },
+    {
+      "name": "ev4",
+      "complexType": {
+        "original": "string | void",
+        "resolved": "string | void",
+        "references": {}
+      }
+    },
+    {
+      "name": "ev5",
+      "complexType": {
+        "original": "V",
+        "resolved": "string | void",
+        "references": {
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "m1",
+      "complexType": {
+        "signature": "(x: string | void, y?: string | void | undefined) => Promise<string | void>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "string | void",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "string | void | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<string | void>"
+      }
+    },
+    {
+      "name": "m2",
+      "complexType": {
+        "signature": "(x: void | undefined) => Promise<void | undefined>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "void | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void | undefined>"
+      }
+    },
+    {
+      "name": "m3",
+      "complexType": {
+        "signature": "(x: V, y?: V | undefined) => Promise<V>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "string | void",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "V | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        },
+        "return": "Promise<V>"
+      }
+    },
+    {
+      "name": "m4",
+      "complexType": {
+        "signature": "(x: U | void) => Promise<U | void>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "void | U",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "U": {
+            "location": "global",
+            "id": "global::U"
+          }
+        },
+        "return": "Promise<void | U>"
+      }
+    },
+    {
+      "name": "m5",
+      "complexType": {
+        "signature": "(y?: void | null | undefined, z?: void | undefined) => Promise<void | null>",
+        "parameters": [
+          {
+            "name": "y",
+            "type": "void | null | undefined",
+            "docs": ""
+          },
+          {
+            "name": "z",
+            "type": "void | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void | null>"
+      }
+    },
+    {
+      "name": "m6",
+      "complexType": {
+        "signature": "(y?: V | undefined, z?: U) => Promise<void>",
+        "parameters": [
+          {
+            "name": "y",
+            "type": "V | undefined",
+            "docs": ""
+          },
+          {
+            "name": "z",
+            "type": "number | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          },
+          "U": {
+            "location": "global",
+            "id": "global::U"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "m7",
+      "complexType": {
+        "signature": "(c: boolean) => Promise<void>",
+        "parameters": [
+          {
+            "name": "c",
+            "type": "boolean",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

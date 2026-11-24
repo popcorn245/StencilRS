@@ -183,6 +183,18 @@ nav, nav-link, popover and modal. Fixture: `parity/fixtures/build/src/components
   the checker's one empty object type. So `string[] | number[]` is one member, `{}`, and it comes
   before every type the program makes (`[A, B] | C[]` is `{} | [A, B]`). Fixture:
   `features/array-unions.tsx`.
+- `void` does not absorb `undefined` in a union that is written. `reduceVoidUndefined` only runs
+  under subtype reduction, which the union of inferred return expressions gets; a union written as
+  a type node, an alias, a type argument and the `undefined` an optional prop or parameter adds
+  all use literal reduction and keep both (`string | undefined | void`, `undefined | void`). Every
+  union stencilrs builds is literal (the inferred returns it ports are never unions of `void` and
+  `undefined`, anything else falls back), so `union_of` keeps both. An optional parameter whose
+  type is `void` or a union with `void` and no `undefined` prints the type, not the written node,
+  in the signature (`y?: string | void | undefined`, `y?: V | undefined`): the added `undefined`
+  does not strip back off, because `void` has the facts of `undefined`. A method's `Promise<void>`
+  inferred from `if (c) return undefined; return this.voidFn()` is the subtype case (`undefined |
+  void` is `void`) and stays with Stencil. Fixtures: `features/void-undefined.tsx`,
+  `build/src/components/void-undefined.tsx`, `build-stable/src/components/void-undefined.tsx`.
 
 ## 18. What `complexType` still leaves to Stencil
 
