@@ -1042,7 +1042,9 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     }
     match &*ty.0 {
         _ if whole => walk(ty, true, true),
-        K::Union(ms, _, origin) => shown_members(ms, origin).iter().any(|m| match &*m.0 {
+        // `resolveType` reads `type.types`, the flattened members, so an alias in the written
+        // union is taken apart there and does not stay nested.
+        K::Union(ms, _, _) => ms.iter().any(|m| match &*m.0 {
             K::Array(..) => parsed(m),
             _ => walk(m, true, false),
         }),
