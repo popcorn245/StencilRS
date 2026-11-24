@@ -184,8 +184,20 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   parameter or return type is `string | Function | HTMLElement | null` for
   `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on
   which files the program checked first (literal types and lib interfaces exist before the file
-  that mentions them). Props are unaffected: Stencil sorts their parts as text. Ionic:
-  `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)`, `setRoot(root: ComponentRef)`.
+  that mentions them). Props are unaffected: Stencil sorts their parts as text. stencilrs orders
+  the members it creates itself and the fixed ones (intrinsics, `null`, `undefined`), and falls back
+  when two or more members have ids that depend on other code. Measured against Ionic's
+  `docs.json`, the four members left are not provable from one file, in every case because the
+  winning id was handed out while the checker looked at *another* file:
+  `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)` prints
+  `CustomEvent<any> | PointerEvent | MouseEvent | TouchEvent | undefined` (lib.dom interface ids);
+  `insertPages` / `setPages` (`NavComponent[] | NavComponentWithProps[]`) print
+  `NavComponentWithProps<any>[] | NavComponent[]` because `view-controller.ts`, which `nav.tsx`
+  imports, already wrote `NavComponentWithProps[]`; router `push(direction?: RouterDirection)` prints
+  `"back" | "forward" | "root"` because the literal `'back'` was met in another file first. Source
+  order is therefore not a rule. Making these exact needs a project-level pre-pass that replays the
+  checker's order (program file order, then each file's declarations and bodies) to number every
+  type; that is not built, and these members keep reporting `stencilrs:`.
 - **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
   `src/components.d.ts`, which Stencil writes, so the source tree does not have them.
 - **An intersection with a union** (`{ date: string } & DatetimeHighlightStyle` where the style is
