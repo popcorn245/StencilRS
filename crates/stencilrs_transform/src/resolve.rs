@@ -111,14 +111,17 @@ impl Resolver {
     /// A resolver for the program that contains `file`. `defs`: whether the exported types'
     /// definitions are needed (`complexType`).
     pub fn new(file: &str, defs: bool) -> Self {
-        let (strict, tsconfig_deps) = strict_null_checks(file);
+        let (strict, stable, tsconfig_deps) = tsconfig_options(file);
+        let registry = Rc::<Registry>::default();
+        // With `stableTypeOrdering` unions are ordered by `compareTypes` (`union_order.rs`).
+        registry.stable.set(stable);
         Resolver {
             cache: RefCell::default(),
             roots: RefCell::default(),
             frames: RefCell::default(),
             depth: Cell::new(0),
             defs,
-            registry: Rc::default(),
+            registry,
             strict,
             tsconfig_deps,
             top_deps: RefCell::default(),
@@ -763,20 +766,20 @@ fn clean(path: &Path) -> PathBuf {
 }
 
 /// Whether the tsconfig that governs `file` turns on `strictNullChecks` (directly or through
-/// `strict`), following `extends` through relative paths. Cached per folder, and read again
-/// when any tsconfig it looked at (or looked for) changes.
-fn strict_null_checks(file: &str) -> (bool, Arc<Vec<Dep>>) {
+/// `strict`) and `stableTypeOrdering`, following `extends` through relative paths. Cached per
+/// folder, and read again when any tsconfig it looked at (or looked for) changes.
+fn tsconfig_options(file: &str) -> (bool, bool, Arc<Vec<Dep>>) {
     let abs = std::env::current_dir()
         .map(|c| c.join(file))
         .unwrap_or_else(|_| PathBuf::from(file));
     let Some(start) = abs.parent() else {
-        return (false, Arc::default());
+        return (false, false, Arc::default());
     };
     if let Some(hit) = cache::tsconfig(start) {
         return hit;
     }
     let mut deps = Vec::new();
-    let mut strict = false;
+    let mut options = Options::default();
     let mut dir = Some(start);
     while let Some(d) = dir {
         let candidate = d.join("tsconfig.json");
@@ -784,40 +787,67 @@ fn strict_null_checks(file: &str) -> (bool, Arc<Vec<Dep>>) {
         let found = dep.stamp.is_some();
         deps.push(dep);
         if found {
-            strict = tsconfig_strict(&candidate, 0, &mut deps).unwrap_or(false);
+            tsconfig_chain(&candidate, 0, &mut deps, &mut options);
             break;
         }
         dir = d.parent();
     }
+    let (strict, stable) = (
+        options.strict.unwrap_or(false),
+        options.stable.unwrap_or(false),
+    );
     let deps = Arc::new(deps);
-    cache::store_tsconfig(start, strict, deps.clone());
-    (strict, deps)
+    cache::store_tsconfig(start, strict, stable, deps.clone());
+    (strict, stable, deps)
 }
 
-fn tsconfig_strict(path: &Path, depth: u8, deps: &mut Vec<Dep>) -> Option<bool> {
+/// The compiler options read from a tsconfig and what it extends; the nearest one to set an
+/// option wins.
+#[derive(Default)]
+struct Options {
+    strict: Option<bool>,
+    stable: Option<bool>,
+}
+
+fn tsconfig_chain(path: &Path, depth: u8, deps: &mut Vec<Dep>, options: &mut Options) {
     if depth > 0 {
         deps.push(Dep::of(path));
     }
-    let text = std::fs::read_to_string(path).ok()?;
-    let json: serde_json::Value = serde_json::from_str(&strip_jsonc(&text)).ok()?;
-    let options = json.get("compilerOptions");
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return;
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&strip_jsonc(&text)) else {
+        return;
+    };
+    let compiler_options = json.get("compilerOptions");
     let flag = |key: &str| {
-        options
+        compiler_options
             .and_then(|o| o.get(key))
             .and_then(serde_json::Value::as_bool)
     };
-    if let Some(strict) = flag("strictNullChecks").or_else(|| flag("strict")) {
-        return Some(strict);
+    if options.strict.is_none() {
+        options.strict = flag("strictNullChecks").or_else(|| flag("strict"));
     }
-    let parent = json.get("extends")?.as_str()?;
+    if options.stable.is_none() {
+        options.stable = flag("stableTypeOrdering");
+    }
+    if options.strict.is_some() && options.stable.is_some() {
+        return;
+    }
+    let Some(parent) = json.get("extends").and_then(serde_json::Value::as_str) else {
+        return;
+    };
     if depth >= 8 || !parent.starts_with('.') {
-        return None;
+        return;
     }
-    let mut next = path.parent()?.join(parent);
+    let Some(dir) = path.parent() else {
+        return;
+    };
+    let mut next = dir.join(parent);
     if next.extension().is_none() {
         next.set_extension("json");
     }
-    tsconfig_strict(&next, depth + 1, deps)
+    tsconfig_chain(&next, depth + 1, deps, options);
 }
 
 /// JSON with comments and trailing commas (what tsconfig.json allows) as plain JSON.
@@ -1048,5 +1078,40 @@ mod tests {
         assert!(strict_in(&dir));
         fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
         assert!(!strict_in(&dir));
+    }
+    #[test]
+    fn stable_type_ordering_is_read_through_extends() {
+        let dir = folder("stable");
+        fs::create_dir_all(dir.join("src")).unwrap();
+        let stable_in = |dir: &Path| {
+            Resolver::new(&dir.join("src").join("c.tsx").to_string_lossy(), false)
+                .registry
+                .stable
+                .get()
+        };
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "compilerOptions": { "strict": true } }"#,
+            0,
+        );
+        assert!(!stable_in(&dir));
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "extends": "./base.json", "compilerOptions": { "strict": true } }"#,
+            1,
+        );
+        write(
+            &dir.join("base.json"),
+            r#"{ "compilerOptions": { "stableTypeOrdering": true } }"#,
+            1,
+        );
+        assert!(stable_in(&dir));
+        assert!(strict_in(&dir));
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "extends": "./base.json", "compilerOptions": { "stableTypeOrdering": false } }"#,
+            2,
+        );
+        assert!(!stable_in(&dir));
     }
 }

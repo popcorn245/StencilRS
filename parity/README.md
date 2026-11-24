@@ -85,6 +85,11 @@ same text, or report a `stencilrs:` error for the member, which is counted apart
 are the ones that need the checker; `docs/quirks.md` lists them. The snapshot is built in a
 temporary copy of the project, so Stencil's generated files never land in the fixtures.
 
+`fixtures/build-stable/` is a second project of the same kind with `"stableTypeOrdering": true` in its
+tsconfig (snapshots in `snapshots-build-stable/`): there stencilrs orders unions the way
+`compareTypes` does, so the shapes the first project leaves to Stencil (unions of lib interfaces,
+aliases, arrays, generics, literals, enums, tuples) are compared too. `node build.mjs` runs both.
+
 ## Scoped CSS
 
 ```sh

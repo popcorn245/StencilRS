@@ -1,0 +1,158 @@
+{
+  "tag": "stable-events",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "generic",
+      "complexType": {
+        "signature": "(event: CustomEvent<string> | CustomEvent<number> | CustomEvent<boolean>) => Promise<void>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "CustomEvent<string> | CustomEvent<number> | CustomEvent<boolean>",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "CustomEvent": {
+            "location": "global",
+            "id": "global::CustomEvent"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "inPromise",
+      "complexType": {
+        "signature": "() => Promise<MouseEvent | TouchEvent | undefined>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "MouseEvent": {
+            "location": "global",
+            "id": "global::MouseEvent"
+          },
+          "TouchEvent": {
+            "location": "global",
+            "id": "global::TouchEvent"
+          }
+        },
+        "return": "Promise<MouseEvent | TouchEvent | undefined>"
+      }
+    },
+    {
+      "name": "keyboard",
+      "complexType": {
+        "signature": "(event: KeyboardEvent | FocusEvent | Event | null) => Promise<void>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "Event | FocusEvent | KeyboardEvent | null",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "KeyboardEvent": {
+            "location": "global",
+            "id": "global::KeyboardEvent"
+          },
+          "FocusEvent": {
+            "location": "global",
+            "id": "global::FocusEvent"
+          },
+          "Event": {
+            "location": "global",
+            "id": "global::Event"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "present",
+      "complexType": {
+        "signature": "(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent) => Promise<void>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "CustomEvent<any> | MouseEvent | PointerEvent | TouchEvent | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "MouseEvent": {
+            "location": "global",
+            "id": "global::MouseEvent"
+          },
+          "TouchEvent": {
+            "location": "global",
+            "id": "global::TouchEvent"
+          },
+          "PointerEvent": {
+            "location": "global",
+            "id": "global::PointerEvent"
+          },
+          "CustomEvent": {
+            "location": "global",
+            "id": "global::CustomEvent"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "reversed",
+      "complexType": {
+        "signature": "(event: TouchEvent | PointerEvent | MouseEvent | UIEvent) => Promise<void>",
+        "parameters": [
+          {
+            "name": "event",
+            "type": "MouseEvent | PointerEvent | TouchEvent | UIEvent",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "TouchEvent": {
+            "location": "global",
+            "id": "global::TouchEvent"
+          },
+          "PointerEvent": {
+            "location": "global",
+            "id": "global::PointerEvent"
+          },
+          "MouseEvent": {
+            "location": "global",
+            "id": "global::MouseEvent"
+          },
+          "UIEvent": {
+            "location": "global",
+            "id": "global::UIEvent"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

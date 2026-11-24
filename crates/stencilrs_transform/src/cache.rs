@@ -138,23 +138,24 @@ pub fn store_root(path: &Path, exports: Exports, deps: Arc<Vec<Dep>>) {
 #[derive(Clone)]
 struct TsconfigEntry {
     strict: bool,
+    stable: bool,
     /// Every `tsconfig.json` looked for on the way up (absent ones too), and the `extends` chain.
     deps: Arc<Vec<Dep>>,
 }
 
 static TSCONFIGS: OnceLock<Mutex<HashMap<PathBuf, TsconfigEntry>>> = OnceLock::new();
 
-/// `strictNullChecks` for files in `dir`, if the tsconfigs it came from have not changed.
-pub fn tsconfig(dir: &Path) -> Option<(bool, Arc<Vec<Dep>>)> {
+/// `strictNullChecks` and `stableTypeOrdering` for files in `dir`, if the tsconfigs it came from have not changed.
+pub fn tsconfig(dir: &Path) -> Option<(bool, bool, Arc<Vec<Dep>>)> {
     let entry = lock(&TSCONFIGS).get(dir)?.clone();
     if fresh(&entry.deps) {
-        return Some((entry.strict, entry.deps));
+        return Some((entry.strict, entry.stable, entry.deps));
     }
     lock(&TSCONFIGS).remove(dir);
     None
 }
 
-pub fn store_tsconfig(dir: &Path, strict: bool, deps: Arc<Vec<Dep>>) {
+pub fn store_tsconfig(dir: &Path, strict: bool, stable: bool, deps: Arc<Vec<Dep>>) {
     let mut tsconfigs = lock(&TSCONFIGS);
     if tsconfigs.len() >= MAX_TSCONFIGS {
         tsconfigs.clear();
@@ -163,6 +164,7 @@ pub fn store_tsconfig(dir: &Path, strict: bool, deps: Arc<Vec<Dep>>) {
         dir.to_owned(),
         TsconfigEntry {
             strict,
+            stable,
             deps,
         },
     );

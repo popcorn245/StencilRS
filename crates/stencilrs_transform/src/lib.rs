@@ -24,6 +24,7 @@ mod resolve;
 pub mod scope_css;
 mod sourcemap;
 mod types;
+mod union_order;
 
 use oxc::allocator::Allocator;
 use oxc::parser::{Parser, ParserReturn};

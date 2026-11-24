@@ -1,0 +1,189 @@
+{
+  "tag": "stable-arrays",
+  "properties": [
+    {
+      "name": "entries",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Entry[] | Item[]",
+        "resolved": "(Item | string)[] | Item[] | undefined",
+        "references": {
+          "Entry": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        }
+      }
+    },
+    {
+      "name": "items",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Item[] | Row[]",
+        "resolved": "Item[] | Row[] | undefined",
+        "references": {
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        }
+      }
+    },
+    {
+      "name": "rows",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Row[] | Item[]",
+        "resolved": "Item[] | Row[] | undefined",
+        "references": {
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        }
+      }
+    },
+    {
+      "name": "sizes",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Size[] | string[]",
+        "resolved": "(\"large\" | \"medium\" | \"small\" | \"xlarge\")[] | string[] | undefined",
+        "references": {
+          "Size": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Size",
+            "referenceLocation": "Size"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "mixed",
+      "complexType": {
+        "signature": "(items: Array<Item> | Row | Item[]) => Promise<void>",
+        "parameters": [
+          {
+            "name": "items",
+            "type": "Item[] | Row",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Array": {
+            "location": "global",
+            "id": "global::Array"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "setAll",
+      "complexType": {
+        "signature": "(items: Row[] | Item[] | Entry[]) => Promise<void>",
+        "parameters": [
+          {
+            "name": "items",
+            "type": "Item[] | Row[] | Entry[]",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Entry",
+            "referenceLocation": "Entry"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    }
+  ],
+  "slots": []
+}

@@ -1,0 +1,210 @@
+{
+  "tag": "stable-aliases",
+  "properties": [
+    {
+      "name": "direction",
+      "flags": {
+        "attribute": "direction",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": false
+      },
+      "complexType": {
+        "original": "Direction",
+        "resolved": "\"down\" | \"left\" | \"right\" | \"up\"",
+        "references": {
+          "Direction": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Direction",
+            "referenceLocation": "Direction"
+          }
+        }
+      }
+    },
+    {
+      "name": "entry",
+      "flags": {
+        "attribute": "entry",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Entry",
+        "resolved": "Item | string | undefined",
+        "references": {
+          "Entry": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Entry",
+            "referenceLocation": "Entry"
+          }
+        }
+      }
+    },
+    {
+      "name": "hook",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "() => HookResult | Promise<HookResult>",
+        "resolved": "(() => Promise<HookResult> | HookResult) | undefined",
+        "references": {
+          "HookResult": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          },
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          }
+        }
+      }
+    },
+    {
+      "name": "hook2",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "() => Promise<HookResult> | HookResult",
+        "resolved": "(() => Promise<HookResult> | HookResult) | undefined",
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HookResult": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          }
+        }
+      }
+    },
+    {
+      "name": "size",
+      "flags": {
+        "attribute": "size",
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Size",
+        "resolved": "\"large\" | \"medium\" | \"small\" | \"xlarge\" | undefined",
+        "references": {
+          "Size": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Size",
+            "referenceLocation": "Size"
+          }
+        }
+      }
+    }
+  ],
+  "events": [],
+  "methods": [
+    {
+      "name": "hooked",
+      "complexType": {
+        "signature": "(fn: () => HookResult | Promise<HookResult>) => Promise<HookResult | Promise<HookResult>>",
+        "parameters": [
+          {
+            "name": "fn",
+            "type": "() => Promise<HookResult> | HookResult",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HookResult": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          }
+        },
+        "return": "Promise<Promise<HookResult> | HookResult>"
+      }
+    },
+    {
+      "name": "pick",
+      "complexType": {
+        "signature": "(size: Size, direction?: Direction) => Promise<void>",
+        "parameters": [
+          {
+            "name": "size",
+            "type": "\"large\" | \"medium\" | \"small\" | \"xlarge\"",
+            "docs": ""
+          },
+          {
+            "name": "direction",
+            "type": "Direction | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Direction": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Direction",
+            "referenceLocation": "Direction"
+          }
+        },
+        "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "resolve",
+      "complexType": {
+        "signature": "() => Promise<Size | undefined>",
+        "parameters": [],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../types",
+            "id": "src/types.ts::Size",
+            "referenceLocation": "Size"
+          }
+        },
+        "return": "Promise<Size | undefined>"
+      }
+    }
+  ],
+  "slots": []
+}

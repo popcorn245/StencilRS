@@ -158,7 +158,9 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   intersections with a union, `any`, literal or `{}` member (the checker distributes or collapses
   those), return types inferred from the body, inferred object types, types from packages or
   tsconfig `paths`, types Stencil generates, and unions whose member order depends on the whole
-  program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
+  program (`docs/quirks.md`, quirk 18; TypeScript's default sorts union members by type id, which
+  depends on what the checker saw first, but with `stableTypeOrdering: true` in the tsconfig, the
+  only order TypeScript 7 has, the order is a function of the types and stencilrs reproduces it). Object, interface, branded-primitive and `Record<never,
   never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and generic aliases and interfaces
   with defaults work. `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))

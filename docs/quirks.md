@@ -186,6 +186,26 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   which files the program checked first (literal types and lib interfaces exist before the file
   that mentions them). Props are unaffected: Stencil sorts their parts as text. Ionic:
   `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)`, `setRoot(root: ComponentRef)`.
+  This is TypeScript's default order, and the only one that depends on the program. TypeScript 6
+  (which Stencil 5 runs on) has the compiler option `stableTypeOrdering`; with it the checker sorts
+  union members with `compareTypes` (`typescript.js`, with `compareTypeNames`, `compareSymbols`,
+  `compareTypeLists`, `compareTupleTypes`): by type flags (`string`, `number`, string literals, number
+  literals, `true`/`false`, enum members, `object`, type parameters, object types, unions, intersections),
+  then by name (an alias's name, or the interface, class or type parameter's), then by declaration
+  position, literal value or type arguments. That order depends on the types alone, and it is the
+  only order TypeScript 7 has. stencilrs reads `stableTypeOrdering` from the governing tsconfig the
+  way it reads `strict` (following `extends`), in build-accurate mode only, and then orders every union
+  with the same comparator (`union_order.rs`) instead of reporting the member. `undefined` and `null`
+  still print last and `false | true` is still `boolean`. The two orders differ in a handful of
+  places (Ionic: `CustomEvent<any> | MouseEvent | PointerEvent | TouchEvent` against
+  `CustomEvent<any> | PointerEvent | MouseEvent | TouchEvent`, a `Promise<X> | X` return, the
+  `SpinnerTypes` literals), so a project must choose, and stencilrs follows its choice. Where the
+  comparator needs something the model does not have, the member still reports `stencilrs:`: two
+  type literals or function types (ordered by where they are written), two types of one name that
+  are not known to be one symbol, two enums, tuples with optional or rest elements and arrays or
+  tuples declared inside a type alias (their nodes are compared), unions the checker keeps an
+  origin for, and intersections without an alias. Fixture: `build-stable/` (its own tsconfig, snapshots
+  in `snapshots-build-stable/`); `build/` is the option off and stays as it was.
 - **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
   `src/components.d.ts`, which Stencil writes, so the source tree does not have them.
 - **An intersection with a union** (`{ date: string } & DatetimeHighlightStyle` where the style is
