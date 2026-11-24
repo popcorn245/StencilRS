@@ -1049,6 +1049,55 @@ mod tests {
         fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
         assert!(!strict_in(&dir));
     }
+
+    #[test]
+    fn a_generated_element_name_reads_back_as_its_tag() {
+        assert_eq!(generated_element_tag("HTMLIonTabElement").as_deref(), Some("ion-tab"));
+        assert_eq!(
+            generated_element_tag("HTMLIonSelectPopoverElement").as_deref(),
+            Some("ion-select-popover")
+        );
+        // The lib's own interfaces, one word, or a word of one letter: not read.
+        for name in [
+            "HTMLElement",
+            "HTMLDivElement",
+            "HTMLTextAreaElement",
+            "HTMLTableCellElement",
+            "HTMLOrSVGElement",
+            "HTMLHRElement",
+            "HTMLIonTab",
+        ] {
+            assert_eq!(generated_element_tag(name), None, "{name}");
+        }
+    }
+
+    #[test]
+    fn the_tag_index_follows_the_files() {
+        let dir = folder("tag-index");
+        let src = dir.join("src");
+        fs::create_dir_all(src.join("tab")).unwrap();
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-tab' }) export class Tab {}",
+            0,
+        );
+        write(&src.join("util.ts"), "export const tag = 'ion-nope';", 0);
+        let found = cache::component_with_tag(&src, "ion-tab", component_tags);
+        assert_eq!(found, Some(src.join("tab").join("tab.tsx")));
+        // Not a component's tag: there is no `@Component` in that file.
+        assert_eq!(cache::component_with_tag(&src, "ion-nope", component_tags), None);
+        // The tag is renamed: the file that declared it is checked on every use.
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-pane' }) export class Tab {}",
+            1,
+        );
+        assert_eq!(cache::component_with_tag(&src, "ion-tab", component_tags), None);
+        assert_eq!(
+            cache::component_with_tag(&src, "ion-pane", component_tags),
+            Some(src.join("tab").join("tab.tsx"))
+        );
+    }
 }
 
 /// The tag a generated element type name stands for: `HTMLIonTabElement` -> `ion-tab`. Stencil
@@ -1124,40 +1173,13 @@ fn find_tsconfig_dir(file: &str) -> Option<PathBuf> {
     None
 }
 
-fn scan_for_tag(dir: &Path, tag: &str, depth: u8) -> Option<PathBuf> {
-    if depth > 12 {
-        return None;
-    }
-    let mut entries: Vec<_> = std::fs::read_dir(dir).ok()?.flatten().collect();
-    entries.sort_by_key(|e| e.file_name());
-    for e in entries {
-        let name = e.file_name();
-        let name = name.to_string_lossy();
-        let path = e.path();
-        if path.is_dir() {
-            if name == "node_modules" || name.starts_with('.') {
-                continue;
-            }
-            if let Some(hit) = scan_for_tag(&path, tag, depth + 1) {
-                return Some(hit);
-            }
-        } else if (name.ends_with(".tsx") || name.ends_with(".ts")) && !name.ends_with(".d.ts") {
-            if let Ok(text) = std::fs::read_to_string(&path) {
-                if component_tags(&text).iter().any(|t| t == tag) {
-                    return Some(path);
-                }
-            }
-        }
-    }
-    None
-}
-
 impl Resolver {
     /// Whether `name` is an element type Stencil generates into `src/components.d.ts`
     /// (`HTMLIonTabElement`): some `@Component` of the project (the `src` folder next to the
-    /// governing tsconfig) has the tag it stands for. The declaring file becomes a dependency of
-    /// the result. A tag nothing declares is not found: its type is an error type in a build,
-    /// which the model does not reproduce.
+    /// governing tsconfig) has the tag it stands for, by the project's tag index
+    /// (`cache::component_with_tag`). The declaring file becomes a dependency of the result. A tag
+    /// nothing declares is not found: its type is an error type in a build, which the model does
+    /// not reproduce.
     pub fn generated_element(&self, importer: &str, name: &str) -> bool {
         let Some(tag) = generated_element_tag(name) else {
             return false;
@@ -1165,7 +1187,7 @@ impl Resolver {
         let Some(root) = find_tsconfig_dir(importer) else {
             return false;
         };
-        let Some(path) = scan_for_tag(&root.join("src"), &tag, 0) else {
+        let Some(path) = cache::component_with_tag(&root.join("src"), &tag, component_tags) else {
             return false;
         };
         self.merge(&[Dep::of(&path)], true);
