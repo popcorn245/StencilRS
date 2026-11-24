@@ -205,7 +205,12 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   as a `global` one, from a declaration in another file; stencilrs reports the prop's
   `complexType` as not ported. Ionic: ion-router-outlet `mode`.
 - `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
-  parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
+  parameter, and lib namespaces other than `Intl`, and `Intl` interfaces outside lib.es5 (`PluralRulesOptions` and later).
+- `Intl.DateTimeFormatOptions` (and `NumberFormatOptions`, `CollatorOptions`, the `Intl` interfaces of
+  lib.es5) is ported: the checker prints the interface
+  without the `Intl.` qualifier. A prop typed `Alias | undefined` where the alias is a union of
+  object types is also ported: `resolveType` reads the flattened members, so the alias is not
+  a nested union. Ionic: ion-datetime `formatOptions`. Fixture: `build/src/components/intl.tsx`.
 
 ## Props typed from their initializer (build-accurate mode)
 

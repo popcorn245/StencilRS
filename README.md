@@ -159,9 +159,9 @@ Not yet (these fall back to Stencil, or are tracked as issues):
   those), return types inferred from the body, inferred object types, types from packages or
   tsconfig `paths`, and unions whose member order depends on the whole
   program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
-  never>` intersections, generic methods, `keyof typeof const` and generic aliases and interfaces
-  with defaults work, as do the element types Stencil generates (`HTMLIonTabElement`, when a
-  component of the project has the tag). `analyze(..., { complexTypes: true })` reports each
+  never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and
+  generic aliases and interfaces with defaults work, as do the element types Stencil generates
+  (`HTMLIonTabElement`, when a component of the project has the tag). `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
 
 ## How it works
