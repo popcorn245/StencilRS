@@ -187,7 +187,8 @@ stencilrs.``). The fix is one line in `tsconfig.json`:
 
 With it (a TypeScript 6 option, and the only order TypeScript 7 has) the order is a function of the
 types, stencilrs reproduces it, and nothing falls back for this reason. The option changes some type
-strings (Ionic: 5 in `docs.json`), so it is your choice to make; stencilrs follows it. The Vite plugin
+strings (Ionic: 3 of 862 documented members, popover `present` and route `beforeEnter` and
+`beforeLeave`), so it is your choice to make; stencilrs follows it. The Vite plugin
 prints one line, once per plugin instance, through Vite's logger at info level when files go to Stencil
 for this reason (`[stencilrs] 3 files have a union TypeScript orders by which member it met first; ...`).
 Details: `docs/quirks.md`, quirk 18.
