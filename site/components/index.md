@@ -52,14 +52,12 @@ The tables come from `analyze()` with `resolveImports` and `complexTypes` over t
 (`site/scripts/components.mjs`), plus the `@prop` comments of each component's `.scss`. Everything it produces is
 compared with the `docs-json` of Stencil's own `stencil build` of the same source, member by member.
 
-- **Every member type is computed by stencilrs** ({{ ionic.stats.fallbacks }} are taken from Stencil).
-  Ionic's migrated `tsconfig.json` sets `"stableTypeOrdering": true`: without it TypeScript orders some unions by
-  which member the checker met first across the whole program, which stencilrs does not guess (see
-  [Why did this file go to Stencil?](https://github.com/popcorn245/StencilRS/blob/next/README.md#why-did-this-file-go-to-stencil-unions-whose-order-depends-on-the-whole-program)
+- <span v-if="ionic.stats.fallbacks === 0">**Every member type is computed by stencilrs.** None is taken from Stencil's docs-json, so no page carries a †.</span><span v-else>**{{ ionic.stats.fallbacks }} member types** are left to Stencil's compiler: `analyze()` reports a `stencilrs:` diagnostic for them ([quirk 18](../guide/quirks)). Those pages show Stencil's docs-json value for the type, marked with †.</span>
+- Ionic's migrated `tsconfig.json` sets `"stableTypeOrdering": true`. Without it TypeScript orders some unions by
+  which member the checker met first across the whole program, and stencilrs leaves those to Stencil rather than guess
+  (see [Why did this file go to Stencil?](https://github.com/popcorn245/StencilRS/blob/next/README.md#why-did-this-file-go-to-stencil-unions-whose-order-depends-on-the-whole-program)
   and [quirk 18](../guide/quirks)). The option changes a few type strings (for example `beforeEnter` and
-  `beforeLeave` of `ion-route`); the reference `docs-json` is built from the same tsconfig.
-- If `analyze()` reported `stencilrs: ... is not ported yet` for a member (today: {{ ionic.stats.fallbacks }}), its
-  page would show Stencil's docs-json value for that type, marked with †. No † appears while the count is 0.
+  `beforeLeave` of `ion-route`); the reference `docs-json` is built with the same tsconfig.
 - **{{ ionic.diff.differences }} differences** remain, in {{ ionic.diff.componentsWithDifferences }} components: each is a compiler
   finding, listed in
   [`site/data/ionic-api-diff.json`](https://github.com/popcorn245/StencilRS/blob/next/site/data/ionic-api-diff.json).
