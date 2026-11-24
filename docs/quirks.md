@@ -194,9 +194,8 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   this.m(...)` where `m` is a method of the same class that is neither generic nor overloaded and
   is declared `Promise<X>`. Then `return r` is `boolean` when `X` is `boolean` and `r` is mentioned
   only in `if (r) { ... }` blocks that contain no `return`, `throw`, `break`, `continue` nor a call
-  other than `this.m()` of a method not declared `never` (`const ok = await w(); if (!ok) return
-  false; return ok` is `boolean` where `ok` stays `true`-or-`false` flow-wise, but `if (ok) throw`
-  is `false`: any other mention keeps the fallback). And `return r.p` is `string` when `X` is
+  other than `this.m()` of a method not declared `never` (`if (!ok) return false; return ok` is `boolean`, and `if (ok) throw ...; return ok` is `false`:
+  any other mention keeps the fallback). And `return r.p` is `string` when `X` is
   a union of `true`, `false` and interfaces that have nothing but properties (declared once, no
   `extends`, no type parameters), exactly one has `p`, it is not optional and written `string`,
   and `r` is mentioned only as `r.p`, `r === true` or `typeof r === '...'`: those only remove
@@ -205,7 +204,8 @@ the caller compiles with Stencil. None can be reproduced without the whole progr
   (`string | true` keeps the literal and stays with Stencil). `stableTypeOrdering` makes no
   difference to these (checked with real Stencil both ways). Fixtures:
   `build/src/components/inferred-returns.tsx` and `inferred-calls.tsx`, which also hold the
-  near-misses that stay with Stencil. Ionic: `getAccordions`, `canTransition` and `push` match.
+  near-misses that stay with Stencil. Ionic: `getAccordions` and `canTransition` match; `push`'s return does too (its
+  parameters are the union-order case below).
 - **A union the checker orders by when it first met its members**, printed whole: a method
   parameter or return type is `string | Function | HTMLElement | null` for
   `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on
