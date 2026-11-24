@@ -52,6 +52,8 @@ pub enum ThisMember<'a, 'b> {
         annotation: Option<&'b TSType<'a>>,
         init: Option<&'b Expression<'a>>,
         readonly: bool,
+        /// Declared with `?`: its type has `undefined` too.
+        optional: bool,
     },
     /// A method and its written return type.
     Method(Option<&'b TSType<'a>>),
@@ -199,6 +201,7 @@ impl<'a, 'b> Locals<'a, 'b> {
                                                     .map(|t| &t.type_annotation),
                                                 init: p.value.as_ref(),
                                                 readonly: p.readonly,
+                                                optional: p.optional,
                                             },
                                         );
                                     }
