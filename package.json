@@ -56,6 +56,8 @@
     "vite.js",
     "vite-css.js",
     "vite-types.js",
+    "vite-docs.js",
+    "vite-project.js",
     "vite-fallback.js",
     "vite-typecheck.js",
     "ssr.js",
