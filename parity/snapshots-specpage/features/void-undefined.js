@@ -8,6 +8,8 @@ export const VoidUndefined = class {
         this.ev3 = __stencil_createEvent(this, "ev3", 7);
         this.ev4 = __stencil_createEvent(this, "ev4", 7);
         this.ev5 = __stencil_createEvent(this, "ev5", 7);
+        this.ev6 = __stencil_createEvent(this, "ev6", 7);
+        this.ev7 = __stencil_createEvent(this, "ev7", 7);
     }
     a;
     b;
@@ -16,11 +18,20 @@ export const VoidUndefined = class {
     e;
     f;
     g;
+    /** An optional member inside a type prints the `undefined` it adds. */
+    h;
+    i;
+    /** A generic alias is instantiated with the same reduction as a written union. */
+    j;
+    k;
+    l;
     ev1;
     ev2;
     ev3;
     ev4;
     ev5;
+    ev6;
+    ev7;
     async m1(x, y) {
         return;
     }
@@ -37,6 +48,18 @@ export const VoidUndefined = class {
         return null;
     }
     async m6(y, z) {
+        return;
+    }
+    async m8(x, y) {
+        return;
+    }
+    async m9(x, y) {
+        return;
+    }
+    async m10(x, y) {
+        return {};
+    }
+    async m11(y, z, w) {
         return;
     }
     render() {
@@ -218,6 +241,131 @@ export const VoidUndefined = class {
                 "internal": false,
                 "getter": false,
                 "setter": false
+            }, {
+                "name": "h",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": true,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "{ a?: string | void }",
+                    "resolved": "{ a?: string | void | undefined; }",
+                    "references": {}
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "An optional member inside a type prints the `undefined` it adds."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "i",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "(y?: V) => void",
+                    "resolved": "((y?: V | undefined) => void) | undefined",
+                    "references": {
+                        "V": {
+                            "location": "global",
+                            "id": "global::V"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "j",
+                "type": "string",
+                "attribute": "j",
+                "reflect": false,
+                "mutable": false,
+                "required": true,
+                "optional": false,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "M<string>",
+                    "resolved": "string | void",
+                    "references": {
+                        "M": {
+                            "location": "global",
+                            "id": "global::M"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": "A generic alias is instantiated with the same reduction as a written union."
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "k",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "Opt<void>",
+                    "resolved": "undefined | void",
+                    "references": {
+                        "Opt": {
+                            "location": "global",
+                            "id": "global::Opt"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
+            }, {
+                "name": "l",
+                "type": "unknown",
+                "attribute": undefined,
+                "reflect": false,
+                "mutable": false,
+                "required": false,
+                "optional": true,
+                "defaultValue": undefined,
+                "complexType": {
+                    "original": "N",
+                    "resolved": "null | undefined | void",
+                    "references": {
+                        "N": {
+                            "location": "global",
+                            "id": "global::N"
+                        }
+                    }
+                },
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "internal": false,
+                "getter": false,
+                "setter": false
             }],
         "virtualProperties": [],
         "states": [],
@@ -385,6 +533,130 @@ export const VoidUndefined = class {
                     "return": "Promise<void>"
                 },
                 "internal": false
+            }, {
+                "name": "m8",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: M<string>, y?: M<string> | undefined) => Promise<M<string>>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "string | void",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "M<string> | undefined",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "M": {
+                            "location": "global",
+                            "id": "global::M"
+                        }
+                    },
+                    "return": "Promise<M<string>>"
+                },
+                "internal": false
+            }, {
+                "name": "m9",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: Opt<void>, y?: Opt<void>) => Promise<Opt<void>>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "void | undefined",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "void | undefined",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "Opt": {
+                            "location": "global",
+                            "id": "global::Opt"
+                        }
+                    },
+                    "return": "Promise<Opt<void>>"
+                },
+                "internal": false
+            }, {
+                "name": "m10",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(x: (y?: string | void) => void, y?: { a?: V; }) => Promise<{ a?: string | void; }>",
+                    "parameters": [{
+                            "name": "x",
+                            "type": "(y?: string | void | undefined) => void",
+                            "docs": ""
+                        }, {
+                            "name": "y",
+                            "type": "{ a?: V | undefined; } | undefined",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "V": {
+                            "location": "global",
+                            "id": "global::V"
+                        }
+                    },
+                    "return": "Promise<{ a?: string | void | undefined; }>"
+                },
+                "internal": false
+            }, {
+                "name": "m11",
+                "docs": {
+                    "text": "",
+                    "tags": []
+                },
+                "complexType": {
+                    "signature": "(y?: N | undefined, z?: void | undefined, w?: void | {} | undefined) => Promise<N>",
+                    "parameters": [{
+                            "name": "y",
+                            "type": "N | undefined",
+                            "docs": ""
+                        }, {
+                            "name": "z",
+                            "type": "void | undefined",
+                            "docs": ""
+                        }, {
+                            "name": "w",
+                            "type": "void | {} | undefined",
+                            "docs": ""
+                        }],
+                    "references": {
+                        "Promise": {
+                            "location": "global",
+                            "id": "global::Promise"
+                        },
+                        "N": {
+                            "location": "global",
+                            "id": "global::N"
+                        }
+                    },
+                    "return": "Promise<N>"
+                },
+                "internal": false
             }],
         "listeners": [],
         "events": [{
@@ -468,6 +740,52 @@ export const VoidUndefined = class {
                         "V": {
                             "location": "global",
                             "id": "global::V"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "ev6",
+                "method": "ev6",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "{ a?: V; m(y?: void): void }",
+                    "resolved": "{ a?: V | undefined; m(y?: void | undefined): void; }",
+                    "references": {
+                        "V": {
+                            "location": "global",
+                            "id": "global::V"
+                        }
+                    }
+                },
+                "internal": false
+            }, {
+                "name": "ev7",
+                "method": "ev7",
+                "bubbles": true,
+                "cancelable": true,
+                "composed": true,
+                "docs": {
+                    "tags": [],
+                    "text": ""
+                },
+                "complexType": {
+                    "original": "M<U>",
+                    "resolved": "number | undefined | void",
+                    "references": {
+                        "M": {
+                            "location": "global",
+                            "id": "global::M"
+                        },
+                        "U": {
+                            "location": "global",
+                            "id": "global::U"
                         }
                     }
                 },

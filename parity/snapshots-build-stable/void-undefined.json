@@ -120,6 +120,101 @@
           }
         }
       }
+    },
+    {
+      "name": "h",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": true
+      },
+      "complexType": {
+        "original": "{ a?: string | void }",
+        "resolved": "{ a?: void | string | undefined; }",
+        "references": {}
+      }
+    },
+    {
+      "name": "i",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "(y?: V) => void",
+        "resolved": "((y?: V | undefined) => void) | undefined",
+        "references": {
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        }
+      }
+    },
+    {
+      "name": "j",
+      "flags": {
+        "attribute": "j",
+        "reflect": false,
+        "mutable": false,
+        "optional": false,
+        "required": true
+      },
+      "complexType": {
+        "original": "M<string>",
+        "resolved": "string | void",
+        "references": {
+          "M": {
+            "location": "global",
+            "id": "global::M"
+          }
+        }
+      }
+    },
+    {
+      "name": "k",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Opt<void>",
+        "resolved": "undefined | void",
+        "references": {
+          "Opt": {
+            "location": "global",
+            "id": "global::Opt"
+          }
+        }
+      }
+    },
+    {
+      "name": "l",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "N",
+        "resolved": "null | undefined | void",
+        "references": {
+          "N": {
+            "location": "global",
+            "id": "global::N"
+          }
+        }
+      }
     }
   ],
   "events": [
@@ -167,6 +262,36 @@
           }
         }
       }
+    },
+    {
+      "name": "ev6",
+      "complexType": {
+        "original": "{ a?: V; m(y?: void): void }",
+        "resolved": "{ a?: V | undefined; m(y?: void | undefined): void; }",
+        "references": {
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        }
+      }
+    },
+    {
+      "name": "ev7",
+      "complexType": {
+        "original": "M<U>",
+        "resolved": "number | undefined | void",
+        "references": {
+          "M": {
+            "location": "global",
+            "id": "global::M"
+          },
+          "U": {
+            "location": "global",
+            "id": "global::U"
+          }
+        }
+      }
     }
   ],
   "methods": [
@@ -193,6 +318,69 @@
           }
         },
         "return": "Promise<void | string>"
+      }
+    },
+    {
+      "name": "m10",
+      "complexType": {
+        "signature": "(x: (y?: string | void) => void, y?: { a?: V; }) => Promise<{ a?: string | void; }>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "(y?: void | string | undefined) => void",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "{ a?: V | undefined; } | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "V": {
+            "location": "global",
+            "id": "global::V"
+          }
+        },
+        "return": "Promise<{ a?: void | string | undefined; }>"
+      }
+    },
+    {
+      "name": "m11",
+      "complexType": {
+        "signature": "(y?: N | undefined, z?: void | undefined, w?: void | string[] | undefined) => Promise<N>",
+        "parameters": [
+          {
+            "name": "y",
+            "type": "N | undefined",
+            "docs": ""
+          },
+          {
+            "name": "z",
+            "type": "void | undefined",
+            "docs": ""
+          },
+          {
+            "name": "w",
+            "type": "void | string[] | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "N": {
+            "location": "global",
+            "id": "global::N"
+          }
+        },
+        "return": "Promise<N>"
       }
     },
     {
@@ -344,6 +532,64 @@
           }
         },
         "return": "Promise<void>"
+      }
+    },
+    {
+      "name": "m8",
+      "complexType": {
+        "signature": "(x: M<string>, y?: M<string> | undefined) => Promise<M<string>>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "void | string",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "M<string> | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "M": {
+            "location": "global",
+            "id": "global::M"
+          }
+        },
+        "return": "Promise<M<string>>"
+      }
+    },
+    {
+      "name": "m9",
+      "complexType": {
+        "signature": "(x: Opt<void>, y?: Opt<void>) => Promise<Opt<void>>",
+        "parameters": [
+          {
+            "name": "x",
+            "type": "void | undefined",
+            "docs": ""
+          },
+          {
+            "name": "y",
+            "type": "void | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Opt": {
+            "location": "global",
+            "id": "global::Opt"
+          }
+        },
+        "return": "Promise<Opt<void>>"
       }
     }
   ],

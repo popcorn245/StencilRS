@@ -9,6 +9,8 @@ export class VoidUndefined {
         this.ev3 = __stencil_createEvent(this, "ev3", 7);
         this.ev4 = __stencil_createEvent(this, "ev4", 7);
         this.ev5 = __stencil_createEvent(this, "ev5", 7);
+        this.ev6 = __stencil_createEvent(this, "ev6", 7);
+        this.ev7 = __stencil_createEvent(this, "ev7", 7);
     }
     a;
     b;
@@ -17,11 +19,20 @@ export class VoidUndefined {
     e;
     f;
     g;
+    /** An optional member inside a type prints the `undefined` it adds. */
+    h;
+    i;
+    /** A generic alias is instantiated with the same reduction as a written union. */
+    j;
+    k;
+    l;
     ev1;
     ev2;
     ev3;
     ev4;
     ev5;
+    ev6;
+    ev7;
     async m1(x, y) {
         return;
     }
@@ -40,6 +51,18 @@ export class VoidUndefined {
     async m6(y, z) {
         return;
     }
+    async m8(x, y) {
+        return;
+    }
+    async m9(x, y) {
+        return;
+    }
+    async m10(x, y) {
+        return {};
+    }
+    async m11(y, z, w) {
+        return;
+    }
     render() {
         return h("div", { key: '0' });
     }
@@ -54,12 +77,21 @@ export class VoidUndefined {
             "e": [1],
             "f": [2],
             "g": [1],
+            "h": [16],
+            "i": [16],
+            "j": [1],
+            "k": [16],
+            "l": [16],
             "m1": [64],
             "m2": [64],
             "m3": [64],
             "m4": [64],
             "m5": [64],
-            "m6": [64]
+            "m6": [64],
+            "m8": [64],
+            "m9": [64],
+            "m10": [64],
+            "m11": [64]
         },
         "$listeners$": undefined,
         "$lazyBundleId$": "-",

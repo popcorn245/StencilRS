@@ -193,7 +193,11 @@ nav, nav-link, popover and modal. Fixture: `parity/fixtures/build/src/components
   in the signature (`y?: string | void | undefined`, `y?: V | undefined`): the added `undefined`
   does not strip back off, because `void` has the facts of `undefined`. A method's `Promise<void>`
   inferred from `if (c) return undefined; return this.voidFn()` is the subtype case (`undefined |
-  void` is `void`) and stays with Stencil. Fixtures: `features/void-undefined.tsx`,
+  void` is `void`) and stays with Stencil. An optional member inside an object or function type
+  follows the same rule where the type is printed (`{ a?: string | void | undefined; }`,
+  `(y?: V | undefined) => void`), and a generic alias is instantiated with literal reduction too
+  (`M<string>` with `type M<T> = T | void` is `string | void`, `Opt<void>` is `void | undefined`).
+  Fixtures: `features/void-undefined.tsx`,
   `build/src/components/void-undefined.tsx`, `build-stable/src/components/void-undefined.tsx`.
 
 ## 18. What `complexType` still leaves to Stencil
