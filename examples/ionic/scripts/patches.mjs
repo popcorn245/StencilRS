@@ -64,4 +64,10 @@ export const tsconfigPatches = {
   // files import `src/...` bare, which `baseUrl: "."` made resolvable, so map it explicitly.
   removeBaseUrl: true,
   extraPaths: { 'src/*': ['./src/*'] },
+  // TypeScript 6's `stableTypeOrdering` sorts union members by their kind, name and value (the only order
+  // TypeScript 7 has) instead of by type id. The default order depends on what the checker met first, so
+  // stencilrs cannot know it without the whole program and sends those members to Stencil (`docs/quirks.md`,
+  // quirk 18); with the option the order is a function of the types, and stencilrs reproduces it. It changes
+  // 5 printed types in docs.json (ion-popover `present`, ion-route `beforeEnter`/`beforeLeave`, `SpinnerTypes`).
+  stableTypeOrdering: true,
 };

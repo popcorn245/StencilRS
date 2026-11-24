@@ -1,0 +1,208 @@
+{
+  "tag": "build-intersection-unions",
+  "properties": [
+    {
+      "name": "fn",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "(h: Highlight) => void",
+        "resolved": "((h: Highlight) => void) | undefined",
+        "references": {
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          }
+        }
+      }
+    },
+    {
+      "name": "highlights",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Highlight[] | Callback",
+        "resolved": "((iso: string) => Style | undefined) | ({ date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { backgroundColor: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { border: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { textColor: string; })[] | undefined",
+        "references": {
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          },
+          "Callback": {
+            "location": "global",
+            "id": "global::Callback"
+          }
+        }
+      }
+    },
+    {
+      "name": "inline",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "{ a: string } & ({ b: number } | { c: boolean })",
+        "resolved": "undefined | { a: string; } & { b: number; } | { a: string; } & { c: boolean; }",
+        "references": {}
+      }
+    },
+    {
+      "name": "list",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Highlight[]",
+        "resolved": "({ date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { backgroundColor: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { border: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { textColor: string; })[]",
+        "references": {
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          }
+        }
+      }
+    },
+    {
+      "name": "named",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Named & Sized",
+        "resolved": "Named & { size: number; } | Named & { width: number; height: number; } | undefined",
+        "references": {
+          "Named": {
+            "location": "global",
+            "id": "global::Named"
+          },
+          "Sized": {
+            "location": "global",
+            "id": "global::Sized"
+          }
+        }
+      }
+    },
+    {
+      "name": "nested",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "{ h: { a: string } & ({ b: number } | { c: boolean }) }",
+        "resolved": "undefined | { h: { a: string; } & ({ b: number; } | { c: boolean; }); }",
+        "references": {}
+      }
+    },
+    {
+      "name": "one",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "Highlight",
+        "resolved": "undefined | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { backgroundColor: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { border: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { textColor: string; }",
+        "references": {
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          }
+        }
+      }
+    },
+    {
+      "name": "two",
+      "flags": {
+        "attribute": null,
+        "reflect": false,
+        "mutable": false,
+        "optional": true,
+        "required": false
+      },
+      "complexType": {
+        "original": "({ a: string } | { b: string }) & ({ c: number } | { d: number })",
+        "resolved": "undefined | { a: string; } & { c: number; } | { a: string; } & { d: number; } | { b: string; } & { c: number; } | { b: string; } & { d: number; }",
+        "references": {}
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "highlightChange",
+      "complexType": {
+        "original": "Highlight",
+        "resolved": "{ date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { backgroundColor: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { border: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { textColor: string; }",
+        "references": {
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          }
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "pick",
+      "complexType": {
+        "signature": "(value: Named & Sized) => Promise<Highlight | undefined>",
+        "parameters": [
+          {
+            "name": "value",
+            "type": "Named & Sized",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Highlight": {
+            "location": "global",
+            "id": "global::Highlight"
+          },
+          "Named": {
+            "location": "global",
+            "id": "global::Named"
+          },
+          "Sized": {
+            "location": "global",
+            "id": "global::Sized"
+          }
+        },
+        "return": "Promise<Highlight | undefined>"
+      }
+    }
+  ],
+  "slots": []
+}

@@ -13,6 +13,8 @@ use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
+use crate::union_order;
+
 /// A type the model does not reproduce. The member is reported as not ported yet.
 #[derive(Debug, Clone)]
 pub struct Unsupported(pub String);
@@ -41,13 +43,69 @@ const ID_OBJECT: u32 = 29;
 const FIRST_ID: u32 = 100;
 
 /// Ids for the types created while one file (and the modules it imports) is analysed.
-#[derive(Default)]
 pub struct Registry {
     next: Cell<u32>,
     interned: RefCell<FxHashMap<String, u32>>,
+    /// The properties of the plain interfaces seen so far, by the id of their `K::Ref`.
+    pub ref_props: RefCell<FxHashMap<u32, Rc<Vec<IfaceProp>>>>,
+    /// Which registry this is, for the state `union_order` keeps about it.
+    generation: u64,
+    /// `stableTypeOrdering` is on in the program's tsconfig: unions are ordered by
+    /// `compareTypes` (`union_order.rs`) and not by type id.
+    pub stable: Cell<bool>,
+}
+
+/// A property of a plain interface, as far as the return type of a member access needs it.
+#[derive(Debug)]
+pub struct IfaceProp {
+    pub name: String,
+    pub optional: bool,
+    /// Written as the keyword `string`.
+    pub string_typed: bool,
+}
+
+impl Default for Registry {
+    fn default() -> Self {
+        static GENERATIONS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+        Registry {
+            next: Cell::new(0),
+            interned: RefCell::default(),
+            ref_props: RefCell::default(),
+            generation: GENERATIONS.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+            stable: Cell::new(false),
+        }
+    }
 }
 
 impl Registry {
+    /// Makes the union order of this program the one `union_of` uses.
+    pub fn activate(&self) {
+        union_order::activate(self.generation, self.stable.get());
+    }
+
+    /// The declaration a type's name stands for (see `union_order`).
+    pub fn set_symbol(&self, id: u32, key: String) {
+        union_order::set_symbol(self.generation, id, key);
+    }
+
+    pub fn copy_symbol(&self, from: u32, to: u32) {
+        union_order::copy_symbol(self.generation, from, to);
+        union_order::copy_born(self.generation, from, to);
+    }
+
+    /// An alias's definition is being evaluated: array and tuple types made now are deferred.
+    pub fn enter_alias(&self) {
+        union_order::enter_alias(self.generation);
+    }
+
+    pub fn leave_alias(&self) {
+        union_order::leave_alias(self.generation);
+    }
+
+    pub fn note_created(&self, id: u32) {
+        union_order::note_created(self.generation, id);
+    }
+
     pub fn fresh(&self) -> u32 {
         let n = self.next.get();
         self.next.set(n + 1);
@@ -62,6 +120,11 @@ impl Registry {
         let id = self.fresh();
         self.interned.borrow_mut().insert(key.to_owned(), id);
         id
+    }
+
+    /// The id `intern` gave this key, if it was ever asked for (asking here makes no type).
+    pub fn interned_id(&self, key: &str) -> Option<u32> {
+        self.interned.borrow().get(key).copied()
     }
 }
 
@@ -385,6 +448,28 @@ fn named_unions(types: &[Ty], out: &mut Vec<Ty>) {
     }
 }
 
+/// The origin a union made by distributing an intersection over a union carries (the checker
+/// prints `A & (B | C)` for it where it is printed whole): one part, the intersection.
+pub fn distribution_origin(typeset: Vec<Ty>, id: u32) -> Vec<Ty> {
+    vec![Ty::new(K::Anon(Anon {
+        id,
+        shape: Shape::Intersection(typeset),
+        alias: None,
+    }))]
+}
+
+fn is_distribution(origin: &Option<Vec<Ty>>) -> bool {
+    matches!(origin.as_deref(), Some([t]) if t.is_intersection())
+}
+
+/// The members a union is listed by: its origin's parts, unless that is a distribution.
+fn shown_members<'a>(ms: &'a [Ty], origin: &'a Option<Vec<Ty>>) -> &'a [Ty] {
+    match origin {
+        Some(o) if !is_distribution(origin) => o,
+        _ => ms,
+    }
+}
+
 /// `getUnionType` with literal reduction. `strict` is `strictNullChecks`: without it `null` and
 /// `undefined` vanish from a union that has other members.
 pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
@@ -449,8 +534,18 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
         K::Undefined => !void,
         _ => true,
     });
-    flat.sort_by_key(Ty::id);
-    flat.dedup_by_key(|t| t.id());
+    if union_order::enabled() {
+        let mut seen = Vec::new();
+        flat.retain(|t| {
+            let new = !seen.contains(&t.id());
+            seen.push(t.id());
+            new
+        });
+        union_order::sort(&mut flat);
+    } else {
+        flat.sort_by_key(Ty::id);
+        flat.dedup_by_key(|t| t.id());
+    }
     match flat.len() {
         0 => return Ty::new(K::Never),
         1 => return flat.remove(0),
@@ -485,9 +580,21 @@ pub fn union_of(types: Vec<Ty>, strict: bool, alias: Option<Rc<Alias>>) -> Ty {
         if !named.is_empty() && named_members + reduced.len() == flat.len() {
             let mut parts = reduced;
             parts.extend(named);
-            parts.sort_by_key(Ty::id);
+            if union_order::enabled() {
+                union_order::sort(&mut parts);
+            } else {
+                parts.sort_by_key(Ty::id);
+            }
             origin = Some(parts);
         }
+    }
+    // A union made from one that is a distribution is printed by that origin too, which is not
+    // modelled (`Printer` reports it).
+    if origin.is_none() {
+        origin = types.iter().find_map(|t| match &*t.0 {
+            K::Union(_, None, o) if is_distribution(o) => o.clone(),
+            _ => None,
+        });
     }
     Ty::new(K::Union(flat, alias, origin))
 }
@@ -600,6 +707,9 @@ impl Printer {
             }
             K::Union(ms, alias, origin) => match alias {
                 Some(a) if !top => self.alias(a)?,
+                _ if is_distribution(origin) => {
+                    return unsupported("an intersection distributed over a union, printed whole");
+                }
                 _ => self.union(origin.as_deref().unwrap_or(ms))?,
             },
             K::Array(el, _) => {
@@ -935,6 +1045,9 @@ pub fn order_depends_on_program(ty: &Ty) -> bool {
 }
 
 fn order_depends(ty: &Ty, whole: bool) -> bool {
+    // With `stableTypeOrdering` (see `union_order`) a union is ordered by its members alone;
+    // what is left is a pair of members the comparator cannot tell apart.
+
     // Members of the same enum are created together, so they count once.
     fn free(ms: &[Ty]) -> usize {
         let mut enums: Vec<*const EnumInfo> = Vec::new();
@@ -959,7 +1072,12 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     fn walk(ty: &Ty, nested: bool, top: bool) -> bool {
         match &*ty.0 {
             K::Union(ms, alias, origin) => {
-                let shown = origin.as_deref().unwrap_or(ms);
+                let shown = shown_members(ms, origin);
+                if union_order::enabled() {
+                    return !union_order::decidable(shown)
+                        || (!(alias.is_some() && nested && !top)
+                            && shown.iter().any(|m| walk(m, true, false)));
+                }
                 if alias.is_some() && nested && !top {
                     // The alias is printed by name, but its object members are still ordered by
                     // when the checker first built them, which is not the order they are written in.
@@ -997,13 +1115,24 @@ fn order_depends(ty: &Ty, whole: bool) -> bool {
     }
     // `resolveType` takes the top-level union apart and sorts the parts as text, so only
     // unions nested in what is printed count.
+    // `parseDocsType` also sorts the element parts of an array as text, so a union written
+    // as an array's element (`(A | B)[]`, reached through the top-level parts) has no order to
+    // depend on; only what its members print does.
+    fn parsed(ty: &Ty) -> bool {
+        match &*ty.0 {
+            K::Union(ms, _, origin) => shown_members(ms, origin).iter().any(parsed),
+            K::Array(el, _) => parsed(el),
+            _ => walk(ty, true, false),
+        }
+    }
     match &*ty.0 {
         _ if whole => walk(ty, true, true),
-        K::Union(ms, _, origin) => origin
-            .as_deref()
-            .unwrap_or(ms)
-            .iter()
-            .any(|m| walk(m, true, false)),
+        // `resolveType` reads `type.types`, the flattened members, so an alias in the written
+        // union is taken apart there and does not stay nested.
+        K::Union(ms, _, _) => ms.iter().any(|m| match &*m.0 {
+            K::Array(..) => parsed(m),
+            _ => walk(m, true, false),
+        }),
         _ => walk(ty, false, true),
     }
 }
@@ -1067,6 +1196,7 @@ impl Subst<'_> {
             K::Array(t, _) => {
                 let el = self.apply(t);
                 let id = self.reg.intern(&format!("array<{}>", el.key()));
+                self.reg.copy_symbol(ty.id(), id);
                 Ty::new(K::Array(el, id))
             }
             K::Ref { name, args, .. } => {
@@ -1075,6 +1205,7 @@ impl Subst<'_> {
                     "ref {name}<{}>",
                     args.iter().map(Ty::key).collect::<Vec<_>>().join(",")
                 ));
+                self.reg.copy_symbol(ty.id(), id);
                 Ty::new(K::Ref {
                     name: name.clone(),
                     args,
@@ -1113,8 +1244,10 @@ impl Subst<'_> {
                     }
                     other => clone_shape(other),
                 };
+                let id = self.reg.fresh();
+                self.reg.copy_symbol(a.id, id);
                 Ty::new(K::Anon(Anon {
-                    id: self.reg.fresh(),
+                    id,
                     shape,
                     alias: self.alias(&a.alias),
                 }))
@@ -1125,10 +1258,12 @@ impl Subst<'_> {
 
     fn alias(&self, alias: &Option<Rc<Alias>>) -> Option<Rc<Alias>> {
         alias.as_ref().map(|a| {
+            let id = self.reg.fresh();
+            self.reg.copy_symbol(a.id, id);
             Rc::new(Alias {
                 name: a.name.clone(),
                 args: a.args.iter().map(|t| self.apply(t)).collect(),
-                id: self.reg.fresh(),
+                id,
                 declared: a.declared.clone(),
             })
         })

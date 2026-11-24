@@ -332,8 +332,12 @@ fn intersection_types_resolve_as_the_checker_prints_them() {
         resolved_of("v: string & { __brand: 'id' }", "", true).0,
         "string & { __brand: \"id\"; }"
     );
-    // A union member is distributed by the checker, which is not modelled: not ported.
+    // A union member is distributed as the checker does.
     let (resolved, _, diags) = resolved_of("v: (A | B) & { c: 1 }", prelude, true);
+    assert_eq!(resolved, "A & { c: 1; } | B & { c: 1; }");
+    assert!(diags.is_empty(), "{diags:?}");
+    // A union with a literal member collapses in the checker: not ported.
+    let (resolved, _, diags) = resolved_of("v: (A | 'x') & { c: 1 }", prelude, true);
     assert_eq!(resolved, "");
     assert_eq!(diags.len(), 1);
     assert!(
@@ -463,7 +467,7 @@ fn ionic_shaped_types_resolve_across_files() {
                @Component({ tag: 'cmp-b' })\n\
                export class CmpB {\n\
                  @Method() async present(e?: MouseEvent | TouchEvent): Promise<void> {}\n\
-                 @Method() async progress() { return Promise.resolve(1); }\n\
+                 @Method() async progress() { return [1].length; }\n\
                }";
     let result = analyze_with(src, &file, true, true);
     let messages: Vec<_> = result

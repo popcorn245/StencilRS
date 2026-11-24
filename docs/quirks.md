@@ -176,30 +176,108 @@ stencilrs reproduces `complexType` from the syntax. These cases need the type ch
 the caller compiles with Stencil. None can be reproduced without the whole program, and
 `parity/build.mjs` checks that the ones it can reproduce match a real build:
 
-- **A return type inferred from the body** (`getProgress() { return Promise.resolve(this.progress) }`,
-  `async addRipple() { return new Promise<() => void>(...) }`). It is the type of an expression
-  and of the class's fields; `async f() { return true }` is `Promise<boolean>` only because the
-  checker widens it. Ionic: refresher, ripple-effect, router, accordion-group.
+- **A return type inferred from the body**, beyond the shapes below. Ported: every `return` (the
+  last statement must be one) is a boolean literal, a `this.field` of type `number`, `string` or
+  `boolean` (annotated, or initialised by a non-`readonly` literal), `Promise.resolve(<one of those>)`
+  or `new Promise<T>(...)` with `T` a type the model prints; `async` wraps the result in a `Promise`
+  unless it already is one, and all the returns must print the same. A number or string literal
+  counts only when it is the only `return` (two different ones keep their literal types, `1 | 2`),
+  and a path that falls off the end adds `undefined`: both stay with Stencil. So does a
+  `this.field` that is optional (`number | undefined`), or that something in the method could
+  narrow: `if (!this.ready) throw ...; return this.ready` returns `true`, not `boolean`, so the
+  field counts only when the method mentions it once and uses `this` in no other way than
+  `this.name`. The inferred
+  type is a node of its own, so `references` starts with `Promise` and then names what `T` names.
+  Also ported: `return <expr> as T` (or `<T>expr`) as the only `return`, for `T` an array, an
+  element type the build generates, an interface with nothing but properties, or a `Promise` of
+  one of those or of a primitive (`as HTMLIonAccordionElement[]`: the type is `T` whatever
+  `<expr>` is). `async` awaits what is returned, so `T` has to be known to have no `then`:
+  `x as Later` is a `Promise<number>` when `Later` has a `then`, and `x as Promise<Promise<T>>` a
+  `Promise<T>`. Those, any other named type, `as const`, a literal type, `x as unknown as T` and
+  a union stay with Stencil. And a local `const r = await
+  this.m(...)` where `m` is a method of the same class that is neither generic nor overloaded and
+  is declared `Promise<X>`. Then `return r` is `boolean` when `X` is `boolean` and `r` is mentioned
+  only in `if (r) { ... }` blocks that contain no `return`, `throw`, `break`, `continue` nor a call
+  other than `this.m()` of a method not declared `never` (`if (!ok) return false; return ok` is `boolean`, and `if (ok) throw ...; return ok` is `false`:
+  any other mention keeps the fallback). And `return r.p` is `string` when `X` is
+  a union of `true`, `false` and interfaces that have nothing but properties (declared once, no
+  `extends`, no type parameters), exactly one has `p`, it is not optional and written `string`,
+  `r` is mentioned only as `r.p`, `r === true` or `typeof r === '...'` (those only remove
+  members of the union, so wherever `r.p` type-checks `r` is that one interface), and `r.p` is
+  written once (`if (r.p === '/home') return r.p` returns the literal `"/home"`). Returns of `string`
+  and booleans combine to `string | boolean` when the booleans are `boolean` or both literals
+  (`string | true` keeps the literal and stays with Stencil). `stableTypeOrdering` makes no
+  difference to these (checked with real Stencil both ways). Fixtures:
+  `build/src/components/inferred-returns.tsx` and `inferred-calls.tsx`, which also hold the
+  near-misses that stay with Stencil. Ionic: `getAccordions` and `canTransition` match; `push`'s return does too (its
+  parameters are the union-order case below).
 - **A union the checker orders by when it first met its members**, printed whole: a method
   parameter or return type is `string | Function | HTMLElement | null` for
   `Function | HTMLElement | string | null`, because each member's type id decides, and ids depend on
   which files the program checked first (literal types and lib interfaces exist before the file
   that mentions them). Props are unaffected: Stencil sorts their parts as text. Ionic:
   `present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent)`, `setRoot(root: ComponentRef)`.
+  This is TypeScript's default order, and the only one that depends on the program. TypeScript 6
+  (which Stencil 5 runs on) has the compiler option `stableTypeOrdering`; with it the checker sorts
+  union members with `compareTypes` (`typescript.js`, with `compareTypeNames`, `compareSymbols`,
+  `compareTypeLists`, `compareTupleTypes`): by type flags (`string`, `number`, string literals, number
+  literals, `true`/`false`, enum members, `object`, type parameters, object types, unions, intersections),
+  then by name (an alias's name, or the interface, class or type parameter's), then by declaration
+  position, literal value or type arguments. That order depends on the types alone, and it is the
+  only order TypeScript 7 has. stencilrs reads `stableTypeOrdering` from the governing tsconfig the
+  way it reads `strict` (following `extends`), in build-accurate mode only, and then orders every union
+  with the same comparator (`union_order.rs`) instead of reporting the member. `undefined` and `null`
+  still print last and `false | true` is still `boolean`. The two orders differ in a handful of
+  places (Ionic: `CustomEvent<any> | MouseEvent | PointerEvent | TouchEvent` against
+  `CustomEvent<any> | PointerEvent | MouseEvent | TouchEvent`, a `Promise<X> | X` return, the
+  `SpinnerTypes` literals), so a project must choose, and stencilrs follows its choice. Where the
+  comparator needs something the model does not have, the member still reports `stencilrs:`: two
+  type literals or function types (ordered by where they are written), two types of one name that
+  are not known to be one symbol, two enums, tuples with optional or rest elements and arrays or
+  tuples declared inside a type alias (their nodes are compared), unions the checker keeps an
+  origin for, and intersections without an alias. Fixture: `build-stable/` (its own tsconfig, snapshots
+  in `snapshots-build-stable/`); `build/` is the option off and stays as it was.
 - **Types the build generates** (`HTMLIonTabElement`, `HTMLIonPopoverElement`): they come from
-  `src/components.d.ts`, which Stencil writes, so the source tree does not have them.
-- **An intersection with a union** (`{ date: string } & DatetimeHighlightStyle` where the style is
-  a union): the checker distributes it into a new union with synthesized members.
+  `src/components.d.ts`, which Stencil writes. With `resolveImports`, `HTML<Pascal>Element` is
+  printed as written and referenced as `global` when a `@Component` under the `src` folder next to
+  the governing tsconfig has the tag it stands for (`ion-tab`); that file becomes a dependency of
+  the result. Names of one word or with digits or acronyms (`HTMLHRElement`), and the lib's own
+  multi-word interfaces, are not read. A tag nothing declares stays unported: a build fails on
+  it (`Cannot find name`). Two element types in one union (`HTMLIonTabElement | HTMLElement`) fall
+  under the type-id ordering above.
+- **An intersection with a union** is distributed as the checker does (`A & (B | C)` is
+  `A & B | A & C`, the cross product made last union fastest, aliases inside it expanded and
+  flattened: `{ date: string } & DatetimeHighlightStyle` is three `{ date } & { ...opt } & { x }`
+  members). A union with a literal, `null`, `undefined`, `any` or `{}` member, a generic one, or a
+  product over 256 members is still left to Stencil, since the checker collapses those. A distributed
+  union printed on its own (not as an array's element, which Stencil sorts as text) is ordered by type
+  id, which stencilrs cannot know, so it still falls back. Ionic: ion-datetime `highlightedDates`
+  now matches. Fixture: `build/src/components/intersection-unions.tsx`.
 - **`typeof` written in a prop's annotation** (`@Prop() x: keyof typeof y`): Stencil adds the
   classes and enums such a query names to `references`, which is not modelled. The same `keyof
   typeof y` behind a local `type` alias works.
-- **A prop typed from a call that returns an alias** (`@Prop({ mutable: true }) mode = getIonMode(this)`
-  where `getIonMode = (ref?: any): Mode`). The runtime flag is ported (string, 1025), but Stencil
-  prints the inferred type with the alias expanded (`"ios" | "md"`) and adds `Mode` to `references`
-  as a `global` one, from a declaration in another file; stencilrs reports the prop's
-  `complexType` as not ported. Ionic: ion-router-outlet `mode`.
+- **A prop typed from a call**, when the callee is not an alias of string literals declared in a
+  relatively imported module (`@Prop({ mutable: true }) mode = getIonMode(this)` where
+  `getIonMode = (ref?: any): Mode`, `type Mode = 'ios' | 'md'`). That one is ported: Stencil prints
+  the alias expanded (`"ios" | "md"`, also as `original`) and adds `Mode` to `references` by the
+  name alone, so it is `global` unless the component's own file imports or declares `Mode`. The
+  alias is evaluated in the module that declares the function (`ModuleSummary::rets`). Any other
+  inferred type that is not one word is still reported. Fixture: `build/src/components/inferred-returns.tsx`.
 - `readonly` arrays and tuples, `unique symbol`, `keyof` of an interface, a lib type or a type
-  parameter, and lib namespaces (`Intl.DateTimeFormatOptions`).
+  parameter, and lib namespaces other than `Intl`, and `Intl` interfaces outside lib.es5 (`PluralRulesOptions` and later).
+- `Intl.DateTimeFormatOptions` (and `NumberFormatOptions`, `CollatorOptions`, the `Intl` interfaces of
+  lib.es5) is ported: the checker prints the interface
+  without the `Intl.` qualifier. A prop typed `Alias | undefined` where the alias is a union of
+  object types is also ported: `resolveType` reads the flattened members, so the alias is not
+  a nested union. Ionic: ion-datetime `formatOptions`. Fixture: `build/src/components/intl.tsx`.
+
+A member with `stencilrs:` here is also what `docs` and `types` of the Vite plugin look at: a file whose
+metadata reports one gets its metadata (`docs`, `components.d.ts`) from Stencil's compiler, for that file only
+(`docs/vite-plugin.md`). One known difference in single-file mode (`resolveImports: false`), found comparing with
+@stencil/unplugin: for a return type such as `Promise<A | null>` Stencil lists `A` in a method's `references` after the
+parameters' types, stencilrs before them (ui-kit's `card-scanner`: `detectFrame`). The parity harness compares
+`references` without key order, so it did not show; it changes the order of `references` in docs-json and the manifest,
+nothing else.
 
 ## Props typed from their initializer (build-accurate mode)
 

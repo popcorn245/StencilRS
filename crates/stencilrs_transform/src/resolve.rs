@@ -26,7 +26,7 @@ use crate::meta::PropType;
 use crate::prop_type::{
     Flags, classify_annotation, function_return, infer_expression, keyof_name_flags, name_flags,
 };
-use crate::types::Registry;
+use crate::types::{Registry, Ty};
 
 #[derive(Clone, Copy, Debug)]
 pub struct TypeSummary {
@@ -60,6 +60,9 @@ pub struct ModuleSummary {
     pub values: Arc<FxHashMap<String, ValueSummary>>,
     /// The types it exports, for `complexType`.
     pub defs: FxHashMap<String, ExportedType>,
+    /// The return type a function it exports is declared with, when that is a type alias
+    /// (`export const getIonMode = (ref?: any): Mode => ...`), evaluated where it is written.
+    pub rets: FxHashMap<String, Ty>,
 }
 
 /// A module's exports while they are collected.
@@ -68,6 +71,7 @@ struct Collected {
     types: FxHashMap<String, TypeSummary>,
     values: FxHashMap<String, ValueSummary>,
     defs: FxHashMap<String, ExportedType>,
+    rets: FxHashMap<String, Ty>,
 }
 
 const MAX_DEPTH: u8 = 8;
@@ -111,14 +115,17 @@ impl Resolver {
     /// A resolver for the program that contains `file`. `defs`: whether the exported types'
     /// definitions are needed (`complexType`).
     pub fn new(file: &str, defs: bool) -> Self {
-        let (strict, tsconfig_deps) = strict_null_checks(file);
+        let (strict, stable, tsconfig_deps) = tsconfig_options(file);
+        let registry = Rc::<Registry>::default();
+        // With `stableTypeOrdering` unions are ordered by `compareTypes` (`union_order.rs`).
+        registry.stable.set(stable);
         Resolver {
             cache: RefCell::default(),
             roots: RefCell::default(),
             frames: RefCell::default(),
             depth: Cell::new(0),
             defs,
-            registry: Rc::default(),
+            registry,
             strict,
             tsconfig_deps,
             top_deps: RefCell::default(),
@@ -177,6 +184,7 @@ impl Resolver {
                 types: exports.types,
                 values: exports.values,
                 defs: FxHashMap::default(),
+                rets: FxHashMap::default(),
             });
             self.merge(&deps, true);
             self.roots.borrow_mut().insert(
@@ -234,6 +242,7 @@ impl Resolver {
                 types: exports.types,
                 values: exports.values,
                 defs: FxHashMap::default(),
+                rets: FxHashMap::default(),
             });
             self.merge(&deps, true);
             self.cache.borrow_mut().insert(
@@ -305,6 +314,7 @@ impl Resolver {
                 types: Arc::new(out.types.clone()),
                 values: Arc::new(out.values.clone()),
                 defs: out.defs.clone(),
+                rets: out.rets.clone(),
             };
             slot.summary = Some(Rc::new(partial));
         }
@@ -547,6 +557,18 @@ fn summarize_local(
             out.defs.insert(exported.to_owned(), d);
         }
     }
+    if defs {
+        let ret = match locals.values.get(name) {
+            Some(LocalValue::Function(ret)) => *ret,
+            Some(LocalValue::Const(init)) => function_return(init),
+            _ => None,
+        };
+        if let Some(ret) = ret
+            && let Some(ty) = crate::complex_type::alias_return(env, ret)
+        {
+            out.rets.insert(exported.to_owned(), ty);
+        }
+    }
     match locals.values.get(name) {
         Some(LocalValue::Const(init)) => {
             let mut summary = value_summary(init, locals, source);
@@ -652,6 +674,7 @@ fn summarize_program(
         types: Arc::new(out.types),
         values: Arc::new(out.values),
         defs: out.defs,
+        rets: out.rets,
     }
 }
 
@@ -763,20 +786,20 @@ fn clean(path: &Path) -> PathBuf {
 }
 
 /// Whether the tsconfig that governs `file` turns on `strictNullChecks` (directly or through
-/// `strict`), following `extends` through relative paths. Cached per folder, and read again
-/// when any tsconfig it looked at (or looked for) changes.
-fn strict_null_checks(file: &str) -> (bool, Arc<Vec<Dep>>) {
+/// `strict`) and `stableTypeOrdering`, following `extends` through relative paths. Cached per
+/// folder, and read again when any tsconfig it looked at (or looked for) changes.
+fn tsconfig_options(file: &str) -> (bool, bool, Arc<Vec<Dep>>) {
     let abs = std::env::current_dir()
         .map(|c| c.join(file))
         .unwrap_or_else(|_| PathBuf::from(file));
     let Some(start) = abs.parent() else {
-        return (false, Arc::default());
+        return (false, false, Arc::default());
     };
     if let Some(hit) = cache::tsconfig(start) {
         return hit;
     }
     let mut deps = Vec::new();
-    let mut strict = false;
+    let mut options = Options::default();
     let mut dir = Some(start);
     while let Some(d) = dir {
         let candidate = d.join("tsconfig.json");
@@ -784,40 +807,67 @@ fn strict_null_checks(file: &str) -> (bool, Arc<Vec<Dep>>) {
         let found = dep.stamp.is_some();
         deps.push(dep);
         if found {
-            strict = tsconfig_strict(&candidate, 0, &mut deps).unwrap_or(false);
+            tsconfig_chain(&candidate, 0, &mut deps, &mut options);
             break;
         }
         dir = d.parent();
     }
+    let (strict, stable) = (
+        options.strict.unwrap_or(false),
+        options.stable.unwrap_or(false),
+    );
     let deps = Arc::new(deps);
-    cache::store_tsconfig(start, strict, deps.clone());
-    (strict, deps)
+    cache::store_tsconfig(start, strict, stable, deps.clone());
+    (strict, stable, deps)
 }
 
-fn tsconfig_strict(path: &Path, depth: u8, deps: &mut Vec<Dep>) -> Option<bool> {
+/// The compiler options read from a tsconfig and what it extends; the nearest one to set an
+/// option wins.
+#[derive(Default)]
+struct Options {
+    strict: Option<bool>,
+    stable: Option<bool>,
+}
+
+fn tsconfig_chain(path: &Path, depth: u8, deps: &mut Vec<Dep>, options: &mut Options) {
     if depth > 0 {
         deps.push(Dep::of(path));
     }
-    let text = std::fs::read_to_string(path).ok()?;
-    let json: serde_json::Value = serde_json::from_str(&strip_jsonc(&text)).ok()?;
-    let options = json.get("compilerOptions");
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return;
+    };
+    let Ok(json) = serde_json::from_str::<serde_json::Value>(&strip_jsonc(&text)) else {
+        return;
+    };
+    let compiler_options = json.get("compilerOptions");
     let flag = |key: &str| {
-        options
+        compiler_options
             .and_then(|o| o.get(key))
             .and_then(serde_json::Value::as_bool)
     };
-    if let Some(strict) = flag("strictNullChecks").or_else(|| flag("strict")) {
-        return Some(strict);
+    if options.strict.is_none() {
+        options.strict = flag("strictNullChecks").or_else(|| flag("strict"));
     }
-    let parent = json.get("extends")?.as_str()?;
+    if options.stable.is_none() {
+        options.stable = flag("stableTypeOrdering");
+    }
+    if options.strict.is_some() && options.stable.is_some() {
+        return;
+    }
+    let Some(parent) = json.get("extends").and_then(serde_json::Value::as_str) else {
+        return;
+    };
     if depth >= 8 || !parent.starts_with('.') {
-        return None;
+        return;
     }
-    let mut next = path.parent()?.join(parent);
+    let Some(dir) = path.parent() else {
+        return;
+    };
+    let mut next = dir.join(parent);
     if next.extension().is_none() {
         next.set_extension("json");
     }
-    tsconfig_strict(&next, depth + 1, deps)
+    tsconfig_chain(&next, depth + 1, deps, options);
 }
 
 /// JSON with comments and trailing commas (what tsconfig.json allows) as plain JSON.
@@ -945,16 +995,8 @@ mod tests {
     #[test]
     fn an_import_cycle_does_not_leave_a_cut_short_summary_behind() {
         let dir = folder("cycle");
-        write(
-            &dir.join("a.ts"),
-            "export { B } from './b'; export const A = 1;",
-            0,
-        );
-        write(
-            &dir.join("b.ts"),
-            "export { A } from './a'; export const B = 'b';",
-            0,
-        );
+        write(&dir.join("a.ts"), "export { B } from './b'; export const A = 1;", 0);
+        write(&dir.join("b.ts"), "export { A } from './a'; export const B = 'b';", 0);
         let importer = dir.join("c.tsx").to_string_lossy().into_owned();
         // Read from a, b is summarised while a is in progress, and lacks a's exports.
         let a = Resolver::new(&importer, false)
@@ -1048,5 +1090,184 @@ mod tests {
         assert!(strict_in(&dir));
         fs::remove_file(dir.join("src").join("tsconfig.json")).unwrap();
         assert!(!strict_in(&dir));
+    }
+    #[test]
+    fn stable_type_ordering_is_read_through_extends() {
+        let dir = folder("stable");
+        fs::create_dir_all(dir.join("src")).unwrap();
+        let stable_in = |dir: &Path| {
+            Resolver::new(&dir.join("src").join("c.tsx").to_string_lossy(), false)
+                .registry
+                .stable
+                .get()
+        };
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "compilerOptions": { "strict": true } }"#,
+            0,
+        );
+        assert!(!stable_in(&dir));
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "extends": "./base.json", "compilerOptions": { "strict": true } }"#,
+            1,
+        );
+        write(
+            &dir.join("base.json"),
+            r#"{ "compilerOptions": { "stableTypeOrdering": true } }"#,
+            1,
+        );
+        assert!(stable_in(&dir));
+        assert!(strict_in(&dir));
+        write(
+            &dir.join("tsconfig.json"),
+            r#"{ "extends": "./base.json", "compilerOptions": { "stableTypeOrdering": false } }"#,
+            2,
+        );
+        assert!(!stable_in(&dir));
+    }
+
+    #[test]
+    fn a_generated_element_name_reads_back_as_its_tag() {
+        assert_eq!(generated_element_tag("HTMLIonTabElement").as_deref(), Some("ion-tab"));
+        assert_eq!(
+            generated_element_tag("HTMLIonSelectPopoverElement").as_deref(),
+            Some("ion-select-popover")
+        );
+        // The lib's own interfaces, one word, or a word of one letter: not read.
+        for name in [
+            "HTMLElement",
+            "HTMLDivElement",
+            "HTMLTextAreaElement",
+            "HTMLTableCellElement",
+            "HTMLOrSVGElement",
+            "HTMLHRElement",
+            "HTMLIonTab",
+        ] {
+            assert_eq!(generated_element_tag(name), None, "{name}");
+        }
+    }
+
+    #[test]
+    fn the_tag_index_follows_the_files() {
+        let dir = folder("tag-index");
+        let src = dir.join("src");
+        fs::create_dir_all(src.join("tab")).unwrap();
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-tab' }) export class Tab {}",
+            0,
+        );
+        write(&src.join("util.ts"), "export const tag = 'ion-nope';", 0);
+        let found = cache::component_with_tag(&src, "ion-tab", component_tags);
+        assert_eq!(found, Some(src.join("tab").join("tab.tsx")));
+        // Not a component's tag: there is no `@Component` in that file.
+        assert_eq!(cache::component_with_tag(&src, "ion-nope", component_tags), None);
+        // The tag is renamed: the file that declared it is checked on every use.
+        write(
+            &src.join("tab").join("tab.tsx"),
+            "@Component({ tag: 'ion-pane' }) export class Tab {}",
+            1,
+        );
+        assert_eq!(cache::component_with_tag(&src, "ion-tab", component_tags), None);
+        assert_eq!(
+            cache::component_with_tag(&src, "ion-pane", component_tags),
+            Some(src.join("tab").join("tab.tsx"))
+        );
+    }
+}
+
+/// The tag a generated element type name stands for: `HTMLIonTabElement` -> `ion-tab`. Stencil
+/// writes `HTML${dashToPascalCase(tag)}Element` into `components.d.ts`; only names that map back
+/// to one tag are read (two or more words, letters only), and the lib's own multi-word element
+/// interfaces are left out.
+fn generated_element_tag(name: &str) -> Option<String> {
+    const LIB: &[&str] = &[
+        "TableCaption", "TableCell", "TableCol", "TableRow", "TableSection", "OptGroup", "DataList",
+        "FieldSet", "OList", "UList", "DList", "IFrame", "BaseFont", "FrameSet", "TextArea",
+        "TableDataCell", "TableHeaderCell", "OrSVG",
+    ];
+    let pascal = name.strip_prefix("HTML")?.strip_suffix("Element")?;
+    if LIB.contains(&pascal) || !pascal.chars().all(|c| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    let mut words: Vec<String> = Vec::new();
+    for c in pascal.chars() {
+        if c.is_ascii_uppercase() {
+            words.push(c.to_ascii_lowercase().to_string());
+        } else {
+            words.last_mut()?.push(c);
+        }
+    }
+    // A single letter word (`HTMLIonTAbElement`, `HTMLHRElement`) is ambiguous.
+    if words.len() < 2 || words.iter().any(|w| w.len() < 2) {
+        return None;
+    }
+    Some(words.join("-"))
+}
+
+/// The `tag: '...'` values of the `@Component` declarations in a source text.
+fn component_tags(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    if !text.contains("@Component") {
+        return out;
+    }
+    let mut rest = text;
+    while let Some(i) = rest.find("tag") {
+        let after = rest[i + 3..].trim_start();
+        rest = &rest[i + 3..];
+        let before_ok = i == 0 || !rest_prev_is_ident(text, text.len() - rest.len() - 3);
+        let Some(after) = after.strip_prefix(':') else { continue };
+        let after = after.trim_start();
+        let Some(q) = after.chars().next().filter(|c| matches!(c, '\'' | '"' | '`')) else {
+            continue;
+        };
+        if let Some(end) = after[1..].find(q) {
+            if before_ok {
+                out.push(after[1..1 + end].to_owned());
+            }
+        }
+    }
+    out
+}
+
+fn rest_prev_is_ident(text: &str, at: usize) -> bool {
+    text[..at]
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '$')
+}
+
+fn find_tsconfig_dir(file: &str) -> Option<PathBuf> {
+    let abs = std::env::current_dir().ok()?.join(file);
+    let mut dir = abs.parent();
+    while let Some(d) = dir {
+        if d.join("tsconfig.json").is_file() {
+            return Some(d.to_owned());
+        }
+        dir = d.parent();
+    }
+    None
+}
+
+impl Resolver {
+    /// Whether `name` is an element type Stencil generates into `src/components.d.ts`
+    /// (`HTMLIonTabElement`): some `@Component` of the project (the `src` folder next to the
+    /// governing tsconfig) has the tag it stands for, by the project's tag index
+    /// (`cache::component_with_tag`). The declaring file becomes a dependency of the result. A tag
+    /// nothing declares is not found: its type is an error type in a build, which the model does
+    /// not reproduce.
+    pub fn generated_element(&self, importer: &str, name: &str) -> bool {
+        let Some(tag) = generated_element_tag(name) else {
+            return false;
+        };
+        let Some(root) = find_tsconfig_dir(importer) else {
+            return false;
+        };
+        let Some(path) = cache::component_with_tag(&root.join("src"), &tag, component_tags) else {
+            return false;
+        };
+        self.merge(&[Dep::of(&path)], true);
+        true
     }
 }

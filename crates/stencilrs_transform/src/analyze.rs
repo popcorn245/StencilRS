@@ -24,7 +24,9 @@ use oxc::syntax::scope::ScopeFlags;
 use serde_json::Value;
 
 use crate::codegen::normalize_path;
-use crate::complex_type::{FileInfo, RefNames, Site, TypeEnv, member_type, method_type};
+use crate::complex_type::{
+    FileInfo, RefNames, Site, TypeEnv, member_type, method_type, references,
+};
 use crate::consts::{Lit, computed_key_text, literal, order_like_object_keys};
 use crate::default_value::initializer_text;
 use crate::eval::{Arg, eval_argument, property_key_name};
@@ -35,7 +37,9 @@ use crate::meta::*;
 use crate::prop_type::{classify_annotation, classify_initializer};
 use crate::resolve::Resolver;
 use crate::scope_css::{scope_css, scope_id};
-use crate::types::{Registry, Unsupported};
+use crate::types::{
+    Registry, Ty, Unsupported, order_depends_on_program, type_to_string, unsupported,
+};
 
 const STENCIL_DECORATORS: [&str; 11] = [
     "Component",
@@ -727,15 +731,49 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                     );
                     prop.docs = ctx.docs(locals, &[p.span.start]);
                     let annotation = p.type_annotation.as_ref().map(|t| &t.type_annotation);
-                    prop_complex_type(
-                        ctx,
-                        &env,
-                        &mut prop,
-                        annotation,
-                        p.optional,
-                        |names| names.visit_property_definition(p),
-                        p.key.span(),
-                    );
+                    let from_call = match (annotation, &p.value) {
+                        (None, Some(Expression::CallExpression(call))) if !p.optional => {
+                            call_returned_alias(ctx, locals, call)
+                        }
+                        _ => None,
+                    };
+                    if let Some((alias, ty)) = from_call {
+                        // The checker prints the alias a called function returns expanded.
+                        let site = Site {
+                            file: ctx.file,
+                            info: &ctx.info,
+                            resolver: ctx.resolver,
+                        };
+                        let printed = type_to_string(&ty).and_then(|text| {
+                            if order_depends_on_program(&ty) {
+                                return unsupported("a union ordered by when the checker met it");
+                            }
+                            let mut names = RefNames::default();
+                            names.names.push(alias);
+                            Ok((text, references(names, &site)?))
+                        });
+                        match printed {
+                            Ok((text, references)) => {
+                                prop.complex_type_original = text.clone();
+                                prop.complex_type.original = text.clone();
+                                prop.complex_type.resolved = text;
+                                prop.complex_type.references = references;
+                            }
+                            Err(why) => {
+                                ctx.unported(format!("prop `{}`", prop.name), why, p.key.span())
+                            }
+                        }
+                    } else {
+                        prop_complex_type(
+                            ctx,
+                            &env,
+                            &mut prop,
+                            annotation,
+                            p.optional,
+                            |names| names.visit_property_definition(p),
+                            p.key.span(),
+                        );
+                    }
                     cmp.properties.push(prop);
                 }
 
@@ -1637,6 +1675,26 @@ fn event_type_argument<'x, 'a>(annotation: &'x TSType<'a>) -> Option<&'x TSType<
         return None;
     }
     r.type_arguments.as_ref()?.params.first()
+}
+
+/// `f(...)` where `f` is imported from a relative module and declared to return a type alias of
+/// string literals: the alias' name and its type.
+fn call_returned_alias(ctx: &Ctx, locals: &Locals, call: &CallExpression) -> Option<(String, Ty)> {
+    let Expression::Identifier(f) = &call.callee else {
+        return None;
+    };
+    let resolver = ctx.resolver?;
+    if locals.values.contains_key(f.name.as_str()) {
+        return None;
+    }
+    let (source, imported) = ctx.info.named_import(f.name.as_str())?;
+    if !source.starts_with('.') {
+        return None;
+    }
+    let home = resolver.module(ctx.file, source)?;
+    let ty = home.rets.get(imported)?.clone();
+    let (_, alias) = home.values.get(imported)?.returns.clone()?;
+    Some((alias, ty))
 }
 
 /// A prop's `complexType.resolved` and `references`.

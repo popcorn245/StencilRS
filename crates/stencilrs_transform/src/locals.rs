@@ -52,6 +52,8 @@ pub enum ThisMember<'a, 'b> {
         annotation: Option<&'b TSType<'a>>,
         init: Option<&'b Expression<'a>>,
         readonly: bool,
+        /// Declared with `?`: its type has `undefined` too.
+        optional: bool,
     },
     /// A method and its written return type.
     Method(Option<&'b TSType<'a>>),
@@ -76,6 +78,13 @@ pub struct Locals<'a, 'b> {
     pub declared: FxHashMap<&'a str, &'b TSType<'a>>,
     /// The instance fields and methods of each class declaration, for `this.x` and `new C().m()`.
     pub members: FxHashMap<&'a str, FxHashMap<String, ThisMember<'a, 'b>>>,
+    /// The methods of each class that are generic, overloaded or declared twice: their call
+    /// has no one signature to take a return type from.
+    pub ambiguous_methods: FxHashMap<&'a str, rustc_hash::FxHashSet<String>>,
+    /// Interfaces declared once, without type parameters or `extends`.
+    pub plain_interfaces: rustc_hash::FxHashSet<&'a str>,
+    /// Type names declared more than once (merged declarations).
+    pub merged_types: rustc_hash::FxHashSet<&'a str>,
     /// The class whose members `this` stands for.
     pub current_class: std::cell::RefCell<Option<String>>,
     /// The static fields of each class declaration.
@@ -120,9 +129,13 @@ impl<'a, 'b> Locals<'a, 'b> {
             };
             match decl {
                 Some(Declaration::TSTypeAliasDeclaration(t)) => {
-                    locals
+                    if locals
                         .types
-                        .insert(t.id.name.as_str(), LocalType::Alias(&t.type_annotation));
+                        .insert(t.id.name.as_str(), LocalType::Alias(&t.type_annotation))
+                        .is_some()
+                    {
+                        locals.merged_types.insert(t.id.name.as_str());
+                    }
                     if let Some(params) = &t.type_parameters {
                         locals.alias_params.insert(
                             t.id.name.as_str(),
@@ -135,13 +148,26 @@ impl<'a, 'b> Locals<'a, 'b> {
                     }
                 }
                 Some(Declaration::TSEnumDeclaration(e)) => {
-                    locals.types.insert(e.id.name.as_str(), LocalType::Enum(e));
+                    if locals
+                        .types
+                        .insert(e.id.name.as_str(), LocalType::Enum(e))
+                        .is_some()
+                    {
+                        locals.merged_types.insert(e.id.name.as_str());
+                    }
                     locals.values.insert(e.id.name.as_str(), LocalValue::Object);
                 }
                 Some(Declaration::TSInterfaceDeclaration(i)) => {
-                    locals
+                    if i.type_parameters.is_none() && i.extends.is_empty() {
+                        locals.plain_interfaces.insert(i.id.name.as_str());
+                    }
+                    if locals
                         .types
-                        .insert(i.id.name.as_str(), LocalType::Interface(&i.body.body));
+                        .insert(i.id.name.as_str(), LocalType::Interface(&i.body.body))
+                        .is_some()
+                    {
+                        locals.merged_types.insert(i.id.name.as_str());
+                    }
                     if let Some(params) = &i.type_parameters {
                         locals.decl_params.insert(i.id.name.as_str(), params);
                     }
@@ -154,9 +180,13 @@ impl<'a, 'b> Locals<'a, 'b> {
                             .iter()
                             .filter_map(|el| el.property_key().and_then(property_key_name))
                             .collect();
-                        locals
+                        if locals
                             .types
-                            .insert(id.name.as_str(), LocalType::Class(members));
+                            .insert(id.name.as_str(), LocalType::Class(members))
+                            .is_some()
+                        {
+                            locals.merged_types.insert(id.name.as_str());
+                        }
                         if let Some(params) = &c.type_parameters {
                             locals.decl_params.insert(id.name.as_str(), params);
                         }
@@ -199,6 +229,7 @@ impl<'a, 'b> Locals<'a, 'b> {
                                                     .map(|t| &t.type_annotation),
                                                 init: p.value.as_ref(),
                                                 readonly: p.readonly,
+                                                optional: p.optional,
                                             },
                                         );
                                     }
@@ -209,6 +240,16 @@ impl<'a, 'b> Locals<'a, 'b> {
                                         && m.kind == MethodDefinitionKind::Method =>
                                 {
                                     if let Some(name) = property_key_name(&m.key) {
+                                        if members.contains_key(&name)
+                                            || m.value.type_parameters.is_some()
+                                            || m.value.this_param.is_some()
+                                        {
+                                            locals
+                                                .ambiguous_methods
+                                                .entry(id.name.as_str())
+                                                .or_default()
+                                                .insert(name.clone());
+                                        }
                                         members.insert(
                                             name,
                                             ThisMember::Method(
