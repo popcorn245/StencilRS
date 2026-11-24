@@ -441,6 +441,49 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
     /// union, collapses `any`, `never`, `unknown`, literals and clashing primitives, and drops
     /// `{}`; those are left to Stencil's own compiler.
     fn intersection(&self, members: Vec<Ty>) -> Res<Ty> {
+        // `A & (B | C)` is `A & B | A & C`: the checker's `getCrossProductIntersections` makes
+        // the intersections in the order of the cross product (the last union varies fastest)
+        // and unites them, which sorts them by id. Every combination must itself be one this
+        // model reproduces, so a union with a literal, `null` or `{}` member is left to Stencil.
+        if members.iter().any(|m| matches!(&*m.0, K::Union(..))) {
+            let alts: Vec<Vec<Ty>> = members
+                .iter()
+                .map(|m| match &*m.0 {
+                    K::Union(ms, _, _) => ms.clone(),
+                    _ => vec![m.clone()],
+                })
+                .collect();
+            if members.iter().any(contains_param) {
+                return unsupported("a generic union in an intersection type");
+            }
+            let mut count: usize = 1;
+            for a in &alts {
+                count = count.saturating_mul(a.len());
+                if count > 256 {
+                    return unsupported("a large union in an intersection type");
+                }
+            }
+            let mut results = Vec::with_capacity(count);
+            for i in 0..count {
+                let mut n = i;
+                let mut chosen = alts.iter().map(|a| a[0].clone()).collect::<Vec<_>>();
+                for j in (0..alts.len()).rev() {
+                    chosen[j] = alts[j][n % alts[j].len()].clone();
+                    n /= alts[j].len();
+                }
+                results.push(self.intersection(chosen)?);
+            }
+            let id = self.reg.fresh();
+            let united = union_of(results, self.strict, None);
+            return Ok(match &*united.0 {
+                K::Union(ms, None, None) => Ty::new(K::Union(
+                    ms.clone(),
+                    None,
+                    Some(distribution_origin(members, id)),
+                )),
+                _ => united,
+            });
+        }
         let mut flat: Vec<Ty> = Vec::new();
         for m in members {
             match &*m.0 {
@@ -466,7 +509,7 @@ impl<'e, 'a, 'b> TypeEnv<'e, 'a, 'b> {
                     Shape::Opaque if a.alias.is_some() => {}
                     _ => return unsupported("this member of an intersection type"),
                 },
-                K::Union(..) | K::Enum(_) => {
+                K::Enum(_) => {
                     return unsupported(
                         "a union in an intersection type, which the checker distributes",
                     );
