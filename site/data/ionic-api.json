@@ -4176,20 +4176,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "prop",
-          "name": "formatOptions",
-          "reason": "a qualified type name"
-        },
-        {
-          "from": "docs-json",
-          "kind": "prop",
-          "name": "highlightedDates",
-          "reason": "a union in an intersection type, which the checker distributes"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/datetime/datetime.tsx",
       "methods": [
         {
@@ -4424,7 +4411,7 @@
           "reflect": false,
           "required": false,
           "type": "undefined | { date: DateTimeFormatOptions; time?: DateTimeFormatOptions | undefined; } | { date?: DateTimeFormatOptions | undefined; time: DateTimeFormatOptions; }",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "attribute": null,
@@ -4438,7 +4425,7 @@
           "reflect": false,
           "required": false,
           "type": "((dateIsoString: string) => DatetimeHighlightStyle | undefined) | ({ date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { backgroundColor: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { border: string; } | { date: string; } & { textColor?: string | undefined; backgroundColor?: string | undefined; border?: string | undefined; } & { textColor: string; })[] | undefined",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "attribute": "hour-cycle",
@@ -9790,20 +9777,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "insertPages",
-          "reason": "a union whose members the checker orders by when it first met them"
-        },
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "setPages",
-          "reason": "a union whose members the checker orders by when it first met them"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/nav/nav.tsx",
       "methods": [
         {
@@ -9920,7 +9894,7 @@
           ],
           "returns": "",
           "signature": "insertPages(insertIndex: number, insertComponents: NavComponent[] | NavComponentWithProps[], opts?: NavOptions | null, done?: TransitionDoneFn) => Promise<boolean>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "deprecated": null,
@@ -10052,7 +10026,7 @@
           ],
           "returns": "",
           "signature": "setPages(views: NavComponent[] | NavComponentWithProps[], opts?: NavOptions | null, done?: TransitionDoneFn) => Promise<boolean>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "deprecated": null,
@@ -10699,14 +10673,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "present",
-          "reason": "a union whose members the checker orders by when it first met them"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/popover/popover.tsx",
       "methods": [
         {
@@ -10761,7 +10728,7 @@
           ],
           "returns": "",
           "signature": "present(event?: MouseEvent | TouchEvent | PointerEvent | CustomEvent) => Promise<void>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         }
       ],
       "modes": [
@@ -12125,14 +12092,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "getProgress",
-          "reason": "a return type inferred from the body"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/refresher/refresher.tsx",
       "methods": [
         {
@@ -12160,7 +12120,7 @@
           "params": [],
           "returns": "",
           "signature": "getProgress() => Promise<number>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         }
       ],
       "modes": [
@@ -12484,14 +12444,7 @@
       "docsTags": [],
       "encapsulation": "shadow",
       "events": [],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "addRipple",
-          "reason": "a return type inferred from the body"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/ripple-effect/ripple-effect.tsx",
       "methods": [
         {
@@ -12510,7 +12463,7 @@
           ],
           "returns": "",
           "signature": "addRipple(x: number, y: number) => Promise<() => void>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         }
       ],
       "modes": [
@@ -12576,7 +12529,7 @@
           "original": "NavigationHookCallback",
           "reflect": false,
           "required": false,
-          "type": "(() => NavigationHookResult | Promise<NavigationHookResult>) | undefined",
+          "type": "(() => Promise<NavigationHookResult> | NavigationHookResult) | undefined",
           "typeFrom": "analyze"
         },
         {
@@ -12590,7 +12543,7 @@
           "original": "NavigationHookCallback",
           "reflect": false,
           "required": false,
-          "type": "(() => NavigationHookResult | Promise<NavigationHookResult>) | undefined",
+          "type": "(() => Promise<NavigationHookResult> | NavigationHookResult) | undefined",
           "typeFrom": "analyze"
         },
         {
@@ -12727,14 +12680,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "push",
-          "reason": "a union whose members the checker orders by when it first met them"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/router/router.tsx",
       "methods": [
         {
@@ -12766,7 +12712,7 @@
           ],
           "returns": "",
           "signature": "push(path: string, direction?: RouterDirection, animation?: AnimationBuilder) => Promise<boolean>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         }
       ],
       "modes": [],
@@ -12934,14 +12880,7 @@
       "docsTags": [],
       "encapsulation": "shadow",
       "events": [],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "prop",
-          "name": "mode",
-          "reason": "the inferred type `Mode`"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/router-outlet/router-outlet.tsx",
       "methods": [],
       "modes": [
@@ -12989,7 +12928,7 @@
           "reflect": false,
           "required": false,
           "type": "\"ios\" | \"md\"",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "attribute": "swipe-gesture",
@@ -15503,20 +15442,7 @@
           "typeFrom": "analyze"
         }
       ],
-      "fallbacks": [
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "select",
-          "reason": "the global type `HTMLIonTabElement`"
-        },
-        {
-          "from": "docs-json",
-          "kind": "method",
-          "name": "getTab",
-          "reason": "the global type `HTMLIonTabElement`"
-        }
-      ],
+      "fallbacks": [],
       "file": "src/components/tabs/tabs.tsx",
       "methods": [
         {
@@ -15540,7 +15466,7 @@
           ],
           "returns": "",
           "signature": "getTab(tab: string | HTMLIonTabElement) => Promise<HTMLIonTabElement | undefined>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         },
         {
           "deprecated": null,
@@ -15554,7 +15480,7 @@
           ],
           "returns": "",
           "signature": "select(tab: string | HTMLIonTabElement) => Promise<boolean>",
-          "typeFrom": "docs-json"
+          "typeFrom": "analyze"
         }
       ],
       "modes": [
@@ -17349,85 +17275,7 @@
       "tag": "ion-toolbar"
     }
   },
-  "fallbacks": [
-    {
-      "from": "docs-json",
-      "kind": "prop",
-      "name": "formatOptions",
-      "reason": "a qualified type name",
-      "tag": "ion-datetime"
-    },
-    {
-      "from": "docs-json",
-      "kind": "prop",
-      "name": "highlightedDates",
-      "reason": "a union in an intersection type, which the checker distributes",
-      "tag": "ion-datetime"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "insertPages",
-      "reason": "a union whose members the checker orders by when it first met them",
-      "tag": "ion-nav"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "setPages",
-      "reason": "a union whose members the checker orders by when it first met them",
-      "tag": "ion-nav"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "present",
-      "reason": "a union whose members the checker orders by when it first met them",
-      "tag": "ion-popover"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "getProgress",
-      "reason": "a return type inferred from the body",
-      "tag": "ion-refresher"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "addRipple",
-      "reason": "a return type inferred from the body",
-      "tag": "ion-ripple-effect"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "push",
-      "reason": "a union whose members the checker orders by when it first met them",
-      "tag": "ion-router"
-    },
-    {
-      "from": "docs-json",
-      "kind": "prop",
-      "name": "mode",
-      "reason": "the inferred type `Mode`",
-      "tag": "ion-router-outlet"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "select",
-      "reason": "the global type `HTMLIonTabElement`",
-      "tag": "ion-tabs"
-    },
-    {
-      "from": "docs-json",
-      "kind": "method",
-      "name": "getTab",
-      "reason": "the global type `HTMLIonTabElement`",
-      "tag": "ion-tabs"
-    }
-  ],
+  "fallbacks": [],
   "groups": [
     {
       "name": "Accordion",
@@ -17862,7 +17710,7 @@
     "components": 94,
     "cssProperties": 485,
     "events": 138,
-    "fallbacks": 11,
+    "fallbacks": 0,
     "methods": 83,
     "properties": 589
   }

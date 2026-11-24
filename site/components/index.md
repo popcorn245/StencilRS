@@ -52,8 +52,14 @@ The tables come from `analyze()` with `resolveImports` and `complexTypes` over t
 (`site/scripts/components.mjs`), plus the `@prop` comments of each component's `.scss`. Everything it produces is
 compared with the `docs-json` of Stencil's own `stencil build` of the same source, member by member.
 
-- **{{ ionic.stats.fallbacks }} member types** are ones `analyze()` reports as `stencilrs: ... is not ported yet` (they need the
-  type checker: [quirk 18](../guide/quirks)). Those pages show Stencil's docs-json value for the type, marked with †.
+- **Every member type is computed by stencilrs** ({{ ionic.stats.fallbacks }} are taken from Stencil).
+  Ionic's migrated `tsconfig.json` sets `"stableTypeOrdering": true`: without it TypeScript orders some unions by
+  which member the checker met first across the whole program, which stencilrs does not guess (see
+  [Why did this file go to Stencil?](https://github.com/popcorn245/StencilRS/blob/next/README.md#why-did-this-file-go-to-stencil-unions-whose-order-depends-on-the-whole-program)
+  and [quirk 18](../guide/quirks)). The option changes a few type strings (for example `beforeEnter` and
+  `beforeLeave` of `ion-route`); the reference `docs-json` is built from the same tsconfig.
+- If `analyze()` reported `stencilrs: ... is not ported yet` for a member (today: {{ ionic.stats.fallbacks }}), its
+  page would show Stencil's docs-json value for that type, marked with †. No † appears while the count is 0.
 - **{{ ionic.diff.differences }} differences** remain, in {{ ionic.diff.componentsWithDifferences }} components: each is a compiler
   finding, listed in
   [`site/data/ionic-api-diff.json`](https://github.com/popcorn245/StencilRS/blob/next/site/data/ionic-api-diff.json).
