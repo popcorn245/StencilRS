@@ -56,6 +56,7 @@ const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 // `@popcorn245/stencilrs/signals` (experimental). Its own imports resolve from the project root, so a
 // linked or nested copy of this package still shares the project's Stencil runtime and polyfill.
 const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
+const RUNTIME_FILE = fileURLToPath(new URL('./runtime.js', import.meta.url));
 const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
 // `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
@@ -421,6 +422,14 @@ export function stencilrs(options = {}) {
         await fallbackPlugin.ensure(this);
         return fallbackPlugin.call('transform', this, original, id, transformOpts);
       };
+      // `runtime: 'stencilrs'`: JSX outside components (functional components, helpers) is
+      // compiled to templates too.
+      if (runtime === 'stencilrs' && !ssr && !specPage && !transformOpts?.ssr && file.endsWith('.tsx') && !DECORATORS_RE.test(code) && !id.startsWith(BASE_PREFIX) && /<[A-Za-z>]/.test(code)) {
+        const fine = await transpileAsync(code, { file, resolveImports: false, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
+        const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
+        if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        return { code: fine.code, map: null };
+      }
       if (!DECORATORS_RE.test(code)) {
         if (needsUnplugin) return fallbackPlugin.call('transform', this, code, id, transformOpts);
         // As @stencil/unplugin does in a production build: fold the flags in every TypeScript file.
@@ -464,7 +473,8 @@ export function stencilrs(options = {}) {
         counts.stencilrs++;
         handled.add(file);
         fileToTag.set(file, fine.components[0].tagName);
-        return { code: fine.code, map: null };
+        // Hot reload: the module accepts itself; `define` moves the new class onto the registered one.
+        return { code: isDev ? `${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
       }
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
@@ -523,6 +533,8 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      // `runtime: 'stencilrs'`: every `@stencil/core` import (helpers calling `h()`, `Build`...) gets the stencilrs runtime.
+      if (runtime === 'stencilrs' && id === '@stencil/core' && !ssr && !specPage && importer) return RUNTIME_FILE;
       if (importer === SIGNALS_FILE && SIGNALS_PEERS.has(id)) {
         importer = join(root, 'index.js');
         if (id !== '@stencil/core' || ssr) return this.resolve(id, importer, { skipSelf: true });

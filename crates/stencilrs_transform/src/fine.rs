@@ -21,7 +21,7 @@ pub const RUNTIME_MODULE: &str = "@popcorn245/stencilrs/runtime";
 /// `@stencil/core` values the stencilrs runtime provides under the same name.
 const RUNTIME_VALUES: [&str; 6] = ["forceUpdate", "getElement", "Build", "writeTask", "readTask", "getAssetPath"];
 /// `@stencil/core` names compiled away.
-const COMPILED_AWAY: [&str; 4] = ["h", "Host", "Fragment", "Component"];
+const COMPILED_AWAY: [&str; 1] = ["Component"];
 
 const VOID: [&str; 14] = [
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
@@ -42,6 +42,7 @@ const CLASS: u8 = 3;
 const STYLE: u8 = 4;
 const REF: u8 = 5;
 const SPREAD: u8 = 6;
+const SLOT: u8 = 7;
 
 pub fn generate(
     program: &Program,
@@ -72,8 +73,15 @@ pub fn generate(
             let imported = s.imported.name();
             let local = s.local.name.to_string();
             match imported.as_str() {
-                "Host" => host_name = local,
-                "Fragment" => fragment_name = local,
+                // Kept for `h()` called directly; elided when only JSX used them.
+                "Host" => {
+                    host_name = local;
+                    keep.push(text(s.span).to_owned());
+                }
+                "Fragment" => {
+                    fragment_name = local;
+                    keep.push(text(s.span).to_owned());
+                }
                 n if MEMBER_DECORATORS_TO_REMOVE.contains(&n) || COMPILED_AWAY.contains(&n) => {
                     aliases.insert(n.to_owned(), local);
                 }
@@ -103,6 +111,9 @@ pub fn generate(
         templates: Vec::new(),
         host_name,
         fragment_name,
+        scope: None,
+        emulate_slots: false,
+        pending_class: None,
     };
     let mut style_imports = Vec::new();
     let mut after_classes: Vec<(u32, String)> = Vec::new();
@@ -110,6 +121,7 @@ pub fn generate(
     // Field spans whose JSX was compiled with the field (skipped by the global JSX pass).
     let mut consumed: Vec<Span> = Vec::new();
 
+    let mut contexts: Vec<JsxContext> = Vec::new();
     let mut classes = Classes(Vec::new());
     classes.visit_program(program);
     for (class, stmt_end) in classes.0 {
@@ -133,9 +145,11 @@ pub fn generate(
             None
         };
         if let Some(cmp) = cmp {
-            if cmp.encapsulation == Encapsulation::Scoped {
-                return Err("stencilrs runtime: scoped encapsulation is not supported yet (use shadow)".into());
-            }
+            contexts.push(JsxContext {
+                span: class.span,
+                scope: (cmp.encapsulation == Encapsulation::Scoped).then(|| format!("sc-{}", cmp.tag_name)),
+                emulate_slots: cmp.encapsulation != Encapsulation::Shadow,
+            });
         }
         for d in &class.decorators {
             ed.remove(d.span.start, d.span.end);
@@ -200,6 +214,7 @@ pub fn generate(
                     // All instance fields become constructor assignments, in source order, so
                     // none shadows a member accessor and each initializer sees the earlier ones.
                     if let Some(value) = &p.value {
+                        jsx.enter(&contexts, value.span());
                         let target = if p.computed {
                             text(p.key.span()).to_owned()
                         } else {
@@ -311,8 +326,9 @@ pub fn generate(
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         defines.push(format!(
-            "__rs_define({name}, {{ tag: {}, shadow: {}, delegatesFocus: {delegates}, style: {style}, members: {{ {} }}, watchers: {{ {} }}, serializers: {{ {} }}, deserializers: {{ {} }}, listeners: [{}] }});",
+            "__rs_define({name}, {{ tag: {}, scoped: {}, shadow: {}, delegatesFocus: {delegates}, style: {style}, members: {{ {} }}, watchers: {{ {} }}, serializers: {{ {} }}, deserializers: {{ {} }}, listeners: [{}] }});",
             json(&cmp.tag_name),
+            cmp.encapsulation == Encapsulation::Scoped,
             cmp.encapsulation == Encapsulation::Shadow,
             members.join(", "),
             group(&cmp.watchers),
@@ -330,11 +346,12 @@ pub fn generate(
         if consumed.iter().any(|c| c.start <= sp.start && sp.end <= c.end) {
             continue;
         }
+        jsx.enter(&contexts, sp);
         ed.replace(sp.start, sp.end, jsx.compile_root(node)?);
     }
 
     let header = format!(
-        "\nimport {{ Base as __rs_Base, define as __rs_define, template as __rs_template, t as __rs_t, createEvent as __rs_createEvent }} from {};\n{}\n{}\n",
+        "\nimport {{ Base as __rs_Base, define as __rs_define, template as __rs_template, t as __rs_t, fc as __rs_fc, createEvent as __rs_createEvent }} from {};\n{}\n{}\n",
         json(RUNTIME_MODULE),
         style_imports.join("\n"),
         jsx.templates
@@ -440,6 +457,19 @@ struct JsxCompiler<'s> {
     templates: Vec<String>,
     host_name: String,
     fragment_name: String,
+    /// `sc-<tag>` while compiling JSX of a scoped component: added to every element.
+    scope: Option<String>,
+    /// Outside shadow DOM, `<slot>` becomes a slot part that relocates the host's children.
+    emulate_slots: bool,
+    /// Classes the current element gets besides its own (scope, slot container).
+    pending_class: Option<String>,
+}
+
+/// The component class a JSX tree belongs to.
+struct JsxContext {
+    span: Span,
+    scope: Option<String>,
+    emulate_slots: bool,
 }
 
 /// One template being built.
@@ -454,6 +484,104 @@ struct Builder {
 }
 
 impl<'s> JsxCompiler<'s> {
+    /// Take the scoping of the innermost component class around `at`.
+    fn enter(&mut self, contexts: &[JsxContext], at: Span) {
+        let ctx = contexts
+            .iter()
+            .filter(|c| c.span.start <= at.start && at.end <= c.span.end)
+            .min_by_key(|c| c.span.end - c.span.start);
+        self.scope = ctx.and_then(|c| c.scope.clone());
+        self.emulate_slots = ctx.is_some_and(|c| c.emulate_slots);
+    }
+
+    fn new_builder() -> Builder {
+        Builder {
+            html: String::new(),
+            parts: Vec::new(),
+            values: Vec::new(),
+            host: Vec::new(),
+            host_values: Vec::new(),
+            marks: 0,
+            key: None,
+        }
+    }
+
+    fn finish(&mut self, b: Builder, svg: bool) -> String {
+        let host = if b.host.is_empty() {
+            "null".to_owned()
+        } else {
+            format!("[{}]", b.host.join(", "))
+        };
+        let index = self.templates.len();
+        self.templates.push(format!("{}, [{}], {svg}, {host}", json(&b.html), b.parts.join(", ")));
+        let mut values = b.host_values;
+        values.extend(b.values);
+        match b.key {
+            Some(k) => format!("__rs_t(__rs_tmpl{index}, [{}], {k})", values.join(", ")),
+            None => format!("__rs_t(__rs_tmpl{index}, [{}])", values.join(", ")),
+        }
+    }
+
+    /// `<Fn a={1}>kids</Fn>` → `__rs_fc(Fn, { a: 1 }, [kids])`.
+    fn functional(&mut self, el: &JSXElement, tag: &str) -> Result<String, String> {
+        let mut props = Vec::new();
+        for a in &el.opening_element.attributes {
+            match a {
+                JSXAttributeItem::SpreadAttribute(sp) => props.push(format!("...{}", self.compile_in(sp.argument.span(), &sp.argument)?)),
+                JSXAttributeItem::Attribute(attr) => {
+                    let name = attr_name(attr);
+                    let value = match &attr.value {
+                        None => "true".to_owned(),
+                        Some(JSXAttributeValue::StringLiteral(s)) => json(&s.value),
+                        Some(JSXAttributeValue::ExpressionContainer(c)) => match c.expression.as_expression() {
+                            Some(e) => self.compile_in(e.span(), e)?,
+                            None => continue,
+                        },
+                        Some(JSXAttributeValue::Element(e)) => self.compile_root(JsxNode::Element(e))?,
+                        Some(JSXAttributeValue::Fragment(f)) => self.compile_root(JsxNode::Fragment(f))?,
+                    };
+                    props.push(format!("{}: {value}", json(&name)));
+                }
+            }
+        }
+        let mut kids = Vec::new();
+        for c in &el.children {
+            match c {
+                JSXChild::Text(t) => {
+                    let txt = clean_jsx_text(&t.span.source_text(self.source));
+                    if !txt.is_empty() {
+                        kids.push(json(&txt.replace("&lt;", "<").replace("&gt;", ">")));
+                    }
+                }
+                JSXChild::Element(e) => kids.push(self.compile_root(JsxNode::Element(e))?),
+                JSXChild::Fragment(f) => kids.push(self.compile_root(JsxNode::Fragment(f))?),
+                JSXChild::ExpressionContainer(c) => {
+                    if let Some(e) = c.expression.as_expression() {
+                        kids.push(self.compile_in(e.span(), e)?);
+                    }
+                }
+                JSXChild::Spread(sp) => kids.push(format!("...{}", self.compile_in(sp.expression.span(), &sp.expression)?)),
+            }
+        }
+        let tag_expr = match &el.opening_element.name {
+            JSXElementName::MemberExpression(m) => m.span.source_text(self.source).to_owned(),
+            _ => tag.to_owned(),
+        };
+        // A variable holding a tag name (`const Tag = 'a'`) renders an element: it takes the scope class.
+        let scope = self.scope.as_ref().map_or(String::new(), |sc| format!(", {}", json(sc)));
+        Ok(format!("__rs_fc({tag_expr}, {{ {} }}, [{}]{scope})", props.join(", "), kids.join(", ")))
+    }
+
+    fn is_functional(&self, el: &JSXElement) -> Option<String> {
+        match &el.opening_element.name {
+            JSXElementName::IdentifierReference(id) => {
+                let n = id.name.to_string();
+                (n != self.host_name && n != self.fragment_name).then_some(n)
+            }
+            JSXElementName::MemberExpression(m) => Some(m.span.source_text(self.source).to_owned()),
+            _ => None,
+        }
+    }
     /// The source of an expression with the JSX inside it compiled.
     fn compile_in(&mut self, span: Span, expr: &Expression) -> Result<String, String> {
         let mut found = OutermostJsx::default();
@@ -471,15 +599,12 @@ impl<'s> JsxCompiler<'s> {
     }
 
     fn compile_root(&mut self, node: JsxNode) -> Result<String, String> {
-        let mut b = Builder {
-            html: String::new(),
-            parts: Vec::new(),
-            values: Vec::new(),
-            host: Vec::new(),
-            host_values: Vec::new(),
-            marks: 0,
-            key: None,
-        };
+        if let JsxNode::Element(el) = node {
+            if let Some(tag) = self.is_functional(el) {
+                return self.functional(el, &tag);
+            }
+        }
+        let mut b = Self::new_builder();
         let mut svg = false;
         match node {
             JsxNode::Element(el) => {
@@ -498,19 +623,7 @@ impl<'s> JsxCompiler<'s> {
             }
             JsxNode::Fragment(f) => self.children(&f.children, &mut b)?,
         }
-        let host = if b.host.is_empty() {
-            "null".to_owned()
-        } else {
-            format!("[{}]", b.host.join(", "))
-        };
-        let index = self.templates.len();
-        self.templates.push(format!("{}, [{}], {svg}, {host}", json(&b.html), b.parts.join(", ")));
-        let mut values = b.host_values;
-        values.extend(b.values);
-        Ok(match b.key {
-            Some(k) => format!("__rs_t(__rs_tmpl{index}, [{}], {k})", values.join(", ")),
-            None => format!("__rs_t(__rs_tmpl{index}, [{}])", values.join(", ")),
-        })
+        Ok(self.finish(b, svg))
     }
 
     /// The tag of an element; `None` for a component reference other than Host/Fragment.
@@ -531,10 +644,45 @@ impl<'s> JsxCompiler<'s> {
         if tag == self.host_name {
             return Err("stencilrs runtime: <Host> must be the root of render()".into());
         }
-        if tag.starts_with(|c: char| c.is_ascii_uppercase()) {
-            return Err(format!("stencilrs runtime: functional components (<{tag}>) are not supported yet"));
+        if self.is_functional(el).is_some() {
+            let value = self.functional(el, &tag)?;
+            self.hole(b, value);
+            return Ok(());
+        }
+        if tag == "slot" && self.emulate_slots {
+            let mut name = String::new();
+            for a in &el.opening_element.attributes {
+                if let JSXAttributeItem::Attribute(attr) = a {
+                    if attr_name(attr) == "name" {
+                        match &attr.value {
+                            Some(JSXAttributeValue::StringLiteral(s)) => name = s.value.to_string(),
+                            _ => return Err("stencilrs runtime: a <slot> name must be a string literal".into()),
+                        }
+                    }
+                }
+            }
+            let fallback = if el.children.is_empty() {
+                "null".to_owned()
+            } else {
+                let mut fb = Self::new_builder();
+                self.children(&el.children, &mut fb)?;
+                self.finish(fb, false)
+            };
+            b.html.push_str("<!--rs-->");
+            b.parts.push(format!("[{}, {SLOT}, {}]", b.marks, json(&name)));
+            b.marks += 1;
+            b.values.push(fallback);
+            return Ok(());
         }
         let custom = tag.contains('-');
+        // Scoped: every element gets the scope class; a slot's container also `-s`.
+        let holds_slot = self.emulate_slots
+            && el.children.iter().any(|c| matches!(c, JSXChild::Element(e) if matches!(&e.opening_element.name, JSXElementName::Identifier(i) if i.name == "slot")));
+        self.pending_class = match (&self.scope, holds_slot) {
+            (Some(sc), true) => Some(format!("{sc} {sc}-s")),
+            (Some(sc), false) => Some(sc.clone()),
+            (None, _) => None,
+        };
         b.html.push('<');
         b.html.push_str(&tag);
         let mark = b.marks;
@@ -553,6 +701,9 @@ impl<'s> JsxCompiler<'s> {
                 }
             }
             self.static_or_part(a, b, mark, custom)?;
+        }
+        if let Some(extra) = self.pending_class.take() {
+            b.html.push_str(&format!(" class=\"{extra}\""));
         }
         if b.parts.len() > before {
             b.html.push_str(" rs");
@@ -604,6 +755,12 @@ impl<'s> JsxCompiler<'s> {
                 }
                 Some(JSXAttributeValue::StringLiteral(s)) if plain && simple => {
                     let raw = &self.source[s.span.start as usize + 1..s.span.end as usize - 1];
+                    if name == "class" {
+                        if let Some(extra) = self.pending_class.take() {
+                            b.html.push_str(&format!(" class=\"{} {extra}\"", raw.replace('"', "&quot;")));
+                            return Ok(());
+                        }
+                    }
                     b.html.push_str(&format!(" {name}=\"{}\"", raw.replace('"', "&quot;")));
                     return Ok(());
                 }
@@ -657,11 +814,8 @@ impl<'s> JsxCompiler<'s> {
                 JSXChild::Text(t) => b.html.push_str(&clean_jsx_text(&t.span.source_text(self.source))),
                 JSXChild::Element(el) => {
                     let tag = self.tag(el)?;
-                    if tag.as_deref().is_some_and(|t| t.starts_with(|c: char| c.is_ascii_uppercase()) && t != self.fragment_name) {
-                        return Err(format!(
-                            "stencilrs runtime: <{}> is not supported here yet",
-                            tag.unwrap_or_default()
-                        ));
+                    if tag.as_deref() == Some(self.host_name.as_str()) {
+                        return Err("stencilrs runtime: <Host> must be the root of render()".into());
                     }
                     self.element(el, b, false)?
                 }

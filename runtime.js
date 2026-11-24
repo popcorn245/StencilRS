@@ -52,7 +52,7 @@ const prepare = (tmpl) => {
   tmpl.order = order;
 };
 
-const instantiate = (tmpl) => {
+const instantiate = (tmpl, host) => {
   if (!tmpl.el) prepare(tmpl);
   const frag = document.importNode(tmpl.el, true);
   const marked = [];
@@ -67,12 +67,16 @@ const instantiate = (tmpl) => {
       }
     }
   }
-  const parts = tmpl.parts.map(([m, type, name]) => makePart(type, marked[m], name, marked[m].namespaceURI === SVG_NS));
+  const parts = tmpl.parts.map(([m, type, name]) => makePart(type, marked[m], name, marked[m].namespaceURI === SVG_NS, host));
   // An empty text node first, so the instance is a contiguous range from `start` to `end`
   // (a hole at either edge inserts its content inside it).
   const start = document.createTextNode('');
   frag.insertBefore(start, frag.firstChild);
-  return { tmpl, frag, parts, start, end: frag.lastChild };
+  // The top-level nodes and holes, for when a slotting host scatters them (see `place`).
+  const top = Array.from(frag.childNodes);
+  let topParts = null;
+  for (const p of parts) if ((p instanceof NodePart || p instanceof SlotPart) && p.m.parentNode === frag) (topParts ||= new Map()).set(p.m, p);
+  return { tmpl, frag, parts, start, end: frag.lastChild, top, topParts };
 };
 
 const update = (inst, values, offset = 0) => {
@@ -89,10 +93,60 @@ const removeRange = (start, end) => {
   }
 };
 
+// Slot relocation outside shadow DOM. A host without a shadow root moves its own children into
+// its `<slot>` parts, so what another component rendered into it (its "logical" children, marked
+// with `__lp`) ends up spread over several containers. Insertions before such a node are routed
+// through the host (`__adopt`), and such ranges are removed or moved node by node.
+const nativeInsert = Node.prototype.insertBefore;
+const ins = (parent, node, ref) => nativeInsert.call(parent, node, ref);
+const place = (node, ref) => {
+  const lp = ref.__lp;
+  if (lp === undefined) ins(ref.parentNode, node, ref);
+  else lp.__adopt(node, ref);
+};
+const drop = (n) => {
+  n.remove();
+  const lp = n.__lp;
+  if (lp !== undefined) {
+    lp.__slotted.delete(n);
+    n.__slot = null;
+  }
+};
+const instNodes = (inst, out) => {
+  for (const n of inst.top) {
+    const p = inst.topParts && inst.topParts.get(n);
+    if (p) partNodes(p, out);
+    out.push(n);
+  }
+  return out;
+};
+const partNodes = (p, out) => {
+  if (p instanceof SlotPart) {
+    for (const n of p.slotted) if (n.__slot === p) out.push(n);
+    return partNodes(p.fallback, out);
+  }
+  if (p.inst) instNodes(p.inst, out);
+  else if (p.text) out.push(p.text);
+  else if (p.node) out.push(p.node);
+  else if (p.hel) out.push(p.hel);
+  else if (p.list) for (const e of p.list) entryNodes(e, out);
+  return out;
+};
+const entryNodes = (e, out) => {
+  out.push(e.start);
+  partNodes(e.part, out);
+  out.push(e.part.m);
+  return out;
+};
+const removeEntry = (e) => {
+  if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) drop(n);
+  else removeRange(e.start, e.part.m);
+};
+
 const moveRange = (start, end, parent, before) => {
   for (let n = start; ; ) {
     const next = n.nextSibling;
-    parent.insertBefore(n, before);
+    ins(parent, n, before);
     if (n === end || !next) break;
     n = next;
   }
@@ -101,24 +155,27 @@ const moveRange = (start, end, parent, before) => {
 // ---------------------------------------------------------------------------------------------
 // Parts
 
-const makePart = (type, node, name, svg) => {
+const makePart = (type, node, name, svg, host) => {
   switch (type) {
-    case 0: return new NodePart(node);
+    case 0: return new NodePart(node, host);
     case 1: return new AttrPart(node, name, svg);
     case 2: return new EventPart(node, name);
     case 3: return new ClassPart(node);
     case 4: return new StylePart(node);
     case 5: return new RefPart(node);
     case 6: return new SpreadPart(node, svg);
+    case 7: return new SlotPart(node, name, host);
     default: throw new Error(`stencilrs runtime: unknown part type ${type}`);
   }
 };
 
 /** A child hole: text, a template, a node, a list of those, or nothing. Content sits before the marker. */
 class NodePart {
-  constructor(marker) {
+  constructor(marker, host) {
     this.m = marker;
+    this.host = host;
     this.v = undefined;
+    this.hel = null;
     this.inst = null;
     this.text = null;
     this.node = null;
@@ -126,31 +183,60 @@ class NodePart {
   }
   clear() {
     if (this.inst) {
-      removeRange(this.inst.start, this.inst.end);
+      if (this.inst.start.__lp !== undefined) for (const n of instNodes(this.inst, [])) drop(n);
+      else removeRange(this.inst.start, this.inst.end);
       this.inst = null;
     } else if (this.text) {
-      this.text.remove();
+      drop(this.text);
       this.text = null;
     } else if (this.node) {
-      this.node.remove();
+      drop(this.node);
       this.node = null;
     } else if (this.list) {
-      for (const e of this.list) removeRange(e.start, e.part.m);
+      for (const e of this.list) removeEntry(e);
       this.list = null;
+    } else if (this.hel) {
+      drop(this.hel);
+      this.hel = null;
     }
+  }
+  /** A vnode from `h()` called directly: one element, patched in place while the tag holds. */
+  setH(v) {
+    if (v.tag === Fragment) {
+      if (!this.list) this.clear();
+      this.setList(v.children);
+      return;
+    }
+    if (!this.hel || this.htag !== v.tag) {
+      this.clear();
+      const parent = this.m.parentNode;
+      const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
+      const el = svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag);
+      const marker = el.appendChild(document.createComment(''));
+      this.hel = el;
+      this.htag = v.tag;
+      this.hprops = new SpreadPart(el, svg);
+      this.hkids = new NodePart(marker, this.host);
+      place(el, this.m);
+    }
+    this.hprops.set(v.props);
+    if (v.sc && !this.hel.classList.contains(v.sc)) this.hel.classList.add(v.sc);
+    this.hkids.set(v.children);
   }
   set(v) {
     if (v === this.v && (v === null || typeof v !== 'object')) return;
     if (v == null || v === false || v === true) {
       this.clear();
+    } else if (v.$h === 1) {
+      this.setH(v);
     } else if (v.$t !== undefined) {
       if (this.inst && this.inst.tmpl === v.$t) {
         update(this.inst, v.v);
       } else {
         this.clear();
-        const inst = instantiate(v.$t);
+        const inst = instantiate(v.$t, this.host);
         update(inst, v.v);
-        this.m.parentNode.insertBefore(inst.frag, this.m);
+        place(inst.frag, this.m);
         this.inst = inst;
       }
     } else if (Array.isArray(v)) {
@@ -159,7 +245,7 @@ class NodePart {
     } else if (v instanceof Node) {
       if (this.node !== v) {
         this.clear();
-        this.m.parentNode.insertBefore(v, this.m);
+        place(v, this.m);
         this.node = v;
       }
     } else {
@@ -169,7 +255,7 @@ class NodePart {
       } else {
         this.clear();
         this.text = document.createTextNode(s);
-        this.m.parentNode.insertBefore(this.text, this.m);
+        place(this.text, this.m);
       }
     }
     this.v = v;
@@ -192,21 +278,22 @@ class NodePart {
         next[i] = old[j];
         from[i] = j;
       } else {
-        next[i] = { k, start: document.createTextNode(''), part: new NodePart(document.createComment('')) };
+        next[i] = { k, start: document.createTextNode(''), part: new NodePart(document.createComment(''), this.host) };
         from[i] = -1;
       }
     }
-    for (let j = 0; j < old.length; j++) if (!used[j]) removeRange(old[j].start, old[j].part.m);
+    for (let j = 0; j < old.length; j++) if (!used[j]) removeEntry(old[j]);
     // Entries on the longest run that kept their relative order stay put; the rest move.
     const keep = lis(from);
     let ref = this.m;
     for (let i = next.length - 1; i >= 0; i--) {
       const e = next[i];
       if (from[i] === -1) {
-        parent.insertBefore(e.start, ref);
-        parent.insertBefore(e.part.m, ref);
+        place(e.start, ref);
+        place(e.part.m, ref);
       } else if (!keep[i]) {
-        moveRange(e.start, e.part.m, parent, ref);
+        if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) place(n, ref);
+        else moveRange(e.start, e.part.m, parent, ref);
       }
       e.part.set(items[i]);
       ref = e.start;
@@ -348,6 +435,59 @@ class RefPart {
   }
 }
 
+/**
+ * `<slot>` outside shadow DOM (scoped or no encapsulation): the host's own children for that
+ * slot name are moved here on first render, as Stencil's slot relocation does; the fallback
+ * content renders when there are none.
+ */
+class SlotPart {
+  constructor(marker, name, host) {
+    this.m = marker;
+    this.name = name;
+    this.host = host;
+    this.fallback = new NodePart(marker, host);
+    this.slotted = [];
+    this.taken = false;
+    this.fb = null;
+    host?.__slotParts?.set(name, this);
+  }
+  set(fallback) {
+    this.fb = fallback;
+    if (!this.taken) {
+      this.taken = true;
+      const parent = this.m.parentNode;
+      for (const n of this.host?.__slotted || []) {
+        if (slotName(n) !== this.name) continue;
+        unhide(n);
+        ins(parent, n, this.m);
+        n.__slot = this;
+        this.slotted.push(n);
+      }
+    }
+    this.fallback.set(this.has() ? null : fallback);
+  }
+  /** A node the host routed here after the first render. */
+  add(n) {
+    this.slotted.push(n);
+    if (this.fallback.v != null && real(n)) this.fallback.set(null);
+  }
+  has() {
+    this.slotted = this.slotted.filter((n) => n.__slot === this);
+    return this.slotted.some(real);
+  }
+}
+
+const unhide = (n) => {
+  if (n.__hid) {
+    n.hidden = false;
+    n.__hid = false;
+  }
+};
+
+/** Slotted content that hides the fallback: an element or non-blank text. */
+const real = (n) => n.nodeType === 1 || (n.nodeType === 3 && n.data.trim() !== '');
+const slotName = (n) => (n.nodeType === 1 && n.getAttribute('slot')) || '';
+
 class SpreadPart {
   constructor(el, svg) {
     this.el = el;
@@ -363,7 +503,7 @@ class SpreadPart {
         p = k === 'class' || k === 'className' ? new ClassPart(this.el)
           : k === 'style' ? new StylePart(this.el)
           : k === 'ref' ? new RefPart(this.el)
-          : k === 'key' ? { set() {} }
+          : k === 'key' || k === 'children' ? { set() {} }
           : /^on[A-Z-]/.test(k) ? new EventPart(this.el, k)
           : new AttrPart(this.el, k, this.svg);
         this.parts.set(k, p);
@@ -402,7 +542,24 @@ const sheetFor = (Cstr, css) => {
   return s;
 };
 
-const HAS_LOADED = 1, QUEUED = 2, RENDERING = 4, CONNECTED_ONCE = 8, REFLECTING = 16;
+const canAdopt = typeof CSSStyleSheet === 'function' && 'replaceSync' in CSSStyleSheet.prototype && typeof ShadowRoot === 'function' && 'adoptedStyleSheets' in ShadowRoot.prototype;
+const shadowStyle = (root, Cstr, style) => {
+  if (canAdopt) root.adoptedStyleSheets = [sheetFor(Cstr, style)];
+  else root.prepend(Object.assign(document.createElement('style'), { textContent: cssOf(style) }));
+};
+/** Scoped and unencapsulated styles: once per document or shadow root the component is in. */
+const injected = new WeakMap();
+const injectStyle = (root, Cstr, style) => {
+  let done = injected.get(root);
+  if (!done) injected.set(root, (done = new Set()));
+  if (done.has(Cstr)) return;
+  done.add(Cstr);
+  const el = Object.assign(document.createElement('style'), { textContent: cssOf(style) });
+  el.setAttribute('sty-id', Cstr.__meta.tag);
+  (root.nodeType === 9 ? root.head : root).prepend(el);
+};
+
+const HAS_LOADED = 1, QUEUED = 2, RENDERING = 4, CONNECTED_ONCE = 8, REFLECTING = 16, DIRTY = 32;
 
 /** What every compiled component extends. */
 export class Base extends HTMLElement {
@@ -423,9 +580,71 @@ export class Base extends HTMLElement {
       }
     }
     this.__early = early;
+    track(this);
   }
   componentOnReady() {
     return this.__onReady;
+  }
+  /** A logical child, from another component's render or the page: into the slot it names. */
+  __adopt(node, ref) {
+    if (node.nodeType === 11) {
+      for (const c of Array.from(node.childNodes)) this.__adopt(c, ref);
+      return;
+    }
+    node.__lp = this;
+    this.__slotted.add(node);
+    const sp = this.__slotParts.get(slotName(node));
+    if (sp === undefined || !this.contains(sp.m)) {
+      this.__stash(node);
+      return;
+    }
+    const parent = sp.m.parentNode;
+    unhide(node);
+    ins(parent, node, ref && ref.__slot === sp && ref.parentNode === parent ? ref : sp.m);
+    node.__slot = sp;
+    sp.add(node);
+  }
+  /**
+   * A logical child with no slot rendered for it. As in Stencil, an element stays in the host,
+   * hidden (so `el.querySelector('[slot=x]')` still finds it); text and comments leave.
+   */
+  __stash(n) {
+    n.__slot = null;
+    if (n.nodeType === 1) {
+      if (!n.hidden) {
+        n.hidden = true;
+        n.__hid = true;
+      }
+      if (n.parentNode !== this) ins(this, n, this.firstChild);
+    } else if (n.parentNode) {
+      n.remove();
+    }
+  }
+  // Outside shadow DOM, children added after the first render go to their slot too.
+  appendChild(n) {
+    if (this.__slotParts === undefined) return super.appendChild(n);
+    this.__adopt(n, null);
+    return n;
+  }
+  insertBefore(n, ref) {
+    if (this.__slotParts === undefined) return super.insertBefore(n, ref);
+    this.__adopt(n, ref);
+    return n;
+  }
+  append(...nodes) {
+    if (this.__slotParts === undefined) return super.append(...nodes);
+    for (const n of nodes) this.__adopt(typeof n === 'string' ? document.createTextNode(n) : n, null);
+  }
+  prepend(...nodes) {
+    if (this.__slotParts === undefined) return super.prepend(...nodes);
+    for (const n of nodes) this.__adopt(typeof n === 'string' ? document.createTextNode(n) : n, null);
+  }
+  removeChild(n) {
+    if (this.__slotParts !== undefined && n.__lp === this) {
+      drop(n);
+      return n;
+    }
+    return super.removeChild(n);
   }
   connectedCallback() {
     const meta = this.constructor.__meta;
@@ -459,17 +678,30 @@ export class Base extends HTMLElement {
     const meta = this.constructor.__meta;
     if (meta.shadow) {
       const root = this.shadowRoot || this.attachShadow({ mode: 'open', delegatesFocus: !!meta.delegatesFocus });
-      if (meta.style) root.adoptedStyleSheets = [sheetFor(this.constructor, meta.style)];
+      if (meta.style) shadowStyle(root, this.constructor, meta.style);
       this.__target = root;
     } else {
-      if (meta.style && !this.constructor.__styled) {
-        this.constructor.__styled = true;
-        document.head.appendChild(Object.assign(document.createElement('style'), { textContent: cssOf(meta.style) }));
+      if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
+      if (meta.scoped) this.classList.add(`sc-${meta.tag}-h`);
+      // Slot relocation: the host's own children wait here until a <slot> part takes them.
+      this.__slotted = new Set();
+      this.__slotParts = new Map();
+      for (const n of Array.from(this.childNodes)) {
+        n.__lp = this;
+        this.__slotted.add(n);
+        this.__stash(n);
       }
       this.__target = this;
     }
+    this.__f &= ~DIRTY;
     this.__render(true);
     this.__f |= HAS_LOADED;
+    // State set during the first render's lifecycle (componentDidRender, say) renders again.
+    if (this.__f & DIRTY) this.__schedule();
+    // As Stencil: a component finishes loading after the components it rendered.
+    const pending = [];
+    for (const el of this.__target.querySelectorAll('*')) if (el instanceof Base && !(el.__f & HAS_LOADED)) pending.push(el.__onReady);
+    if (pending.length) await Promise.all(pending);
     this.classList.add('hydrated');
     try {
       this.componentDidLoad?.();
@@ -487,28 +719,32 @@ export class Base extends HTMLElement {
       const out = this.render();
       if (!this.__root) {
         const marker = document.createComment('');
-        this.__target.appendChild(marker);
-        this.__root = new NodePart(marker);
+        ins(this.__target, marker, null);
+        this.__root = new NodePart(marker, this);
       }
       if (out != null && out.$t !== undefined && out.$t.host) {
         // `<Host>`: its attributes bind to this element, its children render inside.
         if (this.__hostT !== out.$t) {
           this.__hostT = out.$t;
-          this.__host = out.$t.host.map(([type, name]) => makePart(type, this, name, false));
+          this.__host = out.$t.host.map(([type, name]) => makePart(type, this, name, false, this));
         }
         for (let i = 0; i < this.__host.length; i++) this.__host[i].set(out.v[i]);
         if (this.__root.inst && this.__root.inst.tmpl === out.$t) {
           update(this.__root.inst, out.v, this.__host.length);
         } else {
           this.__root.clear();
-          const inst = instantiate(out.$t);
+          const inst = instantiate(out.$t, this);
           update(inst, out.v, this.__host.length);
-          this.__root.m.parentNode.insertBefore(inst.frag, this.__root.m);
+          ins(this.__root.m.parentNode, inst.frag, this.__root.m);
           this.__root.inst = inst;
           this.__root.v = out;
         }
       } else {
         this.__root.set(out);
+      }
+      // Logical children whose slot this render removed go back to the host, hidden.
+      if (this.__slotted !== undefined && this.__slotted.size) {
+        for (const n of this.__slotted) if (n.nodeType === 1 && !this.contains(n)) this.__stash(n);
       }
     } catch (e) {
       console.error(e);
@@ -523,7 +759,11 @@ export class Base extends HTMLElement {
     }
   }
   __schedule() {
-    if (!(this.__f & HAS_LOADED) || this.__f & QUEUED) return;
+    if (!(this.__f & HAS_LOADED)) {
+      this.__f |= DIRTY;
+      return;
+    }
+    if (this.__f & QUEUED) return;
     this.__f |= QUEUED;
     queueMicrotask(() => {
       this.__f &= ~QUEUED;
@@ -540,6 +780,55 @@ export class Base extends HTMLElement {
   }
 }
 
+/** `<Host>` and `<Fragment>` for `h()` called directly; compiled JSX never reaches them. */
+export const Host = { __host: true };
+export const Fragment = (_props, children) => children;
+
+/** Stencil's `h()`, for code that calls it directly: a vnode the node parts render. */
+export function h(tag, props, ...children) {
+  children = children.flat(Infinity);
+  if (typeof tag === 'function' && tag !== Fragment) return fc(tag, props || {}, children);
+  if (tag === Host) throw new Error('stencilrs runtime: h(Host) is not supported; use JSX');
+  return { $h: 1, tag, props: props || {}, children, k: props?.key };
+}
+
+/** Stencil's functional component utilities, over the values children are here. */
+const fcUtils = {
+  forEach: (children, cb) => children.forEach((c, i, a) => cb(toChildNode(c), i, a)),
+  map: (children, cb) => children.map((c, i, a) => fromChildNode(cb(toChildNode(c), i, a))),
+};
+const toChildNode = (c) =>
+  c && c.$h === 1
+    ? { vtag: c.tag, vkey: c.k, vattrs: c.props, vchildren: c.children, vtext: null, vname: c.props?.name }
+    : typeof c === 'string' || typeof c === 'number'
+      ? { vtag: null, vkey: undefined, vattrs: null, vchildren: null, vtext: String(c), vname: undefined, $c: c }
+      : { vtag: null, vkey: c?.k, vattrs: null, vchildren: null, vtext: null, vname: undefined, $c: c };
+const fromChildNode = (n) => (n && '$c' in n ? n.$c : n && n.vtag ? h(n.vtag, n.vattrs, ...(n.vchildren || [])) : n?.vtext ?? n);
+
+/** A functional component call (`<Fn a={1}>…</Fn>`). */
+export const fc = (fn, props, children, scope) => {
+  if (typeof fn === 'string') {
+    // `const Tag = 'a'; <Tag/>`: an element whose name is decided at render time.
+    const v = h(fn, props, ...children);
+    v.sc = scope;
+    return v;
+  }
+  return fn(props, children, fcUtils);
+};
+
+/** Stencil's `Env` (the config's `env`); empty unless the app sets it. */
+export const Env = {};
+let modeResolver = null;
+/** Stencil's `setMode` / `getMode`. */
+export const setMode = (resolver) => (modeResolver = resolver);
+export const getMode = (ref) => ref?.__mode ?? (ref ? (ref.__mode = modeResolver?.(ref)) : undefined);
+let assetPath = '';
+export const setAssetPath = (path) => (assetPath = path);
+export const getRenderingRef = () => null;
+/** Decorators exist as values only for code the compiler did not see; they do nothing. */
+const noDecorator = () => () => {};
+export { noDecorator as Component, noDecorator as Prop, noDecorator as State, noDecorator as Event, noDecorator as Method, noDecorator as Watch, noDecorator as Listen, noDecorator as Element, noDecorator as AttachInternals, noDecorator as PropSerialize, noDecorator as AttrDeserialize };
+
 /** Stencil's `Mixin`: the factories applied right to left over the runtime's base class. */
 export const Mixin = (...mixins) => mixins.reduceRight((acc, mixin) => mixin(acc), Base);
 
@@ -549,7 +838,7 @@ export const Build = { isBrowser: true, isServer: false, isDev: false, isTesting
 export const getElement = (ref) => ref;
 export const writeTask = (cb) => requestAnimationFrame(cb);
 export const readTask = (cb) => requestAnimationFrame(cb);
-export const getAssetPath = (path) => new URL(path, document.baseURI).href;
+export const getAssetPath = (path) => new URL(path, assetPath ? new URL(assetPath, document.baseURI) : document.baseURI).href;
 
 /** Re-render a component (Stencil's `forceUpdate`). */
 export const forceUpdate = (el) => el.__schedule?.();
@@ -558,7 +847,9 @@ export const forceUpdate = (el) => el.__schedule?.();
  * Register a compiled component. `meta.members` is `{ name: [flags, attribute?] }`, `watchers`
  * `{ name: [method...] }`, `listeners` `[[event, method, target?]]`.
  */
-export const define = (Cstr, meta) => {
+export const define = (Cstr, meta, register = true) => {
+  const existing = register ? customElements.get(meta.tag) : undefined;
+  if (existing && existing !== Cstr && existing.__meta) return hotSwap(existing, Cstr, meta);
   meta.listeners ||= [];
   meta.watchers ||= {};
   meta.attrs = {};
@@ -600,6 +891,8 @@ export const define = (Cstr, meta) => {
         if (this.__f & HAS_LOADED) {
           if (watchers) for (const m of watchers) this[m](value, old, name);
           this.__schedule();
+        } else if (this.__f & CONNECTED_ONCE) {
+          this.__f |= DIRTY; // during the first render's lifecycle: render again once loaded
         }
       },
     });
@@ -613,7 +906,38 @@ export const define = (Cstr, meta) => {
   }
   Object.defineProperty(Cstr, '__meta', { value: meta });
   Object.defineProperty(Cstr, 'observedAttributes', { value: Object.keys(meta.attrs) });
-  if (!customElements.get(meta.tag)) customElements.define(meta.tag, Cstr);
+  if (register && !existing) customElements.define(meta.tag, Cstr);
+};
+
+/** Live instances per tag, for hot reload. */
+const live = new Map();
+const track = (el) => {
+  const tag = el.constructor.__meta?.tag;
+  if (!tag) return;
+  let set = live.get(tag);
+  if (!set) live.set(tag, (set = new Set()));
+  set.add(new WeakRef(el));
+};
+
+/**
+ * Hot reload: a custom element can't be defined twice, so the new class's methods, accessors
+ * and metadata move onto the registered one and every live instance renders again.
+ */
+const hotSwap = (Old, New, meta) => {
+  define(New, meta, false); // accessors and callbacks on New, not registered
+  for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(New.prototype))) {
+    if (k !== 'constructor') Object.defineProperty(Old.prototype, k, d);
+  }
+  const m = New.__meta;
+  Object.assign(Old.__meta, m);
+  sheets.delete(Old);
+  for (const ref of live.get(meta.tag) || []) {
+    const el = ref.deref();
+    if (el?.isConnected && el.__f & HAS_LOADED) {
+      el.__hostT = null;
+      el.__render(false);
+    }
+  }
 };
 
 /** Stencil's `createEvent`: `this.changed.emit(detail)`. */

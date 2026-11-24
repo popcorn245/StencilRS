@@ -120,5 +120,5 @@ export class CmpF {
   assert.match(code, /__rs_template\("<p rs><!--rs-->!<\/p><!--rs-->"/);
   assert.match(code, /__rs_template\("<li><!--rs--><\/li>"/);
   assert.match(code, /__rs_t\(__rs_tmpl\d, \[i\], i\)/);
-  assert.match(code, /__rs_define\(CmpF, \{\s*tag: "cmp-f",\s*shadow: true/);
+  assert.match(code, /__rs_define\(CmpF, \{\s*tag: "cmp-f",\s*scoped: false,\s*shadow: true/);
 });
