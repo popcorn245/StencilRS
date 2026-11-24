@@ -1058,7 +1058,8 @@ mod tests {
 fn generated_element_tag(name: &str) -> Option<String> {
     const LIB: &[&str] = &[
         "TableCaption", "TableCell", "TableCol", "TableRow", "TableSection", "OptGroup", "DataList",
-        "FieldSet", "OList", "UList", "DList", "IFrame", "BaseFont", "FrameSet",
+        "FieldSet", "OList", "UList", "DList", "IFrame", "BaseFont", "FrameSet", "TextArea",
+        "TableDataCell", "TableHeaderCell", "OrSVG",
     ];
     let pascal = name.strip_prefix("HTML")?.strip_suffix("Element")?;
     if LIB.contains(&pascal) || !pascal.chars().all(|c| c.is_ascii_alphabetic()) {
