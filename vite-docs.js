@@ -136,10 +136,13 @@ const compilerMetaOf = (code) => {
  * file, computed by stencilrs. Returns `null` when the file has something stencilrs does not port yet (a `stencilrs:`
  * diagnostic): its metadata then comes from Stencil's compiler, see `stencilMeta`.
  */
-export function stencilrsMeta(file, source, { resolveImports = true } = {}) {
+export function stencilrsMeta(file, source, { resolveImports = true, onUnported } = {}) {
   file = normalizePath(file, false);
   const analysis = analyze(source, file, { resolveImports, complexTypes: true });
-  if (analysis.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) return null;
+  if (analysis.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
+    onUnported?.(file, analysis.diagnostics);
+    return null;
+  }
   // Decorators, but no component (a base class, a mixin): nothing to document, as Stencil's compiler finds.
   if (!analysis.components.length) return [];
   const result = transpile(source, { file, resolveImports, componentExport: null, componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null, jsx: 'classic' });

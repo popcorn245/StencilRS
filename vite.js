@@ -37,6 +37,7 @@ import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
 import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
+import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
@@ -185,7 +186,11 @@ export function stencilrs(options = {}) {
   // can't do (CSS-only components, a stencil.config that can't be loaded): `project.unsupported`, known once it has been scanned.
   let needsUnplugin = false;
   const userFilter = stencilOptions.include || stencilOptions.exclude ? createFileFilter(stencilOptions.include ?? [/\.tsx?$/], stencilOptions.exclude ?? ['node_modules/**']) : null;
-  const project = stencilOptions.docs || stencilOptions.types || userFilter ? createProject({ stencil: stencilOptions, resolveImports }) : null;
+  // One line, once, when a file goes to Stencil because the order of a union in it depends on the whole program.
+  let logger = null;
+  let isServe = false;
+  const unionHint = createUnionOrderHint(() => logger, { serve: () => isServe });
+  const project = stencilOptions.docs || stencilOptions.types || userFilter ? createProject({ stencil: stencilOptions, resolveImports, onUnported: unionHint.note }) : null;
   const DOCS_ID = '@stencil/unplugin/docs';
   const DOCS_MODULE = '\0stencil-docs:';
   const notifyDocsChanged = (server) => {
@@ -220,12 +225,10 @@ export function stencilrs(options = {}) {
   let styleScan = null;
   // The dev server's scan runs in the background (see `buildStart`): a promise until it is done. Stylesheets wait for it in `load`.
   let styleScanPending = null;
-  let isServe = false;
   // `typecheck`: a child-process `tsgo` / `tsc --noEmit` (vite-typecheck.js). A build starts it at `buildStart` and awaits it
   // before the bundle is written (after `components.d.ts` is written when `dts` is on); a dev server and a watch rebuild
   // run it in the background and log the verdict.
   const checker = createTypecheck(() => root, typecheck);
-  let logger = null;
   let checkTimer = null;
   let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
   let checkDev = false; // dev server or `vite build --watch`: report, never block
@@ -487,6 +490,7 @@ export function stencilrs(options = {}) {
         // Stencil's compiler through @stencil/unplugin would produce the client shape, not ssr's.
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${why}`);
         counts.stencil++;
+        unionHint.note(file, unported);
         if (verbose) this.info?.(`[stencilrs] ${file}: using Stencil's compiler (${why})`);
         return fallBack();
       }
@@ -664,6 +668,7 @@ export function stencilrs(options = {}) {
     },
 
     buildEnd() {
+      unionHint.flush();
       if (verbose && counts.stencilrs + counts.reused + counts.stencil > 0) {
         this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s), reused ${counts.reused}; ${counts.stencil} left to Stencil's compiler`);
       }

@@ -136,7 +136,7 @@ const compare = () => {
       const ours = fromStencilrs(result.components[0]);
       const fell = new Set();
       for (const d of result.diagnostics) {
-        const m = /^stencilrs: the type of (prop|event|method) `([^`]+)` \((.*)\) is not ported yet\.$/.exec(d.message);
+        const m = /^stencilrs: the type of (prop|event|method) `([^`]+)` \((.*)\) (?:is not ported yet\.|is left to Stencil's compiler\. Add "stableTypeOrdering": true to the tsconfig to compile it with stencilrs\.)$/.exec(d.message);
         if (m) {
           fell.add(`${m[1]}:${m[2]}`);
           fallbacks.push(`${file} ${m[1]} ${m[2]}: ${m[3]}`);

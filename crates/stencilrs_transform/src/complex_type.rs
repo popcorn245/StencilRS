@@ -1565,9 +1565,7 @@ impl TypeEnv<'_, '_, '_> {
             ty = self.with_undefined(ty);
         }
         if self.resolving() && order_depends_on_program(&ty) {
-            return unsupported(
-                "a union nested in a type, whose members the checker orders by when it first met them",
-            );
+            return union_order_unsupported();
         }
         resolve_type(&ty)
     }
@@ -2568,9 +2566,7 @@ fn method_type_in_scope(
     let func = &m.value;
     let check = |ty: &Ty| -> Res<String> {
         if env.resolving() && print_order_depends_on_program(ty) {
-            return unsupported(
-                "a union whose members the checker orders by when it first met them",
-            );
+            return union_order_unsupported();
         }
         type_to_string(ty)
     };

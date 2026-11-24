@@ -38,7 +38,8 @@ use crate::prop_type::{classify_annotation, classify_initializer};
 use crate::resolve::Resolver;
 use crate::scope_css::{scope_css, scope_id};
 use crate::types::{
-    Registry, Ty, Unsupported, order_depends_on_program, type_to_string, unsupported,
+    Registry, Ty, UNION_ORDER_LEFT_TO_STENCIL, UNION_ORDER_PROGRAM_REASON, Unsupported,
+    order_depends_on_program, type_to_string, union_order_unsupported,
 };
 
 const STENCIL_DECORATORS: [&str; 11] = [
@@ -156,12 +157,14 @@ impl Ctx<'_> {
     /// A member whose `complexType` the model cannot compute: Stencil's compiler has to.
     fn unported(&mut self, what: String, why: Unsupported, span: Span) {
         if self.complex_types {
+            let tail = if why.0 == UNION_ORDER_PROGRAM_REASON {
+                UNION_ORDER_LEFT_TO_STENCIL
+            } else {
+                "is not ported yet."
+            };
             self.push(
                 Level::Error,
-                format!(
-                    "stencilrs: the type of {what} ({}) is not ported yet.",
-                    why.0
-                ),
+                format!("stencilrs: the type of {what} ({}) {tail}", why.0),
                 span,
             );
         }
@@ -746,7 +749,7 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                         };
                         let printed = type_to_string(&ty).and_then(|text| {
                             if order_depends_on_program(&ty) {
-                                return unsupported("a union ordered by when the checker met it");
+                                return union_order_unsupported();
                             }
                             let mut names = RefNames::default();
                             names.names.push(alias);
