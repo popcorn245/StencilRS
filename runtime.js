@@ -44,19 +44,81 @@ const prepare = (tmpl) => {
   // Number the marked nodes in document order; strip the attribute marks.
   const walker = document.createTreeWalker(content, 129 /* elements and comments */);
   const order = [];
+  const marked = [];
   let i = 0;
   for (let n = walker.nextNode(); n; n = walker.nextNode(), i++) {
     if (n.nodeType === 8 ? n.data === MARK : n.hasAttribute(MARK)) {
       order.push(i);
+      marked.push(n);
       if (n.nodeType === 1) n.removeAttribute(MARK);
     }
   }
   tmpl.el = content;
   tmpl.order = order;
+  // What hydration checks server nodes against, and which marks sit at the top level.
+  const shape = (n) => (n.nodeType === 1 ? n.localName : n.nodeType);
+  tmpl.markShape = marked.map(shape);
+  tmpl.topMark = marked.map((n) => n.parentNode === content);
+  tmpl.topShape = Array.from(content.childNodes, shape);
 };
+
+// ---------------------------------------------------------------------------------------------
+// Hydration in place
+//
+// Every node a render creates and later needs (an instance's first and top-level nodes, the
+// nodes its parts bind to, the text and markers of holes and lists) is "claimed" in creation
+// order with a number per host. On the server the number goes on the node and the serializer
+// writes it out (`rs-n="<host>.<n>"`, or a `<!--rs ...-->` comment for text and comments). On
+// the client, the first render of a server-rendered host looks each claimed node up by its
+// number instead of creating it, so the server's DOM is kept as it is. Any disagreement (a
+// missing number, another tag) throws MISMATCH and the host renders again from scratch.
+
+const MISMATCH = { mismatch: true };
+const claim = (host, shape, make) => {
+  if (!host) return make();
+  const map = host.__adoptMap;
+  if (map) {
+    const n = map.get(host.__seq++);
+    if (n === undefined || (n.nodeType === 1 ? n.localName : n.nodeType) !== shape) throw MISMATCH;
+    return n;
+  }
+  const n = make();
+  if (SERVER) {
+    (n.__rsn ||= []).push(host.__seq++);
+    n.__rsh = host;
+  }
+  return n;
+};
+const adopting = (host) => !!(host && host.__adoptMap);
 
 const instantiate = (tmpl, host) => {
   if (!tmpl.el) prepare(tmpl);
+  if (adopting(host)) return adoptInstance(tmpl, host);
+  const inst = cloneInstance(tmpl, host);
+  if (SERVER && host) {
+    for (const n of inst.top) claim(host, 0, () => n);
+    for (const p of inst.marked) claim(host, 0, () => p);
+  }
+  inst.marked = null;
+  return inst;
+};
+
+const adoptInstance = (tmpl, host) => {
+  const top = tmpl.topShape.map(() => null);
+  const start = claim(host, 3, null);
+  for (let i = 0; i < top.length; i++) top[i] = claim(host, tmpl.topShape[i], null);
+  top.unshift(start);
+  const marked = tmpl.markShape.map((shape) => claim(host, shape, null));
+  const parts = tmpl.parts.map(([m, type, name]) => makePart(type, marked[m], name, marked[m].namespaceURI === SVG_NS, host));
+  let topParts = null;
+  tmpl.parts.forEach(([m], i) => {
+    const p = parts[i];
+    if (tmpl.topMark[m] && (p instanceof NodePart || p instanceof SlotPart)) (topParts ||= new Map()).set(p.m, p);
+  });
+  return { tmpl, frag: document.createDocumentFragment(), parts, start, end: top[top.length - 1], top, topParts };
+};
+
+const cloneInstance = (tmpl, host) => {
   const frag = document.importNode(tmpl.el, true);
   const marked = [];
   if (tmpl.order.length) {
@@ -79,7 +141,7 @@ const instantiate = (tmpl, host) => {
   const top = Array.from(frag.childNodes);
   let topParts = null;
   for (const p of parts) if ((p instanceof NodePart || p instanceof SlotPart) && p.m.parentNode === frag) (topParts ||= new Map()).set(p.m, p);
-  return { tmpl, frag, parts, start, end: frag.lastChild, top, topParts };
+  return { tmpl, frag, parts, start, end: frag.lastChild, top, topParts, marked };
 };
 
 const update = (inst, values, offset = 0) => {
@@ -222,13 +284,14 @@ class NodePart {
       this.clear();
       const parent = this.m.parentNode;
       const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
-      const el = svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag);
-      const marker = el.appendChild(document.createComment(''));
+      const adopt = adopting(this.host);
+      const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
+      const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
       this.hel = el;
       this.htag = v.tag;
       this.hprops = new SpreadPart(el, svg);
       this.hkids = new NodePart(marker, this.host);
-      place(el, this.m);
+      if (!adopt) place(el, this.m);
     }
     this.hprops.set(v.props);
     if (v.sc && !this.hel.classList.contains(v.sc)) this.hel.classList.add(v.sc);
@@ -255,6 +318,7 @@ class NodePart {
       this.setList(v);
     } else if (v instanceof Node) {
       if (this.node !== v) {
+        if (adopting(this.host)) throw MISMATCH; // a node from outside: the server's is another
         this.clear();
         place(v, this.m);
         this.node = v;
@@ -265,8 +329,10 @@ class NodePart {
         if (this.text.data !== s) this.text.data = s;
       } else {
         this.clear();
-        this.text = document.createTextNode(s);
-        place(this.text, this.m);
+        const adopt = adopting(this.host);
+        this.text = claim(this.host, 3, () => document.createTextNode(s));
+        if (!adopt) place(this.text, this.m);
+        else if (this.text.data !== s) this.text.data = s;
       }
     }
     this.v = v;
@@ -289,7 +355,8 @@ class NodePart {
         next[i] = old[j];
         from[i] = j;
       } else {
-        next[i] = { k, start: document.createTextNode(''), part: new NodePart(document.createComment(''), this.host) };
+        const start = claim(this.host, 3, () => document.createTextNode(''));
+        next[i] = { k, start, part: new NodePart(claim(this.host, 8, () => document.createComment('')), this.host) };
         from[i] = -1;
       }
     }
@@ -297,11 +364,14 @@ class NodePart {
     // Entries on the longest run that kept their relative order stay put; the rest move.
     const keep = lis(from);
     let ref = this.m;
+    const adopt = adopting(this.host);
     for (let i = next.length - 1; i >= 0; i--) {
       const e = next[i];
       if (from[i] === -1) {
-        place(e.start, ref);
-        place(e.part.m, ref);
+        if (!adopt) {
+          place(e.start, ref);
+          place(e.part.m, ref);
+        }
       } else if (!keep[i]) {
         if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) place(n, ref);
         else moveRange(e.start, e.part.m, parent, ref);
@@ -470,7 +540,8 @@ class SlotPart {
       for (const n of this.host?.__slotted || []) {
         if (slotName(n) !== this.name) continue;
         unhide(n);
-        ins(parent, n, this.m);
+        // Hydrating, the server already put it here.
+        if (!adopting(this.host) || n.parentNode !== parent) ins(parent, n, this.m);
         n.__slot = this;
         this.slotted.push(n);
       }
@@ -557,7 +628,11 @@ const sheetFor = (Cstr, css) => {
 const canAdopt = !SERVER && typeof CSSStyleSheet === 'function' && 'replaceSync' in CSSStyleSheet.prototype && typeof ShadowRoot === 'function' && 'adoptedStyleSheets' in ShadowRoot.prototype;
 const shadowStyle = (root, Cstr, style) => {
   if (canAdopt) root.adoptedStyleSheets = [sheetFor(Cstr, style)];
-  else root.prepend(Object.assign(document.createElement('style'), { textContent: cssOf(style) }));
+  else {
+    const el = Object.assign(document.createElement('style'), { textContent: cssOf(style) });
+    el.setAttribute('sty-id', Cstr.__meta.tag);
+    root.prepend(el);
+  }
 };
 /** Scoped and unencapsulated styles: once per document or shadow root the component is in. */
 // Kept on the root (not in this module) so the server renderer can reset it between requests.
@@ -573,43 +648,89 @@ const injectStyle = (root, Cstr, style) => {
   into.prepend(el);
 };
 
+/** `rs t n=1.3,1.7 l=2 h` → { t: true, n: '1.3,1.7', l: '2', h: true } */
+const tokens = (data) => {
+  const o = {};
+  for (const p of data.split(' ')) {
+    const i = p.indexOf('=');
+    if (i < 0) o[p] = true;
+    else o[p.slice(0, i)] = p.slice(i + 1);
+  }
+  return o;
+};
+
 /**
- * Hydration of server-rendered markup (see runtime-server.js). The client renders again over it:
- * a shadow host empties its declarative shadow root; a light-DOM host takes back its logical
- * children, which the server marked `rs-l="<host id>"` (text: a `<!--rs-l:<id>-->` before it),
- * and drops the rest. Runs just before the first render, so the server markup stays on screen
- * while `componentWillLoad` is pending.
+ * Reads the hydration marks the server left for host `id` (see runtime-server.js): the claimed
+ * nodes by number, and the host's logical children (`l=`), in document order. A `<!--rs t ...-->`
+ * comment stands for the text node after it (an empty one is made when the text was empty) and
+ * is removed, whichever host gets to it first.
  */
-const hydrate = (host, shadow) => {
-  const id = host.getAttribute('s-rs');
-  if (id === null) return;
-  host.removeAttribute('s-rs');
+const scan = (root, id) => {
+  const map = new Map();
+  const logical = [];
+  const pre = `${id}.`;
+  const read = (n, tok) => {
+    if (tok.n) for (const k of tok.n.split(',')) if (k.startsWith(pre)) map.set(+k.slice(pre.length), n);
+    if (tok.l === id) logical.push(n);
+  };
+  const visit = (parent) => {
+    for (let n = parent.firstChild; n; n = n.nextSibling) {
+      if (n.nodeType === 1) {
+        const nn = n.getAttribute('rs-n');
+        const l = n.getAttribute('rs-l');
+        if (nn !== null || l !== null) read(n, { n: nn, l });
+        visit(n);
+      } else if (n.nodeType === 8 && n.data.startsWith('rs ')) {
+        const tok = tokens(n.data);
+        if (tok.t) {
+          let text = n.nextSibling;
+          if (!text || text.nodeType !== 3 || text.__rsTok !== undefined) text = ins(parent, document.createTextNode(''), n.nextSibling);
+          text.__rsTok = tok;
+          detach(n);
+          n = text;
+        }
+        read(n, tok);
+      } else if (n.nodeType === 3 && n.__rsTok) {
+        read(n, n.__rsTok);
+      }
+    }
+  };
+  visit(root);
+  return { map, logical };
+};
+
+/** After hydration: the host's own marks go. */
+const unmark = (map, logical) => {
+  for (const n of map.values()) if (n.nodeType === 1) n.removeAttribute('rs-n');
+  for (const n of logical) {
+    if (n.nodeType !== 1) continue;
+    n.removeAttribute('rs-l');
+    if (n.hasAttribute('rs-h')) {
+      n.removeAttribute('rs-h');
+      if (n.hidden) n.__hid = true;
+    }
+  }
+};
+
+/**
+ * The fallback when the client's first render doesn't match the server's: render again from
+ * scratch. A shadow host empties its declarative shadow root; a light-DOM host takes back its
+ * logical children and drops the rest.
+ */
+const rehydrate = (host, shadow, id) => {
   if (shadow) {
     host.shadowRoot?.replaceChildren();
     return;
   }
-  const logical = [];
-  const mark = `rs-l:${id}`;
-  const collect = (parent) => {
-    for (let n = parent.firstChild; n; n = n.nextSibling) {
-      if (n.nodeType === 1) {
-        if (n.getAttribute('rs-l') === id) {
-          n.removeAttribute('rs-l');
-          if (n.hasAttribute('rs-h')) {
-            n.removeAttribute('rs-h');
-            n.hidden = false;
-          }
-          logical.push(n);
-        } else {
-          collect(n);
-        }
-      } else if (n.nodeType === 8 && n.data === mark && n.nextSibling?.nodeType === 3) {
-        n = n.nextSibling;
-        logical.push(n);
-      }
+  const { logical } = scan(host, id);
+  for (const n of logical) {
+    if (n.nodeType !== 1) continue;
+    n.removeAttribute('rs-l');
+    if (n.hasAttribute('rs-h')) {
+      n.removeAttribute('rs-h');
+      n.hidden = false;
     }
-  };
-  collect(host);
+  }
   host.replaceChildren(...logical);
 };
 
@@ -623,6 +744,7 @@ export class Base extends HTMLElement {
     this.__v = new Map();
     this.__root = null;
     this.__host = null;
+    this.__seq = 0;
     this.__onReady = new Promise((r) => (this.__ready = r));
     // Properties set on the element before it was upgraded would shadow the accessors.
     const meta = this.constructor.__meta;
@@ -730,8 +852,14 @@ export class Base extends HTMLElement {
       console.error(e);
     }
     const meta = this.constructor.__meta;
-    hydrate(this, !!meta.shadow);
-    if (meta.shadow) {
+    const ssr = SERVER ? null : this.getAttribute('s-rs');
+    if (ssr !== null) {
+      this.removeAttribute('s-rs');
+      if (!this.__hydrate(ssr, meta)) rehydrate(this, !!meta.shadow, ssr);
+    }
+    if (this.__f & HAS_LOADED) {
+      // hydrated in place
+    } else if (meta.shadow) {
       const root = this.shadowRoot || this.attachShadow({ mode: 'open', delegatesFocus: !!meta.delegatesFocus });
       if (meta.style) shadowStyle(root, this.constructor, meta.style);
       this.__target = root;
@@ -748,9 +876,11 @@ export class Base extends HTMLElement {
       }
       this.__target = this;
     }
-    this.__f &= ~DIRTY;
-    this.__render(true);
-    this.__f |= HAS_LOADED;
+    if (!(this.__f & HAS_LOADED)) {
+      this.__f &= ~DIRTY;
+      this.__render(true);
+      this.__f |= HAS_LOADED;
+    }
     // State set during the first render's lifecycle (componentDidRender, say) renders again.
     if (this.__f & DIRTY) this.__schedule();
     // As Stencil: a component finishes loading after the components it rendered.
@@ -765,6 +895,47 @@ export class Base extends HTMLElement {
     }
     this.__ready(this);
   }
+  /** First render over server markup, keeping its nodes. False (and nothing kept) on a mismatch. */
+  __hydrate(id, meta) {
+    const shadow = !!meta.shadow;
+    const root = shadow ? this.shadowRoot : this;
+    if (!root || typeof this.render !== 'function') return false;
+    const { map, logical } = scan(root, id);
+    if (shadow) {
+      if (meta.style && canAdopt) {
+        shadowStyle(root, this.constructor, meta.style);
+        for (const st of Array.from(root.children)) if (st.localName === 'style' && st.hasAttribute('sty-id')) detach(st);
+      }
+    } else {
+      if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
+      this.__slotted = new Set();
+      this.__slotParts = new Map();
+      for (const n of logical) {
+        n.__lp = this;
+        this.__slotted.add(n);
+      }
+    }
+    this.__target = root;
+    this.__adoptMap = map;
+    this.__seq = 0;
+    this.__f &= ~DIRTY;
+    try {
+      this.__render(true);
+    } catch (e) {
+      if (e !== MISMATCH) console.error(e);
+      this.__root = this.__host = this.__hostT = null;
+      if (!shadow) {
+        for (const n of logical) n.__lp = undefined;
+        this.__slotted = this.__slotParts = undefined;
+      }
+      return false;
+    } finally {
+      this.__adoptMap = null;
+    }
+    unmark(map, logical);
+    this.__f |= HAS_LOADED;
+    return true;
+  }
   __render(first) {
     if (typeof this.render !== 'function') return;
     this.__f |= RENDERING;
@@ -773,8 +944,9 @@ export class Base extends HTMLElement {
       if (!first) this.componentWillUpdate?.();
       const out = this.render();
       if (!this.__root) {
-        const marker = document.createComment('');
-        ins(this.__target, marker, null);
+        const adopt = adopting(this);
+        const marker = claim(this, 8, () => document.createComment(''));
+        if (!adopt) ins(this.__target, marker, null);
         this.__root = new NodePart(marker, this);
       }
       if (out != null && out.$t !== undefined && out.$t.host) {
@@ -802,6 +974,7 @@ export class Base extends HTMLElement {
         for (const n of this.__slotted) if (n.nodeType === 1 && !this.contains(n)) this.__stash(n);
       }
     } catch (e) {
+      if (e === MISMATCH) throw e;
       console.error(e);
     } finally {
       this.__f &= ~RENDERING;

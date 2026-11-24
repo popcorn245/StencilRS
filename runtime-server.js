@@ -8,9 +8,10 @@
 // optional peer dependency) whose globals are installed before `load` imports them. Shadow roots
 // come out as declarative shadow DOM (`<template shadowrootmode="open">`) with their styles
 // inlined; scoped and unencapsulated styles come out as `<style sty-id>` tags. Each component
-// host carries `s-rs="<id>"`, and each child that a light-DOM host moved into one of its slots is
-// marked `rs-l="<id>"` (text: a `<!--rs-l:<id>-->` before it), so that the client runtime can
-// take its children back and render again over the server markup (see `hydrate` in runtime.js).
+// host carries `s-rs="<id>"`. Each node a render claimed (see `claim` in runtime.js) carries its
+// numbers, `rs-n="<host>.<n>"`, and each child a light-DOM host moved into a slot carries
+// `rs-l="<host>"`; text and comments carry the same in a `<!--rs ...-->` comment. The client's
+// first render looks the claimed nodes up and keeps them (hydration in place).
 //
 // One window per renderer, renders one at a time: the runtime keeps per-document state.
 
@@ -82,20 +83,37 @@ async function settle(root, rounds) {
   }
 }
 
+/** The hydration marks of a node: its claim numbers (`n=`) and the host it is a logical child of (`l=`). */
+function marks(node, ids) {
+  const out = [];
+  if (node.__rsn && ids.has(node.__rsh)) {
+    const h = ids.get(node.__rsh);
+    out.push(['n', node.__rsn.map((k) => `${h}.${k}`).join(',')]);
+  }
+  if (node.__lp && ids.has(node.__lp)) {
+    out.push(['l', String(ids.get(node.__lp))]);
+    if (node.__hid) out.push(['h', '']);
+  }
+  return out;
+}
+
 function serialize(node, ids, nextId) {
   if (node.nodeType === 3) {
-    const host = node.__lp;
-    const pre = host && ids.has(host) ? `<!--rs-l:${ids.get(host)}-->` : '';
+    const m = marks(node, ids);
+    const pre = m.length ? `<!--rs t ${m.map(([k, v]) => (v ? `${k}=${v}` : k)).join(' ')}-->` : '';
     const parent = node.parentNode;
     return pre + (parent && RAW.has(parent.localName) ? node.data : escText(node.data));
   }
-  if (node.nodeType === 8) return node.data === '' || node.data === 'rs' ? '' : `<!--${node.data}-->`;
+  if (node.nodeType === 8) {
+    const m = marks(node, ids);
+    if (m.length) return `<!--rs ${m.map(([k, v]) => (v ? `${k}=${v}` : k)).join(' ')}-->`;
+    return node.data === '' || node.data === 'rs' ? '' : `<!--${node.data}-->`;
+  }
   if (node.nodeType !== 1) return '';
   const tag = node.localName;
   let attrs = '';
   for (const a of node.attributes) attrs += a.value === '' ? ` ${a.name}` : ` ${a.name}="${escAttr(a.value)}"`;
-  const host = node.__lp;
-  if (host && ids.has(host)) attrs += ` rs-l="${ids.get(host)}"${node.__hid ? ' rs-h' : ''}`;
+  for (const [k, v] of marks(node, ids)) attrs += v ? ` rs-${k}="${v}"` : ` rs-${k}`;
   let inner = '';
   if (isHost(node)) {
     const id = nextId();

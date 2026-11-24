@@ -30,6 +30,18 @@ export class SsrCard {
     </div>;
   }
 }`,
+  'ssr-list': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'ssr-list', encapsulation: { type: 'scoped' } })
+export class SsrList {
+  @Prop() items = 'a,b,c';
+  render() {
+    const items = this.items.split(',');
+    return <ssr-card heading="List">
+      <span slot="title">{items.length} items</span>
+      <ul>{items.map((i) => <li key={i}>{i}</li>)}</ul>
+    </ssr-card>;
+  }
+}`,
 };
 
 /** The fixtures compiled, with the runtime import replaced by `runtime` (a URL or path). */
