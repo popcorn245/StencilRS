@@ -33,7 +33,9 @@ Stencil runtime, build flags, docs, global stylesheets.
    runtime), or, without one, from whether the file imports `h`.
 3. Compiles the file with stencilrs (`transpile()`), in build-accurate mode by default.
 4. Diagnostics: errors fail the build (as with Stencil), warnings are logged; a `stencilrs:` error
-   means "not ported yet" and triggers the fallback.
+   means the file is left to Stencil's compiler and triggers the fallback: something not ported
+   yet, or a union whose order depends on the whole program. For the latter the plugin prints one
+   line that names the fix, `"stableTypeOrdering": true` in the tsconfig.
 5. Adds what `@stencil/unplugin` adds around compiled output: dev build flags
    (`hotModuleReplacement`, `isDev`), `vdomSignals` when the file imports `@stencil/core/signals`,
    the component class export, and the HMR snippet in dev.

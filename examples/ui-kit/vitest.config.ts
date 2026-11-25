@@ -1,17 +1,18 @@
 // The ui-kit specs on real compiled components.
 //   COMPILER=stencilrs (default): @popcorn245/stencilrs/vite, falling back per file to Stencil
 //   COMPILER=stencil:             @stencil/unplugin alone (Stencil v5's transpileSync), the baseline
+//   COMPILER=runtime:             stencilrs with the experimental stencilrs runtime (no Stencil runtime)
 import { fileURLToPath } from 'node:url';
 
 import stencilrs from '@popcorn245/stencilrs/vite';
 import { stencilVite } from '@stencil/unplugin';
 import { defineConfig } from 'vitest/config';
 
-const compiler = process.env.COMPILER === 'stencil' ? 'stencil' : 'stencilrs';
+const compiler = process.env.COMPILER === 'stencil' ? 'stencil' : process.env.COMPILER === 'runtime' ? 'runtime' : 'stencilrs';
 const vendor = (p: string) => fileURLToPath(new URL(`./vendor/${p}/index.ts`, import.meta.url));
 
 export default defineConfig({
-  plugins: compiler === 'stencil' ? [stencilVite()] : [stencilrs({ verbose: true })],
+  plugins: compiler === 'stencil' ? [stencilVite()] : [stencilrs({ verbose: true, ...(compiler === 'runtime' ? { runtime: 'stencilrs' } : {}) })],
   resolve: {
     alias: {
       '@popcorn245/cards-core': vendor('cards-core'),

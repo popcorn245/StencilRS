@@ -1,0 +1,3471 @@
+{
+  "data": [
+    {
+      "attachInternalsMemberName": null,
+      "attachInternalsCustomStates": [],
+      "formAssociated": false,
+      "tagName": "method-reference-order",
+      "componentClassName": "MethodReferenceOrder",
+      "elementRef": null,
+      "encapsulation": "none",
+      "shadowDelegatesFocus": false,
+      "shadowClonable": false,
+      "shadowSerializable": false,
+      "shadowMode": null,
+      "slotAssignment": null,
+      "patches": null,
+      "properties": [],
+      "virtualProperties": [],
+      "states": [],
+      "methods": [
+        {
+          "name": "m0",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<A | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m1",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ d: A | null; c: string | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ d: any; c: string | null; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m2",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ d: A; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ d: A; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m3",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ d: Local | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<{ d: Local | null; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m4",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<(x: A) => void>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<(x: A) => void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m5",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<(x: A | null) => B>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<(x: any) => B>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m6",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<[A, B | null]>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<[A, any]>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m7",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<A>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Array<A>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m8",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Local | A>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m9",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<L>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "L": {
+                "location": "global",
+                "id": "global::L"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m10",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<LL>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "LL": {
+                "location": "global",
+                "id": "global::LL"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<LL>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m11",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Record<string, A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Record": {
+                "location": "global",
+                "id": "global::Record"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Record<string, any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m12",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Partial<Local>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Partial": {
+                "location": "global",
+                "id": "global::Partial"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<Partial<Local>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m13",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Map<A, B>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Map": {
+                "location": "global",
+                "id": "global::Map"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Map<A, B>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m14",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Map<X<C>, A>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Map": {
+                "location": "global",
+                "id": "global::Map"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Map<X<C>, A>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m15",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Local>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<Local>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m16",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ [k: string]: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<{ [k: string]: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m17",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Promise<A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Promise<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m18",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<A | B | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m19",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<HTMLElement | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m20",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<HTMLElement | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "HTMLElement": {
+                "location": "global",
+                "id": "global::HTMLElement"
+              }
+            },
+            "return": "Promise<Array<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m21",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Readonly<Local>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Readonly": {
+                "location": "global",
+                "id": "global::Readonly"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<Readonly<Local>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m22",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<void>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<void>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m23",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<boolean | A>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m24",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<\"a\" | \"b\" | A>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m25",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<string | A>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m26",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<E>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "E": {
+                "location": "global",
+                "id": "global::E"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<E>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m27",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<E.One>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "E": {
+                "location": "global",
+                "id": "global::E"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<E.One>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m28",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<K>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "K": {
+                "location": "global",
+                "id": "global::K"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<K>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m29",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<K | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "K": {
+                "location": "global",
+                "id": "global::K"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<K | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m30",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ k: K | null; l: L; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "K": {
+                "location": "global",
+                "id": "global::K"
+              },
+              "L": {
+                "location": "global",
+                "id": "global::L"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ k: K | null; l: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m31",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m32",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: string; b: Local | null; c: B | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<{ a: string; b: Local | null; c: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m33",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<{ a: A | null; }>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Array<{ a: any; }>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m34",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ n: { d: A | null; }; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ n: { d: any; }; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m35",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Array<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m36",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<Local | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<Array<Local | null>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m37",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Set<A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Set": {
+                "location": "global",
+                "id": "global::Set"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Set<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m38",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Map<string, A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Map": {
+                "location": "global",
+                "id": "global::Map"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Map<string, any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m39",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<ReadonlyArray<A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "ReadonlyArray": {
+                "location": "global",
+                "id": "global::ReadonlyArray"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<ReadonlyArray<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m40",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<A | undefined>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m41",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<C | A | undefined>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m42",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<number | A | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m43",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<unknown>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<unknown>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m44",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<any>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m45",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Local | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<Local | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m46",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<LL | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "LL": {
+                "location": "global",
+                "id": "global::LL"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<LL | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m47",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Awaited<A>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Awaited": {
+                "location": "global",
+                "id": "global::Awaited"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Awaited<A>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m48",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<NonNullable<L>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "NonNullable": {
+                "location": "global",
+                "id": "global::NonNullable"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "L": {
+                "location": "global",
+                "id": "global::L"
+              }
+            },
+            "return": "Promise<NonNullable<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m49",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ f: (a: A | null) => B | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ f: (a: any) => any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m50",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<Array<A | null>>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<Array<Array<any>>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m51",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Map<X<C>, B | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Map": {
+                "location": "global",
+                "id": "global::Map"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Map<X<C>, any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m52",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Foo<A, B>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Foo": {
+                "location": "global",
+                "id": "global::Foo"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Foo<A, B>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m53",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<X<A | null>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<X<any>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m54",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<X<Local>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              }
+            },
+            "return": "Promise<X<Local>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m55",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<X<{ a: A | null; }>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<X<{ a: any; }>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m56",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ m(): C | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ m(): any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m57",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<() => C | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<() => any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m58",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<(x: B) => C | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<(x: B) => any>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m59",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ [k: string]: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<{ [k: string]: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m60",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; }[]>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<{}>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m61",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; b: { c: C | null; }; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; b: { c: any; }; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m62",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<[a: A | null]>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              }
+            },
+            "return": "Promise<[a: any]>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m63",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<Array<(x: A | null) => void>>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<Array<(x: any) => void>>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m64",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; } | { b: B | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; } | { b: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m65",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; } | null>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; } | null>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m66",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a?: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a?: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m67",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ readonly a: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ readonly a: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m68",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ new (x: A | null): A; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<new (x: any) => A>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m69",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: Array<A | null>; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "Array": {
+                "location": "global",
+                "id": "global::Array"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: Array<any>; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m70",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: \"x\" | \"y\" | A; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m71",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; b: C | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; b: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m72",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: { b: B | null; }[]; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: {}; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m73",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ x: X<A | null>; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "X": {
+                "location": "global",
+                "id": "global::X"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ x: X<any>; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m74",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ a: A | null; } | undefined>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ a: any; } | undefined>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m75",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<{ b: B | null; } | { a: A | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<{ b: any; } | { a: any; }>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m76",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<[{ a: A | null; }, { c: C | null; }]>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<[{ a: any; }, { c: any; }]>"
+          },
+          "internal": false
+        },
+        {
+          "name": "m77",
+          "docs": {
+            "text": "",
+            "tags": []
+          },
+          "complexType": {
+            "signature": "(p: B, q?: Local | null) => Promise<(x: { a: A | null; }) => { c: C | null; }>",
+            "parameters": [
+              {
+                "name": "p",
+                "type": "B",
+                "docs": ""
+              },
+              {
+                "name": "q",
+                "type": "Local | null",
+                "docs": ""
+              }
+            ],
+            "references": {
+              "Promise": {
+                "location": "global",
+                "id": "global::Promise"
+              },
+              "A": {
+                "location": "global",
+                "id": "global::A"
+              },
+              "C": {
+                "location": "global",
+                "id": "global::C"
+              },
+              "B": {
+                "location": "global",
+                "id": "global::B"
+              },
+              "Local": {
+                "location": "global",
+                "id": "global::Local"
+              }
+            },
+            "return": "Promise<(x: { a: any; }) => { c: any; }>"
+          },
+          "internal": false
+        }
+      ],
+      "listeners": [],
+      "events": [],
+      "watchers": [],
+      "doesExtend": false,
+      "styles": [],
+      "globalStyles": [],
+      "internal": false,
+      "sourceMapPath": null,
+      "serializers": [],
+      "deserializers": [],
+      "hasAttributeChangedCallbackFn": false,
+      "hasComponentWillLoadFn": false,
+      "hasComponentDidLoadFn": false,
+      "hasComponentShouldUpdateFn": false,
+      "hasComponentWillUpdateFn": false,
+      "hasComponentDidUpdateFn": false,
+      "hasComponentWillRenderFn": false,
+      "hasComponentDidRenderFn": false,
+      "hasConnectedCallbackFn": false,
+      "hasDeserializer": false,
+      "hasDisconnectedCallbackFn": false,
+      "hasElement": false,
+      "hasEvent": false,
+      "hasLifecycle": false,
+      "hasListener": false,
+      "hasListenerTarget": false,
+      "hasListenerTargetWindow": false,
+      "hasListenerTargetDocument": false,
+      "hasListenerTargetBody": false,
+      "hasMember": true,
+      "hasMethod": true,
+      "hasMode": false,
+      "hasModernPropertyDecls": false,
+      "hasAttribute": false,
+      "hasProp": false,
+      "hasPropNumber": false,
+      "hasPropBoolean": false,
+      "hasPropString": false,
+      "hasPropMutable": false,
+      "hasReflect": false,
+      "hasRenderFn": true,
+      "hasSerializer": false,
+      "hasSlot": false,
+      "hasState": false,
+      "hasStyle": false,
+      "hasVdomAttribute": true,
+      "hasVdomXlink": false,
+      "hasVdomClass": false,
+      "hasVdomFunctional": false,
+      "hasVdomKey": true,
+      "hasVdomListener": false,
+      "hasVdomPropOrAttr": false,
+      "hasVdomPropOrAttrPrefix": false,
+      "hasVdomRef": false,
+      "hasVdomRender": true,
+      "hasVdomStyle": false,
+      "hasVdomText": false,
+      "hasSignalsImport": false,
+      "hasWatchCallback": false,
+      "isPlain": false,
+      "htmlAttrNames": [
+        "key"
+      ],
+      "htmlTagNames": [
+        "div"
+      ],
+      "htmlParts": [],
+      "htmlSlots": [],
+      "isUpdateable": false,
+      "dependents": [],
+      "directDependents": [],
+      "directDependencies": [],
+      "hasPatchAll": false,
+      "hasPatchChildren": false,
+      "hasPatchClone": false,
+      "hasPatchInsert": false,
+      "docs": {
+        "tags": [],
+        "text": "The `references` of a method name the types of the return type the checker prints first, then\nthose of the whole declaration. Names the printed type lost (`A | null` with an unresolved `A` is\n`any`) come later, at their place in the declaration; object and function types keep the\nannotations they were written with."
+      },
+      "styleDocs": []
+    }
+  ],
+  "diagnostics": [],
+  "imports": [
+    {
+      "path": "@stencil/core/testing"
+    }
+  ]
+}

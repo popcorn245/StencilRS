@@ -69,7 +69,10 @@ The plugin compiles component files, their stylesheets and the build flags with 
 loads neither `@stencil/unplugin` nor Stencil's compiler (TypeScript, ~700 ms) unless it has to. A
 file that uses something stencilrs hasn't ported yet falls back to Stencil's own compiler, loaded
 at that point, so a project never breaks for want of a feature
-([what is where](docs/vite-plugin.md)).
+([what is where](docs/vite-plugin.md)). The `docs`, `types`, `include` and `exclude` options are
+done the same way: `import cem from '@stencil/unplugin/docs'` and `components.d.ts` come from
+stencilrs' own metadata, and only a file with a type it hasn't ported yet takes its metadata
+from Stencil's compiler.
 
 ### Type declarations for a library
 
@@ -151,17 +154,44 @@ original TypeScript.
 
 Not yet (these fall back to Stencil, or are tracked as issues):
 
+- the Vite plugin's `docs` and `types` for a project with CSS-only components (`@component` in a
+  stylesheet), or a `stencil.config` that can't be loaded: those go through `@stencil/unplugin`
 - in the lazy (`loader-bundle`), `ssr` and spec-page outputs, decorated base classes
   and mixins with a computed `@Prop`/`@State` name or a `@Watch` options argument
 - `complexType` for types that need the checker: `keyof` of anything but an object literal, a
   `const` object or an alias of those, `typeof` in an annotation, mapped and conditional types,
-  intersections with a union, `any`, literal or `{}` member (the checker distributes or collapses
-  those), return types inferred from the body, inferred object types, types from packages or
-  tsconfig `paths`, types Stencil generates, and unions whose member order depends on the whole
-  program (`docs/quirks.md`, quirk 18). Object, interface, branded-primitive and `Record<never,
-  never>` intersections, generic methods, `keyof typeof const` and generic aliases and interfaces
-  with defaults work. `analyze(..., { complexTypes: true })` reports each
+  intersections with a `null`, `any`, literal or `{}` member (the checker collapses those; an
+  intersection with a union of objects is distributed), return types inferred from the body other
+  than a promise of a boolean, a primitive `this.field`, `Promise.resolve(x)`,
+  `new Promise<T>()`, `x as T` and the awaited results of annotated methods of the class
+  (quirk 18), inferred object types, types from packages or
+  tsconfig `paths`. Object, interface, branded-primitive and `Record<never,
+  never>` intersections, `Intl.*Options` lib types, generic methods, `keyof typeof const` and
+  generic aliases and interfaces with defaults work, as do the element types Stencil generates
+  (`HTMLIonTabElement`, when a component of the project has the tag). `analyze(..., { complexTypes: true })` reports each
   as an error starting with `stencilrs:` ([#8](https://github.com/popcorn245/StencilRS/issues/8))
+
+### Why did this file go to Stencil? Unions whose order depends on the whole program
+
+Without the `stableTypeOrdering` option, TypeScript orders the members of some unions (a method
+parameter or return type such as `MouseEvent | TouchEvent | PointerEvent`) by which member the checker
+met first across the whole program. stencilrs never prints a union in an order Stencil would not print
+for the same tsconfig, so it does not guess here: the file is left to Stencil's compiler, on purpose, and
+the diagnostic says so (``stencilrs: the type of method `present` (a union whose order depends on the whole
+program) is left to Stencil's compiler. Add "stableTypeOrdering": true to the tsconfig to compile it with
+stencilrs.``). The fix is one line in `tsconfig.json`:
+
+```json
+{ "compilerOptions": { "stableTypeOrdering": true } }
+```
+
+With it (a TypeScript 6 option, and the only order TypeScript 7 has) the order is a function of the
+types, stencilrs reproduces it, and nothing falls back for this reason. The option changes some type
+strings (Ionic: 3 of 862 documented members, popover `present` and route `beforeEnter` and
+`beforeLeave`), so it is your choice to make; stencilrs follows it. The Vite plugin
+prints one line, once per plugin instance, through Vite's logger at info level when files go to Stencil
+for this reason (`[stencilrs] 3 files have a union TypeScript orders by which member it met first; ...`).
+Details: `docs/quirks.md`, quirk 18.
 
 ## How it works
 

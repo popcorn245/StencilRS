@@ -14,6 +14,7 @@ mod consts;
 mod default_value;
 mod edits;
 mod eval;
+mod fine;
 mod fold_build_flags;
 mod inherit;
 mod jsdoc;
@@ -24,6 +25,7 @@ mod resolve;
 pub mod scope_css;
 mod sourcemap;
 mod types;
+mod union_order;
 
 use oxc::allocator::Allocator;
 use oxc::parser::{Parser, ParserReturn};

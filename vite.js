@@ -9,9 +9,11 @@
 // `@stencil/unplugin` nor `@stencil/core/compiler` (which loads TypeScript, ~700 ms) is imported
 // until something needs it (vite-fallback.js): a file that uses something stencilrs has not
 // ported yet (serializers, @AttachInternals, …) is compiled by Stencil's own compiler through
-// @stencil/unplugin. So are `docs`, `types`, `include` / `exclude`, and the virtual global
-// stylesheets (`@import 'stencil-hydrate'`). Pass `{ fallback: false }` to make a file that
-// needs the fallback an error instead. What @stencil/unplugin does, and where it went, is in
+// @stencil/unplugin, and so are the virtual global stylesheets (`@import 'stencil-hydrate'`).
+// `docs`, `types`, `include` and `exclude` are done here (vite-project.js, vite-docs.js) from stencilrs'
+// metadata; only a file with something not ported yet takes its metadata from Stencil's compiler, and a
+// project with CSS-only components or a `stencil.config` that can't be loaded is left to @stencil/unplugin.
+// Pass `{ fallback: false }` to make a file that needs the fallback an error instead. What @stencil/unplugin does, and where it went, is in
 // docs/vite-plugin.md.
 //
 // `componentExport: 'ssr'` compiles the components for Stencil's hydrate (server-side rendering)
@@ -30,11 +32,14 @@
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
 import { generateTypes } from './vite-types.js';
 import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
+import { createUnionOrderHint } from './vite-hint.js';
+import { createFileFilter, createProject } from './vite-project.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -52,6 +57,18 @@ const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
 const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
+const STORE_ID = '@stencil/store';
+const JSX_RUNTIME_IDS = new Set(['@stencil/core/jsx-runtime', '@stencil/core/jsx-dev-runtime']);
+// `@popcorn245/stencilrs/signals` (experimental, `signals: true`). Its `@stencil/core` resolves from the project root, so a
+// linked or nested copy of this package shares the project's Stencil runtime. Its `signal-polyfill` resolves from the project
+// if it has a copy, else the copy shipped with this package: one copy either way.
+const SIGNALS_ID = '@popcorn245/stencilrs/signals';
+const SIGNALS_OFF = 'signals are off: set `signals: true` in stencilrs() in your Vite config';
+const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
+const RUNTIME_FILE = fileURLToPath(new URL('./runtime.js', import.meta.url));
+const RUNTIME_HOT_FILE = fileURLToPath(new URL('./runtime-hot.js', import.meta.url));
+const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
+const shippedPolyfill = () => fileURLToPath(import.meta.resolve('signal-polyfill'));
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
 // `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
 // watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
@@ -148,7 +165,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -163,12 +180,15 @@ const SPEC_PAGE_OPTIONS = {
  *   `sass`: options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, ...).
  *   `cache` (default true): a stylesheet's result is reused while it and every file Sass loaded for it are unchanged (content hashes),
  *   so a watch rebuild recompiles only what an edit touched; the Sass step is also kept in node_modules/.cache/stencilrs. 'memory': no disk; false: none.
+ *   signals (default false): TC39 signals (`@popcorn245/stencilrs/signals`; docs/signals.md). `signal-polyfill` ships with stencilrs (the project's own
+ *   copy is used if it has one), and `signals.js` is added to every component module, so a signal passed to a template is bound on the
+ *   stencilrs runtime. Without it, importing `@popcorn245/stencilrs/signals` fails the build.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -177,9 +197,23 @@ export function stencilrs(options = {}) {
   // Component source files seen by this build, for the declaration file.
   const dtsSources = new Map();
   const specPage = stencilOptions.mode === 'spec-page';
-  // Options that need @stencil/unplugin's project scan, or its file filter: it is loaded up
-  // front, and compiles every TypeScript file we don't (as it did before it was lazy).
-  const needsUnplugin = !!(stencilOptions.docs || stencilOptions.types || stencilOptions.include || stencilOptions.exclude);
+  // `docs`, `types`, `include` and `exclude` are done here (vite-project.js), without @stencil/unplugin. It is loaded up front,
+  // and compiles every TypeScript file we don't (as it did before it was lazy), only when the project has something this
+  // can't do (CSS-only components, a stencil.config that can't be loaded): `project.unsupported`, known once it has been scanned.
+  let needsUnplugin = false;
+  const userFilter = stencilOptions.include || stencilOptions.exclude ? createFileFilter(stencilOptions.include ?? [/\.tsx?$/], stencilOptions.exclude ?? ['node_modules/**']) : null;
+  // One line, once, when a file goes to Stencil because the order of a union in it depends on the whole program.
+  let logger = null;
+  let isServe = false;
+  const unionHint = createUnionOrderHint(() => logger, { serve: () => isServe });
+  const project = stencilOptions.docs || stencilOptions.types || userFilter ? createProject({ stencil: stencilOptions, resolveImports, onUnported: unionHint.note }) : null;
+  const DOCS_ID = '@stencil/unplugin/docs';
+  const DOCS_MODULE = '\0stencil-docs:';
+  const notifyDocsChanged = (server) => {
+    const mod = server.moduleGraph.getModuleById?.(DOCS_MODULE) ?? server.moduleGraph.idToModuleMap?.get(DOCS_MODULE);
+    if (mod) server.moduleGraph.invalidateModule(mod, new Set(), Date.now(), true);
+    server.ws.send({ type: 'custom', event: 'stencil:docs-update' });
+  };
   let foldFlags = !specPage;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
@@ -207,12 +241,10 @@ export function stencilrs(options = {}) {
   let styleScan = null;
   // The dev server's scan runs in the background (see `buildStart`): a promise until it is done. Stylesheets wait for it in `load`.
   let styleScanPending = null;
-  let isServe = false;
   // `typecheck`: a child-process `tsgo` / `tsc --noEmit` (vite-typecheck.js). A build starts it at `buildStart` and awaits it
   // before the bundle is written (after `components.d.ts` is written when `dts` is on); a dev server and a watch rebuild
   // run it in the background and log the verdict.
   const checker = createTypecheck(() => root, typecheck);
-  let logger = null;
   let checkTimer = null;
   let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
   let checkDev = false; // dev server or `vite build --watch`: report, never block
@@ -256,10 +288,9 @@ export function stencilrs(options = {}) {
   const fallbackPlugin = createFallback(stencilOptions, (id) => id.startsWith(BASE_PREFIX) || handled.has(id.split('?')[0].replaceAll('\\', '/')));
   // Files ancestor classes were read from, served as base-class virtual modules.
   const baseClasses = new Set();
-  // Component stylesheets served here. `docs` reads @stencil/unplugin's stylesheet bookkeeping,
-  // so with it the stylesheets stay with @stencil/unplugin.
-  const serveCss = !stencilOptions.docs;
-  const loadCss = serveCss ? createCssPipeline(cssOptions) : null;
+  // Component stylesheets served here.
+  const serveCss = true;
+  const loadCss = createCssPipeline(cssOptions);
   // For HMR, as @stencil/unplugin's cssFileToTagNames / cssRealToVirtualIds.
   const cssFileToTags = new Map();
   const cssFileToIds = new Map();
@@ -306,7 +337,14 @@ export function stencilrs(options = {}) {
       // `optimizeDeps.noDiscovery`: Vite finds nothing on a request, so there is no re-run to avoid, and the user's `include`
       // is the whole list. Adding to it there makes `listen` wait for an optimizer run (behind the watcher's first crawl on
       // Windows) that the user turned off: ~1.4 s of the ui-kit's first response.
-      if (env?.command === 'serve' && !ssr && !specPage && !userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      // `@stencil/store` asks `@stencil/core` which component is rendering. Pre-bundled (or, in Vitest, loaded by Node),
+      // it would get `@stencil/core`'s own entry, which never renders the components; left as source, its import
+      // resolves to the runtime they use (`resolveId`).
+      if (env?.command === 'serve' && !ssr && !specPage) {
+        if (!userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID] };
+        result.test = { server: { deps: { inline: [STORE_ID] } } };
+      }
+
       // Stencil's output and cache folders are not watched (see DEFAULT_WATCH_IGNORE); `watchIgnore: false`
       // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
       // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
@@ -323,6 +361,7 @@ export function stencilrs(options = {}) {
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
       root = config.root;
+      project?.setRoot(root);
       isServe = config.command === 'serve';
       logger = config.logger;
       deferCheck = !!dtsFileName && !specPage && !ssr && config.build.write !== false;
@@ -347,6 +386,15 @@ export function stencilrs(options = {}) {
           checkTimer = setTimeout(checkInBackground, 300);
         };
         for (const event of ['add', 'change', 'unlink']) server.watcher.on(event, recheck);
+      }
+      if (project) {
+        // A component, or a stylesheet, added or deleted: docs and `components.d.ts` follow (a change is `handleHotUpdate`'s).
+        const onAddedOrDeleted = async (file) => {
+          if (needsUnplugin) return;
+          if (await project.changed(file)) notifyDocsChanged(server);
+        };
+        server.watcher.on('add', onAddedOrDeleted);
+        server.watcher.on('unlink', onAddedOrDeleted);
       }
       server.watcher.on('add', async (file) => {
         if (!STYLE_FILE_RE.test(file)) return;
@@ -374,6 +422,13 @@ export function stencilrs(options = {}) {
             this.error(e.message);
           }
           void checker.start();
+        }
+      }
+      if (project) {
+        await project.start();
+        if (project.unsupported) {
+          needsUnplugin = true;
+          logger?.warn(`[stencilrs] docs / types / include / exclude are left to @stencil/unplugin: ${project.unsupported}`);
         }
       }
       stamps = new Map();
@@ -408,6 +463,8 @@ export function stencilrs(options = {}) {
       }
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;
+      // @stencil/unplugin's `transformInclude`.
+      if (userFilter && !userFilter(file)) return null;
       // Left to Stencil's compiler (through @stencil/unplugin, loaded now if it was not):
       // it gets the file as it came in, and folds the build flags itself.
       const original = code;
@@ -416,6 +473,14 @@ export function stencilrs(options = {}) {
         await fallbackPlugin.ensure(this);
         return fallbackPlugin.call('transform', this, original, id, transformOpts);
       };
+      // `runtime: 'stencilrs'`: JSX outside components (functional components, helpers) is
+      // compiled to templates too.
+      if (runtime === 'stencilrs' && !ssr && !specPage && file.endsWith('.tsx') && !DECORATORS_RE.test(code) && !id.startsWith(BASE_PREFIX) && /<[A-Za-z>]/.test(code)) {
+        const fine = await transpileAsync(code, { file, resolveImports: false, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
+        const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
+        if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        return { code: fine.code, map: null };
+      }
       if (!DECORATORS_RE.test(code)) {
         if (needsUnplugin) return fallbackPlugin.call('transform', this, code, id, transformOpts);
         // As @stencil/unplugin does in a production build: fold the flags in every TypeScript file.
@@ -423,6 +488,9 @@ export function stencilrs(options = {}) {
         const folded = foldBuildFlags(code, file, { isBrowser: true, isServer: false });
         return folded === null ? null : { code: folded, map: null };
       }
+
+      // A component the project scan did not see (outside the working directory) is added to the docs.
+      if (project && !needsUnplugin && !transformOpts?.ssr && !id.startsWith(BASE_PREFIX)) await project.note(file, original);
 
       // As @stencil/unplugin does for production client builds: fold `Build.isBrowser` /
       // `Build.isServer` so server-only code is tree-shaken.
@@ -445,6 +513,24 @@ export function stencilrs(options = {}) {
         return kept.result;
       }
 
+      // Experimental: `runtime: 'stencilrs'` compiles client components for the stencilrs runtime
+      // (compiled templates, no virtual DOM). No fallback: Stencil's compiler targets its own runtime.
+      if (runtime === 'stencilrs' && !ssr && !specPage) {
+        const fine = await transpileAsync(code, { file, resolveImports, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
+        const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
+        if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        if (!fine.components.length) return null;
+        for (const base of fine.baseClasses) {
+          baseClasses.add(base);
+          this.addWatchFile(base);
+        }
+        counts.stencilrs++;
+        handled.add(file);
+        fileToTag.set(file, fine.components[0].tagName);
+        // Hot reload: the module accepts itself; `define` moves the new class onto the registered one.
+        // Dev only: the runtime's hot-reload half, which also turns on its hydration warnings.
+        return { code: isDev ? `import ${JSON.stringify(RUNTIME_HOT_FILE)};\n${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
+      }
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
@@ -453,6 +539,7 @@ export function stencilrs(options = {}) {
         // Stencil's compiler through @stencil/unplugin would produce the client shape, not ssr's.
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${why}`);
         counts.stencil++;
+        unionHint.note(file, unported);
         if (verbose) this.info?.(`[stencilrs] ${file}: using Stencil's compiler (${why})`);
         return fallBack();
       }
@@ -491,6 +578,8 @@ export function stencilrs(options = {}) {
       if (!ssr && !new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
         out += `\nexport { ${componentClassName} };`;
       }
+      // `signals: true`: load signals.js once in the app even if no file imports it, so it hands the runtime its binder.
+      if (signals && !ssr) out += `\nimport ${JSON.stringify(SIGNALS_FILE)};`;
       if (isDev && !ssr) out += hmrSnippet(tagName, componentClassName);
       const value = { code: out, map };
       if (result.diagnostics.length || !result.deps) memo.delete(memoKey);
@@ -502,13 +591,26 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      // `runtime: 'stencilrs'`: every `@stencil/core` import (helpers calling `h()`, `Build`...) gets the stencilrs runtime.
+      if (runtime === 'stencilrs' && id === '@stencil/core' && !ssr && !specPage && importer) return RUNTIME_FILE;
+      if (importer === SIGNALS_FILE && SIGNALS_PEERS.has(id)) {
+        if (!signals) this.error(SIGNALS_OFF);
+        importer = join(root, 'index.js');
+        if (id === 'signal-polyfill') return (await this.resolve(id, importer, { skipSelf: true })) ?? shippedPolyfill();
+        if (id !== '@stencil/core' || ssr) return this.resolve(id, importer, { skipSelf: true });
+      }
+      if (id === SIGNALS_ID && !signals) this.error(SIGNALS_OFF);
+      if (id === DOCS_ID && project && stencilOptions.docs && !needsUnplugin) return DOCS_MODULE;
       // As @stencil/unplugin: one platform instance for the whole test file.
       if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
       // A file that is not a component (a util, a global script) importing `getMode`, `setMode`, `writeTask`,
       // `h`... from '@stencil/core' gets the runtime the compiled components use. `@stencil/core`'s own
       // entry is a separate, minimal client whose mode resolver, task queue and vdom state the components
       // never see (`stencil build` rewrites these imports the same way).
-      if (id === '@stencil/core' && importer && !specPage && !ssr && !importer.startsWith('\0')) {
+      // The automatic JSX runtime too: `@stencil/core/jsx-runtime` bundles its own client, whose `BUILD` flags
+      // (`vdomSignals`, set above for a file that imports `@stencil/core/signals`) the components' runtime never sees,
+      // so a signal in JSX would not be bound. The runtime exports `jsx`, `jsxs`, `jsxDEV` and `Fragment` itself.
+      if ((id === '@stencil/core' || (runtime !== 'stencilrs' && JSX_RUNTIME_IDS.has(id))) && importer && !specPage && !ssr && !importer.startsWith('\0')) {
         // The same answer for every file of a folder: asked once per folder and build.
         const dir = dirname(importer);
         if (!runtimeByDir.has(dir)) runtimeByDir.set(dir, this.resolve(RUNTIME_ID, importer, { skipSelf: true }));
@@ -530,6 +632,11 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
+      if (id === DOCS_MODULE && project && !needsUnplugin) {
+        await project.start();
+        return `export default ${project.manifestJson()}`;
+      }
       // A stylesheet the scan has not seen (created since, and not reported by a watcher): it may be the first to import a
       // virtual global stylesheet, which has to be generated before it is compiled.
       const sheet = id.startsWith(STENCIL_CSS_PREFIX) ? parseStencilCssId(id).file : id.split('?')[0];
@@ -563,7 +670,8 @@ export function stencilrs(options = {}) {
       const file = id.slice(BASE_PREFIX.length);
       this.addWatchFile(file);
       const code = readFileSync(file, 'utf8');
-      const result = transpile(code, { file, resolveImports, componentExport, useDefineForClassFields, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
+      const baseExport = runtime === 'stencilrs' && !ssr && !specPage ? 'stencilrs' : componentExport;
+      const result = transpile(code, { file, resolveImports, componentExport: baseExport, useDefineForClassFields, transformAsBaseClass: true, ...jsxFor(code, tsconfigJsx) });
       if (result.diagnostics.some((d) => d.message.startsWith('stencilrs:'))) {
         if (!fallback || ssr) this.error(`[stencilrs] ${file}: ${result.diagnostics.map((d) => d.message).join(' ')}`);
         // As @stencil/unplugin's `transpileBaseClass`.
@@ -577,6 +685,7 @@ export function stencilrs(options = {}) {
     },
 
     async handleHotUpdate(ctx) {
+      if (project && !needsUnplugin && (await project.changed(ctx.file))) notifyDocsChanged(ctx.server);
       const mine = hotUpdate(ctx);
       // A stylesheet that starts importing a virtual global stylesheet: @stencil/unplugin generates it.
       if (!fallbackPlugin.loaded && STYLE_FILE_RE.test(ctx.file) && mentionsVirtualGlobalImport(ctx.file)) await fallbackPlugin.ensure(this);
@@ -624,6 +733,7 @@ export function stencilrs(options = {}) {
     },
 
     buildEnd() {
+      unionHint.flush();
       if (verbose && counts.stencilrs + counts.reused + counts.stencil > 0) {
         this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s), reused ${counts.reused}; ${counts.stencil} left to Stencil's compiler`);
       }

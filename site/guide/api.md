@@ -90,7 +90,7 @@ interface ComponentMeta {
 
 interface Diagnostic {
   level: 'error' | 'warn';
-  message: string; // Stencil's own message text; "stencilrs: …" = a feature not ported yet
+  message: string; // Stencil's own message text; "stencilrs: …" = left to Stencil's compiler
   start: number;   // byte offsets into the source
   end: number;
 }

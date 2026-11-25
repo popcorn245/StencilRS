@@ -140,7 +140,7 @@ function scssProps(file, seen = new Set()) {
 
 const hasTag = (docs, name) => (docs?.tags ?? []).some((t) => t.name === name);
 
-/** The member a `stencilrs:` diagnostic names: "the type of prop `x` (reason) is not ported yet". */
+/** The member a `stencilrs:` diagnostic names: "the type of prop `x` (reason) is not ported yet" (or "... is left to Stencil's compiler. Add ..."). */
 function fallbackOf(message) {
   const m = /^stencilrs: the type of (prop|method|event|member)\s+`([^`]+)`\s*\(([^)]*)\)/.exec(message);
   return m ? { kind: m[1], name: m[2], reason: m[3] } : null;

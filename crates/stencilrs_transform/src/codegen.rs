@@ -75,6 +75,8 @@ pub enum ComponentExport {
     Lazy,
     /// `export class X` taking over a host like `Lazy`, with `static get cmpMeta()` and `style`.
     Ssr,
+    /// Experimental: for the stencilrs runtime (`runtime.js`), compiled templates, no vdom.
+    Stencilrs,
 }
 
 /// Stencil's `componentMetadata`: what the compiler's metadata is added to the class as.
@@ -152,7 +154,7 @@ const KEEP_IMPORTS: [&str; 24] = [
     "writeTask",
 ];
 
-const MEMBER_DECORATORS_TO_REMOVE: [&str; 10] = [
+pub(crate) const MEMBER_DECORATORS_TO_REMOVE: [&str; 10] = [
     "AttachInternals",
     "AttrDeserialize",
     "PropSerialize",
@@ -206,6 +208,9 @@ pub fn generate(
     components: &[ComponentMeta],
     opts: &CodegenOptions2,
 ) -> Result<Generated, String> {
+    if opts.component_export == ComponentExport::Stencilrs {
+        return crate::fine::generate(program, source, components, opts);
+    }
     if opts.component_metadata == ComponentMetadata::None {
         return generate_pass(program, source, components, opts, None);
     }
@@ -257,6 +262,8 @@ fn generate_pass(
         .get("Component")
         .cloned()
         .unwrap_or_else(|| "Component".into());
+    let is_custom = |d: &Decorator| is_custom_decorator(d, &remove_decorators, &component_decorator);
+    let mut uses_decorate = false;
 
     // `updateStencilCoreImports`
     let mut last_import_end = None;
@@ -433,7 +440,11 @@ fn generate_pass(
             ed.replace(
                 header_start,
                 class.body.span.start,
-                format!("{export}const {name} = class{extends} "),
+                format!(
+                    "{export}{} {name} = class{extends} ",
+                    // A class decorator may replace the class.
+                    if class.decorators.iter().any(|d| is_custom(d)) { "let" } else { "const" }
+                ),
             );
             ed.insert(class.body.span.end, ";");
         }
@@ -456,6 +467,29 @@ fn generate_pass(
                 }
                 _ => continue,
             };
+            // A decorator of its own on an instance field: the field becomes a constructor
+            // assignment whatever `useDefineForClassFields` says (a class field would shadow an
+            // accessor the decorator defines on the prototype), and the decorator is called after
+            // the class (below).
+            if let ClassElement::PropertyDefinition(p) = el {
+                let any_custom = decorators.iter().any(|d| is_custom(d));
+                if any_custom && !p.r#static && !p.declare {
+                    let all_custom = decorators.iter().all(|d| is_custom(d));
+                    if all_custom {
+                        if let Some(target) = decorated_key(&p.key, p.computed, source) {
+                            ed.remove(p.span.start, p.span.end);
+                            if let Some(value) = &p.value {
+                                field_assignments
+                                    .push(format!("this[{target}] = {};", text(value.span())));
+                            }
+                            continue;
+                        }
+                    }
+                    for d in decorators.iter().filter(|d| is_custom(d)) {
+                        ed.remove(d.span.start, d.span.end);
+                    }
+                }
+            }
             for d in decorators.iter().filter(|d| {
                 decorator_name(d).is_some_and(|n| remove_decorators.iter().any(|r| r == n))
             }) {
@@ -517,6 +551,16 @@ fn generate_pass(
                 }
                 _ => {}
             }
+        }
+
+        // Decorators that are not Stencil's own, after the class and before anything registers
+        // it: members first, then the class's (`docs/decorators.md`).
+        let mut custom_calls = custom_member_calls(class, source, &mut ed, name, &is_custom);
+        let class_call = custom_class_call(class, source, name, &is_custom);
+        custom_calls.extend(class_call.clone());
+        if !custom_calls.is_empty() {
+            uses_decorate = true;
+            ed.insert(stmt_span.end, format!("\n{}", custom_calls.join("\n")));
         }
 
         // `updateLazyComponentConstructor`
@@ -811,7 +855,7 @@ fn generate_pass(
 
         // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
         match opts.component_export {
-            ComponentExport::Lazy | ComponentExport::Ssr => {}
+            ComponentExport::Lazy | ComponentExport::Ssr | ComponentExport::Stencilrs => {}
             ComponentExport::Module => {
                 add(
                     &mut runtime_apis,
@@ -847,6 +891,9 @@ fn generate_pass(
             last_import_end.unwrap_or(0),
             format!("\n{}\n", style_imports.join("\n")),
         );
+    }
+    if uses_decorate {
+        define_calls.insert(0, DECORATE_HELPER.to_owned());
     }
     if !define_calls.is_empty() {
         ed.insert(
@@ -889,11 +936,134 @@ fn generate_pass(
     Ok(Generated { code, map })
 }
 
-fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
+pub(crate) fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
     decorators.iter().any(|d| decorator_name(d) == Some(name))
 }
 
-fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {
+/// `__decorate` as TypeScript's `experimentalDecorators` emit has it (decorators run last to
+/// first; a returned value replaces the descriptor, or the class), emitted once per module that
+/// has a decorator of its own, so output without one is unchanged.
+pub(crate) const DECORATE_HELPER: &str = "function __rs_decorate(decorators, target, key, desc) { var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d; for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r; return c > 3 && r && Object.defineProperty(target, key, r), r; }";
+
+/// A decorator that is not Stencil's own (`MEMBER_DECORATORS_TO_REMOVE`, `Component`): it stays
+/// in the output, applied as TypeScript's legacy decorators are. `stencil` holds the local names.
+pub(crate) fn is_custom_decorator(d: &Decorator, stencil: &[String], component: &str) -> bool {
+    decorator_name(d).is_none_or(|n| n != component && !stencil.iter().any(|s| s == n))
+}
+
+/// The expression naming a member in a decorator call: its name as a string, or a computed key as written.
+pub(crate) fn decorated_key(
+    key: &oxc::ast::ast::PropertyKey,
+    computed: bool,
+    source: &str,
+) -> Option<String> {
+    if computed {
+        return Some(key.span().source_text(source).to_owned());
+    }
+    property_key_name(key).map(|n| json(&n))
+}
+
+/// `__rs_decorate([A(), B()], Cls.prototype, "x", void 0);` for each member with decorators of
+/// its own, in member order (`null` instead of `void 0` for methods and accessors, which makes
+/// the helper start from the property descriptor). Static members take the constructor. The
+/// decorators of methods, accessors and static fields are removed from the source; an instance
+/// field is the caller's, which turns it into a constructor assignment.
+pub(crate) fn custom_member_calls(
+    class: &Class,
+    source: &str,
+    ed: &mut Edits,
+    cls: &str,
+    is_custom: &dyn Fn(&Decorator) -> bool,
+) -> Vec<String> {
+    let mut calls = Vec::new();
+    let mut seen: Vec<(String, bool)> = Vec::new();
+    for el in &class.body.body {
+        let (decorators, is_static, key, computed, method, declare) = match el {
+            ClassElement::PropertyDefinition(p) => {
+                (&p.decorators, p.r#static, &p.key, p.computed, false, p.declare)
+            }
+            ClassElement::MethodDefinition(m) if m.kind != MethodDefinitionKind::Constructor => {
+                (&m.decorators, m.r#static, &m.key, m.computed, true, false)
+            }
+            _ => continue,
+        };
+        if declare || !decorators.iter().any(|d| is_custom(d)) {
+            continue;
+        }
+        let Some(key_text) = decorated_key(key, computed, source) else {
+            continue;
+        };
+        if method || is_static {
+            for d in decorators.iter().filter(|d| is_custom(d)) {
+                ed.remove(d.span.start, d.span.end);
+            }
+        }
+        // A getter and its setter are one property: its decorators, from either, apply once.
+        if seen.contains(&(key_text.clone(), is_static)) {
+            continue;
+        }
+        seen.push((key_text.clone(), is_static));
+        let mut exprs: Vec<&str> = Vec::new();
+        for other in &class.body.body {
+            let (decs, st, k, c) = match other {
+                ClassElement::PropertyDefinition(p) if !method => {
+                    (&p.decorators, p.r#static, &p.key, p.computed)
+                }
+                ClassElement::MethodDefinition(m)
+                    if method && m.kind != MethodDefinitionKind::Constructor =>
+                {
+                    if m.r#static != is_static
+                        || decorated_key(&m.key, m.computed, source).as_deref() != Some(&key_text)
+                    {
+                        continue;
+                    }
+                    (&m.decorators, m.r#static, &m.key, m.computed)
+                }
+                _ => continue,
+            };
+            if st != is_static || decorated_key(k, c, source).as_deref() != Some(&key_text) {
+                continue;
+            }
+            exprs.extend(
+                decs.iter()
+                    .filter(|d| is_custom(d))
+                    .map(|d| d.expression.span().source_text(source)),
+            );
+            if !method {
+                break;
+            }
+        }
+        let target = if is_static {
+            cls.to_owned()
+        } else {
+            format!("{cls}.prototype")
+        };
+        calls.push(format!(
+            "__rs_decorate([{}], {target}, {key_text}, {});",
+            exprs.join(", "),
+            if method { "null" } else { "void 0" }
+        ));
+    }
+    calls
+}
+
+/// `Cls = __rs_decorate([A(), B()], Cls);` for the class decorators that are not `@Component`.
+pub(crate) fn custom_class_call(
+    class: &Class,
+    source: &str,
+    cls: &str,
+    is_custom: &dyn Fn(&Decorator) -> bool,
+) -> Option<String> {
+    let exprs: Vec<&str> = class
+        .decorators
+        .iter()
+        .filter(|d| is_custom(d))
+        .map(|d| d.expression.span().source_text(source))
+        .collect();
+    (!exprs.is_empty()).then(|| format!("{cls} = __rs_decorate([{}], {cls});", exprs.join(", ")))
+}
+
+pub(crate) fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {
     match &d.expression {
         Expression::CallExpression(call) => match &call.callee {
             Expression::Identifier(id) => Some(id.name.as_str()),
@@ -1064,11 +1234,11 @@ impl BaseClasses<'_, '_, '_> {
     }
 }
 
-fn is_super_call(s: &Statement) -> bool {
+pub(crate) fn is_super_call(s: &Statement) -> bool {
     matches!(s, Statement::ExpressionStatement(e) if matches!(&e.expression, Expression::CallExpression(c) if matches!(c.callee, Expression::Super(_))))
 }
 
-fn json(s: &str) -> String {
+pub(crate) fn json(s: &str) -> String {
     serde_json::to_string(s).expect("string")
 }
 
@@ -1332,16 +1502,16 @@ fn custom_states_value(cmp: &ComponentMeta) -> Value {
 }
 
 /// A component style mode: its import identifier and external URLs, or an inline string.
-struct StyleMode {
-    mode: String,
-    identifier: String,
-    urls: Vec<String>,
-    inline: Option<String>,
+pub(crate) struct StyleMode {
+    pub(crate) mode: String,
+    pub(crate) identifier: String,
+    pub(crate) urls: Vec<String>,
+    pub(crate) inline: Option<String>,
 }
 
 const DEFAULT_STYLE_MODE: &str = "$";
 
-fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
+pub(crate) fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
     let base = dash_to_pascal_case(&cmp.tag_name);
     let mut modes: Vec<StyleMode> = style_url_modes(&cmp.options)
         .into_iter()
@@ -1441,7 +1611,7 @@ fn event_creation(ev: &crate::meta::EventMeta) -> String {
 }
 
 /// `normalizePath(join(dirname(file), url))` then `serializeImportPath` with query params.
-fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> String {
+pub(crate) fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> String {
     let file = file.replace('\\', "/");
     let absolute = file.starts_with('/') || file.as_bytes().get(1) == Some(&b':');
     let mut p = if absolute {
@@ -1785,7 +1955,7 @@ fn fmt_num(v: f64) -> String {
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
 /// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
 /// class member positions should point instead (`MemberAnchors`).
-fn strip_types_and_jsx(
+pub(crate) fn strip_types_and_jsx(
     edited: &str,
     opts: &CodegenOptions2,
 ) -> Result<

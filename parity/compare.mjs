@@ -76,12 +76,19 @@ const fromStencilrs = ({ slots: _slots, ...c }) => ({
 
 const diagList = (list, text) => list.map((d) => `${d.level}: ${String(text(d)).trim()}`).sort();
 
+/** `references` objects are written in the order Stencil meets the names: compare the order of their keys too. */
+const keyOrder = (a, b, path) =>
+  !Array.isArray(a) && /(^|\.)references$/.test(path) && Object.keys(a).join('\0') !== Object.keys(b).join('\0')
+    ? [`${path}: key order ${JSON.stringify(Object.keys(a))} → ${JSON.stringify(Object.keys(b))}`]
+    : [];
+
 /** Paths where `a` and `b` differ, as `path: expected → actual` lines. */
 const diff = (a, b, path = '') => {
   if (JSON.stringify(a) === JSON.stringify(b)) return [];
   if (a && b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)) {
     const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
-    return keys.flatMap((k) => diff(a[k], b[k], path ? `${path}.${k}` : k));
+    const leaves = keys.flatMap((k) => diff(a[k], b[k], path ? `${path}.${k}` : k));
+    return leaves.length ? leaves : keyOrder(a, b, path);
   }
   return [`${path || '(root)'}: ${JSON.stringify(a)} → ${JSON.stringify(b)}`];
 };

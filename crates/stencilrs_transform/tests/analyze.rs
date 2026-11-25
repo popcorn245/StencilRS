@@ -332,8 +332,12 @@ fn intersection_types_resolve_as_the_checker_prints_them() {
         resolved_of("v: string & { __brand: 'id' }", "", true).0,
         "string & { __brand: \"id\"; }"
     );
-    // A union member is distributed by the checker, which is not modelled: not ported.
+    // A union member is distributed as the checker does.
     let (resolved, _, diags) = resolved_of("v: (A | B) & { c: 1 }", prelude, true);
+    assert_eq!(resolved, "A & { c: 1; } | B & { c: 1; }");
+    assert!(diags.is_empty(), "{diags:?}");
+    // A union with a literal member collapses in the checker: not ported.
+    let (resolved, _, diags) = resolved_of("v: (A | 'x') & { c: 1 }", prelude, true);
     assert_eq!(resolved, "");
     assert_eq!(diags.len(), 1);
     assert!(
@@ -463,7 +467,7 @@ fn ionic_shaped_types_resolve_across_files() {
                @Component({ tag: 'cmp-b' })\n\
                export class CmpB {\n\
                  @Method() async present(e?: MouseEvent | TouchEvent): Promise<void> {}\n\
-                 @Method() async progress() { return Promise.resolve(1); }\n\
+                 @Method() async progress() { return [1].length; }\n\
                }";
     let result = analyze_with(src, &file, true, true);
     let messages: Vec<_> = result
@@ -474,10 +478,47 @@ fn ionic_shaped_types_resolve_across_files() {
     assert_eq!(
         messages,
         [
-            "stencilrs: the type of method `present` (a union whose members the checker orders by when it first met them) is not ported yet.",
+            "stencilrs: the type of method `present` (a union whose order depends on the whole program) is left to Stencil's compiler. Add \"stableTypeOrdering\": true to the tsconfig to compile it with stencilrs.",
             "stencilrs: the type of method `progress` (a return type inferred from the body) is not ported yet.",
         ]
     );
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// With `stableTypeOrdering` on, a union the comparator cannot order is still not ported, but the
+/// remedy (turn the option on) would be false, so the message must not offer it.
+#[test]
+fn an_undecidable_union_with_the_option_on_does_not_carry_the_hint() {
+    let dir = std::env::temp_dir().join(format!("stencilrs-undecidable-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(
+        dir.join("tsconfig.json"),
+        "{ \"compilerOptions\": { \"strict\": true, \"stableTypeOrdering\": true } }",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("types.ts"),
+        "export interface Item { a: string }\nexport enum Level { A, B }\nexport enum Kind { C, D }\n",
+    )
+    .unwrap();
+    let src = "import { Component, Method } from '@stencil/core';\n\
+               import { Item, Kind, Level } from './types';\n\
+               @Component({ tag: 'cmp-u' })\n\
+               export class CmpU {\n\
+                 @Method() async enumAndObject(v: Item | Level | Kind): Promise<void> {}\n\
+               }";
+    let file = dir.join("cmp-u.tsx").to_string_lossy().replace('\\', "/");
+    let result = analyze_with(src, &file, true, true);
+    let messages: Vec<_> = result
+        .diagnostics
+        .iter()
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        ["stencilrs: the type of method `enumAndObject` (a union whose member order the `stableTypeOrdering` comparator cannot decide) is not ported yet."]
+    );
+    assert!(!messages[0].contains("Add \"stableTypeOrdering\""));
     std::fs::remove_dir_all(&dir).ok();
 }
 

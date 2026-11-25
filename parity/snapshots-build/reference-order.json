@@ -1,0 +1,1515 @@
+{
+  "tag": "build-reference-order",
+  "properties": [],
+  "events": [],
+  "methods": [
+    {
+      "name": "r0",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Item | null>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Item | null>"
+      }
+    },
+    {
+      "name": "r1",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Size | \"huge\">",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Size | \"huge\">"
+      }
+    },
+    {
+      "name": "r10",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Level.Low | Level>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Level": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Level",
+            "referenceLocation": "Level"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Level>"
+      }
+    },
+    {
+      "name": "r11",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Record<string, Item | null>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Record": {
+            "location": "global",
+            "id": "global::Record"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Record<string, Item | null>>"
+      }
+    },
+    {
+      "name": "r12",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Callback | null>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Callback": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Callback",
+            "referenceLocation": "Callback"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Callback | null>"
+      }
+    },
+    {
+      "name": "r13",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<(v: Entry) => Size>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<(v: Entry) => Size>"
+      }
+    },
+    {
+      "name": "r14",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<{ e: Entry | null; }>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<{ e: Entry | null; }>"
+      }
+    },
+    {
+      "name": "r15",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Item[] | Row[]>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          }
+        },
+        "return": "Promise<Item[] | Row[]>"
+      }
+    },
+    {
+      "name": "r16",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Readonly<Item> | null>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Readonly": {
+            "location": "global",
+            "id": "global::Readonly"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Readonly<Item> | null>"
+      }
+    },
+    {
+      "name": "r17",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Partial<Item>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Partial": {
+            "location": "global",
+            "id": "global::Partial"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Partial<Item>>"
+      }
+    },
+    {
+      "name": "r18",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Size[]>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Size[]>"
+      }
+    },
+    {
+      "name": "r19",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Array<Size>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Array": {
+            "location": "global",
+            "id": "global::Array"
+          }
+        },
+        "return": "Promise<Size[]>"
+      }
+    },
+    {
+      "name": "r2",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Entry | null>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Entry | null>"
+      }
+    },
+    {
+      "name": "r20",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Promise<Item>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Promise<Item>>"
+      }
+    },
+    {
+      "name": "r21",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<keyof Item>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<\"id\">"
+      }
+    },
+    {
+      "name": "r22",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Item[\"id\"]>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          }
+        },
+        "return": "Promise<string>"
+      }
+    },
+    {
+      "name": "r23",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Zed & Item>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Zed & Item>"
+      }
+    },
+    {
+      "name": "r24",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Kind | Level>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Level": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Level",
+            "referenceLocation": "Level"
+          },
+          "Kind": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Kind",
+            "referenceLocation": "Kind"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Level | Kind>"
+      }
+    },
+    {
+      "name": "r25",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Size | Direction>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Direction": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Direction",
+            "referenceLocation": "Direction"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Size | Direction>"
+      }
+    },
+    {
+      "name": "r26",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<{ s: Size; d: Direction | null; }[]>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Direction": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Direction",
+            "referenceLocation": "Direction"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<{ s: Size; d: Direction | null; }[]>"
+      }
+    },
+    {
+      "name": "r27",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Map<Entry, Size | null>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Map": {
+            "location": "global",
+            "id": "global::Map"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Map<Entry, Size | null>>"
+      }
+    },
+    {
+      "name": "r28",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<[Entry, Size | null]>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<[Entry, Size | null]>"
+      }
+    },
+    {
+      "name": "r29",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<{ cb: (e: Entry | null) => Size | null; }>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<{ cb: (e: Entry | null) => Size | null; }>"
+      }
+    },
+    {
+      "name": "r3",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Array<Item | null>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Array": {
+            "location": "global",
+            "id": "global::Array"
+          }
+        },
+        "return": "Promise<(Item | null)[]>"
+      }
+    },
+    {
+      "name": "r30",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Set<Size | \"huge\">>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Set": {
+            "location": "global",
+            "id": "global::Set"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Set<Size | \"huge\">>"
+      }
+    },
+    {
+      "name": "r31",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Entry | Size>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          },
+          "Entry": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Entry",
+            "referenceLocation": "Entry"
+          },
+          "Size": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Size",
+            "referenceLocation": "Size"
+          }
+        },
+        "return": "Promise<string | Item>"
+      }
+    },
+    {
+      "name": "r32",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Level | null>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Level": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Level",
+            "referenceLocation": "Level"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Level | null>"
+      }
+    },
+    {
+      "name": "r4",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Item | Zed | undefined>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Item | Zed | undefined>"
+      }
+    },
+    {
+      "name": "r5",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<{ item: Item | null; z: Zed; }>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<{ item: Item | null; z: Zed; }>"
+      }
+    },
+    {
+      "name": "r6",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Box<Item>>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Box": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Box",
+            "referenceLocation": "Box"
+          },
+          "Item": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Item",
+            "referenceLocation": "Item"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Box<Item>>"
+      }
+    },
+    {
+      "name": "r7",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<Box>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "Box": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Box",
+            "referenceLocation": "Box"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<Box<any>>"
+      }
+    },
+    {
+      "name": "r8",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<HookResult>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HookResult": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<HookResult>"
+      }
+    },
+    {
+      "name": "r9",
+      "complexType": {
+        "signature": "(z: Zed, row?: Row) => Promise<HookResult | undefined>",
+        "parameters": [
+          {
+            "name": "z",
+            "type": "Zed",
+            "docs": ""
+          },
+          {
+            "name": "row",
+            "type": "Row | undefined",
+            "docs": ""
+          }
+        ],
+        "references": {
+          "Promise": {
+            "location": "global",
+            "id": "global::Promise"
+          },
+          "HookResult": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::HookResult",
+            "referenceLocation": "HookResult"
+          },
+          "Zed": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Zed",
+            "referenceLocation": "Zed"
+          },
+          "Row": {
+            "location": "import",
+            "path": "../order-types",
+            "id": "src/order-types.ts::Row",
+            "referenceLocation": "Row"
+          }
+        },
+        "return": "Promise<HookResult | undefined>"
+      }
+    }
+  ],
+  "slots": []
+}

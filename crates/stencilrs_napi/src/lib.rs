@@ -95,9 +95,10 @@ impl JsTranspileOptions {
             Some("module") => ComponentExport::Module,
             Some("lazy") => ComponentExport::Lazy,
             Some("ssr") => ComponentExport::Ssr,
+            Some("stencilrs") => ComponentExport::Stencilrs,
             Some(other) => {
                 return Err(napi::Error::from_reason(format!(
-                    "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\" or \"ssr\""
+                    "unknown componentExport {other:?}: expected \"customelement\", \"module\", \"lazy\", \"ssr\" or \"stencilrs\""
                 )));
             }
         };
