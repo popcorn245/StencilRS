@@ -59,12 +59,16 @@ const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 const STORE_ID = '@stencil/store';
 const JSX_RUNTIME_IDS = new Set(['@stencil/core/jsx-runtime', '@stencil/core/jsx-dev-runtime']);
-// `@popcorn245/stencilrs/signals` (experimental). Its own imports resolve from the project root, so a
-// linked or nested copy of this package still shares the project's Stencil runtime and polyfill.
+// `@popcorn245/stencilrs/signals` (experimental, `signals: true`). Its `@stencil/core` resolves from the project root, so a
+// linked or nested copy of this package shares the project's Stencil runtime. Its `signal-polyfill` resolves from the project
+// if it has a copy, else the copy shipped with this package: one copy either way.
+const SIGNALS_ID = '@popcorn245/stencilrs/signals';
+const SIGNALS_OFF = 'signals are off: set `signals: true` in stencilrs() in your Vite config';
 const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
 const RUNTIME_FILE = fileURLToPath(new URL('./runtime.js', import.meta.url));
 const RUNTIME_HOT_FILE = fileURLToPath(new URL('./runtime-hot.js', import.meta.url));
 const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
+const shippedPolyfill = () => fileURLToPath(import.meta.resolve('signal-polyfill'));
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
 // `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
 // watcher (chokidar) opens one `fs.watch` per file under the root, ~0.9 ms each on Windows, and a project
@@ -161,7 +165,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -176,12 +180,15 @@ const SPEC_PAGE_OPTIONS = {
  *   `sass`: options for Sass' `compileString` (`silenceDeprecations`, `loadPaths`, `quietDeps`, ...).
  *   `cache` (default true): a stylesheet's result is reused while it and every file Sass loaded for it are unchanged (content hashes),
  *   so a watch rebuild recompiles only what an edit touched; the Sass step is also kept in node_modules/.cache/stencilrs. 'memory': no disk; false: none.
+ *   signals (default false): TC39 signals (`@popcorn245/stencilrs/signals`; docs/signals.md). `signal-polyfill` ships with stencilrs (the project's own
+ *   copy is used if it has one), and `signals.js` is added to every component module, so a signal passed to a template is bound on the
+ *   stencilrs runtime. Without it, importing `@popcorn245/stencilrs/signals` fails the build.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -571,6 +578,8 @@ export function stencilrs(options = {}) {
       if (!ssr && !new RegExp(`^export\\s+(const|\\{[^}]*\\b${componentClassName}\\b)`, 'm').test(out)) {
         out += `\nexport { ${componentClassName} };`;
       }
+      // `signals: true`: load signals.js once in the app even if no file imports it, so it hands the runtime its binder.
+      if (signals && !ssr) out += `\nimport ${JSON.stringify(SIGNALS_FILE)};`;
       if (isDev && !ssr) out += hmrSnippet(tagName, componentClassName);
       const value = { code: out, map };
       if (result.diagnostics.length || !result.deps) memo.delete(memoKey);
@@ -585,9 +594,12 @@ export function stencilrs(options = {}) {
       // `runtime: 'stencilrs'`: every `@stencil/core` import (helpers calling `h()`, `Build`...) gets the stencilrs runtime.
       if (runtime === 'stencilrs' && id === '@stencil/core' && !ssr && !specPage && importer) return RUNTIME_FILE;
       if (importer === SIGNALS_FILE && SIGNALS_PEERS.has(id)) {
+        if (!signals) this.error(SIGNALS_OFF);
         importer = join(root, 'index.js');
+        if (id === 'signal-polyfill') return (await this.resolve(id, importer, { skipSelf: true })) ?? shippedPolyfill();
         if (id !== '@stencil/core' || ssr) return this.resolve(id, importer, { skipSelf: true });
       }
+      if (id === SIGNALS_ID && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_ID && project && stencilOptions.docs && !needsUnplugin) return DOCS_MODULE;
       // As @stencil/unplugin: one platform instance for the whole test file.
       if (specPage && id === '@stencil/core') return this.resolve('@stencil/core/testing', importer, { skipSelf: true });
@@ -620,6 +632,7 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_MODULE && project && !needsUnplugin) {
         await project.start();
         return `export default ${project.manifestJson()}`;

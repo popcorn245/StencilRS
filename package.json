@@ -103,10 +103,12 @@
       "x86_64-pc-windows-msvc"
     ]
   },
+  "dependencies": {
+    "signal-polyfill": "^0.2.3"
+  },
   "peerDependencies": {
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
-    "signal-polyfill": "^0.2.3",
     "vite": ">=8",
     "happy-dom": ">=20"
   },
@@ -118,7 +120,6 @@
     "happy-dom": "^21.0.1",
     "sass": "^1.99.0",
     "semantic-release": "^25.0.9",
-    "signal-polyfill": "^0.2.3",
     "vite": "8.3.4"
   },
   "release": {
@@ -146,9 +147,6 @@
     ]
   },
   "peerDependenciesMeta": {
-    "signal-polyfill": {
-      "optional": true
-    },
     "happy-dom": {
       "optional": true
     }

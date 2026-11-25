@@ -97,6 +97,7 @@ All four are done by stencilrs, from the metadata it computes (the `COMPILER_MET
 
 | Option | What stencilrs does |
 |---|---|
+| `signals` (default false) | `stencilrs({ signals: true })` enables TC39 signals ([signals.md](signals.md)): `@popcorn245/stencilrs/signals` and its `signal-polyfill` (shipped with stencilrs, or the project's own copy) are bundled once, and `signals.js` is imported by every component module so template signal binding works. Off, importing `/signals` fails the build |
 | `include` / `exclude` | the file filter of `transformInclude` (`vite-project.js`): a file that does not pass is not compiled, and not scanned for docs or types. Defaults as unplugin's: `[/\.tsx?$/]`, `['node_modules/**']` |
 | `docs` | `import cem from '@stencil/unplugin/docs'` is the Custom Elements Manifest of the project's components, from ports of Stencil's `cmpMetaToDocsComponent` and `generateManifest`, with the style docs (`@prop --x`, documented custom properties in `:host`, `@property`) of each stylesheet (Sass and Less compiled when installed, postcss for the auto-detection). It is rebuilt when a component or stylesheet changes in the dev server (`stencil:docs-update`) |
 | `types` | `<srcDir>/components.d.ts`, from a port of Stencil's `generateComponentTypesFile`, written at `buildStart` when its content changed and kept up to date in the dev server. `srcDir` and `signalBacking` come from `stencil.config.*` (loaded with jiti, as unplugin does) or `stencilConfig` |

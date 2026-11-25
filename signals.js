@@ -1,5 +1,6 @@
 // Experimental: `@Signal()` and `@Computed()` for Stencil components, on TC39 Signals
-// (https://github.com/tc39/proposal-signals, Stage 1) through `signal-polyfill`.
+// (https://github.com/tc39/proposal-signals, Stage 1) through `signal-polyfill` (shipped with stencilrs).
+// Enable it with `stencilrs({ signals: true })` in your Vite config: no separate install.
 //
 //   import { Signal, Computed } from '@popcorn245/stencilrs/signals';
 //
