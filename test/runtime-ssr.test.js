@@ -208,6 +208,7 @@ async function servePage(browser, html) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const files = { '/runtime.js': readFileSync(new URL('../runtime.js', import.meta.url), 'utf8') };
+  files['/runtime-hot.js'] = readFileSync(new URL('../runtime-hot.js', import.meta.url), 'utf8');
   const sources = compiledSources('/runtime.js');
   for (const tag in sources) files[`/${tag}.js`] = sources[tag];
   await page.route('http://rs.test/**', (route) => {
@@ -277,6 +278,38 @@ test('client: events from before the runtime arrived are replayed once it has', 
     await page.click('ssr-shop button');
     await tick();
     assert.equal(await page.textContent('ssr-shop button'), '3');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('dev: the hot module warns about a mismatch and swaps a redefined component in place', chromiumOnly, async () => {
+  const browser = await chromium.launch();
+  try {
+    const html = (await render(PAGE, { resumable: false })).replace(/<button([^>]*) r:n="5"/, '<button$1');
+    const { page, errors, define, tick } = await servePage(browser, html);
+    const warnings = [];
+    page.on('console', (m) => m.type() === 'warning' && warnings.push(m.text()));
+    await page.evaluate(() => import('/runtime-hot.js'));
+    await define();
+    await page.evaluate(() => document.querySelector('ssr-card').componentOnReady());
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /<ssr-card> rendered differently on the client than on the server/);
+    // The same tag defined again: the live badge takes the new class's render.
+    await page.evaluate(async () => {
+      const { Base, define, template, t } = await import('/runtime.js');
+      const tmpl = template('<em><!--rs--></em>', [[0, 0]], false, null);
+      class Badge2 extends Base {
+        render() {
+          return t(tmpl, [`new ${this.count}`]);
+        }
+      }
+      define(Badge2, { tag: 'ssr-badge', scoped: false, shadow: true, members: { count: [129, 'count'] } });
+    });
+    await page.click('ssr-card button');
+    await tick();
+    assert.equal(await page.evaluate(() => document.querySelector('ssr-badge').shadowRoot.querySelector('em').textContent), 'new 1');
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

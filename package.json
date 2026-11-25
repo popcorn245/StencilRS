@@ -82,6 +82,7 @@
     "signals.js",
     "signals.d.ts",
     "runtime.js",
+    "runtime-hot.js",
     "runtime.d.ts",
     "runtime-server.js",
     "runtime-server.d.ts"

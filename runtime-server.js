@@ -16,6 +16,8 @@
 //
 // One window per renderer, renders one at a time: the runtime keeps per-document state.
 
+// The DOM events a resumable page delegates: a component listening to any other hydrates on load.
+const DELEGATED = new Set(['click', 'dblclick', 'auxclick', 'contextmenu', 'input', 'change', 'beforeinput', 'submit', 'reset', 'keydown', 'keyup', 'keypress', 'pointerdown', 'pointerup', 'pointerover', 'pointerenter', 'pointerleave', 'pointerout', 'mousedown', 'mouseup', 'mouseover', 'mouseenter', 'mouseleave', 'mouseout', 'touchstart', 'touchend', 'focus', 'blur', 'focusin', 'focusout', 'paste', 'copy', 'cut', 'dragstart', 'drop']);
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 const RAW = new Set(['style', 'script']);
 const escText = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -60,7 +62,7 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
     // Components that must hydrate on load so far: a list holding one can't be skipped on the client.
     let stateless = 0;
     const types = new Set();
-    const delegated = globalThis.__RS_DELEGATED__;
+    const delegated = DELEGATED;
     const nextId = (host) => {
       const id = ++next;
       let now = false;

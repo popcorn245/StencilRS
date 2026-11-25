@@ -34,7 +34,10 @@ inheritance and `Mixin()`, `<Host>`, the load, render and update lifecycle, `com
 (`docs/signals.md`). Also: scoped CSS (`sc-<tag>` classes, styles injected per root node), slots
 outside shadow DOM (relocation, nested and late slotting, unslotted children kept hidden in the
 host as Stencil does), functional components and dynamic tags, `h()` called directly,
-child-before-parent load order, `Env`, `setMode`/`getMode`, asset paths, and HMR (`hotSwap`).
+child-before-parent load order, `Env`, `setMode`/`getMode`, asset paths, and HMR. Hot reload is its own module (`runtime-hot.js`), which the Vite plugin imports
+in dev only, so none of it ships. `@stencil/store` works too: `getRenderingRef()` returns the
+component that is rendering, and the plugin keeps the store out of Vite's pre-bundle so its
+`@stencil/core` import resolves to this runtime.
 
 **Check:** the ui-kit's 874 specs pass on this runtime (`COMPILER=runtime npx vitest run` in
 `examples/ui-kit`, 107 files), and the starter's 27 browser tests pass unchanged on both
@@ -78,7 +81,7 @@ one's children doesn't matter.
 
 If the client's first render doesn't match (a number is missing, or the node has another tag),
 the host falls back: it empties what it rendered, keeps its slotted children, and renders from
-scratch.
+scratch. In dev (the hot module loaded) it also logs a warning naming the component.
 
 With `runtime: 'stencilrs'`, Vite SSR builds (`transformOptions.ssr`) also compile for this
 runtime. One renderer renders one page at a time. The marks cost bytes: roughly 8 per dynamic
@@ -128,7 +131,7 @@ gives an equal value (same templates, keys and values), the list stays as the se
 first different value adopts the server's nodes in place, then updates them as usual.
 
 This is Qwik's resumability, adapted: Qwik also skips running components on load and wakes code on
-events. Unlike Qwik, the component's code is already loaded (9.1 KB gzip for the whole runtime),
+events. Unlike Qwik, the component's code is already loaded (8.9 KB gzip for the whole runtime),
 so waking it costs a render, not a network round trip.
 
 ## Page-load benchmark against Qwik
@@ -208,7 +211,7 @@ Bundle JS:
 | Runtime | Raw | Gzip |
 |---|---:|---:|
 | Stencil | 81.7 KB | 27.6 KB |
-| stencilrs (hydration in place and resuming included) | 25.5 KB | 9.1 KB |
+| stencilrs (hydration in place and resuming included) | 24.9 KB | 8.9 KB |
 | Qwik | 56.8 KB | 24.6 KB |
 
 Stencil's figure is its standalone runtime as the Vite plugin builds it, with every feature flag on.

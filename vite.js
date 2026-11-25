@@ -56,10 +56,12 @@ const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
 const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
+const STORE_ID = '@stencil/store';
 // `@popcorn245/stencilrs/signals` (experimental). Its own imports resolve from the project root, so a
 // linked or nested copy of this package still shares the project's Stencil runtime and polyfill.
 const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
 const RUNTIME_FILE = fileURLToPath(new URL('./runtime.js', import.meta.url));
+const RUNTIME_HOT_FILE = fileURLToPath(new URL('./runtime-hot.js', import.meta.url));
 const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
 // `loader`, `hydrate`, `.stencil`) and Vitest's cache and attachments (`.vitest`). Never source: Stencil's source lives in `src/`. The dev server's file
@@ -324,7 +326,14 @@ export function stencilrs(options = {}) {
       // `optimizeDeps.noDiscovery`: Vite finds nothing on a request, so there is no re-run to avoid, and the user's `include`
       // is the whole list. Adding to it there makes `listen` wait for an optimizer run (behind the watcher's first crawl on
       // Windows) that the user turned off: ~1.4 s of the ui-kit's first response.
-      if (env?.command === 'serve' && !ssr && !specPage && !userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID] };
+      // `@stencil/store` asks `@stencil/core` which component is rendering. Pre-bundled (or, in Vitest, loaded by Node),
+      // it would get `@stencil/core`'s own entry, which never renders the components; left as source, its import
+      // resolves to the runtime they use (`resolveId`).
+      if (env?.command === 'serve' && !ssr && !specPage) {
+        if (!userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID] };
+        result.test = { server: { deps: { inline: [STORE_ID] } } };
+      }
+
       // Stencil's output and cache folders are not watched (see DEFAULT_WATCH_IGNORE); `watchIgnore: false`
       // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
       // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
@@ -508,8 +517,8 @@ export function stencilrs(options = {}) {
         handled.add(file);
         fileToTag.set(file, fine.components[0].tagName);
         // Hot reload: the module accepts itself; `define` moves the new class onto the registered one.
-        // The runtime keeps live instances only when hot reload is on (`__RS_HOT__`).
-        return { code: isDev ? `if (import.meta.hot) globalThis.__RS_HOT__ = true;\n${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
+        // Dev only: the runtime's hot-reload half, which also turns on its hydration warnings.
+        return { code: isDev ? `import ${JSON.stringify(RUNTIME_HOT_FILE)};\n${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
       }
       const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
 

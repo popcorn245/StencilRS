@@ -98,6 +98,9 @@ const instantiate = (tmpl, host) => {
   if (SERVER && host) {
     for (const n of inst.top) if (n !== inst.start) claim(host, 0, () => n);
     for (const p of inst.marked) claim(host, 0, () => p);
+    // A template with something the client must run (an event, a ref, a spread, a slot): a
+    // list holding one can't be kept as the server left it (see `setList`).
+    if ((tmpl.live ??= tmpl.parts.some(([, type]) => type === 2 || type >= 5))) host.__live = (host.__live | 0) + 1;
   }
   inst.marked = null;
   return inst;
@@ -244,7 +247,6 @@ const makePart = (type, node, name, svg, host) => {
       // and, on each element, what it listens to and for whom (`r:e`), so an event wakes only
       // the component whose handler it reaches.
       if (SERVER && host) {
-        host.__live = (host.__live | 0) + 1;
         (host.__evs ||= new Set()).add(p.type);
         (node.__rse ||= new Set()).add(p.type);
         node.__rseh = host;
@@ -253,12 +255,9 @@ const makePart = (type, node, name, svg, host) => {
     }
     case 3: return new ClassPart(node);
     case 4: return new StylePart(node);
-    case 5:
-    case 6:
-    case 7:
-      // What a render must run on the client (a ref, a slot, props that aren't plain values).
-      if (SERVER && host) host.__live = (host.__live | 0) + 1;
-      return type === 5 ? new RefPart(node) : type === 6 ? new SpreadPart(node, svg) : new SlotPart(node, name, host);
+    case 5: return new RefPart(node);
+    case 6: return new SpreadPart(node, svg);
+    case 7: return new SlotPart(node, name, host);
     default: throw new Error(`stencilrs runtime: unknown part type ${type}`);
   }
 };
@@ -332,6 +331,8 @@ class NodePart {
       const adopt = adopting(this.host);
       const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
       const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
+      // Its props may hold handlers and refs, which the client must run.
+      if (SERVER && this.host) this.host.__live = (this.host.__live | 0) + 1;
       this.hel = el;
       this.htag = v.tag;
       this.hprops = new SpreadPart(el, svg);
@@ -895,9 +896,7 @@ const rehydrate = (host, shadow, id) => {
 // listens to a DOM event the document doesn't delegate). Events from before this script ran were
 // caught by the page's inline catcher and are replayed (`replay`).
 
-const DELEGATED = new Set(['click', 'dblclick', 'auxclick', 'contextmenu', 'input', 'change', 'beforeinput', 'submit', 'reset', 'keydown', 'keyup', 'keypress', 'pointerdown', 'pointerup', 'pointerover', 'pointerenter', 'pointerleave', 'pointerout', 'mousedown', 'mouseup', 'mouseover', 'mouseenter', 'mouseleave', 'mouseout', 'touchstart', 'touchend', 'focus', 'blur', 'focusin', 'focusout', 'paste', 'copy', 'cut', 'dragstart', 'drop']);
 const SIGNALS = Symbol.for('stencilrs.signals.patched');
-if (SERVER) globalThis.__RS_DELEGATED__ = DELEGATED;
 // The page's state script: found on the first server-rendered component, parsed on first use.
 let stateEl, pageState;
 const hasState = () => {
@@ -1011,7 +1010,7 @@ export class Base extends HTMLElement {
       }
     }
     this.__early = early;
-    track(this);
+    if (hot) hot.track(this);
   }
   componentOnReady() {
     this.__resume();
@@ -1146,7 +1145,10 @@ export class Base extends HTMLElement {
     const ssr = SERVER ? null : this.getAttribute('s-rs');
     if (ssr !== null) {
       this.removeAttribute('s-rs');
-      if (!this.__hydrate(ssr, meta)) rehydrate(this, !!meta.shadow, ssr);
+      if (!this.__hydrate(ssr, meta)) {
+        if (hot) console.warn(`stencilrs: <${meta.tag}> rendered differently on the client than on the server, so it rendered again from scratch.`, this);
+        rehydrate(this, !!meta.shadow, ssr);
+      }
     }
     if (this.__f & HAS_LOADED) {
       // hydrated in place
@@ -1242,7 +1244,14 @@ export class Base extends HTMLElement {
     try {
       this.componentWillRender?.();
       if (!first) this.componentWillUpdate?.();
-      const out = this.render();
+      const outer = rendering;
+      rendering = this;
+      let out;
+      try {
+        out = this.render();
+      } finally {
+        rendering = outer;
+      }
       if (!this.__root) {
         const adopt = adopting(this);
         const marker = claim(this, 8, () => document.createComment(''));
@@ -1353,7 +1362,9 @@ export const setMode = (resolver) => (modeResolver = resolver);
 export const getMode = (ref) => ref?.__mode ?? (ref ? (ref.__mode = modeResolver?.(ref)) : undefined);
 let assetPath = '';
 export const setAssetPath = (path) => (assetPath = path);
-export const getRenderingRef = () => null;
+/** Stencil's `getRenderingRef`: the component rendering now (what `@stencil/store` subscribes). */
+let rendering = null;
+export const getRenderingRef = () => rendering;
 /** Decorators exist as values only for code the compiler did not see; they do nothing. */
 const noDecorator = () => () => {};
 export { noDecorator as Component, noDecorator as Prop, noDecorator as State, noDecorator as Event, noDecorator as Method, noDecorator as Watch, noDecorator as Listen, noDecorator as Element, noDecorator as AttachInternals, noDecorator as PropSerialize, noDecorator as AttrDeserialize };
@@ -1378,7 +1389,8 @@ export const forceUpdate = (el) => el.__schedule?.();
  */
 export const define = (Cstr, meta, register = true) => {
   const existing = register ? customElements.get(meta.tag) : undefined;
-  if (existing && existing !== Cstr && existing.__meta) return hotSwap(existing, Cstr, meta);
+  // A tag can't be defined twice: in dev the new class moves onto the registered one.
+  if (existing && existing !== Cstr && existing.__meta) return hot ? hot.swap(existing, Cstr, meta) : undefined;
   meta.listeners ||= [];
   meta.names = Object.keys(meta.members);
   meta.watchers ||= {};
@@ -1447,36 +1459,12 @@ export const define = (Cstr, meta, register = true) => {
   if (register && !existing) customElements.define(meta.tag, Cstr);
 };
 
-/** Live instances per tag, for hot reload. */
-const live = new Map();
-const track = (el) => {
-  if (!globalThis.__RS_HOT__) return;
-  const tag = el.constructor.__meta?.tag;
-  if (!tag) return;
-  let set = live.get(tag);
-  if (!set) live.set(tag, (set = new Set()));
-  set.add(new WeakRef(el));
-};
-
-/**
- * Hot reload: a custom element can't be defined twice, so the new class's methods, accessors
- * and metadata move onto the registered one and every live instance renders again.
- */
-const hotSwap = (Old, New, meta) => {
-  define(New, meta, false); // accessors and callbacks on New, not registered
-  for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(New.prototype))) {
-    if (k !== 'constructor') Object.defineProperty(Old.prototype, k, d);
-  }
-  const m = New.__meta;
-  Object.assign(Old.__meta, m);
-  sheets.delete(Old);
-  for (const ref of live.get(meta.tag) || []) {
-    const el = ref.deref();
-    if (el?.isConnected && el.__f & HAS_LOADED) {
-      el.__hostT = null;
-      el.__render(false);
-    }
-  }
+// Hot reload lives in runtime-hot.js, which the Vite plugin imports in dev only.
+let hot = null;
+/** For runtime-hot.js: installs `{ track(el), swap(Old, New, meta) }`. */
+export const __hot = (h) => {
+  hot = h;
+  return { sheets };
 };
 
 /** Stencil's `createEvent`: `this.changed.emit(detail)`. */
