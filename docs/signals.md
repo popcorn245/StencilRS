@@ -1,8 +1,20 @@
 # `@Signal()`: TC39 Signals in components (experimental spike)
 
 Not part of Stencil. [TC39 Signals](https://github.com/tc39/proposal-signals) are at Stage 1. This
-uses [`signal-polyfill`](https://www.npmjs.com/package/signal-polyfill) (an optional peer
-dependency) and may change or go away.
+uses [`signal-polyfill`](https://www.npmjs.com/package/signal-polyfill), which ships with stencilrs, and may change or go away.
+
+## Setup
+
+Turn it on in the Vite plugin. There is nothing to install:
+
+```ts
+export default defineConfig({ plugins: [stencilrs({ signals: true })] });
+```
+
+With `signals: true` the plugin bundles the polyfill (the project's own copy if it has one, else the one
+shipped with stencilrs) and loads `signals.js` once in the app, so signals passed to a template are bound
+without importing it anywhere. Without it, importing `@popcorn245/stencilrs/signals` fails the build with
+"signals are off: set `signals: true` in stencilrs() in your Vite config".
 
 ```tsx
 import { Component, Prop } from '@stencil/core';
@@ -85,4 +97,4 @@ decorator of their own compile exactly as before (parity is unchanged).
 - A `@Signal()` field is not a Stencil member: it has no attribute, no `@Watch`, no `componentShouldUpdate` entry, and it isn't in `components.d.ts`.
 - A `@Signal()` write that `render()` never read does not re-render. That's finer-grained than `@State`, and it's intended.
 - `@Computed()` read outside a render can be stale with respect to a `@Prop` changed since the last render.
-- One polyfill copy per page is needed. The Vite plugin resolves this module's `@stencil/core` and `signal-polyfill` from the project root to keep that true for linked installs.
+- One polyfill copy per page is needed. The Vite plugin resolves this module's `@stencil/core` from the project root, and `signal-polyfill` from the project if it has a copy, else the shipped one, to keep that true for linked installs.

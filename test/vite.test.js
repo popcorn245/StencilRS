@@ -347,3 +347,27 @@ test('serve does not watch the folders `stencil build` writes into; merged with 
   const [custom] = run({ watchIgnore: ['components', './out/'] }, 'serve').server.watch.ignored;
   assert.deepEqual([custom(p('components/x.js')), custom(p('out/x.js')), custom(p('www/x.js'))], [true, true, false]);
 });
+
+const SIGNALS_FILE = join(import.meta.dirname, '..', 'signals.js');
+const polyfillCopies = (code) => (code.match(/Detected cycle in computations/g) ?? []).length;
+
+test('signals: true bundles signals.js and the shipped signal-polyfill (the project has none), once', async () => {
+  write('uses-signals.ts', `import { signal } from ${JSON.stringify(SIGNALS_FILE)};\nexport const s = signal(1);\n`);
+  const code = await run('uses-signals.ts', { signals: true });
+  assert.match(code, /__RS_SIGNALS__/);
+  assert.equal(polyfillCopies(code), 1, 'exactly one polyfill copy');
+});
+
+test('signals: true loads signals.js in an app that imports it nowhere', async () => {
+  const code = await run('ported.tsx', { signals: true });
+  assert.match(code, /__RS_SIGNALS__/);
+  assert.equal(polyfillCopies(code), 1);
+});
+
+test('signals off: importing the signals module fails the build with a clear error', async () => {
+  write('uses-signals-off.ts', `import { signal } from '@popcorn245/stencilrs/signals';\nexport const s = signal(1);\n`);
+  await assert.rejects(run('uses-signals-off.ts'), /signals are off: set `signals: true` in stencilrs\(\) in your Vite config/);
+  write('uses-signals-file.ts', `import { signal } from ${JSON.stringify(SIGNALS_FILE)};\nexport const s = signal(1);\n`);
+  await assert.rejects(run('uses-signals-file.ts'), /signals are off/);
+  assert.doesNotMatch(await run('ported.tsx'), /__RS_SIGNALS__/);
+});

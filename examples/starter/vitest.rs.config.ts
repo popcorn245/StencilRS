@@ -4,7 +4,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [stencilrs({ runtime: 'stencilrs' })],
+  plugins: [stencilrs({ runtime: 'stencilrs', signals: true })],
   test: {
     include: ['src/**/*.test.ts'],
     browser: {

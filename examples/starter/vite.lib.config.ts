@@ -3,7 +3,7 @@ import stencilrs from '@popcorn245/stencilrs/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [stencilrs()],
+  plugins: [stencilrs({ signals: true })],
   build: {
     outDir: 'dist/lib',
     lib: { entry: 'src/index.ts', formats: ['es'], fileName: 'components' },

@@ -37,7 +37,7 @@ const config: StorybookConfig = {
       // Every component in both sets is compiled by stencilrs (Stencil's compiler only as the
       // per-file fallback for features stencilrs hasn't ported).
       plugins: [
-        stencilrs({ verbose: true }),
+        stencilrs({ verbose: true, signals: true }),
         // ui-kit's fonts.css points at /fonts/..., which staticDirs serves but Vite doesn't rebase.
         ...(base
           ? [
