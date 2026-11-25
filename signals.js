@@ -13,8 +13,8 @@
 // one render. Writes to a signal nothing rendered from don't re-render.
 //
 // stencilrs compiles `@Signal() x = v` to `this.x = v` in the constructor plus
-// `Signal()(Cmp.prototype, "x")` after the class, as TypeScript's legacy decorators do with
-// `useDefineForClassFields: false`.
+// `__rs_decorate([Signal()], Cmp.prototype, "x", void 0)` after the class (`Signal()(Cmp.prototype, "x")`),
+// as TypeScript's legacy decorators do. See docs/decorators.md.
 import { Build, forceUpdate } from '@stencil/core';
 import { Signal as TC39 } from 'signal-polyfill';
 
