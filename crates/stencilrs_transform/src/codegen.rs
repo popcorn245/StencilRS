@@ -52,6 +52,8 @@ use crate::scope_css::{scope_css, scope_id};
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 /// What `ComponentExport::Ssr` imports the runtime from (`STENCIL_INTERNAL_SSR_PLATFORM_ID`).
 pub const SSR_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/server";
+/// The module `@Signal()` comes from (experimental; see `signals.js`).
+pub const SIGNALS_MODULE: &str = "@popcorn245/stencilrs/signals";
 
 #[derive(Debug, Clone)]
 pub enum Jsx {
@@ -75,6 +77,8 @@ pub enum ComponentExport {
     Lazy,
     /// `export class X` taking over a host like `Lazy`, with `static get cmpMeta()` and `style`.
     Ssr,
+    /// Experimental: for the stencilrs runtime (`runtime.js`), compiled templates, no vdom.
+    Stencilrs,
 }
 
 /// Stencil's `componentMetadata`: what the compiler's metadata is added to the class as.
@@ -152,7 +156,7 @@ const KEEP_IMPORTS: [&str; 24] = [
     "writeTask",
 ];
 
-const MEMBER_DECORATORS_TO_REMOVE: [&str; 10] = [
+pub(crate) const MEMBER_DECORATORS_TO_REMOVE: [&str; 10] = [
     "AttachInternals",
     "AttrDeserialize",
     "PropSerialize",
@@ -206,6 +210,9 @@ pub fn generate(
     components: &[ComponentMeta],
     opts: &CodegenOptions2,
 ) -> Result<Generated, String> {
+    if opts.component_export == ComponentExport::Stencilrs {
+        return crate::fine::generate(program, source, components, opts);
+    }
     if opts.component_metadata == ComponentMetadata::None {
         return generate_pass(program, source, components, opts, None);
     }
@@ -253,6 +260,7 @@ fn generate_pass(
         .iter()
         .map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned()))
         .collect();
+    let signal_decorator = signal_decorator_local(program);
     let component_decorator = aliases
         .get("Component")
         .cloned()
@@ -441,6 +449,8 @@ fn generate_pass(
         let mut element_replaced = false;
         // `useDefineForClassFields: false`: instance field initializers, to run in the constructor.
         let mut field_assignments: Vec<String> = Vec::new();
+        // `@Signal()` fields, applied after the class as a legacy property decorator would be.
+        let mut signal_calls: Vec<String> = Vec::new();
         let mut ctor: Option<&MethodDefinition> = None;
         let mut connected: Option<&MethodDefinition> = None;
         for el in &class.body.body {
@@ -456,6 +466,33 @@ fn generate_pass(
                 }
                 _ => continue,
             };
+            // `@Signal()` (experimental): the field becomes a constructor assignment whatever
+            // `useDefineForClassFields` says (a class field would shadow the accessor the
+            // decorator defines on the prototype), and the decorator is called after the class.
+            if let (ClassElement::PropertyDefinition(p), Some(sig), Some(field)) =
+                (el, signal_decorator.as_deref(), key_name.as_deref())
+            {
+                let sig_decorators: Vec<&Decorator> = p
+                    .decorators
+                    .iter()
+                    .filter(|d| decorator_name(d) == Some(sig))
+                    .collect();
+                if !sig_decorators.is_empty() && !p.r#static && !p.computed {
+                    for d in sig_decorators {
+                        signal_calls.push(format!(
+                            "{}({name}.prototype, {});",
+                            text(d.expression.span()),
+                            json(field)
+                        ));
+                    }
+                    ed.remove(p.span.start, p.span.end);
+                    if let Some(value) = &p.value {
+                        field_assignments
+                            .push(format!("this[{}] = {};", json(field), text(value.span())));
+                    }
+                    continue;
+                }
+            }
             for d in decorators.iter().filter(|d| {
                 decorator_name(d).is_some_and(|n| remove_decorators.iter().any(|r| r == n))
             }) {
@@ -517,6 +554,10 @@ fn generate_pass(
                 }
                 _ => {}
             }
+        }
+
+        if !signal_calls.is_empty() {
+            ed.insert(stmt_span.end, format!("\n{}", signal_calls.join("\n")));
         }
 
         // `updateLazyComponentConstructor`
@@ -811,7 +852,7 @@ fn generate_pass(
 
         // `defineCustomElement`, `addModuleMetadataProxies`; lazy classes are registered by the loader.
         match opts.component_export {
-            ComponentExport::Lazy | ComponentExport::Ssr => {}
+            ComponentExport::Lazy | ComponentExport::Ssr | ComponentExport::Stencilrs => {}
             ComponentExport::Module => {
                 add(
                     &mut runtime_apis,
@@ -889,11 +930,31 @@ fn generate_pass(
     Ok(Generated { code, map })
 }
 
-fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
+pub(crate) fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
     decorators.iter().any(|d| decorator_name(d) == Some(name))
 }
 
-fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {
+/// The local name `Signal` is imported as from [`SIGNALS_MODULE`], if it is.
+pub(crate) fn signal_decorator_local(program: &Program) -> Option<String> {
+    program.body.iter().find_map(|stmt| {
+        let Statement::ImportDeclaration(imp) = stmt else {
+            return None;
+        };
+        if imp.source.value.as_str() != SIGNALS_MODULE || imp.import_kind.is_type() {
+            return None;
+        }
+        imp.specifiers.iter().flatten().find_map(|s| match s {
+            ImportDeclarationSpecifier::ImportSpecifier(s)
+                if s.imported.name() == "Signal" && !s.import_kind.is_type() =>
+            {
+                Some(s.local.name.to_string())
+            }
+            _ => None,
+        })
+    })
+}
+
+pub(crate) fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {
     match &d.expression {
         Expression::CallExpression(call) => match &call.callee {
             Expression::Identifier(id) => Some(id.name.as_str()),
@@ -1064,11 +1125,11 @@ impl BaseClasses<'_, '_, '_> {
     }
 }
 
-fn is_super_call(s: &Statement) -> bool {
+pub(crate) fn is_super_call(s: &Statement) -> bool {
     matches!(s, Statement::ExpressionStatement(e) if matches!(&e.expression, Expression::CallExpression(c) if matches!(c.callee, Expression::Super(_))))
 }
 
-fn json(s: &str) -> String {
+pub(crate) fn json(s: &str) -> String {
     serde_json::to_string(s).expect("string")
 }
 
@@ -1332,16 +1393,16 @@ fn custom_states_value(cmp: &ComponentMeta) -> Value {
 }
 
 /// A component style mode: its import identifier and external URLs, or an inline string.
-struct StyleMode {
-    mode: String,
-    identifier: String,
-    urls: Vec<String>,
-    inline: Option<String>,
+pub(crate) struct StyleMode {
+    pub(crate) mode: String,
+    pub(crate) identifier: String,
+    pub(crate) urls: Vec<String>,
+    pub(crate) inline: Option<String>,
 }
 
 const DEFAULT_STYLE_MODE: &str = "$";
 
-fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
+pub(crate) fn styles_of(cmp: &ComponentMeta) -> Vec<StyleMode> {
     let base = dash_to_pascal_case(&cmp.tag_name);
     let mut modes: Vec<StyleMode> = style_url_modes(&cmp.options)
         .into_iter()
@@ -1441,7 +1502,7 @@ fn event_creation(ev: &crate::meta::EventMeta) -> String {
 }
 
 /// `normalizePath(join(dirname(file), url))` then `serializeImportPath` with query params.
-fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> String {
+pub(crate) fn style_import_path(file: &str, url: &str, cmp: &ComponentMeta, mode: &str) -> String {
     let file = file.replace('\\', "/");
     let absolute = file.starts_with('/') || file.as_bytes().get(1) == Some(&b':');
     let mut p = if absolute {
@@ -1785,7 +1846,7 @@ fn fmt_num(v: f64) -> String {
 /// Strip TypeScript and compile JSX with oxc, as TypeScript's emit does for Stencil.
 /// With `opts.source_map`, also oxc's map from the output back to `edited`, and where its
 /// class member positions should point instead (`MemberAnchors`).
-fn strip_types_and_jsx(
+pub(crate) fn strip_types_and_jsx(
     edited: &str,
     opts: &CodegenOptions2,
 ) -> Result<

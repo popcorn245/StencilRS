@@ -1,0 +1,1 @@
+{ "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "@builder.io/qwik", "module": "ESNext", "moduleResolution": "Bundler", "target": "ES2022", "strict": true, "skipLibCheck": true } }

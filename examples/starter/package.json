@@ -17,10 +17,12 @@
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",
     "@stencil/core": "5.0.0-beta.25",
+    "@stencil/store": "^2.2.5",
     "@stencil/unplugin": "5.0.0-beta.25",
     "@vitest/browser-playwright": "5.0.4",
     "happy-dom": "21.0.1",
     "playwright": "1.64.1",
+    "signal-polyfill": "^0.2.3",
     "typescript": "6.0.3",
     "vite": "8.3.4",
     "vitest": "5.0.4"

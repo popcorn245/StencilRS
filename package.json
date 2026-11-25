@@ -44,6 +44,18 @@
     "./ssr": {
       "types": "./ssr.d.ts",
       "default": "./ssr.js"
+    },
+    "./signals": {
+      "types": "./signals.d.ts",
+      "default": "./signals.js"
+    },
+    "./runtime": {
+      "types": "./runtime.d.ts",
+      "default": "./runtime.js"
+    },
+    "./runtime/server": {
+      "types": "./runtime-server.d.ts",
+      "default": "./runtime-server.js"
     }
   },
   "files": [
@@ -67,7 +79,14 @@
     "ssr-serializer.js",
     "ssr-patches.js",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "signals.js",
+    "signals.d.ts",
+    "runtime.js",
+    "runtime-hot.js",
+    "runtime.d.ts",
+    "runtime-server.js",
+    "runtime-server.d.ts"
   ],
   "publishConfig": {
     "access": "public"
@@ -87,15 +106,19 @@
   "peerDependencies": {
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
-    "vite": ">=8"
+    "signal-polyfill": "^0.2.3",
+    "vite": ">=8",
+    "happy-dom": ">=20"
   },
   "devDependencies": {
     "@napi-rs/cli": "3.10.8",
     "@semantic-release/exec": "^7.1.0",
     "@stencil/core": "5.0.0-beta.25",
     "@stencil/unplugin": "5.0.0-beta.25",
+    "happy-dom": "^21.0.1",
     "sass": "^1.99.0",
     "semantic-release": "^25.0.9",
+    "signal-polyfill": "^0.2.3",
     "vite": "8.3.4"
   },
   "release": {
@@ -121,5 +144,13 @@
         }
       ]
     ]
+  },
+  "peerDependenciesMeta": {
+    "signal-polyfill": {
+      "optional": true
+    },
+    "happy-dom": {
+      "optional": true
+    }
   }
 }

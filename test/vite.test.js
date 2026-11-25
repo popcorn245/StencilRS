@@ -225,6 +225,9 @@ test('serve pre-bundles the runtime imports the transform injects; Vite merges t
   const run = (options, command, userConfig = {}) => stencilrs(options)[0].config(userConfig, { command, mode: 'development' });
   const want = ['@stencil/core/app-data', '@stencil/core/runtime/client/standalone'];
   assert.deepEqual(run({}, 'serve').optimizeDeps.include, want);
+  // `@stencil/store` stays source (and Vitest inlines it), so its `@stencil/core` import resolves to the components' runtime.
+  assert.deepEqual(run({}, 'serve').optimizeDeps.exclude, ['@stencil/store']);
+  assert.deepEqual(run({}, 'serve').test, { server: { deps: { inline: ['@stencil/store'] } } });
   // Only the plugin's own entries: the user's `include` is left to Vite's array merge.
   assert.deepEqual(run({}, 'serve', { optimizeDeps: { include: ['lodash'] } }).optimizeDeps.include, want);
   assert.equal(run({}, 'build').optimizeDeps, undefined);

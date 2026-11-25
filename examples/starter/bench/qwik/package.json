@@ -1,0 +1,10 @@
+{
+  "name": "bench-qwik",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "vite build" },
+  "devDependencies": {
+    "@builder.io/qwik": "1.20.4",
+    "vite": "7.1.12"
+  }
+}

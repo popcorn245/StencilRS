@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [stencilrs()],
   test: {
     include: ['src/**/*.test.ts'],
+    // *.rs.test.ts needs the stencilrs runtime: npx vitest run --config vitest.rs.config.ts.
+    exclude: ['src/**/*.rs.test.ts'],
     browser: {
       enabled: true,
       headless: true,
