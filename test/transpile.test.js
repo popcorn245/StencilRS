@@ -89,17 +89,80 @@ export class CmpS {
       assert.deepEqual(diagnostics, []);
       assert.match(code, /this\["count"\] = 0;/, `${componentExport}/${useDefineForClassFields}`);
       assert.doesNotMatch(code, /@S\(|^\s*count = 0;|^\s*later;/m);
-      assert.match(code, /\};?\s*S\(\{ equals: Object\.is \}\)\(CmpS\.prototype, "count"\);\nS\(\)\(CmpS\.prototype, "later"\);/);
+      assert.match(code, /\};?\s*__rs_decorate\(\[S\(\{ equals: Object\.is \}\)\], CmpS\.prototype, "count", void 0\);\n__rs_decorate\(\[S\(\)\], CmpS\.prototype, "later", void 0\);/);
     }
   }
 });
 
-test('a decorator named Signal from anywhere else is left alone', () => {
-  const src = `import { Component, h } from '@stencil/core';
-import { Signal } from './elsewhere';
-@Component({ tag: 'cmp-t' })
-export class CmpT { @Signal() count = 0; render() { return <b />; } }`;
-  assert.doesNotMatch(transpile(src, { ...options, useDefineForClassFields: true }).code, /Signal\(\)\(CmpT\.prototype/);
+const DECORATED = `import { Component, Prop, h } from '@stencil/core';
+import { tracked, logged, sealed, tag } from './decs';
+@sealed()
+@Component({ tag: 'cmp-d' })
+@tag('x')
+export class CmpD {
+  @tracked count = 0;
+  @logged() @tracked() other: number;
+  @logged() run() { return 1; }
+  @tracked get doubled() { return this.count * 2; }
+  @tracked static shared = 5;
+  render() { return <b>{this.count}</b>; }
+}`;
+
+test('decorators that are not Stencil\'s are applied after the class, in every output', () => {
+  for (const componentExport of ['customelement', 'module', 'lazy', 'ssr', 'stencilrs']) {
+    for (const useDefineForClassFields of [false, true]) {
+      const { code, diagnostics } = transpile(DECORATED, { ...options, componentExport, useDefineForClassFields });
+      const at = `${componentExport}/${useDefineForClassFields}`;
+      assert.deepEqual(diagnostics, [], at);
+      assert.doesNotMatch(code, /@(tracked|logged|sealed|tag)/, at);
+      // a field is a constructor assignment, so no class field shadows the decorator's accessor
+      assert.match(code, /this\["count"\] = 0;/, at);
+      assert.doesNotMatch(code, /^\s*(count = 0|other);/m, at);
+      // members in order (a decorator list runs last to first), then the class's; static ones take the constructor
+      const calls = [
+        '__rs_decorate([tracked], CmpD.prototype, "count", void 0);',
+        '__rs_decorate([logged(), tracked()], CmpD.prototype, "other", void 0);',
+        '__rs_decorate([logged()], CmpD.prototype, "run", null);',
+        '__rs_decorate([tracked], CmpD.prototype, "doubled", null);',
+        '__rs_decorate([tracked], CmpD, "shared", void 0);',
+        'CmpD = __rs_decorate([sealed(), tag("x")], CmpD);',
+      ];
+      let from = 0;
+      for (const call of calls) {
+        const i = code.indexOf(call, from);
+        assert.ok(i >= from, `${at}: ${call}`);
+        from = i + call.length;
+      }
+      // all of it before anything registers the class
+      const register = code.search(/__stencil_defineCustomElement\(CmpD|__stencil_proxyCustomElement\(CmpD|__rs_define\(CmpD/);
+      if (register >= 0) assert.ok(register > from, `${at}: registered before the decorators ran`);
+      assert.equal(code.match(/function __rs_decorate/g).length, 1, at);
+    }
+  }
+});
+
+test('the decorate helper is only there when a decorator of one\'s own is', () => {
+  for (const componentExport of ['customelement', 'lazy', 'ssr', 'stencilrs']) {
+    assert.doesNotMatch(transpile(source, { ...options, componentExport }).code, /__rs_decorate/);
+  }
+});
+
+test('a custom decorator on a @Prop or @State is an error', () => {
+  const src = `import { Component, Prop, State, h } from '@stencil/core';
+import { tracked } from './decs';
+@Component({ tag: 'cmp-e' })
+export class CmpE {
+  @Prop() @tracked() a = 1;
+  @tracked() @State() b = 2;
+  @tracked() c = 3;
+  render() { return <b />; }
+}`;
+  const { diagnostics } = transpile(src, options);
+  assert.equal(diagnostics.length, 2);
+  for (const d of diagnostics) {
+    assert.equal(d.level, 'error');
+    assert.match(d.messageText ?? d.message, /not supported: it would define an accessor that conflicts/);
+  }
 });
 
 test("componentExport: 'stencilrs' (experimental) compiles JSX to hoisted templates and parts", () => {

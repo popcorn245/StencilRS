@@ -52,8 +52,6 @@ use crate::scope_css::{scope_css, scope_id};
 pub const DEFAULT_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/client/standalone";
 /// What `ComponentExport::Ssr` imports the runtime from (`STENCIL_INTERNAL_SSR_PLATFORM_ID`).
 pub const SSR_CORE_IMPORT_PATH: &str = "@stencil/core/runtime/server";
-/// The module `@Signal()` comes from (experimental; see `signals.js`).
-pub const SIGNALS_MODULE: &str = "@popcorn245/stencilrs/signals";
 
 #[derive(Debug, Clone)]
 pub enum Jsx {
@@ -260,11 +258,12 @@ fn generate_pass(
         .iter()
         .map(|d| aliases.get(d).cloned().unwrap_or_else(|| (*d).to_owned()))
         .collect();
-    let signal_decorator = signal_decorator_local(program);
     let component_decorator = aliases
         .get("Component")
         .cloned()
         .unwrap_or_else(|| "Component".into());
+    let is_custom = |d: &Decorator| is_custom_decorator(d, &remove_decorators, &component_decorator);
+    let mut uses_decorate = false;
 
     // `updateStencilCoreImports`
     let mut last_import_end = None;
@@ -441,7 +440,11 @@ fn generate_pass(
             ed.replace(
                 header_start,
                 class.body.span.start,
-                format!("{export}const {name} = class{extends} "),
+                format!(
+                    "{export}{} {name} = class{extends} ",
+                    // A class decorator may replace the class.
+                    if class.decorators.iter().any(|d| is_custom(d)) { "let" } else { "const" }
+                ),
             );
             ed.insert(class.body.span.end, ";");
         }
@@ -449,8 +452,6 @@ fn generate_pass(
         let mut element_replaced = false;
         // `useDefineForClassFields: false`: instance field initializers, to run in the constructor.
         let mut field_assignments: Vec<String> = Vec::new();
-        // `@Signal()` fields, applied after the class as a legacy property decorator would be.
-        let mut signal_calls: Vec<String> = Vec::new();
         let mut ctor: Option<&MethodDefinition> = None;
         let mut connected: Option<&MethodDefinition> = None;
         for el in &class.body.body {
@@ -466,31 +467,27 @@ fn generate_pass(
                 }
                 _ => continue,
             };
-            // `@Signal()` (experimental): the field becomes a constructor assignment whatever
-            // `useDefineForClassFields` says (a class field would shadow the accessor the
-            // decorator defines on the prototype), and the decorator is called after the class.
-            if let (ClassElement::PropertyDefinition(p), Some(sig), Some(field)) =
-                (el, signal_decorator.as_deref(), key_name.as_deref())
-            {
-                let sig_decorators: Vec<&Decorator> = p
-                    .decorators
-                    .iter()
-                    .filter(|d| decorator_name(d) == Some(sig))
-                    .collect();
-                if !sig_decorators.is_empty() && !p.r#static && !p.computed {
-                    for d in sig_decorators {
-                        signal_calls.push(format!(
-                            "{}({name}.prototype, {});",
-                            text(d.expression.span()),
-                            json(field)
-                        ));
+            // A decorator of its own on an instance field: the field becomes a constructor
+            // assignment whatever `useDefineForClassFields` says (a class field would shadow an
+            // accessor the decorator defines on the prototype), and the decorator is called after
+            // the class (below).
+            if let ClassElement::PropertyDefinition(p) = el {
+                let any_custom = decorators.iter().any(|d| is_custom(d));
+                if any_custom && !p.r#static && !p.declare {
+                    let all_custom = decorators.iter().all(|d| is_custom(d));
+                    if all_custom {
+                        if let Some(target) = decorated_key(&p.key, p.computed, source) {
+                            ed.remove(p.span.start, p.span.end);
+                            if let Some(value) = &p.value {
+                                field_assignments
+                                    .push(format!("this[{target}] = {};", text(value.span())));
+                            }
+                            continue;
+                        }
                     }
-                    ed.remove(p.span.start, p.span.end);
-                    if let Some(value) = &p.value {
-                        field_assignments
-                            .push(format!("this[{}] = {};", json(field), text(value.span())));
+                    for d in decorators.iter().filter(|d| is_custom(d)) {
+                        ed.remove(d.span.start, d.span.end);
                     }
-                    continue;
                 }
             }
             for d in decorators.iter().filter(|d| {
@@ -556,8 +553,14 @@ fn generate_pass(
             }
         }
 
-        if !signal_calls.is_empty() {
-            ed.insert(stmt_span.end, format!("\n{}", signal_calls.join("\n")));
+        // Decorators that are not Stencil's own, after the class and before anything registers
+        // it: members first, then the class's (`docs/decorators.md`).
+        let mut custom_calls = custom_member_calls(class, source, &mut ed, name, &is_custom);
+        let class_call = custom_class_call(class, source, name, &is_custom);
+        custom_calls.extend(class_call.clone());
+        if !custom_calls.is_empty() {
+            uses_decorate = true;
+            ed.insert(stmt_span.end, format!("\n{}", custom_calls.join("\n")));
         }
 
         // `updateLazyComponentConstructor`
@@ -889,6 +892,9 @@ fn generate_pass(
             format!("\n{}\n", style_imports.join("\n")),
         );
     }
+    if uses_decorate {
+        define_calls.insert(0, DECORATE_HELPER.to_owned());
+    }
     if !define_calls.is_empty() {
         ed.insert(
             source.len() as u32,
@@ -934,24 +940,127 @@ pub(crate) fn has_decorator(decorators: &[Decorator], name: &str) -> bool {
     decorators.iter().any(|d| decorator_name(d) == Some(name))
 }
 
-/// The local name `Signal` is imported as from [`SIGNALS_MODULE`], if it is.
-pub(crate) fn signal_decorator_local(program: &Program) -> Option<String> {
-    program.body.iter().find_map(|stmt| {
-        let Statement::ImportDeclaration(imp) = stmt else {
-            return None;
-        };
-        if imp.source.value.as_str() != SIGNALS_MODULE || imp.import_kind.is_type() {
-            return None;
-        }
-        imp.specifiers.iter().flatten().find_map(|s| match s {
-            ImportDeclarationSpecifier::ImportSpecifier(s)
-                if s.imported.name() == "Signal" && !s.import_kind.is_type() =>
-            {
-                Some(s.local.name.to_string())
+/// `__decorate` as TypeScript's `experimentalDecorators` emit has it (decorators run last to
+/// first; a returned value replaces the descriptor, or the class), emitted once per module that
+/// has a decorator of its own, so output without one is unchanged.
+pub(crate) const DECORATE_HELPER: &str = "function __rs_decorate(decorators, target, key, desc) { var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d; for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r; return c > 3 && r && Object.defineProperty(target, key, r), r; }";
+
+/// A decorator that is not Stencil's own (`MEMBER_DECORATORS_TO_REMOVE`, `Component`): it stays
+/// in the output, applied as TypeScript's legacy decorators are. `stencil` holds the local names.
+pub(crate) fn is_custom_decorator(d: &Decorator, stencil: &[String], component: &str) -> bool {
+    decorator_name(d).is_none_or(|n| n != component && !stencil.iter().any(|s| s == n))
+}
+
+/// The expression naming a member in a decorator call: its name as a string, or a computed key as written.
+pub(crate) fn decorated_key(
+    key: &oxc::ast::ast::PropertyKey,
+    computed: bool,
+    source: &str,
+) -> Option<String> {
+    if computed {
+        return Some(key.span().source_text(source).to_owned());
+    }
+    property_key_name(key).map(|n| json(&n))
+}
+
+/// `__rs_decorate([A(), B()], Cls.prototype, "x", void 0);` for each member with decorators of
+/// its own, in member order (`null` instead of `void 0` for methods and accessors, which makes
+/// the helper start from the property descriptor). Static members take the constructor. The
+/// decorators of methods, accessors and static fields are removed from the source; an instance
+/// field is the caller's, which turns it into a constructor assignment.
+pub(crate) fn custom_member_calls(
+    class: &Class,
+    source: &str,
+    ed: &mut Edits,
+    cls: &str,
+    is_custom: &dyn Fn(&Decorator) -> bool,
+) -> Vec<String> {
+    let mut calls = Vec::new();
+    let mut seen: Vec<(String, bool)> = Vec::new();
+    for el in &class.body.body {
+        let (decorators, is_static, key, computed, method, declare) = match el {
+            ClassElement::PropertyDefinition(p) => {
+                (&p.decorators, p.r#static, &p.key, p.computed, false, p.declare)
             }
-            _ => None,
-        })
-    })
+            ClassElement::MethodDefinition(m) if m.kind != MethodDefinitionKind::Constructor => {
+                (&m.decorators, m.r#static, &m.key, m.computed, true, false)
+            }
+            _ => continue,
+        };
+        if declare || !decorators.iter().any(|d| is_custom(d)) {
+            continue;
+        }
+        let Some(key_text) = decorated_key(key, computed, source) else {
+            continue;
+        };
+        if method || is_static {
+            for d in decorators.iter().filter(|d| is_custom(d)) {
+                ed.remove(d.span.start, d.span.end);
+            }
+        }
+        // A getter and its setter are one property: its decorators, from either, apply once.
+        if seen.contains(&(key_text.clone(), is_static)) {
+            continue;
+        }
+        seen.push((key_text.clone(), is_static));
+        let mut exprs: Vec<&str> = Vec::new();
+        for other in &class.body.body {
+            let (decs, st, k, c) = match other {
+                ClassElement::PropertyDefinition(p) if !method => {
+                    (&p.decorators, p.r#static, &p.key, p.computed)
+                }
+                ClassElement::MethodDefinition(m)
+                    if method && m.kind != MethodDefinitionKind::Constructor =>
+                {
+                    if m.r#static != is_static
+                        || decorated_key(&m.key, m.computed, source).as_deref() != Some(&key_text)
+                    {
+                        continue;
+                    }
+                    (&m.decorators, m.r#static, &m.key, m.computed)
+                }
+                _ => continue,
+            };
+            if st != is_static || decorated_key(k, c, source).as_deref() != Some(&key_text) {
+                continue;
+            }
+            exprs.extend(
+                decs.iter()
+                    .filter(|d| is_custom(d))
+                    .map(|d| d.expression.span().source_text(source)),
+            );
+            if !method {
+                break;
+            }
+        }
+        let target = if is_static {
+            cls.to_owned()
+        } else {
+            format!("{cls}.prototype")
+        };
+        calls.push(format!(
+            "__rs_decorate([{}], {target}, {key_text}, {});",
+            exprs.join(", "),
+            if method { "null" } else { "void 0" }
+        ));
+    }
+    calls
+}
+
+/// `Cls = __rs_decorate([A(), B()], Cls);` for the class decorators that are not `@Component`.
+pub(crate) fn custom_class_call(
+    class: &Class,
+    source: &str,
+    cls: &str,
+    is_custom: &dyn Fn(&Decorator) -> bool,
+) -> Option<String> {
+    let exprs: Vec<&str> = class
+        .decorators
+        .iter()
+        .filter(|d| is_custom(d))
+        .map(|d| d.expression.span().source_text(source))
+        .collect();
+    (!exprs.is_empty()).then(|| format!("{cls} = __rs_decorate([{}], {cls});", exprs.join(", ")))
 }
 
 pub(crate) fn decorator_name<'a>(d: &'a Decorator) -> Option<&'a str> {

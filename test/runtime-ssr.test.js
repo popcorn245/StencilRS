@@ -217,7 +217,7 @@ async function servePage(browser, html) {
     return route.fulfill({ contentType: 'text/javascript', body: files[path] ?? '' });
   });
   await page.goto('http://rs.test/');
-  const define = () => page.evaluate(() => Promise.all(['/ssr-badge.js', '/ssr-card.js', '/ssr-list.js', '/ssr-shop.js', '/ssr-live.js'].map((f) => import(f))));
+  const define = () => page.evaluate(() => Promise.all(['/ssr-badge.js', '/ssr-card.js', '/ssr-list.js', '/ssr-shop.js', '/ssr-live.js', '/ssr-deco.js'].map((f) => import(f))));
   const tick = () => page.evaluate(() => new Promise((r) => setTimeout(r, 20)));
   return { page, errors, define, tick };
 }
@@ -338,6 +338,56 @@ test('a signal passed to the template follows it: server value, then bound on lo
     // Removed from the page, it lets go of the signal.
     await page.evaluate(() => document.querySelector('ssr-live').remove());
     assert.equal((await page.evaluate(() => globalThis.__ssrLive.watchers)), 0);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('server: a third-party field, method and accessor decorator run on the server', async () => {
+  globalThis.__decoLog.length = 0;
+  const html = strip(await render('<ssr-deco></ssr-deco>', { resumable: false }));
+  assert.match(html, /<p[^>]*>init\|HI INIT!\|4<\/p>/);
+  // the initializers went through the decorator's setter, before connectedCallback
+  assert.deepEqual(globalThis.__decoLog.slice(0, 3), ['set label=init', 'set n=2', 'connected']);
+});
+
+test('client: a server-rendered element upgrades with its decorated accessors in place', chromiumOnly, async () => {
+  const browser = await chromium.launch();
+  try {
+    const { page, errors, define, tick } = await servePage(browser, await render('<ssr-deco></ssr-deco>', { resumable: false }));
+    // not upgraded yet: no accessor, no own property
+    assert.equal(await page.evaluate(() => document.querySelector('ssr-deco').label), undefined);
+    await define();
+    await tick();
+    assert.deepEqual(
+      await page.evaluate(() => {
+        const el = document.querySelector('ssr-deco');
+        const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'label');
+        return {
+          own: Object.hasOwn(el, 'label') || Object.hasOwn(el, 'n'),
+          accessor: typeof d.get === 'function' && typeof d.set === 'function',
+          label: el.label,
+          hello: el.hello(),
+          twin: el.twin,
+          text: el.textContent,
+          log: globalThis.__decoLog,
+        };
+      }),
+      {
+        own: false,
+        accessor: true,
+        label: 'init',
+        hello: 'HI INIT!',
+        twin: 4,
+        text: 'init|HI INIT!|4',
+        // the initializers reached the setter in the constructor, before connectedCallback
+        log: ['set label=init', 'set n=2', 'connected'],
+      },
+    );
+    // writing through the accessor is the decorator's, the component renders what it reads
+    await page.evaluate(() => (document.querySelector('ssr-deco').n = 5));
+    assert.equal(await page.evaluate(() => document.querySelector('ssr-deco').twin), 10);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();
