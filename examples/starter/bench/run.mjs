@@ -140,13 +140,46 @@ async function cells(page) {
   });
 }
 
+// stencilrs only (it renders on a microtask, so the work can be timed without waiting for a frame):
+// the number 1,000 components show changes, by a prop on each (each renders) or by one signal
+// passed to their templates (none renders). Script time until the DOM holds the new number.
+async function live(page, liveUrl) {
+  return page.evaluate(async (liveUrl) => {
+    await import(liveUrl);
+    const host = document.getElementById('cells');
+    const fill = async (tag) => {
+      host.innerHTML = '';
+      for (let i = 0; i < 1000; i++) host.appendChild(Object.assign(document.createElement(tag), { label: `cell ${i}` }));
+      await Promise.all([...host.children].map((c) => c.componentOnReady()));
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r)));
+    };
+    const shown = () => host.lastElementChild.shadowRoot.querySelector('b').textContent;
+    await fill('bench-cell');
+    let t = performance.now();
+    for (const c of host.children) c.value = 7;
+    await new Promise((r) => queueMicrotask(r));
+    const prop = performance.now() - t;
+    if (shown() !== '7') throw new Error(`cells did not update (${shown()})`);
+    await fill('bench-live-cell');
+    const next = String(window.benchTick.value + 1);
+    t = performance.now();
+    window.benchTick.value++;
+    const signal = performance.now() - t;
+    if (shown() !== next) throw new Error(`live cells did not update (${shown()})`);
+    host.innerHTML = '';
+    return { prop, signal };
+  }, liveUrl);
+}
+
 const browser = await chromium.launch(process.env.CHROME ? { executablePath: process.env.CHROME } : { channel: 'chrome' });
 const results = {};
 const runtimes = ['stencil', 'stencilrs', ...(existsSync(join(here, 'dist-qwik')) ? ['qwik'] : [])];
 for (const runtime of runtimes) {
   const dir = join(here, `dist-${runtime}`);
   const qwik = runtime === 'qwik';
-  const js = readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.js'));
+  const all = readdirSync(join(dir, 'assets')).filter((f) => f.endsWith('.js'));
+  const liveJs = all.find((f) => f.startsWith('live-'));
+  const js = all.filter((f) => f !== liveJs);
   const bytes = js.reduce((n, f) => n + readFileSync(join(dir, 'assets', f)).length, 0);
   const gz = js.reduce((n, f) => n + gzipSync(readFileSync(join(dir, 'assets', f))).length, 0);
   const server = await serve(dir);
@@ -168,6 +201,14 @@ for (const runtime of runtimes) {
   }
   r.cases['1,000 components: create'] = { total: median(c) };
   r.cases['1,000 components: change a prop on each'] = { total: median(u) };
+  if (runtime === 'stencilrs') {
+    const a = [], b = [];
+    for (let i = 0; i < Math.max(5, RUNS >> 1) + 1; i++) {
+      const m = await live(page, `/assets/${liveJs}`);
+      if (i) { a.push(m.prop); b.push(m.signal); }
+    }
+    r.live = { prop: median(a), signal: median(b) };
+  }
   results[runtime] = r;
   await page.close();
   server.close();
@@ -184,3 +225,5 @@ for (const name of Object.keys(results.stencil.cases)) {
 }
 const size = (r) => `${r.bytes} B (${r.gz} B gzip)`;
 console.log(`\nJS: Stencil ${size(results.stencil)}, stencilrs ${size(results.stencilrs)}${q ? `, Qwik ${size(q)} (every chunk, though Qwik loads them lazily)` : ''}`);
+const l = results.stencilrs.live;
+console.log(`\nstencilrs, 1,000 components show a new number (script ms): a prop on each ${l.prop.toFixed(2)}, one signal in their templates ${l.signal.toFixed(2)}`);

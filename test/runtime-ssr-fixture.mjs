@@ -54,6 +54,23 @@ export class SsrShop {
     </div>;
   }
 }`,
+  // A signal of Stencil 5's shape (`peek`, `subscribe`), passed to the template as it is.
+  'ssr-live': `import { Component, h } from '@stencil/core';
+const live = (globalThis.__ssrLive ||= (() => {
+  let v = 'on';
+  const subs = new Set();
+  return {
+    peek: () => v,
+    get value() { return v; },
+    set value(n) { v = n; for (const f of subs) f(v); },
+    subscribe(f) { subs.add(f); f(v); return () => subs.delete(f); },
+    get watchers() { return subs.size; },
+  };
+})());
+@Component({ tag: 'ssr-live', encapsulation: { type: 'scoped' } })
+export class SsrLive {
+  render() { return <p class={live}>{live}</p>; }
+}`,
 };
 
 /** The fixtures compiled, with the runtime import replaced by `runtime` (a URL or path). */

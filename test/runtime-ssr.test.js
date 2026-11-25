@@ -217,7 +217,7 @@ async function servePage(browser, html) {
     return route.fulfill({ contentType: 'text/javascript', body: files[path] ?? '' });
   });
   await page.goto('http://rs.test/');
-  const define = () => page.evaluate(() => Promise.all(['/ssr-badge.js', '/ssr-card.js', '/ssr-list.js', '/ssr-shop.js'].map((f) => import(f))));
+  const define = () => page.evaluate(() => Promise.all(['/ssr-badge.js', '/ssr-card.js', '/ssr-list.js', '/ssr-shop.js', '/ssr-live.js'].map((f) => import(f))));
   const tick = () => page.evaluate(() => new Promise((r) => setTimeout(r, 20)));
   return { page, errors, define, tick };
 }
@@ -310,6 +310,34 @@ test('dev: the hot module warns about a mismatch and swaps a redefined component
     await page.click('ssr-card button');
     await tick();
     assert.equal(await page.evaluate(() => document.querySelector('ssr-badge').shadowRoot.querySelector('em').textContent), 'new 1');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('a signal passed to the template follows it: server value, then bound on load without a render', chromiumOnly, async () => {
+  const html = await render('<ssr-live></ssr-live>');
+  // Bound parts must be bound on load, so the component doesn't wait (`s-rh`); nothing watches on the server.
+  assert.match(html, /<ssr-live class="[^"]*" s-rs="1" s-rh><p class="on" r:n="[\d,]+"><!--\^t\d+-->on<!--\^\d+--><\/p>/);
+  assert.equal(globalThis.__ssrLive.watchers, 0);
+  const browser = await chromium.launch();
+  try {
+    const { page, errors, define, tick } = await servePage(browser, html);
+    await page.evaluate(() => (window.before = document.querySelector('ssr-live p')));
+    await define();
+    await tick();
+    const state = () =>
+      page.evaluate(() => {
+        const p = document.querySelector('ssr-live p');
+        return { text: p.textContent, cls: p.className, same: p === window.before, watchers: globalThis.__ssrLive.watchers };
+      });
+    assert.deepEqual(await state(), { text: 'on', cls: 'on', same: true, watchers: 2 });
+    await page.evaluate(() => (globalThis.__ssrLive.value = 'off'));
+    assert.deepEqual(await state(), { text: 'off', cls: 'off', same: true, watchers: 2 });
+    // Removed from the page, it lets go of the signal.
+    await page.evaluate(() => document.querySelector('ssr-live').remove());
+    assert.equal((await page.evaluate(() => globalThis.__ssrLive.watchers)), 0);
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

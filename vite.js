@@ -57,6 +57,7 @@ const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
 const STORE_ID = '@stencil/store';
+const JSX_RUNTIME_IDS = new Set(['@stencil/core/jsx-runtime', '@stencil/core/jsx-dev-runtime']);
 // `@popcorn245/stencilrs/signals` (experimental). Its own imports resolve from the project root, so a
 // linked or nested copy of this package still shares the project's Stencil runtime and polyfill.
 const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
@@ -590,7 +591,10 @@ export function stencilrs(options = {}) {
       // `h`... from '@stencil/core' gets the runtime the compiled components use. `@stencil/core`'s own
       // entry is a separate, minimal client whose mode resolver, task queue and vdom state the components
       // never see (`stencil build` rewrites these imports the same way).
-      if (id === '@stencil/core' && importer && !specPage && !ssr && !importer.startsWith('\0')) {
+      // The automatic JSX runtime too: `@stencil/core/jsx-runtime` bundles its own client, whose `BUILD` flags
+      // (`vdomSignals`, set above for a file that imports `@stencil/core/signals`) the components' runtime never sees,
+      // so a signal in JSX would not be bound. The runtime exports `jsx`, `jsxs`, `jsxDEV` and `Fragment` itself.
+      if ((id === '@stencil/core' || (runtime !== 'stencilrs' && JSX_RUNTIME_IDS.has(id))) && importer && !specPage && !ssr && !importer.startsWith('\0')) {
         // The same answer for every file of a folder: asked once per folder and build.
         const dir = dirname(importer);
         if (!runtimeByDir.has(dir)) runtimeByDir.set(dir, this.resolve(RUNTIME_ID, importer, { skipSelf: true }));

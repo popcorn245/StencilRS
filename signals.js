@@ -25,6 +25,48 @@ export const signal = (value, options) => new TC39.State(value, options);
 /** A TC39 `Signal.Computed`, from the same polyfill copy the decorators use. */
 export const computed = (fn, options) => new TC39.Computed(fn, options);
 
+// The stencilrs runtime binds a signal passed as a part's value (`{count}`) to that part: see
+// "Signals bound to parts" in runtime.js. One watcher serves every binding; each is a Computed
+// that reads the signal and applies its value, re-run on a microtask after the signal changes.
+let flushing = false;
+const bindings = new TC39.subtle.Watcher(() => {
+  if (flushing) return;
+  flushing = true;
+  queueMicrotask(() => {
+    flushing = false;
+    for (const c of bindings.getPending()) {
+      try {
+        c.get();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    bindings.watch();
+  });
+});
+const parts = {
+  is: (v) => v instanceof TC39.State || v instanceof TC39.Computed,
+  /** Applies the signal's value now and after each change; returns how to stop. */
+  watch(signal, apply) {
+    // On the server a render happens once: nothing to watch, nothing to leak per request.
+    if (globalThis.__RS_SERVER__) {
+      apply(signal.get());
+      return () => {};
+    }
+    // Only the signal is tracked: what applying it reads (a child component rendering, say) is not.
+    const c = new TC39.Computed(() => {
+      const v = signal.get();
+      TC39.subtle.untrack(() => apply(v));
+    });
+    c.get();
+    bindings.watch(c);
+    return () => bindings.unwatch(c);
+  },
+};
+// Whichever of the two modules loads first, the runtime gets it.
+if (globalThis.__RS_BIND__) globalThis.__RS_BIND__(parts);
+else globalThis.__RS_SIGNALS__ = parts;
+
 /** instance → Map(field → Signal.State) */
 const states = new WeakMap();
 /** instance → Map(getter → Signal.Computed) */

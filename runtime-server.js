@@ -73,6 +73,8 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
           if (delegated.has(type)) types.add(type);
           else if (`on${type}` in window.HTMLElement.prototype) now = true;
         }
+        // A part bound to a signal must be bound on load, or it would miss the signal's changes.
+        if (host.__sb && host.__sb.size) now = true;
         if (entry === null) {
           now = true;
           stateless++;

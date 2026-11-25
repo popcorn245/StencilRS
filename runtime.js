@@ -93,8 +93,13 @@ const adopting = (host) => !!(host && host.__adoptMap);
 
 const instantiate = (tmpl, host) => {
   if (!tmpl.el) prepare(tmpl);
-  if (adopting(host)) return adoptInstance(tmpl, host);
+  if (adopting(host)) {
+    const inst = adoptInstance(tmpl, host);
+    inst.h = host;
+    return inst;
+  }
   const inst = cloneInstance(tmpl, host);
+  inst.h = host;
   if (SERVER && host) {
     for (const n of inst.top) if (n !== inst.start) claim(host, 0, () => n);
     for (const p of inst.marked) claim(host, 0, () => p);
@@ -150,7 +155,73 @@ const cloneInstance = (tmpl, host) => {
 
 const update = (inst, values, offset = 0) => {
   const parts = inst.parts;
-  for (let i = 0; i < parts.length; i++) parts[i].set(values[i + offset]);
+  for (let i = 0; i < parts.length; i++) {
+    const v = values[i + offset];
+    if (bound || (v !== null && typeof v === 'object' && isSignal(v))) bind(parts[i], v, inst.h);
+    else parts[i].set(v);
+  }
+};
+
+// ---------------------------------------------------------------------------------------------
+// Signals bound to parts
+//
+// A part whose value is a signal itself (`{count}`, not `{count.value}`) follows it: the part is
+// set now and again whenever the signal changes, without its component rendering. Two kinds:
+//
+// - Stencil 5's own (`@stencil/core/signals`, Preact signals), which Stencil's vdom binds the
+//   same way: anything with `peek()` and `subscribe()`.
+// - TC39 signals, once `@popcorn245/stencilrs/signals` is loaded: it installs
+//   `{ is(v), watch(signal, apply) }` (it owns the polyfill; this file never imports it).
+//
+// A binding ends when its part is given another value or removed, and pauses while its component
+// is disconnected.
+
+let sig = globalThis.__RS_SIGNALS__ || null;
+globalThis.__RS_BIND__ = (s) => (sig = s);
+/** Whether any part was ever bound: until then, parts take their values without a look. */
+let bound = false;
+const subscribes = (v) => typeof v.peek === 'function' && typeof v.subscribe === 'function';
+const isSignal = (v) => subscribes(v) || (sig !== null && sig.is(v));
+const follow = (p) => {
+  const s = p.$s;
+  const apply = (v) => p.set(v);
+  if (!subscribes(s)) return sig.watch(s, apply);
+  // On the server a render happens once: nothing to watch, nothing to leak per request.
+  if (SERVER) return apply(s.peek()), null;
+  return s.subscribe(apply);
+};
+const bind = (p, v, host) => {
+  if (v !== null && typeof v === 'object' && isSignal(v)) {
+    if (p.$s === v) return;
+    if (p.$u) p.$u();
+    bound = true;
+    p.$s = v;
+    if (host) {
+      (host.__sb ||= new Set()).add(p);
+      // The client must bind it too: a list holding it can't be kept as the server left it.
+      if (SERVER) host.__live = (host.__live | 0) + 1;
+    }
+    p.$u = follow(p);
+  } else {
+    if (p.$s !== undefined) unbind(p, host);
+    p.set(v);
+  }
+};
+const unbind = (p, host) => {
+  if (p.$u) p.$u();
+  p.$u = p.$s = undefined;
+  if (host && host.__sb) host.__sb.delete(p);
+};
+/** Ends the bindings in what a node part holds (the part's own binding stays). */
+const unbindIn = (p, host) => {
+  if (p.inst) for (const q of p.inst.parts) unbindAll(q, p.inst.h);
+  else if (p.list) for (const e of p.list) unbindAll(e.part, host);
+  else if (p.hkids) unbindAll(p.hkids, host);
+};
+const unbindAll = (p, host) => {
+  if (p.$s !== undefined) unbind(p, host);
+  if (p instanceof NodePart) unbindIn(p, host);
+  else if (p instanceof SlotPart) unbindAll(p.fallback, host);
 };
 
 // Native removal: a host's patched removeChild must not see the runtime's own work (and
@@ -217,6 +288,7 @@ const entryNodes = (e, out) => {
   return out;
 };
 const removeEntry = (e) => {
+  if (bound) unbindAll(e.part, e.part.host);
   if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) drop(n);
   else removeRange(e.start, e.part.m);
 };
@@ -299,6 +371,7 @@ class NodePart {
   }
   clear() {
     if (this.defer) this.undefer();
+    if (bound) unbindIn(this, this.host);
     if (this.inst) {
       if (this.inst.start.__lp !== undefined) for (const n of instNodes(this.inst, [])) drop(n);
       else removeRange(this.inst.start, this.inst.end);
@@ -1127,10 +1200,19 @@ export class Base extends HTMLElement {
         this.__load();
       }
     } else {
+      // Bindings paused while it was away follow their signals again.
+      if (this.__sb) for (const p of this.__sb) if (!p.$u) p.$u = follow(p);
       this.__connected?.();
     }
   }
   disconnectedCallback() {
+    // Unwatched, a shared signal no longer holds this element.
+    if (this.__sb) {
+      for (const p of this.__sb) {
+        if (p.$u) p.$u();
+        p.$u = null;
+      }
+    }
     this.__disconnected?.();
   }
   async __load() {
@@ -1219,6 +1301,7 @@ export class Base extends HTMLElement {
       this.__render(true);
     } catch (e) {
       if (e !== MISMATCH) console.error(e);
+      if (this.__sb) for (const p of this.__sb) unbind(p, this);
       this.__root = this.__host = this.__hostT = null;
       if (!shadow) {
         for (const n of logical) n.__lp = undefined;
@@ -1264,7 +1347,7 @@ export class Base extends HTMLElement {
           this.__hostT = out.$t;
           this.__host = out.$t.host.map(([type, name]) => makePart(type, this, name, false, this));
         }
-        for (let i = 0; i < this.__host.length; i++) this.__host[i].set(out.v[i]);
+        for (let i = 0; i < this.__host.length; i++) bind(this.__host[i], out.v[i], this);
         if (this.__root.inst && this.__root.inst.tmpl === out.$t) {
           update(this.__root.inst, out.v, this.__host.length);
         } else {

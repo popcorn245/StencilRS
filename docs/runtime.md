@@ -35,7 +35,8 @@ inheritance and `Mixin()`, `<Host>`, the load, render and update lifecycle, `com
 outside shadow DOM (relocation, nested and late slotting, unslotted children kept hidden in the
 host as Stencil does), functional components and dynamic tags, `h()` called directly,
 child-before-parent load order, `Env`, `setMode`/`getMode`, asset paths, and HMR. Hot reload is its own module (`runtime-hot.js`), which the Vite plugin imports
-in dev only, so none of it ships. `@stencil/store` works too: `getRenderingRef()` returns the
+in dev only, so none of it ships. A signal passed to a template as it is (`{count}`) is bound to
+that part and updates it without a render (`docs/signals.md`). `@stencil/store` works too: `getRenderingRef()` returns the
 component that is rendering, and the plugin keeps the store out of Vite's pre-bundle so its
 `@stencil/core` import resolves to this runtime.
 
@@ -131,7 +132,7 @@ gives an equal value (same templates, keys and values), the list stays as the se
 first different value adopts the server's nodes in place, then updates them as usual.
 
 This is Qwik's resumability, adapted: Qwik also skips running components on load and wakes code on
-events. Unlike Qwik, the component's code is already loaded (8.9 KB gzip for the whole runtime),
+events. Unlike Qwik, the component's code is already loaded (9.5 KB gzip for the whole runtime),
 so waking it costs a render, not a network round trip.
 
 ## Page-load benchmark against Qwik
@@ -210,8 +211,8 @@ Bundle JS:
 
 | Runtime | Raw | Gzip |
 |---|---:|---:|
-| Stencil | 81.7 KB | 27.6 KB |
-| stencilrs (hydration in place and resuming included) | 24.9 KB | 8.9 KB |
+| Stencil | 76.0 KB | 26.2 KB |
+| stencilrs (hydration in place, resuming and signal bindings included) | 25.4 KB | 9.5 KB |
 | Qwik | 56.8 KB | 24.6 KB |
 
 Stencil's figure is its standalone runtime as the Vite plugin builds it, with every feature flag on.

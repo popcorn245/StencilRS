@@ -36,6 +36,38 @@ export class MyCounter {
 | Disconnect | The watcher stops watching, so a long-lived store doesn't keep a removed element alive. On reconnect it watches again and re-renders once. |
 | SSR | `render()` runs plainly on the server (`Build.isBrowser` is false), with no watcher. A store defined at module level is shared across requests, so keep per-request data out of it. |
 
+## A signal passed to the template
+
+On the stencilrs runtime (`runtime: 'stencilrs'`), a signal written into JSX as it is follows
+that spot. `{count}` instead of `{count.get()}`:
+
+```tsx
+import { signal, computed } from '@popcorn245/stencilrs/signals';
+
+export const count = signal(0);
+const tone = computed(() => (count.get() % 2 ? 'odd' : 'even'));
+
+// in a component's render():
+<button class={tone} onClick={() => count.set(count.get() + 1)}>{count}</button>
+```
+
+The text node and the `class` are set when the signal changes. `render()` does not run, so
+`componentWillRender`/`componentDidRender` don't fire for it. The component needs no `@Signal()`
+field for this: it reads nothing in `render()`.
+
+| | Behaviour |
+|---|---|
+| Where | A child (`{count}`) and any attribute, property, `class` or `style` value, in a component's JSX and in the templates of functional components and helpers. Not in the props of `h()` called directly. |
+| Which signals | TC39 signals from this module, and Stencil 5's own (`@stencil/core/signals`): anything with `peek()` and `subscribe()`. |
+| Batching | TC39 signals apply on a microtask, so several writes make one DOM update. Stencil's apply at once, or at the end of their `batch()`. |
+| Lifetime | A binding ends when the part gets another value or its nodes are removed. It pauses while the component is disconnected, and catches up on reconnect. |
+| SSR | The server writes the current value and watches nothing. On the client the component hydrates on load (`s-rh`), keeping the server's nodes, so the binding exists from the start. |
+| Stencil's runtime | Stencil 5 binds its own signals in JSX the same way (`vdomSignals`), so `{count}` with `@stencil/core/signals` is the same source on both runtimes. A TC39 signal in JSX is not bound there. |
+
+Numbers (`examples/starter/bench`, stencilrs, script time): 1,000 components show a new number in
+3.3 ms when a prop is set on each (each renders), and in 0.8 ms when one signal in their templates
+changes (none renders). The binding code adds about 0.4 KB gzip to the runtime.
+
 ## How it compiles
 
 `@Signal()` is recognised only when imported from `@popcorn245/stencilrs/signals`. stencilrs writes
@@ -48,6 +80,7 @@ unchanged).
 
 ## Limits found in the spike
 
+- Only a component with a `@Signal()` or `@Computed()` member has its `render()` tracked. A component with neither that reads a store (`total.get()`) in `render()` does not re-render when the store changes. Pass the signal itself (`{total}`, above) or give the component a decorated member.
 - Don't write a signal inside `render()`. The polyfill (0.2.3) allows it, but the write happens inside the tracked render, so it is a render loop waiting to happen. Stencil warns about the same thing for `@State`.
 - A `@Signal()` field is not a Stencil member: it has no attribute, no `@Watch`, no `componentShouldUpdate` entry, and it isn't in `components.d.ts`.
 - A `@Signal()` write that `render()` never read does not re-render. That's finer-grained than `@State`, and it's intended.
