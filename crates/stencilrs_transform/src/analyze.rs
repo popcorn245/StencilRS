@@ -131,6 +131,15 @@ impl Ctx<'_> {
             .unwrap_or_else(|| decorator.to_owned())
     }
 
+    /// A decorator that is not Stencil's own (see `decorators.md`).
+    fn is_custom_decorator(&self, d: &Decorator) -> bool {
+        let stencil: Vec<String> = crate::codegen::MEMBER_DECORATORS_TO_REMOVE
+            .iter()
+            .map(|n| self.name(n))
+            .collect();
+        crate::codegen::is_custom_decorator(d, &stencil, &self.name("Component"))
+    }
+
     fn text(&self, span: Span) -> &str {
         span.source_text(self.source)
     }
@@ -701,6 +710,24 @@ fn class_members(ctx: &mut Ctx, class: &Class, locals: &Locals) -> Members {
                 let resolved = ctx
                     .member_name(&p.key, p.computed, true, locals)
                     .unwrap_or_else(|| name.clone());
+
+                // A decorator of its own would define an accessor over the one Stencil does.
+                if !decorator_calls(&p.decorators, &prop_n).is_empty()
+                    || !decorator_calls(&p.decorators, &state_n).is_empty()
+                {
+                    for d in &p.decorators {
+                        if ctx.is_custom_decorator(d) {
+                            ctx.push(
+                                Level::Error,
+                                format!(
+                                    "The decorator {} on the @Prop() or @State() \"{resolved}\" is not supported: it would define an accessor that conflicts with the one Stencil defines for the member.",
+                                    ctx.text(d.expression.span())
+                                ),
+                                d.span,
+                            );
+                        }
+                    }
+                }
 
                 if let Some(call) = decorator_calls(&p.decorators, &prop_n).first() {
                     let name = resolved.clone();

@@ -9,8 +9,8 @@ use oxc::ast_visit::Visit;
 use oxc::span::{GetSpan, Span};
 
 use crate::codegen::{
-    CodegenOptions2, Generated, MEMBER_DECORATORS_TO_REMOVE, decorator_name, has_decorator, json,
-    strip_types_and_jsx, style_import_path, styles_of,
+    CodegenOptions2, DECORATE_HELPER, Generated, MEMBER_DECORATORS_TO_REMOVE, custom_class_call,
+    custom_member_calls, decorator_name, has_decorator, is_custom_decorator, json, strip_types_and_jsx, style_import_path, styles_of,
 };
 use crate::edits::Edits;
 use crate::eval::property_key_name;
@@ -104,7 +104,8 @@ pub fn generate(
     let dec = |n: &str| aliases.get(n).cloned().unwrap_or_else(|| n.to_owned());
     let component_dec = dec("Component");
     let stencil_decs: Vec<String> = MEMBER_DECORATORS_TO_REMOVE.iter().map(|d| dec(d)).collect();
-    let signal_dec = crate::codegen::signal_decorator_local(program);
+    let is_custom = |d: &Decorator| is_custom_decorator(d, &stencil_decs, &component_dec);
+    let mut uses_decorate = false;
 
     let mut jsx = JsxCompiler {
         source,
@@ -178,7 +179,6 @@ pub fn generate(
             }
         }
         let mut ctor = None;
-        let mut field_decorator_calls = Vec::new();
         for el in &class.body.body {
             match el {
                 ClassElement::PropertyDefinition(p) if !p.r#static => {
@@ -201,17 +201,6 @@ pub fn generate(
                         }
                         continue;
                     }
-                    // Other decorators (e.g. `@Signal()`): applied after the class, as legacy
-                    // decorators are with `useDefineForClassFields: false`.
-                    for d in &p.decorators {
-                        if decorator_name(d).is_some_and(|n| stencil_decs.iter().any(|s| s == n)) {
-                            continue;
-                        }
-                        if let (Some(cls), Some(k)) = (&name, &key) {
-                            let _ = &signal_dec;
-                            field_decorator_calls.push(format!("{}({cls}.prototype, {});", text(d.expression.span()), json(k)));
-                        }
-                    }
                     // All instance fields become constructor assignments, in source order, so
                     // none shadows a member accessor and each initializer sees the earlier ones.
                     if let Some(value) = &p.value {
@@ -225,9 +214,7 @@ pub fn generate(
                     }
                 }
                 ClassElement::MethodDefinition(m) => {
-                    for d in m.decorators.iter().filter(|d| {
-                        decorator_name(d).is_some_and(|n| stencil_decs.iter().any(|s| s == n))
-                    }) {
+                    for d in m.decorators.iter().filter(|d| !is_custom(d)) {
                         ed.remove(d.span.start, d.span.end);
                     }
                     if m.kind == MethodDefinitionKind::Constructor {
@@ -253,8 +240,15 @@ pub fn generate(
                 format!(" constructor(...__a) {{ super(...__a); {} }} ", assignments.join(" ")),
             ),
         }
-        if !field_decorator_calls.is_empty() {
-            after_classes.push((stmt_end, field_decorator_calls.join("\n")));
+        // Decorators that are not Stencil's own: members, then the class's, after the class and
+        // before `__rs_define` registers it (`docs/decorators.md`).
+        if let Some(cls) = &name {
+            let mut calls = custom_member_calls(class, source, &mut ed, cls, &is_custom);
+            calls.extend(custom_class_call(class, source, cls, &is_custom));
+            if !calls.is_empty() {
+                uses_decorate = true;
+                after_classes.push((stmt_end, calls.join("\n")));
+            }
         }
 
         let (Some(cmp), Some(name)) = (cmp, name) else { continue };
@@ -365,6 +359,9 @@ pub fn generate(
     ed.insert(last_import_end, header);
     for (at, calls) in after_classes {
         ed.insert(at, format!("\n{calls}\n"));
+    }
+    if uses_decorate {
+        defines.insert(0, DECORATE_HELPER.to_owned());
     }
     ed.insert(source.len() as u32, format!("\n{}\n", defines.join("\n")));
 

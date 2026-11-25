@@ -70,13 +70,13 @@ changes (none renders). The binding code adds about 0.4 KB gzip to the runtime.
 
 ## How it compiles
 
-`@Signal()` is recognised only when imported from `@popcorn245/stencilrs/signals`. stencilrs writes
-`@Signal() count = 0` as `this["count"] = 0` in the constructor (whatever `useDefineForClassFields`
-says, because a class field would shadow the accessor) and `Signal()(Cmp.prototype, "count")` after
-the class. That is what TypeScript's legacy decorators emit, so Stencil's own compiler (the fallback)
-should produce equivalent code (not yet tested). `@Computed()` is an ordinary method decorator and needs nothing from
-the compiler. Components that don't import the module compile exactly as before (parity is
-unchanged).
+`@Signal()` is an ordinary decorator that is not Stencil's own, so it is lowered like any other
+(see [decorators.md](decorators.md) for the rules and the order): `@Signal() count = 0` becomes
+`this["count"] = 0` in the constructor (whatever `useDefineForClassFields` says, because a class
+field would shadow the accessor) and `__rs_decorate([Signal()], Cmp.prototype, "count", void 0)`
+after the class, which is what TypeScript's legacy decorators emit. `@Computed()` goes through the
+same path as a getter decorator. Nothing about the import path is special. Components with no
+decorator of their own compile exactly as before (parity is unchanged).
 
 ## Limits found in the spike
 

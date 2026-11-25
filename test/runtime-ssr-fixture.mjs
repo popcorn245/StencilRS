@@ -71,6 +71,28 @@ const live = (globalThis.__ssrLive ||= (() => {
 export class SsrLive {
   render() { return <p class={live}>{live}</p>; }
 }`,
+  // Decorators of a third party (legacy, as TypeScript's `experimentalDecorators`): a field, a method and an accessor.
+  'ssr-deco': `import { Component, h } from '@stencil/core';
+const log = (globalThis.__decoLog ||= []);
+const boxes = new WeakMap();
+// A field decorator: an accessor on the prototype, so the initializer has to go through the setter.
+const boxed = (proto, key) => Object.defineProperty(proto, key, {
+  configurable: true, enumerable: true,
+  get() { return boxes.get(this)?.[key]; },
+  set(v) { log.push('set ' + key + '=' + v); (boxes.get(this) || boxes.set(this, {}).get(this))[key] = v; },
+});
+// A method decorator and an accessor decorator, each returning a replacement descriptor.
+const shout = (suffix) => (proto, key, d) => ({ ...d, value() { return d.value.call(this).toUpperCase() + suffix; } });
+const twice = (proto, key, d) => ({ ...d, get() { return d.get.call(this) * 2; } });
+@Component({ tag: 'ssr-deco', encapsulation: { type: 'scoped' } })
+export class SsrDeco {
+  @boxed label = 'init';
+  @boxed n = 2;
+  @shout('!') hello() { return 'hi ' + this.label; }
+  @twice get twin() { return this.n; }
+  connectedCallback() { log.push('connected'); }
+  render() { return <p>{this.label}|{this.hello()}|{this.twin}</p>; }
+}`,
 };
 
 /** The fixtures compiled, with the runtime import replaced by `runtime` (a URL or path). */
