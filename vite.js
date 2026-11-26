@@ -165,7 +165,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -188,7 +188,7 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -248,6 +248,60 @@ export function stencilrs(options = {}) {
   let checkTimer = null;
   let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
   let checkDev = false; // dev server or `vite build --watch`: report, never block
+  // `deferWatch`: true from `config` until the page has loaded (`deferWatchFor`); while true, `deferred` hides the root's files.
+  let deferring = false;
+  let deferRoot = '';
+  let watchedFromStart = new Set(); // the config file's dependencies and `publicDir`: watched at once, as Vite asks
+  let envDir = '';
+  let stopDeferring = () => {};
+  const posix = (p) => String(p).replaceAll('\\', '/');
+  const deferred = (path) => {
+    if (!deferring) return false;
+    const p = posix(path);
+    if (!p.startsWith(`${deferRoot}/`)) return false; // the root itself, and anything outside it, is not ours to hide
+    for (const w of watchedFromStart) if (p === w || p.startsWith(`${w}/`)) return false;
+    // `.env`, `.env.local`, `.env.<mode>`: directly in `envDir`, which may be the root
+    return !(p.startsWith(`${envDir}/.env`) && !p.slice(envDir.length + 1).includes('/'));
+  };
+  /**
+   * Ends the deferral once the page has loaded: no request in flight for `idle` ms (200), or `cap` ms (5000) after the server
+   * starts when no request comes (a health check, a user who has not opened the page, middleware mode behind another server).
+   * Then the root is added to the watcher again, without the hiding. A file saved meanwhile is not reported until its next
+   * save: the crawl has not seen it (`ignoreInitial`), and no event was due.
+   */
+  const deferWatchFor = (server) => {
+    if (!deferring) return;
+    const { idle = 200, cap = 5000 } = typeof deferWatch === 'object' ? deferWatch : {};
+    let inflight = 0;
+    let idleTimer;
+    const end = () => {
+      stopDeferring();
+      deferring = false;
+      server.watcher.add(server.config.root);
+    };
+    const capTimer = setTimeout(end, cap);
+    capTimer.unref();
+    stopDeferring = () => {
+      clearTimeout(capTimer);
+      clearTimeout(idleTimer);
+      stopDeferring = () => {};
+    };
+    server.middlewares.use((req, res, next) => {
+      if (!deferring) return next();
+      inflight++;
+      clearTimeout(idleTimer);
+      res.once('close', () => {
+        if (--inflight > 0 || !deferring) return;
+        idleTimer = setTimeout(end, idle);
+        idleTimer.unref();
+      });
+      next();
+    });
+    // Middleware mode has no `httpServer` to close: the server's own `close` stops the timers.
+    const close = server.close;
+    server.close = () => (stopDeferring(), close.call(server));
+  };
+
   const reportCheck = (r) => {
     if (!r || r.killed) return;
     if (r.ok) logger?.info(`[stencilrs] typecheck passed (${r.name})`, { timestamp: true });
@@ -349,8 +403,16 @@ export function stencilrs(options = {}) {
       // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
       // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
       // (the user turned the watcher off) is left alone.
-      if (env?.command === 'serve' && watchIgnore && watchIgnore.length && userConfig.server?.watch !== null) {
-        result.server = { watch: { ignored: [watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore)] } };
+      //
+      // The root's first crawl (chokidar: one `readdir` and `stat` per entry, 811 on the Ionic example) runs on the main
+      // thread while the page's first requests wait. Until those are served, `deferWatch` hides what is under the root from
+      // that crawl; `configureServer` then adds the root again. One function, so the user's `ignored` stays one entry
+      // next to ours.
+      const ignoreFolders = watchIgnore && watchIgnore.length ? watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore) : null;
+      deferring = env?.command === 'serve' && deferWatch !== false;
+      deferRoot = posix(resolve(userConfig.root ?? process.cwd())).replace(/\/+$/, '');
+      if (env?.command === 'serve' && (ignoreFolders || deferring) && userConfig.server?.watch !== null) {
+        result.server = { watch: { ignored: [(path) => !!ignoreFolders?.(path) || deferred(path)] } };
       }
       return result;
     },
@@ -361,6 +423,8 @@ export function stencilrs(options = {}) {
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
       root = config.root;
+      watchedFromStart = new Set([...(config.configFileDependencies ?? []), config.publicDir || ''].filter(Boolean).map(posix));
+      envDir = posix(config.envDir || root);
       project?.setRoot(root);
       isServe = config.command === 'serve';
       logger = config.logger;
@@ -376,8 +440,10 @@ export function stencilrs(options = {}) {
       // The Sass compiler process (sass-embedded) ends with the server.
       server.httpServer?.once('close', () => {
         stopCheck();
+        stopDeferring();
         void loadCss?.dispose();
       });
+      deferWatchFor(server);
       if (checker.enabled) {
         // After a change to a TypeScript file or a tsconfig: once edits settle, and a run still going is killed for the new one.
         const recheck = (file) => {

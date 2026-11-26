@@ -62,6 +62,24 @@ stencilrs({ watchIgnore: false }); // watch everything, as before
 stencilrs({ watchIgnore: ['www', 'dist', 'components'] }); // replace the list (folders under the root)
 ```
 
+## First crawl after the page (`deferWatch`)
+
+The watcher's first crawl of the project root (one `readdir` and `stat` per entry: 811 on the Ionic
+example) runs on Node's main thread while the first request is being served. In `serve`, the
+plugin hides the root's files from that crawl and adds the root again once the page has loaded:
+200 ms after the last in-flight request finished, or 5 s after the server starts if no request
+comes (middleware mode, a page nobody opened). On the Ionic example (Vite 8.4.0) the first module
+arrives about 130 ms earlier. The config file's dependencies, the `.env` files and `publicDir`
+are watched from the start, and `server.watch: null` is left alone.
+
+A file saved before the root is added back is not reported until its next save: the late crawl
+does not emit events for files that already exist. That window is the first page load.
+
+```ts
+stencilrs({ deferWatch: false }); // watch the whole root from the start, as before
+stencilrs({ deferWatch: { idle: 500, cap: 10_000 } }); // the two times, in ms
+```
+
 ## Component CSS options (`css`)
 
 `stencilrs({ css: { targets, minify, sass, cache } })`:
