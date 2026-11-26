@@ -1,3 +1,5 @@
+import type { RenderCache, RenderCacheOptions } from './ssr.js';
+
 export interface StencilRenderOptions {
   /** `'declarative-shadow-dom'` (the default) or `'scoped'`: how shadow components are serialized. */
   serializeShadowRoot?: 'declarative-shadow-dom' | 'scoped' | boolean | { default?: string; [tag: string]: unknown };
@@ -41,6 +43,13 @@ export interface StencilEngineOptions {
    * In-process and on every worker, with the engine's `renderOptions`; `ready` resolves after it. (`true` is a TypeError.)
    */
   warmup?: string[] | { views: string[]; times?: number };
+  /**
+   * Cache rendered pages in the main thread, before a worker is asked (a hit costs no round-trip). `true` is the defaults.
+   * The key is a hash of the final HTML (after the inner engine) and the merged render options; an identical request returns identical bytes.
+   * Only correct when the page is a pure function of those inputs. A result with an `error` diagnostic or a thrown error is never stored; concurrent identical misses share one render.
+   * One render opts out with the `stencilCache: false` local (`res.render('page', { stencilCache: false })`).
+   */
+  renderCache?: boolean | RenderCacheOptions;
   /** Milliseconds a pooled render may take (default 30000, 0 for no limit). Past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`. */
   renderTimeout?: number;
 }
@@ -49,6 +58,8 @@ export interface StencilExpressEngine {
   (path: string, options: object, callback: (err: Error | null, html?: string) => void): void;
   /** Resolves once the hydrate app is loaded and warmed up on the engine and every worker (at once without `warmup` or `workers`). Rejects if the app cannot load or a warm-up render fails; after a failed warm-up the engine still renders. */
   ready: Promise<void>;
+  /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
+  renderCache: RenderCache | null;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */
   close(): Promise<void>;
 }
