@@ -340,7 +340,7 @@ test('serve does not watch the folders `stencil build` writes into; merged with 
   const win = process.platform === 'win32';
   const root = win ? 'C:\\proj (1)' : '/proj (1)';
   const run = (options, command, userConfig = {}) => stencilrs(options)[0].config({ root, ...userConfig }, { command, mode: 'development' });
-  const [ignore] = run({}, 'serve').server.watch.ignored;
+  const [ignore] = run({ deferWatch: false }, 'serve').server.watch.ignored;
   const p = (rel) => (win ? `C:\\proj (1)\\${rel}` : `/proj (1)/${rel}`);
   for (const dir of ['www', 'dist', 'loader', 'hydrate', '.stencil']) {
     assert.equal(ignore(p(dir)), true, dir);
@@ -360,11 +360,11 @@ test('serve does not watch the folders `stencil build` writes into; merged with 
   }
 
   // Off, replaced, not for build, or a watcher the user turned off.
-  assert.equal(run({ watchIgnore: false }, 'serve').server, undefined);
-  assert.equal(run({ watchIgnore: [] }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: false, deferWatch: false }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: [], deferWatch: false }, 'serve').server, undefined);
   assert.equal(run({}, 'build').server, undefined);
   assert.equal(run({}, 'serve', { server: { watch: null } }).server, undefined);
-  const [custom] = run({ watchIgnore: ['components', './out/'] }, 'serve').server.watch.ignored;
+  const [custom] = run({ watchIgnore: ['components', './out/'], deferWatch: false }, 'serve').server.watch.ignored;
   assert.deepEqual([custom(p('components/x.js')), custom(p('out/x.js')), custom(p('www/x.js'))], [true, true, false]);
 });
 
