@@ -409,7 +409,8 @@ export function stencilrs(options = {}) {
       // that crawl; `configureServer` then adds the root again. One function, so the user's `ignored` stays one entry
       // next to ours.
       const ignoreFolders = watchIgnore && watchIgnore.length ? watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore) : null;
-      deferring = env?.command === 'serve' && deferWatch !== false;
+      // Vitest runs a dev server too, but never requests a page through it: its watcher would sit hidden until the cap.
+      deferring = env?.command === 'serve' && deferWatch !== false && !process.env.VITEST;
       deferRoot = posix(resolve(userConfig.root ?? process.cwd())).replace(/\/+$/, '');
       if (env?.command === 'serve' && (ignoreFolders || deferring) && userConfig.server?.watch !== null) {
         result.server = { watch: { ignored: [(path) => !!ignoreFolders?.(path) || deferred(path)] } };
