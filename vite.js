@@ -31,7 +31,7 @@
 // `extends Mixin(a, b)`) are read for their members, and the files they live in are served as
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
@@ -54,6 +54,7 @@ const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
 const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
+const DIR_PREFIX = 'stencilrs-dir:';
 const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
@@ -217,6 +218,30 @@ export function stencilrs(options = {}) {
   let foldFlags = !specPage;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
+  let cacheDir = '';
+  let devBase = '';
+  // In dev the client runtime is pre-bundled, so the transform below never sees it, and Vite would run `stripLiteral` over it twice for the one
+  // `new URL(".", import.meta.url)`: in the optimizer, and again in `vite:asset-import-meta-url` over the bundle it wrote. This plugin (before
+  // Vite's own in the optimizer) writes the directory as `new URL("stencilrs-dir:<path relative to deps/>", '' + import.meta.url)`; neither
+  // Vite pattern matches that, and `transform` turns the path into the URL Vite's dev plugin would write (`devUrlOfDir`) when the file is served.
+  // Vite also adds the directory to `safeModulePaths`: that set is read for an exact file path only, and nothing fetches the directory itself.
+  const runtimeBaseUrlOptimizerPlugin = () => ({
+    name: 'stencilrs:runtime-base-url',
+    transform: {
+      filter: { id: STENCIL_DIST_RE, code: STENCIL_BASE_URL },
+      handler(code, id) {
+        const dir = relative(join(cacheDir, 'deps'), dirname(id)).replaceAll('\\', '/');
+        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(${JSON.stringify(DIR_PREFIX + dir)}, '' + import.meta.url)`), map: null };
+      },
+    },
+  });
+  // `fileToDevUrl` of Vite: `/rel` inside the root, `/@fs/<abs>` outside it, behind the base.
+  const devUrlOfDir = (rel) => {
+    const abs = resolve(cacheDir, 'deps', rel).replaceAll('\\', '/');
+    const rootSlash = root.replaceAll('\\', '/').replace(/\/?$/, '/');
+    const moduleUrl = abs === rootSlash.slice(0, -1) ? '/' : abs.startsWith(rootSlash) ? '/' + abs.slice(rootSlash.length) : '/@fs/' + abs.replace(/^\/+/, '');
+    return devBase ? devBase.replace(/\/$/, '') + moduleUrl : moduleUrl;
+  };
   let tsconfigJsx = null;
   // A tsconfig with `useDefineForClassFields: false` (Stencil projects set it, so that a @Prop default is a
   // plain assignment) is honoured as Stencil does: stencilrs emits the initializers as constructor
@@ -395,7 +420,9 @@ export function stencilrs(options = {}) {
       // it would get `@stencil/core`'s own entry, which never renders the components; left as source, its import
       // resolves to the runtime they use (`resolveId`).
       if (env?.command === 'serve' && !ssr && !specPage) {
-        if (!userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID] };
+        if (!userConfig.optimizeDeps?.noDiscovery) {
+          result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID], rolldownOptions: { plugins: [runtimeBaseUrlOptimizerPlugin()] } };
+        }
         result.test = { server: { deps: { inline: [STORE_ID] } } };
       }
 
@@ -420,6 +447,8 @@ export function stencilrs(options = {}) {
 
     configResolved(config) {
       fallbackPlugin.remember('resolved', config);
+      cacheDir = config.cacheDir;
+      devBase = (config.server?.origin ?? '') + (config.decodedBase ?? config.base ?? '');
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
@@ -522,6 +551,9 @@ export function stencilrs(options = {}) {
     },
 
     async transform(code, id, transformOpts) {
+      if (isServe && code.includes(`"${DIR_PREFIX}`)) {
+        return { code: code.replace(/"stencilrs-dir:([^"]+)"/g, (_, rel) => JSON.stringify(devUrlOfDir(rel))), map: null };
+      }
       const file = id.split('?')[0].replaceAll('\\', '/');
       // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
       // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).

@@ -36,6 +36,7 @@
 //   --workers N           also measure each row through the stencilEngine worker pool (issue #140), as extra express rows
 //                         `<row>+workers` (N worker_threads, or 'auto'); the single-process rows are unchanged. Use
 //                         --connections of at least N: fewer connections than workers leaves workers idle
+//   --cache               also measure each row with the engine's renderCache on, as extra express rows `<row>+cache` (100% hit rate: an upper bound; issue #181)
 //   --connections N       autocannon connections (4)        --duration S  seconds per run (5)
 //   --out <file>          JSON path (../../site/data/benchmarks-ionic-ssr.json)
 //   --note "<text>"       free text stored in the JSON      --machine "<text>"  machine description
@@ -74,6 +75,7 @@ const COLD_RUNS = Number(opt('--cold-runs', 5));
 const EXPRESS = !flag('--no-express');
 const WORKERS = opt('--workers', null);
 if (WORKERS != null && WORKERS !== 'auto' && !(Number(WORKERS) >= 1)) throw new Error("--workers must be a number of at least 1, or 'auto'");
+const CACHE = flag('--cache');
 const EXPRESS_PAGE = opt('--express-page', 'list-50');
 const OUT = resolve(opt('--out', join(root, '../../site/data/benchmarks-ionic-ssr.json')));
 const pickList = (name, all) => {
@@ -116,9 +118,9 @@ const freePort = () =>
     });
   });
 
-const express = async (file, mode, workers) => {
+const express = async (file, mode, workers, cache) => {
   const port = await freePort();
-  const server = spawn(process.execPath, [join(root, 'ssr-bench', 'server.mjs'), file, EXPRESS_PAGE, mode, String(port), ...(workers ? [workers] : [])], { stdio: ['ignore', 'pipe', 'inherit'] });
+  const server = spawn(process.execPath, [join(root, 'ssr-bench', 'server.mjs'), file, EXPRESS_PAGE, mode, String(port), ...(workers || cache ? [workers || '0'] : []), ...(cache ? ['cache'] : [])], { stdio: ['ignore', 'pipe', 'inherit'] });
   try {
     await new Promise((ok, fail) => {
       server.stdout.on('data', (d) => String(d).includes('listening') && ok());
@@ -235,6 +237,14 @@ if (EXPRESS) {
       for (const mode of modes) {
         log(`express + autocannon: ${r.id}+workers (${WORKERS}), ${EXPRESS_PAGE}, ${mode} (${CONNECTIONS} connections, ${DURATION} s)`);
         throughput[`${r.id}+workers`][mode] = await express(r.file, mode, WORKERS);
+      }
+    }
+    if (CACHE) {
+      // renderCache on, every request but the first a hit: an upper bound, not what real traffic gets (issue #181)
+      throughput[`${r.id}+cache`] = {};
+      for (const mode of modes) {
+        log(`express + autocannon: ${r.id}+cache (100% hits), ${EXPRESS_PAGE}, ${mode} (${CONNECTIONS} connections, ${DURATION} s)`);
+        throughput[`${r.id}+cache`][mode] = await express(r.file, mode, null, true);
       }
     }
   }
