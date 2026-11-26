@@ -100,6 +100,15 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
 - **View cache.** Plain-HTML views are read once while Express's `view cache` is on (Express turns it on in production).
 - **`renderOptions`** apply to every render; the `stencil` local overrides them for one:
   `res.render('home', { user, stencil: { serializeShadowRoot: 'scoped' } })`.
+- **`renderCache`** (opt-in, `true` or `{ max, maxBytes, ttl }`) returns a stored page for an identical render: same final HTML after the inner
+  engine, same merged render options. A hit is byte-identical and, with `workers`, never reaches a worker. It is an LRU bounded by
+  `max` entries (default 500) and `maxBytes` (64 MiB; a declarative-shadow-DOM page is about 1 MB), with an optional `ttl` in ms. Renders
+  that throw or report an `error` diagnostic are never stored, and concurrent identical misses share one render.
+  **Use it only for pages that are a pure function of the HTML and options.** A clock, a random id or per-request state read while rendering
+  would be frozen into the stored page; a page the inner engine personalizes is a different key per user and only fills the cache.
+  `res.render('page', { stencilCache: false })` opts one render out; `engine.renderCache.stats()` and `.clear()` inspect and flush it.
+  Outside Express, `createRenderCache(renderToString, options)` from `@popcorn245/stencilrs/ssr` wraps any `renderToString`.
+  On the Ionic `list-50` page with a 100% hit rate (an upper bound), req/s went from about 20 to about 900 in our container; see the PR for the method.
 - **Full document or fragment.** A view that opens with a doctype or `<html>` is rendered as a document, anything else as a fragment.
   **A fragment has no `<head>`, so it loses the component styles Stencil puts there**. Render a full document, or add the styles yourself.
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the

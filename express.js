@@ -21,6 +21,7 @@ import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, hydrateHref, pickRenderToString } from './express-hydrate.js';
+import { createRenderCache } from './render-cache.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
 const isDocument = (html) => /^\s*(?:<!--[\s\S]*?-->\s*)*<(?:!doctype\b|html[\s>])/i.test(html);
@@ -179,10 +180,11 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
  * @param [config.maxQueue] renders that may wait for a free worker (default 100); one more fails with code `ESTENCIL_QUEUE_FULL`
  * @param [config.compileCache] Node's compile cache (`module.enableCompileCache`) for the hydrate app, here and in each worker: `true` (default; a no-op on a Node without it), `false` to opt out, or a directory for the cache
  * @param [config.warmup] render at startup so the first request is not JIT-cold: a list of views (paths, run through the inner engine with no locals) and HTML strings (starting with `<`), or `{ views, times }` to run the list `times` times (default 1; the JIT needs repeats). Shape them like real traffic. In-process and on every worker; `ready` resolves after it
+ * @param [config.renderCache] opt-in cache of rendered pages, in the main thread before a worker is asked: `true` (defaults) or `{ max, maxBytes, ttl }`. Only for pages that are a pure function of the HTML and options; a view opts out with the `stencilCache: false` local
  * @param [config.renderTimeout] ms a pooled render may take (default 30000, 0 = no limit); past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`
  * @returns an Express engine: `app.engine('ext', stencilEngine({ ... }))`, with `ready` (a promise: the app is loaded and warmed up; resolves at once without `warmup` or a pool; rejects when the app cannot load or a warm-up render fails, the engine stays usable after a failed warm-up) and `close()` (stops the workers)
  */
-export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false } = {}) => {
+export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false, renderCache = false } = {}) => {
   if (hydrate == null) throw new TypeError('stencilEngine: `hydrate` is required');
   const size = workers === 'auto' ? Math.max(1, availableParallelism() - 1) : workers;
   if (!Number.isInteger(size) || size < 0) throw new TypeError("stencilEngine: `workers` must be a non-negative integer or 'auto'");
@@ -191,6 +193,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   const warmTimes = warmup && typeof warmup === 'object' && !Array.isArray(warmup) ? warmup.times ?? 1 : 1;
   if (warmup !== false && !(Array.isArray(warmViews) && warmViews.every((w) => typeof w === 'string') && Number.isInteger(warmTimes) && warmTimes >= 1)) throw new TypeError('stencilEngine: `warmup` must be an array of view paths and HTML strings, or { views, times } with a whole `times` of at least 1');
   if (!(typeof compileCache === 'boolean' || typeof compileCache === 'string')) throw new TypeError('stencilEngine: `compileCache` must be a boolean or a directory');
+  if (!(renderCache === false || renderCache === true || (renderCache && typeof renderCache === 'object'))) throw new TypeError('stencilEngine: `renderCache` must be true, false or { max, maxBytes, ttl }');
   // Before the hydrate app is imported (here or by a worker): the cache serves modules loaded after the call.
   enableCompileCache(compileCache);
   let pool = null;
@@ -242,12 +245,15 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     for (let n = 0; n < warmTimes; n++) for (const w of items) await renderToString(w.html, w.options);
   };
 
+  // One render of final HTML: on the pool, or here. The cache (if any) sits in front, so a hit costs no worker round-trip.
+  const run = (html, options) => (pool ? pool.render(html, options) : load().then((renderToString) => renderToString(html, options)));
+  const cached = renderCache ? createRenderCache(run, renderCache) : null;
+
   const render = async (path, locals) => {
-    const renderToString = pool ? null : await load();
     const html = engine ? await fill(path, locals) : await read(path, locals.cache);
     const options = { ...renderOptions, ...locals.stencil };
     options.fullDocument ??= isDocument(html);
-    const result = await (pool ? pool.render(html, options) : renderToString(html, options));
+    const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
     const errors = [];
     for (const d of result.diagnostics ?? []) {
       if (d.level === 'error') errors.push(d);
@@ -270,6 +276,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   };
   express.ready = pool ? pool.ready : warming ? warmInProcess() : Promise.resolve();
   express.ready.catch(() => {}); // `ready` reports it; an unobserved rejection must not crash the server
+  express.renderCache = cached; // `.clear()` and `.stats()`, or null
   express.close = async () => void (await pool?.close());
   return express;
 };

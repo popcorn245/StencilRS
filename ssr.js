@@ -363,3 +363,5 @@ export const buildHydrate = async (options = {}) => {
   return { code, file, components: cmps.map((c) => c.tagName) };
 };
 
+
+export { createRenderCache } from './render-cache.js';
