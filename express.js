@@ -22,6 +22,7 @@ import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
 import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands } from './express-islands.js';
+import { STREAM_MODES, streamPage, streamView } from './express-stream.js';
 import { createRenderCache } from './render-cache.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
@@ -37,17 +38,21 @@ const loadHydrate = async (hydrate) => {
 const SCOPED_ISLANDS = "stencilEngine: `islands` need serializeShadowRoot 'declarative-shadow-dom' (the default): islands are not supported with scoped rendering (`serializeShadowRoot: 'scoped'` or `false`), see docs/islands.md";
 const isScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false;
 
-/** `islands: false | true | { idStride, earlyHead }` as `{ idStride, earlyHead }`, or null. */
+/** `islands: false | true | { idStride, earlyHead, stream, fallback, onError }` with the defaults filled in, or null. */
 const normalizeIslands = (islands) => {
   if (islands === false || islands == null) return null;
   const o = islands === true ? {} : islands;
-  if (typeof o !== 'object') throw new TypeError('stencilEngine: `islands` must be true, false or { idStride, earlyHead }');
-  for (const key of Object.keys(o)) if (key !== 'idStride' && key !== 'earlyHead') throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected idStride, earlyHead)`);
-  const { idStride = 1000, earlyHead = false } = o;
+  if (typeof o !== 'object') throw new TypeError('stencilEngine: `islands` must be true, false or { idStride, earlyHead, stream, fallback, onError }');
+  for (const key of Object.keys(o)) if (!['idStride', 'earlyHead', 'stream', 'fallback', 'onError'].includes(key)) throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected idStride, earlyHead, stream, fallback, onError)`);
+  const { idStride = 1000, earlyHead = false, stream = 'in-order', fallback, onError } = o;
   if (!(Number.isSafeInteger(idStride) && idStride >= 1)) throw new TypeError('stencilEngine: `islands.idStride` must be a positive integer');
   if (typeof earlyHead !== 'boolean') throw new TypeError('stencilEngine: `islands.earlyHead` must be a boolean');
-  return { idStride, earlyHead };
+  if (!STREAM_MODES.includes(stream)) throw new TypeError(`stencilEngine: \`islands.stream\` must be one of ${STREAM_MODES.join(', ')}`);
+  for (const [key, fn] of [['fallback', fallback], ['onError', onError]]) if (fn !== undefined && typeof fn !== 'function') throw new TypeError(`stencilEngine: \`islands.${key}\` must be a function`);
+  return { idStride, earlyHead, stream, fallback, onError };
 };
+
+const abortError = (signal) => Object.assign(new Error('stencilEngine: render cancelled'), { name: 'AbortError', code: 'ABORT_ERR', cause: signal.reason });
 
 const workerFile = new URL('./express-worker.js', import.meta.url);
 
@@ -167,12 +172,26 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
 
   return {
     ready: settledAll().then(() => {}),
-    render: (html, options, fragment = false) =>
+    render: (html, options, fragment = false, signal) =>
       new Promise((resolve, reject) => {
         if (closed) return reject(closed);
         if (broken) return reject(broken);
+        if (signal?.aborted) return reject(abortError(signal));
         if (queue.length >= maxQueue) return reject(Object.assign(new Error(`stencilEngine: render queue is full (${maxQueue} waiting)`), { code: 'ESTENCIL_QUEUE_FULL' }));
-        queue.push({ id: nextId++, html, options, fragment, resolve, reject, timer: null });
+        const job = { id: nextId++, html, options, fragment, resolve, reject, timer: null };
+        // A client that went away: a render still waiting for a thread is dropped. One a thread already has runs to its end (its result is not wanted).
+        signal?.addEventListener(
+          'abort',
+          () => {
+            const at = queue.indexOf(job);
+            if (at >= 0) {
+              queue.splice(at, 1);
+              reject(abortError(signal));
+            }
+          },
+          { once: true }
+        );
+        queue.push(job);
         dispatch();
       }),
     close: async () => {
@@ -269,7 +288,13 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   const cached = renderCache ? createRenderCache(run, renderCache) : null;
 
   // One render of markup on its own, with the options as given: in-process or pooled, the whole result back.
-  const fragmentRender = async (html, options) => (pool ? pool.render(html, options, true) : fragmentResult(await (await load())(html, options)));
+  // `signal` (an AbortSignal): a render that has not started when it aborts is cancelled.
+  const fragmentRender = async (html, options, signal) => {
+    if (pool) return pool.render(html, options, true, signal);
+    const renderToString = await load();
+    if (signal?.aborted) throw abortError(signal);
+    return fragmentResult(await renderToString(html, options));
+  };
 
   // A fragment: markup rendered on its own, with options of its own (`idBase`, ...), and the whole of the result back, in-process or pooled.
   const renderFragment = async (html, options = {}) => {
@@ -322,7 +347,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   };
 
   // A view with islands, split and with every render started: the shell and the islands at once (on the pool they spread over the threads).
-  const islandPage = (path, html, split, options) => {
+  const islandPage = (path, html, split, options, signal) => {
     if (isScoped(options)) throw new IslandError(`${path}: islands need serializeShadowRoot to be 'declarative-shadow-dom' (the default), not scoped mode (docs/islands.md)`);
     const { idStride: stride } = islandsConfig;
     if (!Number.isSafeInteger((split.islands.length + 1) * stride)) throw new IslandError(`${path}: ${split.islands.length} islands with an idStride of ${stride} overflow the hydration id range`);
@@ -334,8 +359,8 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       view: path,
       document,
       stride,
-      shell: fragmentRender(split.shell, { ...base, idBase: 0 }),
-      parts: split.islands.map((isl, i) => (isl.html.trim() ? fragmentRender(isl.html, { ...base, fullDocument: false, idBase: (i + 1) * stride }) : null)),
+      shell: fragmentRender(split.shell, { ...base, idBase: 0 }, signal),
+      parts: split.islands.map((isl, i) => (isl.html.trim() ? fragmentRender(isl.html, { ...base, fullDocument: false, idBase: (i + 1) * stride }, signal) : null)),
       earlyHead: early && probe(early.htmlTag, base).then((tag) => tag + early.rest),
       inspect: (label, result) => inspect(path, result.diagnostics, label),
     });
@@ -350,12 +375,12 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   };
 
   // The island page of a view, or null if the view has no islands (or the engine no `islands` option).
-  const renderIslands = async (path, locals = {}) => {
+  const renderIslands = async (path, locals = {}, { signal } = {}) => {
     if (!islandsConfig) return null;
     const { html, options } = await prepare(path, locals);
-    return islandsOf(path, html, options);
+    return islandsOf(path, html, options, signal);
   };
-  const islandsOf = (path, html, options) => {
+  const islandsOf = (path, html, options, signal) => {
     if (!/<stencil-island/i.test(html)) return null; // the common case: nothing to scan
     let split;
     try {
@@ -364,7 +389,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       if (e instanceof IslandError) e.message = `${path}: ${e.message}`;
       throw e;
     }
-    return split ? islandPage(path, html, split, options) : null;
+    return split ? islandPage(path, html, split, options, signal) : null;
   };
 
   const render = async (path, locals) => {
@@ -377,6 +402,24 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     inspect(path, result.diagnostics);
     return result.html;
   };
+
+  // The page as chunks to write (express-stream.js): a view with islands as they come, any other view whole, as one chunk.
+  const stream = (path, locals = {}, options = {}) =>
+    streamPage({
+      ...options,
+      view: path,
+      mode: options.mode ?? islandsConfig?.stream,
+      fallback: options.fallback ?? islandsConfig?.fallback,
+      onError: options.onError ?? islandsConfig?.onError,
+      start: async (signal) => {
+        const { html, options: renderOptionsOfView } = await prepare(path, locals);
+        const page = islandsConfig ? islandsOf(path, html, renderOptionsOfView, signal) : null;
+        if (page) return { page };
+        const result = await (cached ? cached(html, renderOptionsOfView, { cache: locals.stencilCache !== false }) : run(html, renderOptionsOfView));
+        inspect(path, result.diagnostics);
+        return { html: result.html };
+      },
+    });
 
   const express = (path, options, callback) => {
     // A promise chain, not an async function: Express's callback must be called once, and a throw inside it must not re-enter the catch.
@@ -400,7 +443,10 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   express.ready.catch(() => {}); // `ready` reports it; an unobserved rejection must not crash the server
   express.renderFragment = renderFragment;
   express.renderIslands = renderIslands;
+  express.stream = stream;
   express.renderCache = cached; // `.clear()` and `.stats()`, or null
   express.close = async () => void (await pool?.close());
   return express;
 };
+
+export { streamView };
