@@ -96,7 +96,7 @@ runtime throws `Cannot read properties of undefined (reading 'length')` (and onc
 
 With `runtime: 'stencilrs'`, a production browser build keeps only the optional parts of `runtime.js` the build's components use: light DOM
 (slots, scoped CSS), `h()` vnodes and spreads, signal bindings, and hydration with resuming (kept unless you say the app is client-only). A shadow-DOM
-client-only app is 4.5 KB gzip, 7.0 KB with hydration, 9.0 KB whole. Details, the detection rules, sizes and the tests: [runtime.md](runtime.md#smaller-builds-runtimefeatures).
+client-only app is 4.5 KB gzip, 7.0 KB with hydration, 9.0 KB whole. Details, the detection rules, sizes and the tests: [runtime.md](https://github.com/popcorn245/StencilRS/blob/main/docs/runtime.md#smaller-builds-runtimefeatures).
 
 ```ts
 stencilrs({ runtime: 'stencilrs' });                                    // 'auto' (the default): keeps hydration and resuming
@@ -163,7 +163,7 @@ server html should set `buildFlags: { hydrateClientSide: false }`.
 `invisiblePrehydration`, `hydratedFlag`) are the defaults; `buildFlags` overrides any of them. `verbose: true` prints the component count, the scan
 time and how many flags are on.
 
-Measured (Vite 8.4.0, minified, gzip level 9, `@stencil/core` 5.0.0-beta.25; `spike/build-flags/sz.mjs`, details in [the spike](spike-build-flags.md)):
+Measured (Vite 8.4.0, minified, gzip level 9, `@stencil/core` 5.0.0-beta.25; `spike/build-flags/sz.mjs`, details in [the spike](https://github.com/popcorn245/StencilRS/blob/main/docs/spike-build-flags.md)):
 
 | Build | unfolded | folded (default) | folded and `hydrateClientSide: false` |
 |---|---:|---:|---:|
