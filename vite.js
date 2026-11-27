@@ -322,10 +322,15 @@ export function stencilrs(options = {}) {
   const runtimeBaseUrlOptimizerPlugin = () => ({
     name: 'stencilrs:runtime-base-url',
     transform: {
-      filter: { id: STENCIL_DIST_RE, code: STENCIL_BASE_URL },
+      filter: { id: STENCIL_DIST_RE },
       handler(code, id) {
-        const dir = relative(join(cacheDir, 'deps'), dirname(id)).replaceAll('\\', '/');
-        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(${JSON.stringify(DIR_PREFIX + dir)}, '' + import.meta.url)`), map: null };
+        // The pre-bundled runtime of the dev server: the hydration order patch (client-patches.js) as in a build, and the base URL.
+        let out = applyClientRuntimePatches(code, id);
+        if (out.includes(STENCIL_BASE_URL)) {
+          const dir = relative(join(cacheDir, 'deps'), dirname(id)).replaceAll('\\', '/');
+          out = out.replaceAll(STENCIL_BASE_URL, `new URL(${JSON.stringify(DIR_PREFIX + dir)}, '' + import.meta.url)`);
+        }
+        return out === code ? null : { code: out, map: null };
       },
     },
   });
