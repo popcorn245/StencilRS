@@ -36,6 +36,50 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
 
+## A client that hydrates server-rendered html (`hydrateClient`)
+
+`renderToString` / `hydrateDocument` of the hydrate app (`buildHydrate`, `@popcorn245/stencilrs/ssr`) write html the browser can show before any
+script runs: `s-id` / `c-id` markers on the elements, `<!--r.N-->` and `<!--o.N-->` comments, `s-sn` on slotted nodes, `sty-id` styles. The client
+runtime adopts those nodes instead of rendering again only when it was built with `BUILD.hydrateClientSide`. `stencil build` turns that on when the
+project has a hydrate (`ssr`) output target, and a Vite build leaves the runtime's default (on); a client-only library turns it off with
+`buildFlags: { hydrateClientSide: false }`, which is what the Ionic harness's `vite.config.ts` does for its single module.
+
+```ts
+stencilrs({ hydrateClient: true });
+stencilrs({ hydrateClient: { split: true, manifest: 'components.json', dir: 'components', tags: {}, collections: ['ionicons'] } });
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `hydrateClient` | `false` | `false`: nothing changes (the default output is byte for byte what it was; `test/vite-hydrate-client.test.js` compares it, and the Ionic build was compared before and after, `diff -r` on the whole output folder). `true`, or an object: sets `BUILD.hydrateClientSide = true` in every component module (it wins over `buildFlags`), and emits per-component modules and a manifest in a production build |
+| `split` | `true` | every component file is also an entry of its own, `<dir>/<tag>.js`, which defines the tag when it is evaluated. The shared code (runtime, helpers) becomes chunks the modules import. `false`: the flag only, one bundle |
+| `manifest` | `'components.json'` | the asset that lists the modules: `{ version: 1, tags: { "ion-button": "components/ion-button.js" }, imports: { "components/ion-button.js": ["runtime-AbC123.js", ...] } }`. `imports` is the static closure of chunks of this build (for `modulepreload`), paths relative to the output directory. `false`: none |
+| `dir` | `'components'` | the folder of the modules, under the output directory |
+| `tags` | `{}` | `{ tag: file }`: a custom element the project does not compile, whose module (a file that defines it) is emitted and listed like a component |
+| `collections` | `[]` | packages built by `stencil build` whose components are compiled by stencilrs as the project's own (the same `readCollections` as `buildHydrate`'s `collections`), emitted and listed like the others. Needed for `ionicons`: its `ion-icon` ships compiled with a runtime of its own (`ionicons/components/index.js`, hydration compiled out), so server-rendered icons would be rendered again |
+
+`split` and the manifest apply to `vite build` only, not to the dev server or `mode: 'spec-page'`, and only to a component stencilrs compiled
+itself (a file left to Stencil's compiler through `@stencil/unplugin` stays in the entry's bundle and is not listed). Your own entry, if you have one,
+still imports every component; a loader that wants only some tags does not load it. Anything that has to run before the first tag is defined (Ionic's
+global script) is an entry of your own (`lib.entry: { ionic, init }`), loaded first.
+
+### Loading the modules
+
+A component module defines its tag when it is evaluated, and the browser upgrades the elements already in the page at that moment. A parent that
+sets props on children in `componentWillLoad` (`ion-tabs` sets `active` on its `ion-tab`s) then runs on a child that is not defined yet; the value is
+an own property of the element that the child's constructor (`this.active = false`) overwrites when it is upgraded. Stencil's lazy loader never meets this because it registers all its tags in one
+go. So a loader should import the modules first, with `customElements.define` held back, and define every tag in one synchronous pass
+(`examples/ionic/spike/islands/hydrating-client.mjs` has the 10 lines; `test/vite-hydrate-client.test.js` has them too). With Ionic's page of kitchen-sink,
+loading the same modules in parallel without this left the first `ion-tab` hidden and its button unselected, the only difference to Stencil's own client.
+
+### What was checked
+
+Ionic (`examples/ionic`): `IONIC_HYDRATE_CLIENT=1 vite build` writes `init.js` (the global script), `components/*.js` (96 tags, `ion-icon` from the ionicons collection)
+and `components.json`; `npm run build:hydrate` renders `list-50` and `kitchen-sink` (DSD); `node spike/islands/hydrating-client.mjs <page> dsd` loads the page in Chromium with only
+the modules the page uses and reports adoption (every server node still connected), clicks (`ion-toggle`, `ion-checkbox`, `ion-button`), console errors, and whether the DOM after hydration equals
+the one Stencil's own client (`stencil build --dev` with an `ssr` target, the spike's) produces. Known and not ours: @stencil/core 5.0.0-beta.25's client
+runtime throws `Cannot read properties of undefined (reading 'length')` (and once `'nodeType'`) in `patch` while hydrating childless elements, on Stencil's own client too; hydration continues.
+
 ## Folders the dev server does not watch (`watchIgnore`)
 
 Vite's file watcher (chokidar) opens one `fs.watch` per file under the project root, about 0.9 ms

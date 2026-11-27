@@ -139,7 +139,7 @@ async function interact(doc) {
 }
 
 /** Load `origin`, adopt the server's elements with the client bundle (Stencil lazy loader), report what hydration did. */
-export const hydrationReport = async (browser, origin, _html, path = '/') => {
+export const hydrationReport = async (browser, origin, _html, path = '/', bootScript = "import '/client/dist/ionic/ionic.esm.js';") => {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -147,7 +147,7 @@ export const hydrationReport = async (browser, origin, _html, path = '/') => {
   await page.goto(origin + path, { waitUntil: 'load' });
   const styleTagsBefore = await page.evaluate(() => document.querySelectorAll('style[sty-id]').length);
   const marked = await page.evaluate(`(${markServerNodes})(document)`);
-  await page.addScriptTag({ type: 'module', content: "import '/client/dist/ionic/ionic.esm.js';" });
+  await page.addScriptTag({ type: 'module', content: bootScript });
   await page.waitForFunction(() => customElements.get('ion-toggle') || customElements.get('ion-item'), null, { timeout: 30000 });
   // Every Ionic host must come ready; a page whose hydration wedged never does, so the wait has a deadline and the report says so.
   const ready = await page.evaluate(async () => {

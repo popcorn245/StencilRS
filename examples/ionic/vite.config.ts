@@ -15,6 +15,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import stencilrs from '@popcorn245/stencilrs/vite';
+import { ionicHydrateOptions } from './scripts/hydrate-options.mjs';
 import { defineConfig, type Plugin } from 'vite';
 
 // Ionic's Sass still uses `@import`, global built-ins and other deprecated features (about 2,000 lines of warnings per build).
@@ -40,10 +41,10 @@ writeFileSync(
   entry,
   [
     `import './init';`,
-    `import { defineCustomElement as defineIonIcon } from 'ionicons/components/ion-icon.js';`,
+    ...(process.env.IONIC_HYDRATE_CLIENT === '1' ? [] : [`import { defineCustomElement as defineIonIcon } from 'ionicons/components/ion-icon.js';`]),
     `export { initialize } from '${rel(join(src, 'global/ionic-global.ts'))}';`,
     ...components.map((f) => `import '${rel(f)}';`),
-    `defineIonIcon();`,
+    ...(process.env.IONIC_HYDRATE_CLIENT === '1' ? [`import '/__stencilrs_collection__/ionicons/components/icon/icon.js.tsx';`] : [`defineIonIcon();`]),
     '',
   ].join('\n'),
 );
@@ -143,6 +144,13 @@ const globalCss = (): Plugin => {
   };
 };
 
+// IONIC_HYDRATE_CLIENT=1: the hydrating client (`hydrateClient`, docs/vite-plugin.md): the runtime adopts server-rendered nodes, every
+// component is its own module (components/<tag>.js, listed in components.json), and Ionic's global script is init.js (load it first).
+const hydrateClient = process.env.IONIC_HYDRATE_CLIENT === '1';
+// ion-icon is the one component outside migrated/: the ionicons package ships it compiled, with a runtime of its own that does not hydrate.
+// `hydrateClient.collections` compiles it from the collection as the hydrate build does (scripts/hydrate-options.mjs), with the same stylesheet repair.
+const hydrateCss = ionicHydrateOptions(here.replace(/[\\/]$/, '')).stencilrs.css;
+
 export default defineConfig({
   root: join(here, 'migrated'),
   // Ionic's tsconfig `paths`, which Vite does not read.
@@ -157,12 +165,12 @@ export default defineConfig({
   // The dev server's watcher opens an fs.watch per file under migrated/ (slow on Windows). `stencil build` (npm run
   // build:stencil, in this folder) writes dist/ (types, collection) and .stencil/ there; the plugin's default also
   // skips www/, loader/ and hydrate/. `components/` is Stencil's standalone output folder (never source: that is src/).
-  plugins: [stencilrs({ dts: process.env.IONIC_DTS === '1', watchIgnore: ['.stencil', '.stencil-standalone', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, buildFlags: { hydrateClientSide: false } }), globalCss()],
+  plugins: [stencilrs({ dts: process.env.IONIC_DTS === '1', watchIgnore: ['.stencil', '.stencil-standalone', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, ...(hydrateClient ? { hydrateClient: { collections: ['ionicons'], split: process.env.IONIC_HYDRATE_SPLIT !== '0' }, css: hydrateCss } : { buildFlags: { hydrateClientSide: false } }) }), globalCss()],
   build: {
     outDir: process.env.IONIC_OUT_DIR ?? join(here, 'dist-stencilrs'),
     emptyOutDir: true,
-    minify: true,
-    lib: { entry, formats: ['es'], fileName: 'ionic' },
+    minify: process.env.IONIC_NO_MINIFY ? false : true,
+    lib: hydrateClient && process.env.IONIC_HYDRATE_SPLIT !== '0' ? { entry: { ionic: entry, init: join(libDir, 'init.ts') }, formats: ['es'], fileName: (_f, name) => `${name}.js` } : { entry, formats: ['es'], fileName: 'ionic' },
     rollupOptions: { output: { assetFileNames: '[name][extname]' } },
   },
 });
