@@ -158,7 +158,7 @@ any scanned file importing `@stencil/core/signals`, turns `vdomSignals` on.
 an SSR output target, which the plugin cannot know. It is the biggest single flag (2.5 KB gzip of the starter's 10): a client that does not hydrate
 server html should set `buildFlags: { hydrateClientSide: false }`.
 
-`vite build --watch` rescans on every rebuild (the cache makes that ~15 ms for 136 components) and watches every scanned file, so adding a `<slot>` or a
+`vite build --watch` rescans on every rebuild (the cache makes that ~10 ms of file stamps for Ionic's 95 components, and what the bundler resolved for an alias or a workspace package is remembered until a file appears in or disappears from the scanned folders; a rebuild after one edit is 6% slower than unfolded) and watches every scanned file, so adding a `<slot>` or a
 `formAssociated` component changes the flags of the next bundle (a new file that nothing imports yet does not start a rebuild; the one that imports it does). The config flags `stencil.config` can change (`compat.lightDomPatches`, `taskQueue`,
 `invisiblePrehydration`, `hydratedFlag`) are the defaults; `buildFlags` overrides any of them. `verbose: true` prints the component count, the scan
 time and how many flags are on.
@@ -177,8 +177,8 @@ Measured (Vite 8.4.0, minified, gzip level 9, `@stencil/core` 5.0.0-beta.25; `sp
 The saving is the runtime, 13 to 18 KB gzip whatever the app: most of a small app, a few percent of a big one. The scan does not compile a second time: it
 shares each component's compile with `transform` (one `transpile` per file, with `componentMetadata: 'result'`, which returns the compiler metadata beside the
 unchanged code), runs beside Vite's own work and is awaited only by the runtime. Cold `vite build`, fresh processes interleaved, median of 15: starter 300 to
-306 ms (+2%), ui-kit (136 components) 645 to 679 ms (+5%), Ionic's core (95 components) 817 to 980 ms (+20%, noisy; the scan's remaining cost is main-thread
-file walking and parsing, which Rolldown's `transform` hooks compete for). A warm rescan (watch mode) is about 15 ms.
+306 ms (+2%), ui-kit (136 components) 645 to 679 ms (+5%), Ionic's core (95 components) 817 to 980 ms (+20%, measured on a loaded box; on a quiet one, 15 interleaved pairs, +25 ms or +2% after the scan asked the bundler
+about aliases all at once and stopped compiling the compiler's metadata literal as code, from +90 ms; docs/bench-2026-11-27.md section 6). A warm rescan (watch mode) is about 10 ms.
 
 `test/vite-fold.test.js` (the flag computation, the scan and its cache, the fallbacks and the warnings, features that must survive, opt-out, watch),
 `npm --prefix examples/starter run check:fold` (the starter's production build, folded and not, in Chromium: the DOM after the same clicks, input,

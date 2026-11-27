@@ -941,10 +941,8 @@ export function stencilrs(options = {}) {
         const res = resolveStringRuntime(id, importer);
         if (res) return res;
       }
-      if (id === APP_DATA_ID && foldActive) {
-        await foldPending;
-        return FOLDED_APP_DATA_ID;
-      }
+      // Resolved at once: the flags are what this module's `load` waits for, so the modules that import it are not held up by the scan.
+      if (id === APP_DATA_ID && foldActive) return FOLDED_APP_DATA_ID;
       if (collectionSource.size) {
         if (collectionSource.has(id)) return id;
         // A collection component's own imports are its original's neighbours; the packages it and its files use (`@stencil/core`,
@@ -996,7 +994,10 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
-      if (id === FOLDED_APP_DATA_ID && foldActive) return foldedAppDataModule(foldedFlags ?? foldAllOn);
+      if (id === FOLDED_APP_DATA_ID && foldActive) {
+        await foldPending;
+        return foldedAppDataModule(foldedFlags ?? foldAllOn);
+      }
       if (collectionSource.size && collectionSource.has(id)) return collectionSource.get(id);
       if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_MODULE && project && !needsUnplugin) {
