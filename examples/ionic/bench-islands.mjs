@@ -1,4 +1,4 @@
-// Issue #191: the islands engine against the whole-page render, over HTTP, interleaved A/B (every round visits each route once, the
+// Issues #191 and #193 (the `cached` route: the static islands served from the per-island cache): the islands engine against the whole-page render, over HTTP, interleaved A/B (every round visits each route once, the
 // order rotating), medians with min-max and n. Starts bench/islands-server.mjs itself.
 //   node bench-islands.mjs [workers=2] [rounds=40] [throughputRounds=3]
 import { spawn } from 'node:child_process';
@@ -9,7 +9,7 @@ import { fmt, stats } from './spike/islands/lib.mjs';
 
 const [workers = '2', roundsArg = '40', tRoundsArg = '3'] = process.argv.slice(2);
 const rounds = Number(roundsArg);
-const routes = ['full', 'islands', 'inorder', 'early'];
+const routes = ['full', 'islands', 'cached', 'inorder', 'early'];
 const pages = ['list-50', 'kitchen-sink'];
 const conc = 4;
 
@@ -51,7 +51,7 @@ const run = async (path, ms) => {
   await Promise.all(Array.from({ length: conc }, async () => { while (performance.now() < end) { await get(path, agent); n++; } }));
   return n / (ms / 1000);
 };
-const troutes = ['full', 'islands', 'inorder'];
+const troutes = ['full', 'islands', 'cached'];
 for (const page of pages) {
   const acc = Object.fromEntries(troutes.map((r) => [r, []]));
   for (const r of troutes) await run(`/${r}/${page}`, 1000);

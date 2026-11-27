@@ -1,7 +1,8 @@
-// The server of bench-islands.mjs (issue #191): the Ionic pages through the real engine, four ways, all gzip.
+// The server of bench-islands.mjs (issue #191): the Ionic pages through the real engine, five ways, all gzip.
 //   /full/<page>      stencilEngine without `islands`, the page rendered whole (`res.render`), one response
 //   /islands/<page>   stencilEngine({ islands }) with the page's <stencil-island> view, `res.render`: parallel renders, one assembled response
 //   /inorder/<page>   the same engine's `renderIslands(...).chunks()` written as each piece is next in line (the seam a streaming responder uses, #192)
+//   /cached/<page>    the islands engine with the page's static islands marked `cache` (`<page>.cached.html`; kitchen-sink: header and the list at the end, list-50: its first island): the per-island render cache (#193)
 //   /early/<page>     as inorder with `islands: { earlyHead: true }`: the head leaves before the shell has rendered
 // node bench/islands-server.mjs <port> <workers>
 import express from 'express';
@@ -16,13 +17,15 @@ const [port = '0', workersArg = '2'] = process.argv.slice(2);
 const workers = Number(workersArg);
 const views = writeViews(['list-50', 'kitchen-sink']);
 const warmViews = (suffix) => ['list-50', 'kitchen-sink'].map((n) => join(views, `${n}${suffix}.html`));
+const NOCACHE = process.env.ISLAND_CACHE === 'off'; // ISLAND_CACHE=off: the cached routes render everything (the marks are ignored): the cost of the layer itself
 const common = { hydrate: HYDRATE, workers, renderOptions: renderOptions(MODES.dsd) };
 const full = stencilEngine({ ...common, warmup: { views: warmViews('.full'), times: 6 } });
-const isl = stencilEngine({ ...common, islands: {}, warmup: { views: warmViews(''), times: 6 } });
+const isl = stencilEngine({ ...common, islands: { cache: !NOCACHE }, warmup: { views: warmViews(''), times: 6 } });
 const early = stencilEngine({ ...common, islands: { earlyHead: true }, warmup: { views: warmViews(''), times: 6 } });
 await Promise.all([full.ready, isl.ready, early.ready]);
 // the fragment path is the one islands use: warm it the way traffic does
 for (let n = 0; n < 6; n++) for (const e of [isl, early]) for (const v of warmViews('')) await (await e.renderIslands(v)).html();
+for (let n = 0; n < 6; n++) for (const v of warmViews('.cached')) await (await isl.renderIslands(v)).html();
 
 const gzipWriter = (res) => {
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-encoding': 'gzip', 'cache-control': 'no-store' });
@@ -49,6 +52,7 @@ app.disable('x-powered-by');
 app.set('etag', false);
 app.get('/full/:page', (req, res, next) => render(full, `${req.params.page}.full.html`, res, next));
 app.get('/islands/:page', (req, res, next) => render(isl, `${req.params.page}.html`, res, next));
+app.get('/cached/:page', (req, res, next) => render(isl, `${req.params.page}.cached.html`, res, next));
 app.get('/inorder/:page', stream(isl));
 app.get('/early/:page', stream(early));
 app.use((err, _req, res, _next) => { console.error(err); res.status(500).end(String(err.message)); });

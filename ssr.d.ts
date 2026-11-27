@@ -78,9 +78,9 @@ export interface RenderCacheOptions {
   ttl?: number;
 }
 
-/** A caching `renderToString`: pass `{ cache: false }` as the third argument to skip the cache for one call. */
+/** A caching `renderToString`: pass `{ cache: false }` as the third argument to skip the cache for one call, or `{ ttl }` (ms) to replace the configured ttl for that lookup. */
 export interface RenderCache {
-  (html: string, options?: any, call?: { cache?: boolean }): Promise<{ html: string; diagnostics?: object[] }>;
+  (html: string, options?: any, call?: { cache?: boolean; ttl?: number }): Promise<{ html: string; diagnostics?: object[] }>;
   clear(): void;
   stats(): { hits: number; misses: number; evictions: number; bypassed: number; entries: number; bytes: number };
 }
