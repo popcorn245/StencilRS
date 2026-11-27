@@ -41,6 +41,7 @@ import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStenci
 import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
 import { readCollections } from './ssr-collection.js';
+import { applyClientRuntimePatches } from './client-patches.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -652,8 +653,11 @@ export function stencilrs(options = {}) {
       const file = id.split('?')[0].replaceAll('\\', '/');
       // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
       // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).
-      if (code.includes(STENCIL_BASE_URL) && !ssr && !transformOpts?.ssr && STENCIL_DIST_RE.test(file)) {
-        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`), map: null };
+      if (!ssr && !transformOpts?.ssr && STENCIL_DIST_RE.test(file)) {
+        // Stencil's client runtime: the hydration order patch (client-patches.js), and the base URL below.
+        let out = applyClientRuntimePatches(code, file);
+        if (out.includes(STENCIL_BASE_URL)) out = out.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`);
+        if (out !== code) return { code: out, map: null };
       }
       if (!/\.tsx?$/.test(file) || file.endsWith('.d.ts')) return null;
       if (file.includes('/node_modules/')) return null;

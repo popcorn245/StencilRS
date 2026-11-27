@@ -245,8 +245,7 @@ What differs from a whole scoped page, and is not a bug:
   with `display: none` against `inline` in the spike); the islands page shows them.
 - **`visible` and layout.** The server html of a component that is not hydrated yet is not laid out like the hydrated one (its shadow styles are not in a shadow root), so an island below an idle or deferred one can be in view, and activate, earlier than in DSD.
   `check/islands-client.mjs` with `ISLANDS_MODE=scoped` allows for it.
-- **ion-tabs race.** About 1 in 10 hydrations of a scoped kitchen-sink page, whole or islands, orders `ion-tab` and `ion-tab-bar` the other way round in the light DOM (a race in the client; the whole page does it as often). `check/islands.mjs` takes the DOM
-  most of three hydrations of the whole page come to and re-hydrates a variant that is not it, twice at most (`attempts`).
+- **Light-DOM order.** Stencil's client hydration could put the light children of a shadow host (`ion-tab` and `ion-tab-bar` in `ion-tabs`) in slot order instead of authored order, about 1 in 10 times in scoped mode: a load-order race between per-tag modules. The Vite plugin patches it in Stencil's client runtime (`client-patches.js`) and `check/hydrate-order.mjs` checks it.
 - **`serializeShadowRoot: false`** annotates nothing for relocation (it is not meant to hydrate): the islands are in place, markers are merged, nothing else changes.
 
 ## Checks and numbers
@@ -254,6 +253,7 @@ What differs from a whole scoped page, and is not a bug:
 From `examples/ionic` (`npm run build:hydrate`, and the client build: `IONIC_HYDRATE_CLIENT=1 IONIC_OUT_DIR=$PWD/dist-hydrate-client node node_modules/vite/bin/vite.js build --config vite.config.ts`):
 
 - `node check/islands-client.mjs` (`ISLANDS_MODE=scoped` for scoped mode): one directive of each kind on kitchen-sink, in Chromium, on the production hydrating client build. `test/islands-client.test.js` checks every directive on a small fixture.
+- `node check/hydrate-order.mjs [scoped|dsd] [N]`: hydrates the whole kitchen-sink page N times (30 by default) with the production client, and fails unless every hydration comes to the same DOM.
 - `node check/islands.mjs [pages] [dsd,scoped]`: list-50 and kitchen-sink split into islands, through `res.render` and each `streamView` mode, in DSD and in scoped mode, hydrated in Chromium against the whole-page render (same DOM,
   no duplicate host ids or element ids, every host ready, the toggles, the checkbox and a button respond to clicks) and against a client-only render of the same markup. It hydrates with the production `hydrateClient` build (`ISLANDS_CLIENT=hydrate`, the default;
   `stencil` is Stencil's own lazy-loader dev client, spike-islands.md, which is right for DSD only: see [Scoped mode](#scoped-mode)). `spike/islands/scoped-visual.mjs` compares screenshots (pixels) of each variant against the client-only render.
