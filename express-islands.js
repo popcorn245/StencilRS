@@ -221,7 +221,7 @@ export const findMarkers = (rendered, islands) => {
 const styleTag = (s) => `<style${s.id ? ` sty-id="${String(s.id).replace(/"/g, '&quot;')}"` : ''}>${s.content}</style>`;
 
 /** Writes each style once per page: `fresh(styles)` is the tags of the ones not seen yet. */
-const createDeduper = (seed = []) => {
+export const createDeduper = (seed = []) => {
   const seen = new Set(seed.map((s) => s.id ?? s.content));
   return (styles) => {
     let out = '';
@@ -375,6 +375,9 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
       const styles = isls.map((i) => fresh(i.styles)).join('');
       return segments[0].slice(0, headEnd.start) + styles + segments[0].slice(headEnd.start) + isls.map((isl, k) => isl.html + segments[k + 1]).join('');
     },
+
+    /** What a streaming responder (express-stream.js) assembles its own chunks from: the early head, the cut shell, an island's render. */
+    pieces: { head: earlyHead, cut: cutShell, part, document },
 
     /** Per island, once rendered: what the client side will want (`components` for a per-island manifest). Settles when every island has. */
     async manifest() {

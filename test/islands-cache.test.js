@@ -151,3 +151,19 @@ test('islands.cache is validated', () => {
   assert.throws(() => stencilEngine({ hydrate: built.hydrate, islands: { cache: { max: -1 } } }), /renderCache: `max`/);
   assert.throws(() => stencilEngine({ hydrate: built.hydrate, islands: { nope: 1 } }), /idStride, earlyHead, cache/);
 });
+
+test('engine.stream serves a cached island from the cache too, in order and out of order, with the same ids as res.render', async () => {
+  const { engine, of } = counting({ islands: {} });
+  const file = view(page('cache', ''));
+  const rendered = await renderView(engine, file, { who: 'ann' });
+  for (const mode of ['in-order', 'out-of-order']) {
+    let streamed = '';
+    for await (const chunk of engine.stream(file, { who: 'ann' }, { mode })) streamed += chunk;
+    assert.deepEqual(ids(streamed).sort((x, y) => x - y), ids(rendered).sort((x, y) => x - y), mode);
+  }
+  assert.equal(of('label="A"'), 1, 'island a: one render for the page and both streams');
+  assert.equal(engine.islandCache.stats().hits, 2);
+  // `stencilCache: false` bypasses it when streaming as well
+  for await (const _ of engine.stream(file, { who: 'ann', stencilCache: false })) void _;
+  assert.equal(of('label="A"'), 2);
+});

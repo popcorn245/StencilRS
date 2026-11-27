@@ -76,7 +76,7 @@ export interface StencilEngineOptions {
    * the rest of the page (the shell) render as separate fragments, in parallel on the pool, each with its own `idBase` range, and are
    * assembled into one page (what `res.render` sends, or `engine.renderIslands(path).chunks()` for a streaming responder). A view without
    * islands renders exactly as without this option. Declarative shadow DOM only: scoped rendering is refused. `true` is the defaults.
-   * See docs/islands.md. Experimental (#191).
+   * `engine.stream(path, locals)` and `streamView(engine, view, locals)` send it as it renders. See docs/islands.md. Experimental (#191, #192).
    */
   islands?: boolean | StencilIslandsOptions;
 }
@@ -91,6 +91,12 @@ export interface StencilIslandsOptions {
    * its `<meta charset>` to it. Component styles written in the body make the Stencil client add a copy of each to `<head>` when it hydrates (harmless, a few KB).
    */
   earlyHead?: boolean;
+  /** The default mode of `engine.stream` (default `'in-order'`). */
+  stream?: StencilStreamMode;
+  /** The default `fallback` of `engine.stream`: the html that replaces an island that failed after the response started. */
+  fallback?: StencilStreamOptions['fallback'];
+  /** The default `onError` of `engine.stream`: where a failure after the response started is logged (default `console.error`). */
+  onError?: StencilStreamOptions['onError'];
   /**
    * The render cache of islands marked `cache` (`cache` alone: the `ttl` here, none by default; `cache="60"`: 60 seconds): `true` (default, the render cache's defaults),
    * `{ max, maxBytes, ttl }` (ms) like `renderCache`, or `false` to ignore the marks. Keyed on the island's html and the render options with its `idBase`, so a hit
@@ -98,6 +104,36 @@ export interface StencilIslandsOptions {
    */
   cache?: boolean | RenderCacheOptions;
 }
+
+/** `'in-order'`: the shell, then each island in the order of the view as it is next in line. `'out-of-order'`: the whole shell with an anchor for each island at once, then each island as it finishes, moved into place by a one-line script. */
+export type StencilStreamMode = 'in-order' | 'out-of-order';
+
+export interface StencilStreamOptions {
+  mode?: StencilStreamMode;
+  /** A CSP nonce for the inline script and style of the out-of-order mode (base64 or base64url characters only), or a function returning one. Component `<style>` tags carry no nonce. */
+  nonce?: string | (() => string);
+  /** When it aborts the iteration ends and the renders that have not started are cancelled (one a worker has taken runs to its end). Breaking out of a `for await` does the same. */
+  signal?: AbortSignal;
+  /** The html that replaces an island that failed after bytes were sent (default: an empty hidden `<div data-island="name" data-client="none" data-island-error>`). */
+  fallback?: (name: string, error: Error) => string;
+  /** Called for each failure after bytes were sent, with the island's name (`null`: the page). Default: `console.error`. */
+  onError?: (error: Error, info: { view: string; island: string | null }) => void;
+  /** In-order: put islands that are ready together in one chunk, so one flush (default true). */
+  coalesce?: boolean;
+}
+
+export interface StreamViewOptions extends Omit<StencilStreamOptions, 'signal' | 'nonce'> {
+  nonce?: string | ((req: any, res: any) => string);
+  /** Gzip in the handler when the client accepts it, with a sync flush after every chunk (default false: use `compression`, which is flushed with `res.flush()`, or a proxy). `{ level }` is zlib's. */
+  compress?: boolean | { level?: number };
+}
+
+/**
+ * An Express handler that streams a view as `engine.stream` renders it. `locals` is an object or `(req, res) => object`, merged over `app.locals`
+ * and `res.locals`. An error before the first byte goes to `next(err)`; after it, the failure is logged and the response ends. A client that
+ * hangs up cancels the renders that have not started.
+ */
+export function streamView(engine: StencilExpressEngine, view: string, locals?: object | ((req: any, res: any) => object | Promise<object>), options?: StreamViewOptions): (req: any, res: any, next: (err?: unknown) => void) => Promise<void>;
 
 /** An island of a view, as `engine.renderIslands` reports it. */
 export interface StencilIsland {
@@ -135,7 +171,13 @@ export interface StencilExpressEngine {
    * The view as an island page with every render already started, or null when the engine has no `islands` option or the view no islands.
    * Runs the inner engine with `locals` like `res.render`. The seam a streaming responder uses: write `page.chunks()` as they arrive. Experimental.
    */
-  renderIslands(path: string, locals?: object): Promise<StencilIslandPage | null>;
+  renderIslands(path: string, locals?: object, options?: { signal?: AbortSignal }): Promise<StencilIslandPage | null>;
+  /**
+   * The page as chunks to write, each one flush: the early head (if any), the shell up to the first island, then the islands (see `StencilStreamMode`).
+   * A view without islands is one chunk. A failure before the first chunk throws out of the iteration; an island that fails later is replaced by its fallback and logged.
+   * Experimental (#192).
+   */
+  stream(path: string, locals?: object, options?: StencilStreamOptions): AsyncGenerator<string, void, void>;
   /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
   renderCache: RenderCache | null;
   /** The per-island render cache (`islands.cache`), or null when the engine has no islands or `islands.cache` is false: `clear()` and `stats()`. */
