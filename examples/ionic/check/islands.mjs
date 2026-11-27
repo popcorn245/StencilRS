@@ -70,20 +70,7 @@ for (const mode of modes) {
       }
       const { server, origin } = await serve({ '/': handler }, { clientDir: client.dir });
       html ??= await (await fetch(origin)).text();
-      // A scoped page hydrates to one of two DOMs now and then, whole page or islands alike (about 1 in 10 on kitchen-sink: ion-tabs' light children come out in the
-      // other order, a race in Stencil's client). So the reference is the DOM most of three hydrations of the full render come to, and a variant that is
-      // not that DOM is hydrated again, twice at most; the attempts are reported.
-      let attempts = 0;
-      let got;
-      if (!full) {
-        const runs = [await hydrationReport(browser, origin, html, '/', client.boot), await hydrationReport(browser, origin, html, '/', client.boot), await hydrationReport(browser, origin, html, '/', client.boot)];
-        got = runs.find((r) => runs.filter((o) => o.sigNoCtx === r.sigNoCtx).length >= 2) ?? runs[0];
-        attempts = 1;
-      }
-      while (!got || (full && got.sigNoCtx !== full.sigNoCtx && attempts < 3)) {
-        attempts++;
-        got = await hydrationReport(browser, origin, html, '/', client.boot);
-      }
+      const got = await hydrationReport(browser, origin, html, '/', client.boot);
       const { sig, sigNoCtx, ...report } = got;
       server.close();
       if (process.env.ISLANDS_DUMP_SIG) (await import('node:fs')).writeFileSync(`${process.env.ISLANDS_DUMP_SIG}-${name}-${mode}-${label.replace(/\W+/g, '_')}.sig`, sig);
@@ -103,7 +90,6 @@ for (const mode of modes) {
         sameDomAsFull: sig === full.sig,
         sameDomIgnoringListContext: sigNoCtx === full.sigNoCtx,
         sameDomAsClientOnly: sig === clientOnly.sig,
-        attempts,
         ready: report.ready,
         hostsNotHydrated: report.hostsNotHydrated,
         lost: report.lost,

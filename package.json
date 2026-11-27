@@ -84,6 +84,7 @@
     "ssr.d.ts",
     "ssr-serializer.js",
     "ssr-patches.js",
+    "client-patches.js",
     "render-cache.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
