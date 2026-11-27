@@ -143,8 +143,11 @@ Measured (Vite 8.4.0, minified, gzip level 9, `@stencil/core` 5.0.0-beta.25; `sp
 | Ionic `app-tabs`, 34 components | 123.7 KB | 108.6 KB (-12.2 %) | the same |
 | Ionic `app-tabs`, runtime chunk | 28.1 KB | 13.2 KB (-53 %) | the same |
 
-The saving is the runtime, 13 to 18 KB gzip whatever the app: most of a small app, a few percent of a big one. The scan costs about 0.2 s cold for 136
-components (parallel, `transpileMany`) and 15 ms warm; see the spike for the build-time numbers.
+The saving is the runtime, 13 to 18 KB gzip whatever the app: most of a small app, a few percent of a big one. The scan does not compile a second time: it
+shares each component's compile with `transform` (one `transpile` per file, with `componentMetadata: 'result'`, which returns the compiler metadata beside the
+unchanged code), runs beside Vite's own work and is awaited only by the runtime. Cold `vite build`, fresh processes interleaved, median of 15: starter 300 to
+306 ms (+2%), ui-kit (136 components) 645 to 679 ms (+5%), Ionic's core (95 components) 817 to 980 ms (+20%, noisy; the scan's remaining cost is main-thread
+file walking and parsing, which Rolldown's `transform` hooks compete for). A warm rescan (watch mode) is about 15 ms.
 
 `test/vite-fold.test.js` (the flag computation, the scan and its cache, the fallbacks and the warnings, features that must survive, opt-out, watch),
 `npm --prefix examples/starter run check:fold` (the starter's production build, folded and not, in Chromium: the DOM after the same clicks, input,

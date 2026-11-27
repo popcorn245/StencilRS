@@ -110,9 +110,10 @@ impl JsTranspileOptions {
         {
             None | Some("") => ComponentMetadata::None,
             Some("compilerstatic") => ComponentMetadata::CompilerStatic,
+            Some("result") => ComponentMetadata::Result,
             Some(other) => {
                 return Err(napi::Error::from_reason(format!(
-                    "unknown componentMetadata {other:?}: expected \"compilerstatic\""
+                    "unknown componentMetadata {other:?}: expected \"compilerstatic\" or \"result\""
                 )));
             }
         };

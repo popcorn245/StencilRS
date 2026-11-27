@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
-import { transpileMany } from './index.js';
+import { transpileAsync, transpileMany } from './index.js';
 import { compilerMetaOf, hasComponentDecorator, normalizePath, stencilMeta } from './vite-docs.js';
 
 /**
@@ -75,12 +75,28 @@ const SVG_RE = /<svg[\s>/]/;
 const unported = (d) => !/^stencilrs: the type of /.test(d.message) && (d.message.startsWith('stencilrs:') || d.level === 'error');
 const unique = (re, source) => [...new Set([...source.matchAll(re)].map((m) => m[1]))];
 
+/**
+ * The metadata object of a `static get COMPILER_META() { return {...}; }` member (what `transpile` returns for `componentMetadata: 'result'`): the
+ * object literal is the text between `return ` and the method's closing `; }`, so no scan of its strings is needed.
+ */
+const metaFromGetter = (text) => {
+  const start = text.indexOf('return {') + 7;
+  const end = text.lastIndexOf('}', text.lastIndexOf('}') - 1);
+  if (start < 7 || end < start) return null;
+  const literal = text.slice(start, end + 1);
+  try {
+    return JSON.parse(literal); // what the compiler writes is JSON, nearly always: much cheaper than compiling it
+  } catch {
+    return new Function(`return ${literal}`)(); // `undefined`, a bare key
+  }
+};
+
 /** A relative import specifier as the source file it names, or null. */
 function resolveLocal(spec, from) {
   const base = resolve(dirname(from), spec);
   const stem = base.replace(/\.(m?js|jsx)$/, '');
   for (const c of [base, ...['.tsx', '.ts', '.jsx'].map((e) => base + e), ...['.tsx', '.ts'].map((e) => stem + e), ...['.tsx', '.ts'].map((e) => join(base, 'index' + e))]) {
-    if (isSource(c) && existsSync(c) && statSync(c).isFile()) return posix(c);
+    if (isSource(c) && statSync(c, { throwIfNoEntry: false })?.isFile()) return posix(c);
   }
   return null;
 }
@@ -115,8 +131,11 @@ const packageOf = (spec) => {
   return spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
 };
 
-/** The real folder of a package that ships compiled Stencil components (it has a `collection`, or lists `@stencil/core` as a dependency), else null. */
-function componentPackage(name, fromDir) {
+/**
+ * The package `name` as `fromDir` finds it: its real folder, whether it ships compiled Stencil components (it has a `collection`, or lists
+ * `@stencil/core` as a dependency), and whether it is a link to somewhere else (a workspace package). Null when it is not installed.
+ */
+function packageInfo(name, fromDir) {
   if (name.startsWith('@stencil/') || name === '@popcorn245/stencilrs') return null;
   for (let dir = fromDir; ; dir = dirname(dir)) {
     const pkgFile = join(dir, 'node_modules', name, 'package.json');
@@ -124,7 +143,8 @@ function componentPackage(name, fromDir) {
       try {
         const pkg = JSON.parse(readFileSync(pkgFile, 'utf-8'));
         const uses = !!(pkg.collection || pkg.dependencies?.['@stencil/core'] || pkg.peerDependencies?.['@stencil/core']);
-        return uses ? posix(dirname(realpathSync(pkgFile))) : null;
+        const real = posix(dirname(realpathSync(pkgFile)));
+        return { folder: real, uses, linked: real !== posix(dirname(pkgFile)) };
       } catch {
         return null;
       }
@@ -137,21 +157,43 @@ function componentPackage(name, fromDir) {
  * The scanner of a plugin instance. Its cache (per source file: the file's and its dependencies' `<mtime ns>:<size>` stamps) lives as
  * long as the instance, so a watch rebuild reads again only what changed.
  */
-export function createFoldScanner({ resolveImports = true } = {}) {
+export function createFoldScanner({ resolveImports = true, compileOptions = null } = {}) {
   const cache = new Map(); // file -> entry
   const packages = new Map(); // `${dir}|${name}` -> real folder | null
 
-  const transpileOptions = (file) => ({ file: normalizePath(file, false), resolveImports, componentExport: null, componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null, jsx: 'classic' });
+  // With `compileOptions(source, file)` (the Vite plugin's own options for a component), the scan compiles each component exactly as the build's
+  // `transform` will, and the metadata comes beside the code (`componentMetadata: 'result'`): the result is shared with `transform` (`compile`), so the
+  // build does not compile the same file twice. Without it (tools, tests) the metadata is the one spec-page mode compiles.
+  const transpileOptions = (file, source) =>
+    compileOptions
+      ? { ...compileOptions(source, file), componentMetadata: 'result' }
+      : { file: normalizePath(file, false), resolveImports, componentExport: null, componentMetadata: 'compilerstatic', coreImportPath: '@stencil/core/testing', style: null, jsx: 'classic' };
+  // One compile per component and source, shared by the scan and the build's `transform`: whoever asks first starts it, the other waits for it.
+  let compiled = new Map(); // file -> { source, promise }
+  const compile = (file, source, who) => {
+    let c = compiled.get(file);
+    if (!c || c.source !== source) {
+      c = { source, promise: transpileAsync(source, transpileOptions(file, source)), asked: new Set() };
+      compiled.set(file, c);
+    }
+    c.asked.add(who);
+    if (c.asked.size === 2) compiled.delete(file); // both have the promise: the map need not keep the result alive
+    return c.promise;
+  };
+  /** A new build: results nobody asked for again are dropped. */
+  const newBuild = () => {
+    compiled = new Map();
+  };
 
   /** The entry of a transpile result: `metas` (or `reason` when stencilrs cannot give them), `deps`. */
-  function fromTranspile(entry, result) {
+  function fromTranspile(entry, result, file) {
     if (result.error) return void (entry.reason = result.error);
     const bad = result.diagnostics.find(unported);
     if (bad) return void (entry.reason = bad.message);
     entry.deps = [...(result.deps ?? []), ...result.baseClasses.map((b) => [b, stampOf(b)])];
     if (!result.components?.length) return void (entry.metas = []); // a base class or mixin
     if (result.components.length > 1) return void (entry.reason = 'several components in one file');
-    const meta = compilerMetaOf(result.code);
+    const meta = result.compilerMeta?.length ? metaFromGetter(result.compilerMeta[0]) : compilerMetaOf(result.code);
     if (!meta) return void (entry.reason = 'no COMPILER_META');
     entry.metas = [meta];
   }
@@ -198,10 +240,13 @@ export function createFoldScanner({ resolveImports = true } = {}) {
   /**
    * The components of the project: every source file under `dirs`, plus the local modules they and `entries` import (a component outside
    * `dirs` that the bundle reaches is part of the project), plus `extraSources` (`{ file, source }`, collections compiled as the project's own).
-   * `resolveSpec(spec, importer)` is the bundler's resolver, for aliases and workspace packages. `prebuilt` lists the imports (`{ spec, name, from, id }`) of packages that ship compiled Stencil components (not in `skipPackages`, and none of their
+   * `resolveSpec(spec, importer)` is the bundler's resolver (asked for `aliases`, packages of Stencil components and linked packages only), for aliases and workspace packages. `prebuilt` lists the imports (`{ spec, name, from, id }`) of packages that ship compiled Stencil components (not in `skipPackages`, and none of their
    * folders is scanned): whether one shares the runtime is for `usesSharedRuntime` to say, once the bundler has resolved it.
    */
-  async function scan(root, { dirs = null, entries = [], extraSources = [], skipPackages = [], resolveSpec = null } = {}) {
+  async function scan(root, { dirs = null, entries = [], extraSources = [], skipPackages = [], resolveSpec = null, aliases = [] } = {}) {
+    // Where a package is looked up from: the project's root for its own files (one answer for the whole project), else the file's folder.
+    const home = (file) => (file.startsWith(posix(root) + '/') ? posix(root) : dirname(file));
+    const aliased = (spec) => aliases.some((a) => (typeof a === 'string' ? spec === a || spec.startsWith(a + '/') : a.test(spec)));
     const started = performance.now();
     const resolved = new Map(); // `${dir}|${specifier}` -> the file the bundler resolves it to, this scan
     const stamps = new Map();
@@ -238,6 +283,13 @@ export function createFoldScanner({ resolveImports = true } = {}) {
         const name = packageOf(spec);
         if (!name || name.startsWith('@stencil/') || skipPackages.includes(name)) continue;
         const key = `${dirname(file)}|${spec}`;
+        // Asking the bundler costs; it is asked for what can matter: an alias, a package of Stencil components, a package linked from the workspace.
+        if (!aliased(spec)) {
+          const pk = `${home(file)}|${name}`;
+          if (!packages.has(pk)) packages.set(pk, packageInfo(name, home(file)));
+          const info = packages.get(pk);
+          if (!info?.uses && !info?.linked) continue;
+        }
         if (!resolved.has(key)) {
           const r = await resolveSpec(spec, file).catch(() => null);
           resolved.set(key, r && !r.external ? posix(r.id.split('?')[0]) : null);
@@ -261,8 +313,10 @@ export function createFoldScanner({ resolveImports = true } = {}) {
 
     // All the files to compile at once, on every core.
     if (pending.length) {
-      const results = await transpileMany(pending.map(([file, e]) => ({ source: e.source, options: transpileOptions(file) })));
-      pending.forEach(([, entry], i) => fromTranspile(entry, results[i]));
+      const results = compileOptions
+        ? await Promise.all(pending.map(([file, e]) => compile(file, e.source, 'scan').catch((err) => ({ error: err.message }))))
+        : await transpileMany(pending.map(([file, e]) => ({ source: e.source, options: transpileOptions(file, e.source) })));
+      pending.forEach(([file, entry], i) => fromTranspile(entry, results[i], file));
     }
     // What stencilrs could not read comes from Stencil's compiler (loads TypeScript, once per build: only a project with such files pays).
     for (const [file, entry] of pending) {
@@ -301,9 +355,10 @@ export function createFoldScanner({ resolveImports = true } = {}) {
         const name = packageOf(spec);
         if (!name || skip.has(name) || prebuilt.has(spec)) continue;
         const from = dirname(entry.extra ?? key);
-        const id = `${from}|${name}`;
-        if (!packages.has(id)) packages.set(id, componentPackage(name, from));
-        const folder = packages.get(id);
+        const id = `${home(entry.extra ?? key)}|${name}`;
+        if (!packages.has(id)) packages.set(id, packageInfo(name, home(entry.extra ?? key)));
+        const info = packages.get(id);
+        const folder = info?.uses ? info.folder : null;
         // A package whose sources are among the scanned files (a workspace package listed in `dirs`) is counted already.
         if (folder && !scannedFiles.some((f) => f.startsWith(folder + '/'))) prebuilt.set(spec, { spec, name, from: entry.extra ?? key, id: resolved.get(`${from}|${spec}`) });
       }
@@ -311,7 +366,7 @@ export function createFoldScanner({ resolveImports = true } = {}) {
     return { cmps, signalsImport, fallback, failed, prebuilt: [...prebuilt.values()], files: seen, watch: [...entriesOf.values()].flatMap((e) => e.deps.map(([p]) => p)).concat(scannedFiles), ms: performance.now() - started };
   }
 
-  return { scan };
+  return { scan, compile, newBuild };
 }
 
 /** The component metadata of every component under `dirs` (default `root`), once, without a cache: for tools and tests. */
@@ -465,21 +520,30 @@ const lines = (items) => items.slice(0, 5).map((i) => `\n  - ${i}`).join('') + (
 const rel = (root, f) => (f.startsWith(posix(root) + '/') ? f.slice(posix(root).length + 1) : f);
 
 /**
+ * The runtime's `@stencil/core/app-data` as the bundler resolves it, or null when this build does not bundle the runtime (an external `@stencil/core`
+ * is the consumer's, with its own flags: the components must set them, so nothing is folded).
+ */
+export async function bundledAppData(ctx, root) {
+  const appData = await ctx.resolve(APP_DATA, join(root, 'noop.js'), { skipSelf: true });
+  return appData && !appData.external ? appData : null;
+}
+
+/**
  * The `BUILD` flags of a production client build as constants, or `flags: null` when every flag has to stay on (the caller then keeps what it
  * did without folding). `overrides` is what `runtimeFlags` of vite.js gives (`signals`, the user's `buildFlags`, `hydrateClient`): it wins over
  * the computed flags. Warns once, naming the files, whenever it keeps everything on because the component set is not certain.
- * @returns {Promise<{ flags: Record<string, unknown> | null, scan?: object, reason?: string }>}
+ * @returns {Promise<{ flags: Record<string, unknown> | null, allOn: Record<string, unknown>, scan: object }>} `allOn`: the flags when none is folded
  */
-export async function foldFlagsForBuild(ctx, scanner, { root, dirs, signals, overrides, entries = [], extraSources = [], skipPackages = [], verbose = false }) {
+export async function foldFlagsForBuild(ctx, scanner, { appData, root, dirs, signals, overrides, entries = [], extraSources = [], skipPackages = [], aliases = [], verbose = false }) {
   const note = (m) => ctx.warn(`[stencilrs] foldRuntimeFlags: ${m}\n  Every runtime feature stays on (as with foldRuntimeFlags: false). Add the folders of the components to foldRuntimeFlags.dirs, or set foldRuntimeFlags: false.`);
-  const appData = await ctx.resolve(APP_DATA, join(root, 'noop.js'), { skipSelf: true });
-  // A runtime that is not part of this bundle (an external `@stencil/core`) is the consumer's, with its own flags: the components must set them.
-  if (!appData || appData.external) return { flags: null, reason: appData ? 'external runtime' : 'no @stencil/core/app-data' };
-  const scan = await scanner.scan(root, { dirs, entries, extraSources, skipPackages, resolveSpec: (spec, importer) => ctx.resolve(spec, importer, { skipSelf: true }) });
+  const base = defaultBuildFlags(appData.id.split('?')[0]);
+  // Every flag on, as the runtime has them, with what the project asked for (`signals`, `buildFlags`, `hydrateClient`) on top.
+  const allOn = (scan) => ({ ...base, ...(signals || scan?.signalsImport ? { vdomSignals: true } : {}), ...overrides });
+  const scan = await scanner.scan(root, { dirs, entries, extraSources, skipPackages, resolveSpec: (spec, importer) => ctx.resolve(spec, importer, { skipSelf: true }), aliases });
   if (ctx.meta?.watchMode) for (const f of scan.watch) ctx.addWatchFile(f);
   if (scan.failed.length) {
     note(`${scan.failed.length} file(s) could not be read by stencilrs or by Stencil's compiler, so their features are unknown:${lines(scan.failed.map((f) => `${rel(root, f.file)}: ${f.reason}`))}`);
-    return { flags: null, scan };
+    return { flags: null, allOn: allOn(scan), scan };
   }
   // A package of prebuilt components that shares this runtime (its modules import `@stencil/core`) has features nobody counted. One that bundles
   // a runtime of its own (ionicons' `ion-icon`, a standalone build) does not touch this one.
@@ -491,13 +555,12 @@ export async function foldFlagsForBuild(ctx, scanner, { root, dirs, signals, ove
   if (shared.length) {
     const names = [...new Set(shared)];
     note(`${names.length} package(s) of prebuilt Stencil components share the runtime (${names.join(', ')}); their features are unknown.`);
-    return { flags: null, scan };
+    return { flags: null, allOn: allOn(scan), scan };
   }
   if (!scan.cmps.length) {
     if (verbose) ctx.info?.('[stencilrs] foldRuntimeFlags: no component found, every runtime feature stays on');
-    return { flags: null, scan };
+    return { flags: null, allOn: allOn(scan), scan };
   }
-  const base = defaultBuildFlags(appData.id.split('?')[0]);
   // `hydrateClientSide` stays what it is without folding (on, unless `buildFlags` or `hydrateClient` say otherwise): Stencil turns it off only for a
   // project with an SSR output target, which this cannot know. `buildFlags: { hydrateClientSide: false }` is the one that matters most.
   const flags = {

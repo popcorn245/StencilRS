@@ -40,7 +40,7 @@ import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
-import { createFoldScanner, defaultBuildFlags, entryFilesOf, foldBuildReads, foldFlagsForBuild, foldRuntimeFlagsOption, foldedAppDataModule, unscannedRuntimeUsers } from './vite-fold.js';
+import { bundledAppData, createFoldScanner, defaultBuildFlags, entryFilesOf, foldBuildReads, foldFlagsForBuild, foldRuntimeFlagsOption, foldedAppDataModule, unscannedRuntimeUsers } from './vite-fold.js';
 import { readCollections } from './ssr-collection.js';
 import { autoRuntimeFeatures, readSources, runtimeFeatureDefines } from './runtime-features.js';
 import { applyClientRuntimePatches } from './client-patches.js';
@@ -268,8 +268,12 @@ export function stencilrs(options = {}) {
   const ssr = componentExport === 'ssr';
   // `foldRuntimeFlags` (vite-fold.js): on by default for a production client build, `false` opts out, `{ dirs }` the folders (relative to the Vite root, default `src`).
   const { enabled: foldRuntimeFlags, dirs: foldDirs } = foldRuntimeFlagsOption(foldOption);
-  const foldScanner = createFoldScanner({ resolveImports });
+  let foldScanner = null; // made in `configResolved`, once the options of `transform` are known
+  const transpileOptionsOf = (code, file) => ({ file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
   let foldScanned = new Set();
+  let foldActive = false; // this build folds: components write no flags, the app-data module has them (all on when the scan cannot vouch for the set)
+  let foldAllOn = null;
+  let foldPending = null; // this build's scan, until it has decided `foldedFlags`
   let entryFiles = [];
   const hydrateClient = hydrateClientOptions(hydrateClientOption);
   if (hydrateClient && ssr) throw new Error(`[stencilrs] hydrateClient is the browser build: it cannot be combined with componentExport: 'ssr'`);
@@ -331,6 +335,7 @@ export function stencilrs(options = {}) {
   let foldedFlags = null;
   let isBuild = false;
   let viteSsrBuild = false;
+  let resolveAliases = [];
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let cacheDir = '';
@@ -579,6 +584,7 @@ export function stencilrs(options = {}) {
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
       isBuild = config.command === 'build';
+      resolveAliases = (Array.isArray(config.resolve?.alias) ? config.resolve.alias : []).map((a) => a.find);
       viteSsrBuild = !!config.build?.ssr; // a Vite SSR bundle: the server runtime, whose flags are not these
       buildStamps = config.command === 'build';
       root = config.root;
@@ -592,6 +598,8 @@ export function stencilrs(options = {}) {
       entryFiles = foldRuntimeFlags && isBuild ? entryFilesOf(config) : [];
       // TypeScript's own default, at the ES2022 target Stencil v5 emits: on.
       useDefineForClassFields = readTsconfigOptions(root).useDefineForClassFields !== false;
+      // The scan compiles a component with the very options `transform` uses, and shares the result with it (vite-fold.js `compile`).
+      foldScanner = foldRuntimeFlags && isBuild ? createFoldScanner({ resolveImports, compileOptions: (source, file) => transpileOptionsOf(source, file) }) : null;
     },
 
     configureServer(server) {
@@ -640,22 +648,45 @@ export function stencilrs(options = {}) {
       splitFiles.clear(); // `emitFile` is per build: a watch rebuild emits every component's entry again
       if (hydrateClient && !isDev && !specPage) await emitExtraTags(this);
       foldedFlags = null;
+      foldPending = null;
+      foldActive = false;
       if (foldRuntimeFlags && isBuild && !viteSsrBuild && !isDev && !ssr && !specPage && runtime === 'stencil') {
-        // Every component of the project must be known before the runtime chunk is made: scan the sources first, as `stencil build` reads them all.
-        const folded = await foldFlagsForBuild(this, foldScanner, {
-          root,
-          dirs: foldDirs.map((d) => resolve(root, d)).filter((d) => existsSync(d)),
-          signals,
-          // What the components would each set at run time: `signals`, the user's `buildFlags`, `hydrateClient`. It wins over the computed flags.
-          overrides: runtimeFlags({ signals, buildFlags, hydrateClient: !!hydrateClient }),
-          entries: entryFiles,
-          extraSources: [...collectionSource].map(([file, source]) => ({ file, source })),
-          skipPackages: hydrateClient ? hydrateClient.collections : [],
-          verbose,
-        });
-        foldedFlags = folded.flags;
-        foldScanned = folded.scan?.files ?? new Set();
-        if (!foldedFlags && verbose && folded.reason) logger?.info(`[stencilrs] foldRuntimeFlags: ${folded.reason}, every runtime feature stays on`);
+        const appData = await bundledAppData(this, root);
+        if (!appData) {
+          if (verbose) logger?.info('[stencilrs] foldRuntimeFlags: the runtime is not part of this bundle, every runtime feature stays on');
+        } else {
+          // Every component of the project must be known before the runtime chunk is made, as `stencil build` reads them all. Not awaited here: Vite goes on
+          // resolving, loading and compiling modules, the scan compiles the components beside it (a component is compiled once, for both), and what needs the
+          // flags (the runtime's `app-data`, the runtime itself) waits for `foldPending`. A component's output does not depend on them.
+          foldScanner.newBuild();
+          foldActive = true;
+          const ctx = this;
+          const overrides = runtimeFlags({ signals, buildFlags, hydrateClient: !!hydrateClient });
+          foldPending = (async () => {
+            try {
+              const folded = await foldFlagsForBuild(ctx, foldScanner, {
+                appData,
+                root,
+                dirs: foldDirs.map((d) => resolve(root, d)).filter((d) => existsSync(d)),
+                signals,
+                // What the components would each set at run time: `signals`, the user's `buildFlags`, `hydrateClient`. It wins over the computed flags.
+                overrides,
+                entries: entryFiles,
+                extraSources: [...collectionSource].map(([file, source]) => ({ file, source })),
+                skipPackages: hydrateClient ? hydrateClient.collections : [],
+                aliases: resolveAliases,
+                verbose,
+              });
+              foldedFlags = folded.flags;
+              foldAllOn = folded.allOn;
+              foldScanned = folded.scan?.files ?? new Set();
+            } catch (e) {
+              // A scan that fails is no reason to fail the build: nothing is folded.
+              ctx.warn(`[stencilrs] foldRuntimeFlags: the scan failed (${e.message}); every runtime feature stays on`);
+              foldAllOn = { ...defaultBuildFlags(appData.id.split('?')[0]), vdomSignals: true, ...overrides };
+            }
+          })();
+        }
       }
       if (checker.enabled) {
         checkDev = isServe || !!this.meta?.watchMode;
@@ -706,6 +737,7 @@ export function stencilrs(options = {}) {
       }
       const file = id.split('?')[0].replaceAll('\\', '/');
       // `foldRuntimeFlags`: the runtime's reads of `BUILD.x` become the literals, which the bundler cannot do through the object itself.
+      if (foldPending && !(ssr || transformOpts?.ssr) && STENCIL_DIST_RE.test(file) && code.includes(APP_DATA_ID)) await foldPending;
       if (foldedFlags && !(ssr || transformOpts?.ssr) && STENCIL_DIST_RE.test(file) && code.includes(APP_DATA_ID)) {
         code = foldBuildReads(applyClientRuntimePatches(code, file), foldedFlags);
         if (code.includes(STENCIL_BASE_URL)) code = code.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`);
@@ -758,7 +790,7 @@ export function stencilrs(options = {}) {
         code = foldBuildFlags(code, file, { isBrowser: true, isServer: false }) ?? code;
       }
 
-      const memoKey = `${id}\0${transformOpts?.ssr ? 1 : 0}`;
+      const memoKey = `${id}\0${transformOpts?.ssr ? 1 : 0}\0${foldActive ? 1 : 0}`; // a folding build's components write no flags
       const kept = memo.get(memoKey);
       if (kept && kept.source === original && depsFresh(kept.deps, buildStamps ? stamps : new Map())) {
         counts.reused++;
@@ -790,7 +822,7 @@ export function stencilrs(options = {}) {
         // Dev only: the runtime's hot-reload half, which also turns on its hydration warnings.
         return { code: isDev ? `import ${JSON.stringify(RUNTIME_HOT_FILE)};\n${fine.code}\nif (import.meta.hot) import.meta.hot.accept();\n` : fine.code, map: null };
       }
-      const result = await transpileAsync(code, { file, resolveImports, componentExport, useDefineForClassFields, ...(specPage ? SPEC_PAGE_OPTIONS : {}), ...jsxFor(code, tsconfigJsx) });
+      const result = await (foldActive ? foldScanner.compile(file, code, 'build') : transpileAsync(code, transpileOptionsOf(code, file)));
 
       const unported = result.diagnostics.filter((d) => d.message.startsWith('stencilrs:'));
       if (unported.length) {
@@ -820,7 +852,7 @@ export function stencilrs(options = {}) {
       emitSplit(this, file, tagName);
 
       const overrides = runtimeFlags({ signals: SIGNALS_IMPORT_RE.test(code), buildFlags, hydrateClient: !!hydrateClient, dev: isDev && !ssr && !specPage });
-      const mutations = foldedFlags ? '' : Object.entries(overrides)
+      const mutations = foldActive ? '' : Object.entries(overrides)
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
         .join('');
       let out = mutations ? `import{BUILD as __stencilBUILD}from"${APP_DATA_ID}";\n${mutations}\n${result.code}` : result.code;
@@ -847,7 +879,10 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
-      if (foldedFlags && id === APP_DATA_ID) return FOLDED_APP_DATA_ID;
+      if (id === APP_DATA_ID && foldActive) {
+        await foldPending;
+        return FOLDED_APP_DATA_ID;
+      }
       if (collectionSource.size) {
         if (collectionSource.has(id)) return id;
         // A collection component's own imports are its original's neighbours; the packages it and its files use (`@stencil/core`,
@@ -899,7 +934,7 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
-      if (id === FOLDED_APP_DATA_ID && foldedFlags) return foldedAppDataModule(foldedFlags);
+      if (id === FOLDED_APP_DATA_ID && foldActive) return foldedAppDataModule(foldedFlags ?? foldAllOn);
       if (collectionSource.size && collectionSource.has(id)) return collectionSource.get(id);
       if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_MODULE && project && !needsUnplugin) {
@@ -1002,7 +1037,8 @@ export function stencilrs(options = {}) {
       await loadCss?.dispose();
     },
 
-    buildEnd() {
+    async buildEnd() {
+      await foldPending; // a scan nobody waited for (no component, no runtime) is done before the build is
       unionHint.flush();
       // `foldRuntimeFlags` computed the flags from the components its scan found. A module that uses the runtime and was not scanned (reached through an
       // alias, say) has its features missing from them, and the output is made already: say so, with the files.

@@ -3,8 +3,8 @@
 > **Shipped.** `foldRuntimeFlags` is on by default for production client builds of the default runtime (opt out with `foldRuntimeFlags: false`;
 > the default is the constant `FOLD_RUNTIME_FLAGS_DEFAULT` in `vite-fold.js`). The option, its safety rules (every flag stays on, with one warning, when the
 > component set is uncertain), the watch behaviour and the final numbers are in [docs/vite-plugin.md](vite-plugin.md#smaller-production-bundles-foldruntimeflags).
-> What changed from this prototype: the scan is parallel (`transpileMany`) and cached per file by mtime and size (136 components: 0.2 s cold, 15 ms warm,
-> against 0.45 s each time), follows what the bundler resolves (aliases, workspace packages), reads files stencilrs does not port with Stencil's compiler,
+> What changed from this prototype: the scan is parallel (`transpileMany`) and cached per file by mtime and size (136 components: 15 ms warm; cold, the scan shares its compile with `transform`, so a ui-kit build costs +5%, 645 to 679 ms median,
+> against 0.45 s extra each time), follows what the bundler resolves (aliases, workspace packages), reads files stencilrs does not port with Stencil's compiler,
 > keeps every flag on for a file nobody can read or a package of prebuilt components that shares the runtime (it used to warn after the output was made),
 > puts a `<slot>` / `<svg>` of a local module a component imports on, applies `buildFlags` before the rules that follow from a flag, and rescans in watch mode.
 > The text below is the spike as written (the "What is left" list is what the shipped version did).

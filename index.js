@@ -72,10 +72,12 @@ export const analyze = (source, fileName, options = {}) =>
  * what @stencil/unplugin's `spec-page` mode compiles. The metadata carries the JSDoc and the
  * `complexType` of members; with `complexTypes` (on by default here) a type stencilrs cannot
  * resolve without the type checker is an error starting `stencilrs:`, the cue to use Stencil.
+ * `componentMetadata: 'result'`: the same metadata beside the code instead of in it: `code` is what no `componentMetadata` generates, and
+ * `compilerMeta` has each component's `static get COMPILER_META()` member text (one analysis, one generation; `complexTypes` stays as given).
  * `style: null` leaves styles out (Stencil's option; the default `'static'` keeps them).
  * @param {string} source module source (TS/TSX)
- * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean, useDefineForClassFields?: boolean }} options
- * @returns {{ code: string, map: string | null, components: object[], diagnostics: object[], baseClasses: string[] }}
+ * @param {{ file: string, componentExport?: 'customelement' | 'module' | 'lazy' | 'ssr' | null, componentMetadata?: 'compilerstatic' | 'result' | null, style?: 'static' | null, coreImportPath?: string, jsx?: 'classic' | 'automatic', jsxImportSource?: string, resolveImports?: boolean, complexTypes?: boolean, sourceMap?: boolean, transformAsBaseClass?: boolean, useDefineForClassFields?: boolean }} options
+ * @returns {{ code: string, map: string | null, compilerMeta: string[], components: object[], diagnostics: object[], baseClasses: string[] }}
  */
 export const transpile = (source, options) => JSON.parse(native.transpile(source, nativeOptions(options)));
 
@@ -85,7 +87,7 @@ function nativeOptions(options) {
   return {
     ...rest,
     ...(options.componentExport === null ? { componentExport: 'lazy' } : {}),
-    ...(componentMetadata ? { componentMetadata, complexTypes: options.complexTypes ?? true } : {}),
+    ...(componentMetadata ? { componentMetadata, ...(componentMetadata === 'compilerstatic' ? { complexTypes: options.complexTypes ?? true } : {}) } : {}),
     ...(style === null ? { emitStyles: false } : {}),
   };
 }

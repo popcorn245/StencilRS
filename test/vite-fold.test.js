@@ -433,3 +433,24 @@ test('a build whose @stencil/core is external is not folded: the components keep
   assert.equal(folded, await run2({ ...NO_HYDRATION, foldRuntimeFlags: false }));
   assert.match(folded, /app-data/);
 });
+
+test('the scan and the build share one compile per component, the very result `transform` would compute', async () => {
+  const { transpile } = await import('../index.js');
+  const source = cmp('my-a', { encapsulation: 'none', body: '<div><slot /></div>' });
+  const root = project({ 'src/a.tsx': source });
+  const file = join(root, 'src/a.tsx').replaceAll('\\', '/');
+  const options = (code, f) => ({ file: f, resolveImports: true, componentExport: 'customelement', useDefineForClassFields: true, jsx: 'classic' });
+  const scanner = createFoldScanner({ compileOptions: options });
+  const asked = scanner.compile(file, source, 'build'); // the build's transform asks first
+  assert.equal(scanner.compile(file, source, 'build'), asked, 'the same compile, not a second one');
+  const scan = await scanner.scan(root, { dirs: [join(root, 'src')] });
+  assert.equal(buildFeatures(scan.cmps).slotRelocation, true);
+  const handed = await asked;
+  const plain = transpile(source, options(source, file));
+  assert.equal(handed.code, plain.code, 'the code is exactly the one without any metadata');
+  assert.equal(handed.map, plain.map);
+  assert.deepEqual(handed.diagnostics, plain.diagnostics);
+  assert.equal(handed.compilerMeta.length, 1);
+  // another source is another compile
+  assert.notEqual(scanner.compile(file, source + ' ', 'build'), asked);
+});
