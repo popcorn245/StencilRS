@@ -4,7 +4,7 @@
 // Needs: the stencilrs string bundle (spike/vite.string.config.ts), the Qwik build (bench/qwik/load),
 // `node spike/compare/build-solid.mjs`. Astro runs in its own vitest process (astro/bench.test.js).
 import { gzipSync } from 'node:zlib';
-import { createStringRenderer } from '../runtime-string.js';
+import { createStringRenderer } from '../../runtime-string.js';
 
 const N = Number(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 40);
 const bench = new URL('../../examples/starter/bench/', import.meta.url);
