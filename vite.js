@@ -41,6 +41,7 @@ import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStenci
 import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
 import { readCollections } from './ssr-collection.js';
+import { autoRuntimeFeatures, readSources, runtimeFeatureDefines } from './runtime-features.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -243,12 +244,14 @@ const SPEC_PAGE_OPTIONS = {
  *   `BUILD.hydrateClientSide` (the one `buildFlags: { hydrateClientSide: false }` turns off), and, in a production build, emits every component
  *   as a module of its own, `components/<tag>.js` (importing it defines the tag), with `components.json` mapping tag to module and to the
  *   shared chunks it imports. `{ split: false }`: the flag only; `{ manifest, dir }`: the manifest's file name (false: none), the folder.
+ *   runtimeFeatures (experimental, `runtime: 'stencilrs'` production builds; docs/spike-runtime-size.md): compiles features of the runtime out of the bundle: `'auto'`
+ *   (from the project's own `src`) or `{ server, hydrate, resume, light, signals, vnode, hot }`, each `false` to drop it. Unset: the whole runtime.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', runtimeFeatures, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -502,6 +505,13 @@ export function stencilrs(options = {}) {
     config(userConfig, env) {
       fallbackPlugin.remember('config', [userConfig, env]);
       const result = { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
+      // Production builds of the stencilrs runtime: its optional features (runtime.js `F_*`) are `define`d, all on unless
+      // `runtimeFeatures` turns some off, so the bundler folds them. The dev server and Vitest keep the whole runtime.
+      if (runtime === 'stencilrs' && env?.command === 'build' && !ssr && !specPage) {
+        const features = runtimeFeatures === 'auto' ? autoRuntimeFeatures(readSources(join(resolve(userConfig.root ?? process.cwd()), 'src')), { hydrateClient: !!hydrateClient }) : runtimeFeatures;
+        if (hydrateClient && features?.hydrate === false) throw new Error(`[stencilrs] runtimeFeatures.hydrate is false but hydrateClient is on`);
+        result.define = runtimeFeatureDefines(features);
+      }
       // The dev server's startup scan reads source files, so it misses the imports the transform
       // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
       // first request and re-runs its optimizer. Only the client runtime of the default output
