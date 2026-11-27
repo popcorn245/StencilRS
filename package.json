@@ -65,6 +65,7 @@
     "express.d.ts",
     "express-hydrate.js",
     "express-islands.js",
+    "express-stream.js",
     "express-worker.js",
     "vite.js",
     "vite-css.js",
