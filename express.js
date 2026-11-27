@@ -17,11 +17,13 @@
 // `hydrate` is anything with `renderToString(html, options)`: a hydrate app built by stencilrs
 // (`componentExport: 'ssr'`) or by Stencil's own `ssr` output target.
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
 import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands } from './express-islands.js';
+import { bootConfig, bootTag, insertBeforeBodyEnd, normalizeClient } from './islands-manifest.js';
 import { STREAM_MODES, streamPage, streamView } from './express-stream.js';
 import { createRenderCache } from './render-cache.js';
 
@@ -38,20 +40,20 @@ const loadHydrate = async (hydrate) => {
 const SCOPED_ISLANDS = "stencilEngine: `islands` need serializeShadowRoot 'declarative-shadow-dom' (the default): islands are not supported with scoped rendering (`serializeShadowRoot: 'scoped'` or `false`), see docs/islands.md";
 const isScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false;
 
-/** `islands: false | true | { idStride, earlyHead, cache, stream, fallback, onError }` with the defaults filled in, or null. `cache`: `false` or the island render cache's config (`true` = its defaults). */
+/** `islands: false | true | { idStride, earlyHead, cache, stream, fallback, onError, client }` with the defaults filled in, or null. `cache`: `false` or the island render cache's config (`true` = its defaults). */
 const normalizeIslands = (islands) => {
   if (islands === false || islands == null) return null;
   const o = islands === true ? {} : islands;
-  const KEYS = ['idStride', 'earlyHead', 'cache', 'stream', 'fallback', 'onError'];
+  const KEYS = ['idStride', 'earlyHead', 'cache', 'stream', 'fallback', 'onError', 'client'];
   if (typeof o !== 'object') throw new TypeError(`stencilEngine: \`islands\` must be true, false or { ${KEYS.join(', ')} }`);
   for (const key of Object.keys(o)) if (!KEYS.includes(key)) throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected ${KEYS.join(', ')})`);
-  const { idStride = 1000, earlyHead = false, cache = true, stream = 'in-order', fallback, onError } = o;
+  const { idStride = 1000, earlyHead = false, cache = true, stream = 'in-order', fallback, onError, client = false } = o;
   if (!(Number.isSafeInteger(idStride) && idStride >= 1)) throw new TypeError('stencilEngine: `islands.idStride` must be a positive integer');
   if (typeof earlyHead !== 'boolean') throw new TypeError('stencilEngine: `islands.earlyHead` must be a boolean');
   if (!(cache === false || cache === true || (cache && typeof cache === 'object'))) throw new TypeError('stencilEngine: `islands.cache` must be true, false or { max, maxBytes, ttl }');
   if (!STREAM_MODES.includes(stream)) throw new TypeError(`stencilEngine: \`islands.stream\` must be one of ${STREAM_MODES.join(', ')}`);
   for (const [key, fn] of [['fallback', fallback], ['onError', onError]]) if (fn !== undefined && typeof fn !== 'function') throw new TypeError(`stencilEngine: \`islands.${key}\` must be a function`);
-  return { idStride, earlyHead, cache, stream, fallback, onError };
+  return { idStride, earlyHead, cache, stream, fallback, onError, client: client ? normalizeClient(client, (file) => JSON.parse(readFileSync(file, 'utf8'))) : null };
 };
 
 const abortError = (signal) => Object.assign(new Error('stencilEngine: render cancelled'), { name: 'AbortError', code: 'ABORT_ERR', cause: signal.reason });
@@ -375,6 +377,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       }),
       earlyHead: early && probe(early.htmlTag, base).then((tag) => tag + early.rest),
       inspect: (label, result) => inspect(path, result.diagnostics, label),
+      client: islandsConfig.client && document ? (manifest) => bootTag(bootConfig(manifest, islandsConfig.client), islandsConfig.client) : null,
     });
   };
 
@@ -408,7 +411,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     const { html, options } = await prepare(path, locals);
     if (islandsConfig) {
       const page = islandsOf(path, html, options, undefined, locals.stencilCache !== false);
-      if (page) return page.html();
+      if (page) return islandsConfig.client ? insertBeforeBodyEnd(await page.html(), await page.bootTag()) : page.html();
     }
     const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
     inspect(path, result.diagnostics);

@@ -367,6 +367,29 @@ layer. The island's html is the fragment render with the shell's marker removed,
 that are new for the page written in front of it. Client: `@popcorn245/stencilrs/islands` (about 1.5 KB, `client-boot.mjs` is the
 draft): the five directives above on the custom-elements build, with the island -> tag lists in a manifest.
 
+## Follow-ups 8 and 9, built (#195)
+
+The directives, the `connectedCallback` gate, the island to tags manifest and the `ready` events are `islands-client.js` and the engine's `islands.client` (docs/islands.md); the per-island
+unit is the `hydrateClient` build's per-tag module, resolved per page from `result.components`. Measured (`examples/ionic/bench-islands-client.mjs`, production build, minified,
+Chromium, 414x480, interleaved rounds, n=15, medians; kitchen-sink with `form` and `rest` deferred, list-50 with `b`): script time is CDP `ScriptDuration`, ready is from navigation until the shell and the
+`load` islands are ready.
+
+| | script ms | ready ms | JS requested (gzip) | HTML gzip |
+|---|---|---|---|---|
+| kitchen-sink, spike boot, all `load` | 126 (105-182) | 452 (369-616) | 634 KB (162 KB), 118 files | 33,237 B |
+| kitchen-sink, spike boot, deferred static | 73 (60-106) | 313 (258-398) | 335 KB (97 KB), 74 files | 33,248 B |
+| kitchen-sink, new client, all `load` | 98 (84-159) | 331 (293-448) | 638 KB (164 KB), 119 files | 33,090 B |
+| kitchen-sink, new client, deferred static | 57 (55-87) | 237 (193-329) | 339 KB (99 KB), 75 files | 31,252 B |
+| list-50, spike boot, all `load` | 104 (79-157) | 283 (259-370) | 228 KB (66 KB), 38 files | 21,628 B |
+| list-50, spike boot, `b` static | 67 (53-88) | 257 (190-301) | 228 KB (66 KB), 38 files | 21,641 B |
+| list-50, new client, all `load` | 83 (72-100) | 181 (142-237) | 232 KB (67 KB), 39 files | 20,565 B |
+| list-50, new client, `b` static | 63 (46-93) | 163 (129-198) | 232 KB (67 KB), 39 files | 18,298 B |
+
+Static against all-load on kitchen-sink: script -42% (new) and -42% (spike), JS -47% and -47%, ready -28% and -31%; the spike's dev-build figures were -50%, -57% and about -40%. On list-50 `b` uses the
+tags `a` already loads, so no code is saved and only the hydration work is: script -24%, ready -10% (inside the noise: the ranges overlap). The new client's `all` against the spike's `all`: script -22%, ready -27%;
+the two boots differ in the loader (one define pass, `modulepreload` of the modules and their chunks, the ready measure) and the contributions were not separated, so it is not a measure of the directives. The visible variant (`form` and
+`rest` visible, scrolled to at the end) hydrated the part of `form` that was in the first viewport at once and the rest on scroll: +13 files, +13 ms script (10-23).
+
 ## Follow-up issues (sizes: S under a day, M a few days, L a week or more)
 
 1. **`idBase` render option as a guarded `ssr-patches.js` patch**, with a differential test (`idBase` unset is byte-identical) and a guard test. S.

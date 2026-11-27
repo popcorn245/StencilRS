@@ -15,6 +15,7 @@ import { isAbsolute } from 'node:path';
 import { constants, createGzip } from 'node:zlib';
 
 import { createDeduper } from './express-islands.js';
+import { insertBeforeBodyEnd } from './islands-manifest.js';
 
 export const STREAM_MODES = ['in-order', 'out-of-order'];
 
@@ -78,6 +79,17 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
       return defaultFallback(name);
     }
   };
+  // The client boot of `islands.client` (''): written before `</body>` in the chunk that closes the page, once every island has settled.
+  const boot = async (page) => {
+    try {
+      return (await page.bootTag?.()) ?? '';
+    } catch (err) {
+      try {
+        onError(err, { view, island: null });
+      } catch {}
+      return '';
+    }
+  };
   try {
     const started = await wait(start(ctl.signal));
     if (started === aborted) return;
@@ -123,7 +135,13 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
     };
 
     if (mode === 'in-order') {
-      yield (early && pieces.document ? fresh(result.styles) : '') + segments[0];
+      let first = (early && pieces.document ? fresh(result.styles) : '') + segments[0];
+      if (!order.length) {
+        const tag = await wait(boot(started.page));
+        if (tag === aborted) return;
+        if (tag) first = insertBeforeBodyEnd(first, tag);
+      }
+      yield first;
       for (let k = 0; k < order.length; k++) {
         let chunk = '';
         let r = await outcome(order[k]);
@@ -134,6 +152,11 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
           if (!coalesce || k + 1 >= order.length || !done.has(order[k + 1])) break;
           k++;
           r = done.get(order[k]);
+        }
+        if (k === order.length - 1) {
+          const tag = await wait(boot(started.page));
+          if (tag === aborted) return;
+          if (tag) chunk = insertBeforeBodyEnd(chunk, tag);
         }
         yield chunk;
       }
@@ -156,7 +179,9 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
       const got = island(order[k], r);
       yield `<div hidden id="s-isl-c-${k}">${typeof got === 'string' ? got : styled(got) + got.html}</div><script${nonceText}>$ISL(${k})</script>`;
     }
-    yield tail;
+    const tag = await wait(boot(started.page));
+    if (tag === aborted) return;
+    yield tag ? insertBeforeBodyEnd(tail, tag) : tail;
   } catch (err) {
     if (ctl.signal.aborted) return; // the client left (or the loop broke off): whatever failed was a cancelled render
     throw err;

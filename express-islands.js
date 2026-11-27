@@ -218,6 +218,13 @@ export const findMarkers = (rendered, islands) => {
   return out;
 };
 
+/**
+ * What a static island (never hydrated) does not need: Stencil's hydration annotations. `s-id`, `c-id`, `s-sn` and `s-mode` attributes and the
+ * `<!--r. o. s. t. c.-->` comments are for the client runtime to find its nodes again; with nothing to hydrate they are bytes (-8..-21% gzip, docs/spike-islands.md).
+ * `sty-id` stays: the client's style lookup and the deduplication of styles are keyed by it.
+ */
+export const stripAnnotations = (html) => html.replace(/ (?:s-id|c-id|s-sn|s-mode)="[^"]*"/g, '').replace(/<!--[rostc]\.[^>]*-->/g, '');
+
 const styleTag = (s) => `<style${s.id ? ` sty-id="${String(s.id).replace(/"/g, '&quot;')}"` : ''}>${s.content}</style>`;
 
 /** Writes each style once per page: `fresh(styles)` is the tags of the ones not seen yet. */
@@ -279,8 +286,9 @@ export const probedHtmlTag = (rendered) => {
  * @param document whether the view is a document: only then there is a `<head>` and styles are written (a fragment has neither, as for any fragment render)
  * @param earlyHead a promise of the start of the response (`probedHtmlTag` + `earlyHeadParts().rest`), or null: written before anything renders, and the shell's styles go to the top of `<body>`
  * @param inspect `(label, result)`: the engine's diagnostics check for a render (it throws on an error)
+ * @param client `(clientManifest) => html` of the client's boot (`islands.client`), or null. With it a static or `none` island loses its hydration annotations: the client never hydrates it
  */
-export const createIslandPage = ({ split, view, shell, parts, stride, document, earlyHead = null, inspect }) => {
+export const createIslandPage = ({ split, view, shell, parts, stride, document, earlyHead = null, inspect, client = null }) => {
   for (const p of [shell, ...parts, earlyHead]) p?.catch?.(() => {}); // a render nobody awaited because another failed first must not be an unhandled rejection
   const check = (label, result, base) => {
     inspect(label, result);
@@ -325,7 +333,8 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
           const isl = split.islands[slot];
           const result = parts[slot] ? await parts[slot] : { html: '', styles: [], components: [], hydratedCount: 0 };
           check(`island ${JSON.stringify(isl.name)}`, result, (slot + 1) * stride);
-          const tagged = tagRoots(result.html, ` data-island="${isl.name}" data-client="${isl.client}"`);
+          const never = client && (isl.client === 'static' || isl.client === 'none');
+          const tagged = tagRoots(never ? stripAnnotations(result.html) : result.html, ` data-island="${isl.name}" data-client="${isl.client}"`);
           if (!tagged.roots && result.html.trim()) {
             throw new IslandError(`${view}: island ${JSON.stringify(isl.name)} has no element at its top level (only text or comments): there is nothing to carry data-island, wrap it in an element`);
           }
@@ -376,6 +385,27 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
       return segments[0].slice(0, headEnd.start) + styles + segments[0].slice(headEnd.start) + isls.map((isl, k) => isl.html + segments[k + 1]).join('');
     },
 
+    /**
+     * What the client boot needs, once every render is in: `{ shell: [tag], islands: [{ name, client, tags }] }`, the tags each part of the page uses
+     * (`result.components`), the islands in the view's order.
+     */
+    async clientManifest() {
+      const { result } = await cutShell();
+      const tagsOf = (components) => [...new Set(components.map((c) => c.tag))].sort();
+      // An island that failed to render (a streamed page replaced it with a fallback) is listed as `none`: nothing to load for it.
+      const list = await Promise.all(
+        split.islands.map(async (isl, slot) => {
+          const got = await part(slot).then((r) => r, () => null);
+          return got ? { name: isl.name, client: isl.client, tags: tagsOf(got.components ?? []) } : { name: isl.name, client: 'none', tags: [] };
+        })
+      );
+      return { shell: tagsOf(result.components ?? []), islands: list };
+    },
+
+    /** The markup that starts the client for this page (the manifest as JSON, preloads, the boot script), `''` without `islands.client`. It goes before `</body>`: `res.render` does that, a streaming responder writes it with the last chunk. */
+    async bootTag() {
+      return client ? client(await page.clientManifest()) : '';
+    },
     /** What a streaming responder (express-stream.js) assembles its own chunks from: the early head, the cut shell, an island's render. */
     pieces: { head: earlyHead, cut: cutShell, part, document },
 

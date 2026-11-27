@@ -103,6 +103,27 @@ export interface StencilIslandsOptions {
    * has the ids of its slot. The shell and unmarked islands always render. A view opts out for a request with the `stencilCache: false` local.
    */
   cache?: boolean | RenderCacheOptions;
+  /**
+   * Start the client for the page: `res.render` writes, before `</body>`, the page's boot configuration (`<script type="application/json" id="stencil-islands">`: the module files of the shell and of each
+   * island, from `result.components` and the `components.json` of a `hydrateClient` build), `modulepreload` links for what loads at once, and the script `@popcorn245/stencilrs/islands`
+   * (the plugin's `hydrateClient: { islands: true }` writes it as `islands.js`). A `static` or `none` island is rendered without hydration annotations. Documents only. See docs/islands.md.
+   */
+  client?: boolean | StencilIslandsClientOptions;
+}
+
+export interface StencilIslandsClientOptions {
+  /** URL prefix of the build's files (default `/`). */
+  base?: string;
+  /** The build's `components.json`: a path, or the parsed object. */
+  manifest: string | { tags: Record<string, string>; imports?: Record<string, string[]> };
+  /** Modules that run before any component is defined (Ionic's global script), relative to `base`. */
+  init?: string[];
+  /** URL of the boot script (default `<base>islands.js`); `false`: none, your own bundle imports `@popcorn245/stencilrs/islands`. */
+  script?: string | false;
+  /** `modulepreload` for the shell's and the `load` islands' modules and their chunks (default true). */
+  preload?: boolean;
+  /** `rootMargin` of the `visible` directive (default `0px`). */
+  margin?: string;
 }
 
 /** `'in-order'`: the shell, then each island in the order of the view as it is next in line. `'out-of-order'`: the whole shell with an anchor for each island at once, then each island as it finishes, moved into place by a one-line script. */
@@ -138,7 +159,7 @@ export function streamView(engine: StencilExpressEngine, view: string, locals?: 
 /** An island of a view, as `engine.renderIslands` reports it. */
 export interface StencilIsland {
   name: string;
-  /** `load` (default), `idle`, `visible`, `static` or `none`: written on the island's roots as `data-client`; the client directives of a later release read it. */
+  /** `load` (default), `idle`, `visible`, `static` or `none`: written on the island's roots as `data-client`; the client (`@popcorn245/stencilrs/islands`) reads it. */
   client: 'load' | 'idle' | 'visible' | 'static' | 'none';
   /** The `cache` attribute: null (absent), true (bare) or seconds (0: not cached). */
   cache: boolean | number | null;
@@ -155,6 +176,10 @@ export interface StencilIslandPage {
   html(): Promise<string>;
   /** Per island, after it has rendered: its `StencilIsland` fields and the components it hydrated (`{ tag, mode, count, depth }`), for a per-island client manifest. */
   manifest(): Promise<Array<StencilIsland & { components: StencilFragmentResult['components'] }>>;
+  /** After every render: the tags (sorted) the shell and each island used, for the client's boot or a build-time manifest. */
+  clientManifest(): Promise<{ shell: string[]; islands: Array<{ name: string; client: StencilIsland['client']; tags: string[] }> }>;
+  /** The markup that starts the client (`islands.client`): write it before `</body>`, with the last chunk. `''` without that option or for a fragment. `res.render` does it itself. */
+  bootTag(): Promise<string>;
 }
 
 export interface StencilExpressEngine {

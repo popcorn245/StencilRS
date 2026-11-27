@@ -40,6 +40,7 @@
       "types": "./express.d.ts",
       "default": "./express.js"
     },
+    "./islands": "./islands-client.js",
     "./vite": "./vite.js",
     "./ssr": {
       "types": "./ssr.d.ts",
@@ -65,6 +66,8 @@
     "express.d.ts",
     "express-hydrate.js",
     "express-islands.js",
+    "islands-client.js",
+    "islands-manifest.js",
     "express-stream.js",
     "express-worker.js",
     "vite.js",
