@@ -37,7 +37,10 @@ bash scripts/ci.sh   # what CI runs: compiler, parity, both example projects, St
 
 Keep a pull request to one change, say what it fixes and how you checked it. Title it as a
 [conventional commit](https://www.conventionalcommits.org): it becomes the squashed commit, and
-releases are cut from those (`fix:` a patch, `feat:` a minor release, `docs:`/`chore:`/`test:` none). Touching the native
+releases are cut from those (`fix:`/`perf:` a patch, `feat:` a minor release, `docs:`/`chore:`/`test:` none).
+A bump of a dependency users get or pair with (a runtime or peer dependency, such as Vite) is
+`chore(deps):` or `build(deps):`: it cuts a patch and gets a Dependencies section in the release
+notes. A bump that only touches the dev toolchain is `chore(deps-dev):` and stays out of both. Touching the native
 binding also runs [`release.yml`](.github/workflows/release.yml), which builds and installs it on
 every supported platform.
 
