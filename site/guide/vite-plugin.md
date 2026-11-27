@@ -26,6 +26,8 @@ doesn't pay for loading TypeScript ([#52](https://github.com/popcorn245/StencilR
 |---|---|---|
 | `resolveImports` | `true` | Compute component metadata the way a full `stencil build` does: follow relative imports for prop types and defaults, know lib types (`Date`, `Record<…>`, …). `false` gives exactly what Stencil's single-file `transpileSync` (and so `@stencil/unplugin`) produces. |
 | `fallback` | `true` | When a file uses a feature stencilrs hasn't ported, let Stencil's compiler handle that file. `false` makes it a build error instead. |
+| `foldRuntimeFlags` | `true` | Production client builds: compute Stencil's runtime `BUILD` flags from the project's components, as `stencil build` does, so the bundle drops the runtime features no component uses (13 to 18 KB gzip smaller on any app). `false` is the unfolded output. `{ dirs: ['src', 'ui/src'] }` picks the folders scanned (default `src`). When the component set is uncertain, every flag stays on and one warning names the files. `buildFlags` and `hydrateClient` still win. |
+| `buildFlags` | `{}` | Overrides for the runtime's `BUILD` flags, on top of the computed ones. A client that does not hydrate server html sets `{ hydrateClientSide: false }` (another 2.5 KB). |
 | `verbose` | `false` | Log which files fell back, and a count at the end of a build. |
 | *anything else* | | Passed to `@stencil/unplugin` (`docs`, `types`, `stencilConfig`, `dev`, `include`, `exclude`, …). |
 

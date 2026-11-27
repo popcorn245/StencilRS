@@ -16,6 +16,9 @@
 //
 // One window per renderer, renders one at a time: the runtime keeps per-document state.
 
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+
 // The DOM events a resumable page delegates: a component listening to any other hydrates on load.
 const DELEGATED = new Set(['click', 'dblclick', 'auxclick', 'contextmenu', 'input', 'change', 'beforeinput', 'submit', 'reset', 'keydown', 'keyup', 'keypress', 'pointerdown', 'pointerup', 'pointerover', 'pointerenter', 'pointerleave', 'pointerout', 'mousedown', 'mouseup', 'mouseover', 'mouseenter', 'mouseleave', 'mouseout', 'touchstart', 'touchend', 'focus', 'blur', 'focusin', 'focusout', 'paste', 'copy', 'cut', 'dragstart', 'drop']);
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
@@ -24,28 +27,77 @@ const escText = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>
 const escAttr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 const isHost = (el) => !!el.constructor?.__meta;
 
-/** Installs a happy-dom window's globals, then imports the components. */
-export async function createRenderer(load, { url = 'http://localhost/', settleRounds = 20, resumable = true, lazyDefine = null } = {}) {
-  const { Window } = await import('happy-dom');
-  const window = new Window({ url });
+/**
+ * Server rendering for the stencilrs runtime. `load` imports the components (compiled for the runtime); it is called
+ * with `{ renderer }`, which is `'dom'` for the bundle built for the runtime in `runtime.js`, and `'string'` for the one
+ * built for `runtime-string.js` (see `stringRenderer` in docs/vite-plugin.md).
+ *
+ * `renderer: 'dom'` (default) installs a happy-dom window's globals, then imports the components. `renderer: 'string'`
+ * renders without a DOM (runtime-string.js, 30 to 40 times faster), and renders a page that uses something it does not
+ * model with the happy-dom renderer instead, with identical output (see `createHybrid`).
+ */
+export async function createRenderer(load, options = {}) {
+  const { renderer = 'dom' } = options;
+  if (typeof load !== 'function') load = entryLoader(load);
+  if (renderer === 'string') return createHybrid(load, options);
+  if (renderer !== 'dom') throw new Error(`[stencilrs] createRenderer: renderer must be 'dom' or 'string', got ${JSON.stringify(renderer)}`);
+  return createDomRenderer(load, options, false);
+}
+
+/** `load` as the URL (or path) of the SSR build's entry: the string variant is `string/<name>` next to it (`stringRenderer`, vite-string.js). */
+function entryLoader(entry) {
+  const url = entry instanceof URL ? entry : /^[a-z][a-z0-9+.-]+:/i.test(String(entry)) ? new URL(entry) : pathToFileURL(resolve(String(entry)));
+  const string = new URL(`string/${url.pathname.slice(url.pathname.lastIndexOf('/') + 1)}`, url);
+  return ({ renderer }) => import(renderer === 'string' ? string.href : url.href);
+}
+
+/**
+ * Installs the happy-dom window's globals (the names Node does not have, and the few it has that the DOM overrides).
+ * Returns what puts everything back as it was.
+ */
+function installGlobals(window) {
   const keep = new Set(Object.getOwnPropertyNames(globalThis));
+  const undo = [];
+  const set = (key, value) => {
+    undo.push([key, Object.getOwnPropertyDescriptor(globalThis, key)]);
+    Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
+  };
   for (const key of Object.getOwnPropertyNames(window)) {
     if (keep.has(key) || key === 'undefined' || key === 'NaN' || key === 'Infinity') continue;
     try {
-      Object.defineProperty(globalThis, key, { value: window[key], configurable: true, writable: true });
+      set(key, window[key]);
     } catch {
       // read-only on this Node: leave Node's own
     }
   }
-  for (const key of ['window', 'document', 'customElements', 'HTMLElement', 'Node', 'Element', 'Event', 'CustomEvent', 'EventTarget', 'navigator', 'location']) {
-    Object.defineProperty(globalThis, key, { value: key === 'window' ? window : window[key], configurable: true, writable: true });
-  }
+  for (const key of ['window', 'document', 'customElements', 'HTMLElement', 'Node', 'Element', 'Event', 'CustomEvent', 'EventTarget', 'navigator', 'location']) set(key, key === 'window' ? window : window[key]);
+  return () => {
+    for (let i = undo.length - 1; i >= 0; i--) {
+      const [key, d] = undo[i];
+      if (d) Object.defineProperty(globalThis, key, d);
+      else delete globalThis[key];
+    }
+  };
+}
+
+/**
+ * The happy-dom renderer. With `isolate`, the window's globals exist only while it loads and renders: a renderer that
+ * runs components without a DOM (`renderer: 'string'`) must not find a `document` between them.
+ */
+async function createDomRenderer(load, { url = 'http://localhost/', settleRounds = 20, resumable = true, lazyDefine = null } = {}, isolate) {
+  const { Window } = await import('happy-dom');
+  const window = new Window({ url });
+  const uninstallLoad = installGlobals(window);
   globalThis.__RS_SERVER__ = true;
-  await load();
+  try {
+    await load({ renderer: 'dom' });
+  } finally {
+    if (isolate) uninstallLoad();
+  }
 
   const document = window.document;
   let queue = Promise.resolve();
-  const render = async (html, { resumable: resume = resumable, lazyDefine: ld = lazyDefine } = {}) => {
+  const renderPage = async (html, { resumable: resume = resumable, lazyDefine: ld = lazyDefine } = {}) => {
     // Fresh state per request: no styles or components left from the last one.
     document.body.replaceChildren();
     for (const s of document.head.querySelectorAll('style[sty-id]')) s.remove();
@@ -102,7 +154,67 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
     }
     return styles + out;
   };
+  const render = async (html, opts) => {
+    if (!isolate) return renderPage(html, opts);
+    const uninstall = installGlobals(window);
+    try {
+      return await renderPage(html, opts);
+    } finally {
+      // What a component left for the next macrotask still finds its globals.
+      await new Promise((r) => setTimeout(r));
+      uninstall();
+    }
+  };
   return (html, opts) => (queue = queue.then(() => render(html, opts), () => render(html, opts)));
+}
+
+/**
+ * `renderer: 'string'`: every page goes to the string renderer (runtime-string.js) first. It throws `Fallback` for
+ * anything it cannot reproduce exactly, and the page is then rendered from the start by the happy-dom renderer, whose
+ * globals exist only while it runs. A render is atomic, so the two never overlap: a string render waits for a
+ * happy-dom render that is in flight, and a page that falls back therefore delays the renders behind it, as every
+ * render of the default renderer does.
+ */
+async function createHybrid(load, options) {
+  const { url, resumable = true, lazyDefine = null, onFallback = null } = options;
+  const { createStringRenderer } = await import('./runtime-string.js');
+  let strRender;
+  try {
+    strRender = await createStringRenderer(() => load({ renderer: 'string' }), { resumable, lazyDefine, url });
+  } catch (e) {
+    if (e?.code === 'ERR_MODULE_NOT_FOUND' || e?.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') e.message += `\n[stencilrs] renderer: 'string' needs the server bundle built for it: set stringRenderer: true in stencilrs() and run the SSR build again (docs/runtime.md).`;
+    throw e;
+  }
+  let dom = null;
+  let tail = Promise.resolve();
+  let busy = 0;
+  const viaDom = (html, opts) => {
+    busy++;
+    const job = tail.then(async () => {
+      dom ||= createDomRenderer(() => load({ renderer: 'dom' }), options, true);
+      return (await dom)(html, opts);
+    });
+    tail = job.then(
+      () => busy--,
+      () => busy--,
+    );
+    return job;
+  };
+  const render = async (html, opts) => {
+    while (busy) await tail;
+    try {
+      return await strRender(html, opts);
+    } catch (e) {
+      if (e?.name !== 'Fallback') throw e;
+      render.fallbacks++;
+      render.lastFallback = e.message;
+      if (onFallback) onFallback(e.message, html);
+      return viaDom(html, opts);
+    }
+  };
+  render.fallbacks = 0;
+  render.lastFallback = null;
+  return render;
 }
 
 // A component's state as the page should resume it: its members that differ from a fresh

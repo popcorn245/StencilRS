@@ -367,7 +367,12 @@ pub fn generate(
 
     let (edited, _offsets) = ed.apply_mapped();
     let (code, _map, _anchors) = strip_types_and_jsx(&edited, opts)?;
-    Ok(Generated { code, map: None })
+    Ok(Generated {
+        code,
+        map: None,
+        meta: Vec::new(),
+        meta_inputs: Vec::new(),
+    })
 }
 
 /// `@Event()` options of a base class's event: its name and the runtime's flags.

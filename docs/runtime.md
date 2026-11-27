@@ -1,7 +1,8 @@
 # The stencilrs runtime (experimental spike)
 
 `stencilrs({ runtime: 'stencilrs' })` compiles the same component source for a small runtime of
-its own (`runtime.js`, about 4.8 KB gzip) instead of Stencil's. Stencil's runtime stays the default,
+its own (`runtime.js`: 4.5 KB gzip for a small client-only app in a production build, 9.0 KB with every optional part, see
+[Smaller builds](#smaller-builds-runtimefeatures)) instead of Stencil's. Stencil's runtime stays the default,
 and nothing changes for projects that don't set the option.
 
 ## How it differs
@@ -50,6 +51,82 @@ runtimes (`npx vitest run --config vitest.rs.config.ts`).
 - on the host of a non-shadow component, `innerHTML`, `textContent` and `replaceChildren` are not
   routed to slots (`appendChild`, `insertBefore`, `append`, `prepend`, `removeChild` are)
 
+## Smaller builds (`runtimeFeatures`)
+
+`runtime.js` is one module, and its optional parts are behind switches (`F_SERVER`, `F_HYDRATE`, `F_RESUME`, `F_LIGHT`, `F_SIGNALS`,
+`F_VNODE`, `F_HOT`). In a production browser build the Vite plugin turns each on or off, the bundler folds the checks, and what no
+component can reach is not shipped. A one-component app is **7.0 KB gzip** with the default (`'auto'`, which keeps hydration and resuming) and **4.5 KB** with `'client'` (an app no server renders), instead of 9.0 KB (9,034 B, 6,996 B and 4,609 B). The dev server and Vitest always run the whole
+runtime.
+
+```ts
+stencilrs({ runtime: 'stencilrs' });                                   // 'auto' (the default): hydration and resuming stay
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: 'client' });        // auto for an app no server renders: no hydration, no resuming
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: false });           // the whole runtime ('all' is the same)
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: { vnode: false } }); // the parts you name are off, the rest are on
+```
+
+| Feature | What it is | `'auto'` turns it on when | Bytes (gzip) |
+|---|---|---|---:|
+| `light` | components without shadow DOM: slot relocation, scoped and global styles, the `sc-` class | any component of the build has `encapsulation` `none` or `scoped` (metadata the compiler returns for it; Stencil's default is none), or a template has a `<slot>` part outside shadow DOM | 878 |
+| `vnode` | `h()` vnodes in node parts, `{...props}` spreads | the compiled code calls `h()`, uses a functional component or dynamic tag, or a template has a spread part | 362 |
+| `signals` | binding a signal passed to a template | a module imports `@stencil/core/signals` or `@popcorn245/stencilrs/signals`, or the plugin's `signals` option is on | 377 |
+| `hydrate` | hydration in place (claim scanning, `r:n` marks, mismatch fallback) | always, unless `'client'` or `hydrate: false` (a client build cannot tell that a server rendered its page) | 1,582 |
+| `resume` | the state script, event delegation, waking components, early-event replay (needs `hydrate`) | as `hydrate` | 910 |
+| `server` | the `SERVER` branches of `runtime-server.js` | never: a browser build does not render | 303 |
+| `hot` | hot-reload hooks | never: dev server only | 97 |
+
+(Bytes: the saving of turning that one off in the reference app below.)
+
+**Where the answer comes from.** Not from a scan of the sources. The plugin hands every module it transforms to a `FeatureScan`: a compiled
+component with its metadata (`encapsulation`) and the code the compiler emitted (an `h` the user imported for JSX and never called is gone from
+it), a base class, JSX compiled outside a component, and every other module that imports the runtime. The runtime module itself is transformed
+last: when it is first asked for, the plugin loads the build's entries and what they import (`this.load`, so each module is transformed once,
+as it would be anyway), reads the scan, and writes the constants into the runtime before the bundler tree-shakes it (a `renderChunk`
+substitution cannot do this: the classes would already be kept). Components of a package the build compiles (`hydrateClient.collections`) are
+in the scan like the project's own.
+
+A wrong `false` renders a page broken, a wrong `true` costs bytes, so what the plugin cannot read counts as using the feature: a module that
+imports `Base`, `define` or `Mixin` from the runtime (a hand-written component, a library compiled by stencilrs elsewhere) turns on `light`
+and `vnode`; one that imports `h`, `Fragment` or `FunctionalComponent` turns on `vnode`; any signals import turns on `signals`. A module that
+only reads `Build` or `getAssetPath` asks for nothing. If, after the runtime was built, a module turns up that needs a feature `'auto'` left out (a
+plugin emitted a chunk the entries do not reach), the build fails naming the feature and the file, and says what to set. It never builds a broken page.
+
+**Hydration stays on under `'auto'`.** Nothing in a client build says whether a server rendered its html, and a build without hydration
+renders such a page again next to the server's nodes, so `'auto'` keeps `hydrate` and `resume`. An app no server renders opts out with
+`runtimeFeatures: 'client'` (auto without those two; `{ hydrate: false, resume: false }` is the same by hand, and `'client'` with
+`hydrateClient` is a build error). If a `'client'` build does meet a server-rendered host (`s-rs`), the runtime logs once,
+`server-rendered page, build without hydration (runtimeFeatures)`. `test/runtime-features-hydrate.test.js` runs the default build in Chromium
+against server html (hydrating in place and resuming, shadow components and a scoped one, with and without resuming) and
+`examples/starter/bench/load/check.mjs` does it for the 500-card page: the same nodes survive, a click wakes one component.
+
+**`light: false` with a component that is not shadow DOM is a build error** (`runtimeFeatures.light is false, but src/x.tsx has <x-card> (none)`),
+not a page without its slots and styles. Under `'auto'` the case cannot happen. Other parts turned off by hand are the user's word: `vnode:
+false` with a spread throws at run time (`spread is not in this build`).
+
+**Changing the default.** `DEFAULT_RUNTIME_FEATURES` in `runtime-features.js` is what `runtimeFeatures` is when not set: `'auto'`, or `'all'`
+for the whole runtime as before.
+
+### What each part costs (the reference app)
+
+One component (a counter with a prop, a state, a click handler, shadow DOM with a four-rule style, a keyed list of 10), Vite 8.4.0, default
+minifier, `target: es2022`; `examples/starter/bench/size` (`node run.mjs`, `features.mjs`, `smoke.mjs`; each built app loaded in Chromium).
+
+| Build | Raw | Gzip | Brotli |
+|---|---:|---:|---:|
+| `runtimeFeatures: false` (the whole runtime) | 24,867 | 9,034 | 8,191 |
+| `'client'` (auto for an app no server renders; shadow DOM only here) | 11,424 | 4,609 | 4,152 |
+| `'client'`, plus light DOM | 14,550 | 5,506 | 5,006 |
+| `'client'`, plus signals | 12,313 | 4,972 | 4,488 |
+| default, hydration kept, resuming off by hand | 15,927 | 6,079 | 5,471 |
+| **default (`'auto'`)**: shadow DOM, hydration and resuming | 18,429 | 6,996 | 6,312 |
+| default + light + signals + vnode | 23,958 | 8,632 | 7,812 |
+
+The same app in other frameworks (gzip): Solid 5.0 KB, Preact 6.6 KB, Lit 7.0 KB, Svelte 13.0 KB, Qwik 24.2 KB (client-rendered), Stencil's runtime 25.6 KB.
+The 500-card load page (`bench/load`, default `'auto'`, hydrating and resuming) is 8.5 KB of JS gzip, 9.6 KB whole.
+What stays in the 4.5 KB is the part every component needs (template parser, instances, lists, `class`/`style`/attribute/event/ref parts,
+reflection, `@Watch`/`@Listen`, `componentOnReady`, `define`); each of those is 50 to 120 B, and gating them was judged not worth the ways to break an
+app. How the numbers were found, and the other frameworks' build setups: [spike-runtime-size.md](spike-runtime-size.md).
+
 ## Server rendering and hydration
 
 ```js
@@ -84,6 +161,8 @@ If the client's first render doesn't match (a number is missing, or the node has
 the host falls back: it empties what it rendered, keeps its slotted children, and renders from
 scratch. In dev (the hot module loaded) it also logs a warning naming the component.
 
+The default `runtimeFeatures` keeps this; `'client'` drops it (see [Smaller builds](#smaller-builds-runtimefeatures)).
+
 With `runtime: 'stencilrs'`, Vite SSR builds (`transformOptions.ssr`) also compile for this
 runtime. One renderer renders one page at a time. The marks cost bytes: roughly 8 per dynamic
 node.
@@ -91,6 +170,53 @@ node.
 **Check:** `test/runtime-ssr.test.js` renders in happy-dom and hydrates in Chromium. It checks
 that every server node is the same object afterwards (shadow, scoped, nested slots, keyed lists),
 that the page is interactive, and that a tampered page falls back and still works.
+
+### A faster server renderer: `renderer: 'string'`
+
+```js
+// vite.config.ts: stencilrs({ runtime: 'stencilrs', stringRenderer: true }), then `vite build --ssr`
+const render = await createRenderer('./dist-server/entry-server.js', { renderer: 'string', onFallback: (why) => console.warn(why) });
+```
+
+The happy-dom renderer is the default and stays so. With `renderer: 'string'`, a page is first rendered by
+`runtime-string.js`, which has no DOM: it reuses the compiled templates and writes the same string. On the 500-card
+page (`examples/starter/bench/load`, 177,447 characters) it takes about 3 to 5 ms against 90 to 130 ms
+(`node spike/bench-render.mjs 40`, interleaved, warm; the output is byte-identical, `node spike/compare-html.mjs`).
+
+**Output.** Whenever the string path renders a page, the string is byte-for-byte what the happy-dom renderer writes
+(`test/runtime-string.test.js` renders about 85 pages of `test/string-fixtures.mjs` both ways), and Chromium hydrates
+it like the DOM renderer's (same nodes kept, clicks work, resumable or not).
+
+**Fallback.** A page the string renderer cannot reproduce exactly is rendered by happy-dom instead, per page, and
+`onFallback(reason, html)` is called, `render.fallbacks` counts them and `render.lastFallback` says why. The page
+falls back when it uses:
+
+- slots of light-DOM (`encapsulation: 'none'`) components, scoped slots, or light children of a component in the page
+  (relocation of nodes is not modelled);
+- an async or promise-returning lifecycle hook, signals, an `h()` vnode (non-template render), a `<table>`, `<select>`
+  or `<textarea>` in a template (the HTML parser restructures them), or markup the parser would change (a `<div>` in a
+  `<p>`, an entity without a semicolon or an unknown one, a style value the DOM rewrites);
+- state changed after the first render (in `componentDidLoad`, a timer, a continuation), a timer or microtask started
+  in a render, `writeTask`/`readTask`;
+- any hook or render that touches a DOM global (`document`, `window`, `typeof window`, `HTMLElement`...), a ref
+  element's members, or an event with listeners other than the emitter's own.
+
+Refs and spreads on elements, svg templates, lists, `<Host>`, reflected props and light components without children
+are supported.
+
+**Isolation.** The string path has no DOM globals, and while it renders every DOM global throws (that is how a hook
+touching `document` is detected and the page falls back). The fallback renders in an isolated happy-dom window whose
+globals exist only while it renders and are removed after, so `typeof document` is `'undefined'` in your hooks,
+before, during a string render and after. The two renderers never run at the same time; renders are queued.
+
+**Differences to know.** A page that falls back runs its hooks twice (once on the string path, which discarded its
+result). A module-level counter used for ids sees both runs. A non-stencilrs custom element is a plain element for
+the string renderer.
+
+**Setup.** `stringRenderer: true` (needs `runtime: 'stencilrs'`, `docs/vite-plugin.md`) makes `vite build --ssr`
+also write `<outDir>/string/<entry>.js`, the same bundle importing `@popcorn245/stencilrs/runtime/string`. Pass
+`createRenderer` the entry's path or URL (the string variant is found next to it), or a `load({ renderer })`
+function that imports the one asked for. Without the option, `renderer: 'string'` throws a message naming it.
 
 ### Resuming: components that wait for an event
 
@@ -132,7 +258,7 @@ gives an equal value (same templates, keys and values), the list stays as the se
 first different value adopts the server's nodes in place, then updates them as usual.
 
 This is Qwik's resumability, adapted: Qwik also skips running components on load and wakes code on
-events. Unlike Qwik, the component's code is already loaded (9.5 KB gzip for the whole runtime),
+events. Unlike Qwik, the component's code is already loaded (9.5 KB gzip for the whole runtime, less when `runtimeFeatures` leaves parts out),
 so waking it costs a render, not a network round trip.
 
 ## Page-load benchmark against Qwik
@@ -212,7 +338,8 @@ Bundle JS:
 | Runtime | Raw | Gzip |
 |---|---:|---:|
 | Stencil | 76.0 KB | 26.2 KB |
-| stencilrs (hydration in place, resuming and signal bindings included) | 25.4 KB | 9.5 KB |
+| stencilrs (hydration in place, resuming and signal bindings included; `runtimeFeatures: false`) | 25.4 KB | 9.5 KB |
+| stencilrs, `runtimeFeatures: 'client'` (the reference app, shadow DOM only) | 11.2 KB | 4.5 KB |
 | Qwik | 56.8 KB | 24.6 KB |
 
 Stencil's figure is its standalone runtime as the Vite plugin builds it, with every feature flag on.

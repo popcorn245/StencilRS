@@ -41,6 +41,8 @@ step "Components: starter (tests in happy-dom, then the library build)"
 npm --prefix examples/starter ci
 npm --prefix examples/starter test
 npm --prefix examples/starter run build:lib
+# The production build folds the runtime's BUILD flags (foldRuntimeFlags, on by default): smaller, and the page still works in Chromium (skipped when none).
+npm --prefix examples/starter run check:fold
 
 step "Components: ui-kit (the spec suite on stencilrs, then the library build)"
 npm --prefix examples/ui-kit ci
@@ -53,6 +55,8 @@ npm --prefix examples/ui-kit run compare:spec-page
 # Component CSS through the Vite plugin: byte for byte what @stencil/unplugin makes.
 npm --prefix examples/ui-kit run compare:css
 npm --prefix examples/ui-kit run build:stencilrs
+# ... and the BUILD flags foldRuntimeFlags computes from its 136 components are Stencil's own (collection-manifest.json of `stencil build`).
+npm --prefix examples/ui-kit run check:fold-flags
 # ... and it never loads TypeScript or Stencil's compiler: both load only for a file stencilrs falls back on.
 npm --prefix examples/ui-kit run check:no-typescript
 # The dev server: component and stylesheet served, HMR, virtual global stylesheets, still no TypeScript.

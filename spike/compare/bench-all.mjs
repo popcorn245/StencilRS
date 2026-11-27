@@ -9,7 +9,7 @@ import { createStringRenderer } from '../runtime-string.js';
 const N = Number(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : 40);
 const bench = new URL('../../examples/starter/bench/', import.meta.url);
 
-const str = await createStringRenderer(() => import(new URL('dist-load-string-server/entry-server.js', bench)));
+const str = await createStringRenderer(() => import(new URL('dist-load-stencilrs-server/string/entry-server.js', bench)));
 const { renderLit, renderLitTemplates } = await import('./lit-page.mjs');
 const { renderSolid } = await import('./dist/solid-page.mjs');
 const { default: qwikRender } = await import(new URL('dist-load-qwik/server/entry.ssr.js', bench));

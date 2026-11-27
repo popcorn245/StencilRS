@@ -1,7 +1,7 @@
 // The string renderer alone (for --cpu-prof): node spike/bench-string-only.mjs [n]
-import { createStringRenderer } from './runtime-string.js';
+import { createStringRenderer } from '../runtime-string.js';
 const bench = new URL('../examples/starter/bench/', import.meta.url);
-const render = await createStringRenderer(() => import(new URL('dist-load-string-server/entry-server.js', bench)));
+const render = await createStringRenderer(() => import(new URL('dist-load-stencilrs-server/string/entry-server.js', bench)));
 const n = Number(process.argv[2] ?? 300);
 for (let i = 0; i < 20; i++) render.sync('<load-app></load-app>');
 const ts = [];

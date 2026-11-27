@@ -1,11 +1,11 @@
 // stencilrs: happy-dom renderer vs string renderer on the 500-card page, interleaved in one process.
 //   node spike/bench-render.mjs [n=50]      cold: node spike/bench-render.mjs cold string|dom
-import { createStringRenderer } from './runtime-string.js';
+import { createStringRenderer } from '../runtime-string.js';
 import { createRenderer } from '../runtime-server.js';
 import { gzipSync } from 'node:zlib';
 
 const bench = new URL('../examples/starter/bench/', import.meta.url);
-const loadString = () => import(new URL('dist-load-string-server/entry-server.js', bench));
+const loadString = () => import(new URL('dist-load-stencilrs-server/string/entry-server.js', bench));
 const loadDom = () => import(new URL('dist-load-stencilrs-server/entry-server.js', bench));
 const PAGE = '<load-app></load-app>';
 const stat = (xs) => {

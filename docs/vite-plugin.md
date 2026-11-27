@@ -36,6 +36,14 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
 
+## A DOM-free server renderer (`stringRenderer`)
+
+`stencilrs({ runtime: 'stencilrs', stringRenderer: true })` (default `false`; it throws without `runtime: 'stencilrs'`):
+a `vite build --ssr` also writes the variant of the server bundle for the string renderer to `<outDir>/string/` (a
+nested build of the same entries, importing `@popcorn245/stencilrs/runtime/string`). Use it with
+`createRenderer(entry, { renderer: 'string' })` from `@popcorn245/stencilrs/runtime/server`, which falls back to happy-dom
+page by page (`docs/runtime.md`). The default output is unchanged.
+
 ## A client that hydrates server-rendered html (`hydrateClient`)
 
 `renderToString` / `hydrateDocument` of the hydrate app (`buildHydrate`, `@popcorn245/stencilrs/ssr`) write html the browser can show before any
@@ -83,6 +91,99 @@ and `components.json`; `npm run build:hydrate` renders `list-50` and `kitchen-si
 the modules the page uses and reports adoption (every server node still connected), clicks (`ion-toggle`, `ion-checkbox`, `ion-button`), console errors, and whether the DOM after hydration equals
 the one Stencil's own client (`stencil build --dev` with an `ssr` target, the spike's) produces. Known and not ours: @stencil/core 5.0.0-beta.25's client
 runtime throws `Cannot read properties of undefined (reading 'length')` (and once `'nodeType'`) in `patch` while hydrating childless elements, on Stencil's own client too; hydration continues.
+
+## Which parts of the stencilrs runtime ship (`runtimeFeatures`)
+
+With `runtime: 'stencilrs'`, a production browser build keeps only the optional parts of `runtime.js` the build's components use: light DOM
+(slots, scoped CSS), `h()` vnodes and spreads, signal bindings, and hydration with resuming (kept unless you say the app is client-only). A shadow-DOM
+client-only app is 4.5 KB gzip, 7.0 KB with hydration, 9.0 KB whole. Details, the detection rules, sizes and the tests: [runtime.md](https://github.com/popcorn245/StencilRS/blob/main/docs/runtime.md#smaller-builds-runtimefeatures).
+
+```ts
+stencilrs({ runtime: 'stencilrs' });                                    // 'auto' (the default): keeps hydration and resuming
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: 'client' });         // an app no server renders: auto without hydration and resuming
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: false });            // the whole runtime ('all' is the same)
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: { vnode: false } }); // by hand: named parts off, the others on
+```
+
+| Value | Meaning |
+|---|---|
+| unset, `'auto'` | the parts the modules of this build use, from what the plugin compiled (component metadata, compiled code) and, for modules it does not compile, their imports of the runtime, conservatively. `server` and `hot` are always off. `hydrate` and `resume` stay on (a client build cannot tell that a server rendered its page). A feature that turns out to be needed after the runtime was built fails the build |
+| `'client'` | `'auto'` with `hydrate` and `resume` off, for an app no server renders (with `hydrateClient` it is an error) |
+| `false`, `'all'` | the whole runtime |
+| `{ server, hydrate, resume, light, signals, vnode, hot }` | each `false` drops that part; one left out stays on. `light: false` with a component that is not shadow DOM is a build error; `hydrate: false` with `hydrateClient` too |
+
+Production builds of `runtime: 'stencilrs'` only (not the dev server, Vitest, SSR builds, `mode: 'spec-page'`). A `'client'` build that meets a page rendered by `runtime-server.js` logs once in the console that it has no hydration. The default is one constant,
+`DEFAULT_RUNTIME_FEATURES` in `runtime-features.js`.
+
+## Smaller production bundles (`foldRuntimeFlags`)
+
+Stencil's client runtime reads about 80 `BUILD` feature flags in some 330 places (`if (BUILD.slotRelocation) ...`). `stencil build` computes the flags
+from the project's components and bundles with them as constants, so a feature no component uses is not in the output. A Vite build used to leave them
+all on and let each component module set the few it needs at run time (`BUILD.x = ...`), which no bundler can fold.
+
+`foldRuntimeFlags` does what `stencil build` does: at `buildStart` of a production client build it reads the project's components (stencilrs'
+`componentMetadata: 'compilerstatic'`, the metadata `docs` and `types` already use), computes the flags with Stencil's own rules (`getBuildFeatures`,
+the standalone-output and `updateBuildConditionals` rules), serves them as constants from `@stencil/core/app-data` and in the runtime's own reads, and
+the bundler drops the dead branches. A component module no longer writes to `BUILD`. **It is on by default** (`FOLD_RUNTIME_FLAGS_DEFAULT` in
+`vite-fold.js`), for production builds of the default runtime (`runtime: 'stencil'`); not the dev server, Vitest, `componentExport: 'ssr'`, `mode:
+'spec-page'`, a Vite `build.ssr` bundle, or a build whose `@stencil/core` is external (the consumer's runtime then needs the components' own writes).
+
+```ts
+stencilrs();                                      // on
+stencilrs({ foldRuntimeFlags: false });           // off: the previous output, byte for byte
+stencilrs({ foldRuntimeFlags: { dirs: ['src', 'packages/ui/src'] } }); // folders (relative to the Vite root) to scan; default ['src']
+```
+
+What is scanned: every source file under `dirs`, and every local module they, the Vite entries and `index.html` import, whether by a relative path or
+through what the bundler resolves (an alias, a workspace package linked into `node_modules`), and the `hydrateClient.collections` sources. The result
+is cached per file by `<mtime>:<size>` stamps (the stamps of the modules a component imports too), so a rebuild reads again only what changed. The
+files stencilrs does not port yet (`stencilrs:` diagnostics other than a member's `complexType`, several components in one file) are read by Stencil's
+compiler (`transpileSync`, loaded only then); a `<slot>` or `<svg>` in a local module a component imports counts for it, as Stencil's single-file
+metadata cannot see it.
+
+A flag is **never dropped on a guess**. When the component set is uncertain, every flag stays on, exactly as with `foldRuntimeFlags: false`, and the
+build prints one warning naming the files:
+
+* a file that neither stencilrs nor Stencil's compiler can read (its features are unknown);
+* a package of prebuilt Stencil components that shares this runtime (its modules import `@stencil/core`: `@ionic/core/components`, a collection
+  built by `stencil build`). A package that bundles a runtime of its own (`ionicons`' `ion-icon`) is not one;
+* at the end of the build, a module that uses the runtime and was never scanned (reached by `import.meta.glob`, say): the output is made already, so
+  this one only warns, naming it. Add its folder to `dirs`.
+
+Flags you pass win: `buildFlags` (`{ hydrateClientSide: false }`, `{ slotRelocation: true }`; what follows from a flag follows from your value, so
+`slotRelocation: true` brings the light-DOM patches) and `hydrateClient` (`hydrateClientSide` on) apply on top of the computed ones. `signals: true`, or
+any scanned file importing `@stencil/core/signals`, turns `vdomSignals` on.
+
+`hydrateClientSide` is **not** turned off by the fold: it stays what it is without folding (on), because Stencil turns it off only when the project has
+an SSR output target, which the plugin cannot know. It is the biggest single flag (2.5 KB gzip of the starter's 10): a client that does not hydrate
+server html should set `buildFlags: { hydrateClientSide: false }`.
+
+`vite build --watch` rescans on every rebuild (the cache makes that ~15 ms for 136 components) and watches every scanned file, so adding a `<slot>` or a
+`formAssociated` component changes the flags of the next bundle (a new file that nothing imports yet does not start a rebuild; the one that imports it does). The config flags `stencil.config` can change (`compat.lightDomPatches`, `taskQueue`,
+`invisiblePrehydration`, `hydratedFlag`) are the defaults; `buildFlags` overrides any of them. `verbose: true` prints the component count, the scan
+time and how many flags are on.
+
+Measured (Vite 8.4.0, minified, gzip level 9, `@stencil/core` 5.0.0-beta.25; `spike/build-flags/sz.mjs`, details in [the spike](https://github.com/popcorn245/StencilRS/blob/main/docs/spike-build-flags.md)):
+
+| Build | unfolded | folded (default) | folded and `hydrateClientSide: false` |
+|---|---:|---:|---:|
+| starter (11 components, signals) | 29.87 KB | 16.44 KB (-45 %) | 14.00 KB (-53 %) |
+| starter, `signals: false` (the signal components still import it) | 27.68 KB | 14.24 KB (-49 %) | 11.82 KB (-57 %) |
+| ui-kit library, 136 components | 678.2 KB | 666.0 KB (-1.8 %) | 663.3 KB (-2.2 %) |
+| Ionic core, 95 components, one module | 256.1 KB | 240.5 KB (-6.1 %) | the same (its config already sets it) |
+| Ionic `app-tabs`, 34 components | 123.7 KB | 108.6 KB (-12.2 %) | the same |
+| Ionic `app-tabs`, runtime chunk | 28.1 KB | 13.2 KB (-53 %) | the same |
+
+The saving is the runtime, 13 to 18 KB gzip whatever the app: most of a small app, a few percent of a big one. The scan does not compile a second time: it
+shares each component's compile with `transform` (one `transpile` per file, with `componentMetadata: 'result'`, which returns the compiler metadata beside the
+unchanged code), runs beside Vite's own work and is awaited only by the runtime. Cold `vite build`, fresh processes interleaved, median of 15: starter 300 to
+306 ms (+2%), ui-kit (136 components) 645 to 679 ms (+5%), Ionic's core (95 components) 817 to 980 ms (+20%, noisy; the scan's remaining cost is main-thread
+file walking and parsing, which Rolldown's `transform` hooks compete for). A warm rescan (watch mode) is about 15 ms.
+
+`test/vite-fold.test.js` (the flag computation, the scan and its cache, the fallbacks and the warnings, features that must survive, opt-out, watch),
+`npm --prefix examples/starter run check:fold` (the starter's production build, folded and not, in Chromium: the DOM after the same clicks, input,
+events and form submit is the same) and `npm --prefix examples/ui-kit run check:fold-flags` (the 56 component-derived flags of the ui-kit's 136
+components against the ones `stencil build` writes into `collection-manifest.json`) guard it.
 
 ## Folders the dev server does not watch (`watchIgnore`)
 

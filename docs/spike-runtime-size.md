@@ -1,5 +1,17 @@
 # Spike: how small can the stencilrs runtime get?
 
+> **Shipped.** `runtimeFeatures` is a product option, `'auto'` by default for `runtime: 'stencilrs'` production browser builds. The
+> user-facing docs are [runtime.md](runtime.md#smaller-builds-runtimefeatures) and [vite-plugin.md](vite-plugin.md); the sections below
+> are the measurements that led to it. What changed from this write-up: `'auto'` reads the modules the build compiles (component
+> metadata and compiled code, `FeatureScan` in `runtime-features.js`), not a regex over `src/`, and it covers packages the build
+> compiles (`hydrateClient.collections`); `hydrate` and `resume` stay on under `'auto'` (a client build cannot tell that a server rendered the page) and `runtimeFeatures: 'client'` turns them off; `light: false` with a component that is not
+> shadow DOM is a build error; a `'client'` build on a server-rendered page logs once; gated builds with hydration were run in Chromium
+> (`test/runtime-features-hydrate.test.js`, `examples/starter/bench/load/check.mjs`). The switches' constants are written into the
+> runtime before it is bundled (a late substitution left dead classes in the bundle), and `deferDefine`'s lazy-define code, which was not
+> behind `F_RESUME`, now is (the whole runtime stayed 9,034 B gzip; a shadow-only `'client'` app is 4,609 B, 4,547 B before the console message; default `'auto'` 6,996 B).
+> The whole runtime measures 9,034 B gzip here against 9,307 B for the commit before this spike, so the 25 B regression is gone.
+> Numbers below are the spike's own, not re-measured, except where docs/runtime.md has newer ones.
+
 Question: `runtime: 'stencilrs'` (`runtime.js`) is 25.4 KB raw / 9.5 KB gzip with hydration in place, resuming and signal
 bindings (docs/runtime.md). How small is it for an app that uses none of that, and how does it compare with Lit, Solid, Svelte 5,
 Preact and Qwik for the same tiny app?

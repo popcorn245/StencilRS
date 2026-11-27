@@ -1,5 +1,5 @@
 // Checks that each built app works (the size numbers mean nothing for an app that does not run): it renders the
-// button and 10 items in its shadow root, and a click adds one to the count and moves the bold item.
+// button and 10 items in its shadow root, and a click adds one to the count and moves the bold item. (The stub-* builds of stub.mjs are broken on purpose: skipped.)
 //
 //   node smoke.mjs [name ...]      after `node run.mjs`; CHROME=/path/to/chrome overrides the browser
 import { createServer } from 'node:http';
@@ -8,7 +8,7 @@ import { extname, join } from 'node:path';
 import { chromium } from 'playwright-core';
 
 const here = import.meta.dirname;
-const names = process.argv.slice(2).length ? process.argv.slice(2) : readdirSync(join(here, 'dist')).filter((n) => !n.startsWith('feat-'));
+const names = process.argv.slice(2).length ? process.argv.slice(2) : readdirSync(join(here, 'dist')).filter((n) => !n.startsWith('feat-') && !n.startsWith('stub-'));
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
 let failed = 0;

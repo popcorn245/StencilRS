@@ -74,6 +74,20 @@ done the same way: `import cem from '@stencil/unplugin/docs'` and `components.d.
 stencilrs' own metadata, and only a file with a type it hasn't ported yet takes its metadata
 from Stencil's compiler.
 
+### A smaller runtime (`runtime: 'stencilrs'`)
+
+`stencilrs({ runtime: 'stencilrs' })` builds for stencilrs' own runtime instead of Stencil's, and its production
+build ships only the parts your components use (`runtimeFeatures`, `'auto'` by default, which keeps hydration): a one-component
+shadow-DOM app is 7.0 KB gzip, 4.5 KB with `runtimeFeatures: 'client'` (no server renders it), 9.0 KB with every optional part (`false`). Options, rules and sizes: [docs/runtime.md](docs/runtime.md#smaller-builds-runtimefeatures)
+and [docs/vite-plugin.md](docs/vite-plugin.md#which-parts-of-the-stencilrs-runtime-ship-runtimefeatures).
+
+### A faster server renderer
+
+`stencilrs({ runtime: 'stencilrs', stringRenderer: true })` makes `vite build --ssr` also write a server bundle for a
+DOM-free renderer; `createRenderer(entry, { renderer: 'string' })` (`@popcorn245/stencilrs/runtime/server`) then renders
+a 500-card page in about 3 to 5 ms instead of 90 to 130, byte-identical, and renders any page it cannot reproduce with
+happy-dom ([docs/runtime.md](docs/runtime.md)). Off by default.
+
 ### Type declarations for a library
 
 `stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
@@ -130,6 +144,22 @@ stencilrs({ typecheck: { tsconfig: 'tsconfig.app.json', bin: 'tsc' } });
   included, are written, so it sees the fresh declarations when your tsconfig includes them (this gives
   up the overlap with the write step; type errors then leave the output on disk). Without `dts`, keep a
   checked-in `src/components.d.ts` as Stencil projects do.
+
+### Smaller production bundles
+
+`stencil build` bundles Stencil's runtime with the feature flags (`BUILD.slotRelocation`, `BUILD.hostListener`, ...) computed from your components,
+so a feature none of them uses is not shipped. The Vite plugin does the same by default for production builds of the default runtime
+(`foldRuntimeFlags`): it reads the project's components at `buildStart` (in parallel, cached per file, rescanned in `--watch`) and the runtime
+loses the features no component needs, 13 to 18 KB gzip on any app (the starter 29.9 to 16.4 KB, Ionic's tab pages 123.7 to 108.6 KB).
+
+```ts
+stencilrs({ foldRuntimeFlags: false });                  // off: the same output as before
+stencilrs({ foldRuntimeFlags: { dirs: ['src', 'ui/src'] } }); // folders to scan (default 'src'); what the bundle imports is followed too
+stencilrs({ buildFlags: { hydrateClientSide: false } });  // a client that does not hydrate server html: another 2.5 KB
+```
+
+When it cannot be sure which components a bundle has (a file nothing can read, a package of prebuilt components that shares the runtime) every flag
+stays on and one warning names the files. [Details, numbers and the checks](docs/vite-plugin.md#smaller-production-bundles-foldruntimeflags).
 
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).
