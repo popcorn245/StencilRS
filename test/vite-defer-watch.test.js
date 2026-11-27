@@ -25,9 +25,14 @@ const start = async (deferWatch, server = {}) => {
 const watchesDeep = (s) => Object.keys(s.watcher.getWatched()).some((d) => d.replaceAll('\\', '/').endsWith('/a/b'));
 const changes = (s, ms) =>
   new Promise((resolve) => {
-    const t = setTimeout(() => resolve(false), ms);
-    s.watcher.on('change', (f) => f === deep && (clearTimeout(t), resolve(true)));
-    writeFileSync(deep, `export const x = ${Math.random()};\n`);
+    // The re-added root's directories show in getWatched() before chokidar has a watch on each file, so a single write
+    // straight after can land in that gap on a slow runner. Write again until the change is seen (or the time runs out).
+    const write = () => writeFileSync(deep, `export const x = ${Math.random()};\n`);
+    const again = setInterval(write, 250);
+    const done = (v) => (clearTimeout(t), clearInterval(again), resolve(v));
+    const t = setTimeout(() => done(false), ms);
+    s.watcher.on('change', (f) => f === deep && done(true));
+    write();
   });
 const until = async (cond, ms = 3000) => {
   for (const t = Date.now(); !cond() && Date.now() - t < ms; ) await new Promise((r) => setTimeout(r, 20));
