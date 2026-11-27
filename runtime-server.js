@@ -25,7 +25,7 @@ const escAttr = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 const isHost = (el) => !!el.constructor?.__meta;
 
 /** Installs a happy-dom window's globals, then imports the components. */
-export async function createRenderer(load, { url = 'http://localhost/', settleRounds = 20, resumable = true } = {}) {
+export async function createRenderer(load, { url = 'http://localhost/', settleRounds = 20, resumable = true, lazyDefine = null } = {}) {
   const { Window } = await import('happy-dom');
   const window = new Window({ url });
   const keep = new Set(Object.getOwnPropertyNames(globalThis));
@@ -45,7 +45,7 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
 
   const document = window.document;
   let queue = Promise.resolve();
-  const render = async (html, { resumable: resume = resumable } = {}) => {
+  const render = async (html, { resumable: resume = resumable, lazyDefine: ld = lazyDefine } = {}) => {
     // Fresh state per request: no styles or components left from the last one.
     document.body.replaceChildren();
     for (const s of document.head.querySelectorAll('style[sty-id]')) s.remove();
@@ -63,6 +63,8 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
     let stateless = 0;
     const types = new Set();
     const delegated = DELEGATED;
+    // For lazy define: the tags seen, and those with an instance that hydrates on load.
+    const seen = new Set(), eager = new Set();
     const nextId = (host) => {
       const id = ++next;
       let now = false;
@@ -81,6 +83,8 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
         } else if (entry) state[id] = entry;
       }
       nextId.now = now;
+      seen.add(host.localName);
+      if (now) eager.add(host.localName);
       return id;
     };
     nextId.stateless = () => (state ? stateless : -1);
@@ -91,7 +95,7 @@ export async function createRenderer(load, { url = 'http://localhost/', settleRo
     // `e`: the events to delegate, for the components that wait.
     if (state) {
       const e = [...types].join(',');
-      out += `<script type="rs/state" e="${e}">${JSON.stringify(state).replace(/</g, '\\u003c')}</script>`;
+      out += `<script type="rs/state" e="${e}"${ld ? ` ld="${ld}" lt="${[...seen].filter((t) => !eager.has(t))}"` : ''}>${JSON.stringify(state).replace(/</g, '\\u003c')}</script>`;
       // Interactive before the runtime arrives: this catches those events until it does (which
       // replays them, see `replay` in runtime.js), and says so with an `rsinit` event.
       if (e) out += `<script>(d=>{const q=[],t="${e}".split(","),f=e=>q.push([e,e.composedPath()]);for(const k of t)d.addEventListener(k,f,!0);d.__rsq={q,off(){for(const k of t)d.removeEventListener(k,f,!0)}};d.dispatchEvent(new Event("rsinit"))})(document)</script>`;

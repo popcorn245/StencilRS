@@ -284,6 +284,67 @@ test('client: events from before the runtime arrived are replayed once it has', 
   }
 });
 
+test('client: lazy define (wake) keeps waiting tags undefined until an event, a render or a replay needs them', chromiumOnly, async () => {
+  const browser = await chromium.launch();
+  try {
+    const { page, errors, define, tick } = await servePage(browser, await render('<ssr-shop></ssr-shop>', { lazyDefine: 'wake' }));
+    // An event from before the runtime: caught by the inline catcher, replayed once the tag is defined.
+    await page.click('ssr-shop button');
+    await define();
+    await tick();
+    const defined = () => page.evaluate(() => ({ shop: !!customElements.get('ssr-shop'), badge: !!customElements.get('ssr-badge'), css: document.querySelectorAll(':defined:not(li):not(ul):not(div):not(button)').length }));
+    assert.equal(await page.textContent('ssr-shop button'), '1'); // replayed: the tag was defined to wake it
+    assert.deepEqual((await defined()).badge, false); // the badges wait inside the kept list
+    // Held back: a property set before the tag is defined survives the upgrade, and wakes it.
+    const pending = await page.evaluate(() => {
+      const badges = document.querySelectorAll('ssr-badge');
+      badges[1].count = 42;
+      return { ownProp: Object.prototype.hasOwnProperty.call(badges[1], 'count'), defined: !!customElements.get('ssr-badge'), matches: badges[0].matches(':defined') };
+    });
+    assert.deepEqual(pending, { ownProp: true, defined: false, matches: false });
+    // Pending whenDefined resolves on wake: a click on a badge's host is not a handler event, so a render does it.
+    await page.evaluate(() => { window.whenBadge = customElements.whenDefined('ssr-badge').then(() => (window.badgeDefined = true)); });
+    await page.evaluate(() => (document.querySelector('ssr-shop').items = 'ccc,a,bb,dddd'));
+    await tick();
+    assert.equal((await defined()).badge, true); // the list changed: its templates carry the tag
+    assert.equal(await page.evaluate(() => window.badgeDefined), true);
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('ssr-shop li')].map((li) => li.textContent + li.querySelector('ssr-badge').count)), ['ccc3', 'a1', 'bb2', 'dddd4']);
+    await page.click('ssr-shop button');
+    await tick();
+    assert.equal(await page.textContent('ssr-shop button'), '2');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('client: lazy define (idle) defines the held-back tags when the browser is idle', chromiumOnly, async () => {
+  const browser = await chromium.launch();
+  try {
+    const { page, errors, define } = await servePage(browser, await render('<ssr-shop></ssr-shop>', { lazyDefine: 'idle' }));
+    await define();
+    await page.waitForFunction(() => customElements.get('ssr-shop') && customElements.get('ssr-badge'));
+    await page.click('ssr-shop button');
+    await page.waitForFunction(() => document.querySelector('ssr-shop button').textContent === '1');
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
+test('client: lazy define leaves a tag with an instance that must hydrate on load alone', chromiumOnly, async () => {
+  const browser = await chromium.launch();
+  try {
+    // ssr-live binds a signal: it can't wait, so its tag is defined at once.
+    const { page, errors, define } = await servePage(browser, await render('<ssr-live></ssr-live>', { lazyDefine: 'wake' }));
+    await define();
+    assert.equal(await page.evaluate(() => !!customElements.get('ssr-live')), true);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
 test('dev: the hot module warns about a mismatch and swaps a redefined component in place', chromiumOnly, async () => {
   const browser = await chromium.launch();
   try {
