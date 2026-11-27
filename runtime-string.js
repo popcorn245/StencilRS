@@ -184,7 +184,13 @@ const REF = new Proxy(
 );
 
 const tags = new Map(); // tag -> class
-const cssOf = (style) => (Array.isArray(style) ? style.map(cssOf).join('') : typeof style === 'function' ? style() : style) || '';
+const cssText = (style) => (Array.isArray(style) ? style.map(cssText).join('') : typeof style === 'function' ? style() : style) || '';
+// Written as is, so the renderer's placeholder characters (U+0001..U+0008) cannot be in it.
+const cssOf = (style) => {
+  const css = cssText(style);
+  if (/[\u0000-\u0008]/.test(css)) fallback('a control character in a style');
+  return css;
+};
 
 const lateChange = (host) => {
   // The render is over: a timer or a promise changed a component after it was written. Its output is stale.
@@ -296,7 +302,7 @@ const parse = (html) => {
   const n = html.length;
   let i = 0;
   let svg = 0; // depth inside <svg>
-  if (/[\u0000\r]/.test(html)) fallback('a NUL or CR in a template');
+  if (/[\u0000-\u0008\r]/.test(html)) fallback('a control character or CR in a template');
   while (i < n) {
     if (html.charCodeAt(i) !== 60) {
       let j = html.indexOf('<', i);
@@ -619,6 +625,7 @@ const setAttr = (ops, tag, inst, svg, name, v, H) => {
     return;
   }
   const attr = svg ? name : name.toLowerCase();
+  if (/[\u0000-\u0008]/.test(attr)) fallback('a control character in an attribute name');
   if (v == null) ops.push(['r', attr]);
   else if (v === false) ops.push(['f', attr]);
   else ops.push(['a', attr, v === true ? '' : String(v)]);
@@ -857,11 +864,7 @@ const buildList = (items, H, conn) => {
   for (let i = len - 1; i >= 0; i--) {
     const piece = buildValue(items[i], H, conn);
     total += CNT + 2;
-    if (conn) {
-      const B = [];
-      emitValue(piece, B);
-      list.items[i] = B;
-    } else list.items[i] = piece;
+    list.items[i] = conn ? emitValue(piece) : piece;
   }
   list.conn = conn;
   // `~<last claim>:<nodes>` on the first start mark: the client steps over a list nothing in it has to run. Whether
@@ -875,38 +878,38 @@ const buildList = (items, H, conn) => {
 };
 
 // ---------------------------------------------------------------------------------------------
-// Phase B: the markup. `A` is the output so far, an array of strings, numbers (tokens the numbering pass fills in:
-// a component's `s-rs`, the id of the component that claimed a node, the start and end of a list) and nested arrays.
+// Phase B: the markup, as one string. What the numbering pass fills in later (a component's `s-rs`, the id of the
+// component that claimed a node, the start and end of a list) is a marker in it: a control character, an index and
+// U+0006. Control characters (U+0000..U+0008) are never data (`esc` falls back on them), so a marker cannot be
+// forged, and the pass counts the markers it finds against the ones made.
 
-const T_HOST = 0, T_LISTSTART = 1, T_LISTEND = 2, T_DOT = 3, T_COLON = 4;
-const tok = (kind, val) => (val << 3) | kind;
-
-/** The claim numbers of a node, as `marks` writes them: bare for the component the node is written in, else with its id. */
-const pushNums = (A, buf, H, nums, kind) => {
-  if (H === CTX) return buf + nums.join(',');
-  for (let i = 0; i < nums.length; i++) {
-    if (i) buf += ',';
-    A.push(buf);
-    A.push(tok(kind, H.__idx));
-    buf = String(nums[i]);
-  }
-  return buf;
+const M_HOST = '\u0001', M_LISTSTART = '\u0002', M_LISTEND = '\u0003', M_DOT = '\u0004', M_COLON = '\u0005';
+let MARKS = 0;
+const mark = (kind, val) => {
+  MARKS++;
+  return `${kind}${val}\u0006`;
 };
 
-const emitValue = (p, A) => {
-  if (typeof p === 'string') A.push(p);
-  else if (p instanceof Frame) emitFrame(p, A);
-  else if (p instanceof List) emitList(p, A);
-  else if (p instanceof Text) {
-    let buf = '<!--^t';
-    buf = pushNums(A, buf, p.H, [p.n], T_DOT);
-    A.push(`${buf}-->${p.s}`);
-  }
+/** One or two claim numbers of a node, as `marks` writes them: bare for the component the node is written in, else with its id. */
+const claims = (buf, H, a, b, kind) => {
+  if (H === CTX) return b === undefined ? buf + a : `${buf}${a},${b}`;
+  const m = mark(kind, H.__idx);
+  if (b === undefined) return buf + m + a;
+  MARKS++;
+  return `${buf}${m}${a},${m}${b}`;
 };
 
-const emitList = (list, A) => {
+const emitValue = (p) => {
+  if (typeof p === 'string') return p;
+  if (p instanceof Frame) return emitFrame(p);
+  if (p instanceof List) return emitList(p);
+  if (p instanceof Text) return claims('<!--^t', p.H, p.n, undefined, M_DOT) + `-->${p.s}`;
+  return '';
+};
+
+const emitList = (list) => {
   const items = list.items;
-  if (items === null) return;
+  if (items === null) return '';
   const H = list.H;
   const len = items.length;
   let k = -1;
@@ -918,30 +921,19 @@ const emitList = (list, A) => {
   let bodies = items;
   if (!list.conn) {
     bodies = new Array(len);
-    for (let i = 0; i < len; i++) {
-      const B = [];
-      emitValue(items[i], B);
-      bodies[i] = B;
-    }
+    for (let i = 0; i < len; i++) bodies[i] = emitValue(items[i]);
   }
+  let out = '';
   for (let i = 0; i < len; i++) {
-    let buf = '<!--^t';
-    buf = pushNums(A, buf, H, [list.starts[i]], T_DOT);
-    if (i === 0 && k >= 0) {
-      A.push(buf);
-      A.push(tok(T_LISTSTART, k));
-      buf = '';
-    }
-    A.push(`${buf}-->`);
-    A.push(bodies[i]);
-    buf = '<!--^';
-    buf = pushNums(A, buf, H, [list.marks[i]], T_DOT);
-    A.push(`${buf}-->`);
+    let buf = claims('<!--^t', H, list.starts[i], undefined, M_DOT);
+    if (i === 0 && k >= 0) buf += mark(M_LISTSTART, k);
+    out += buf + '-->' + bodies[i] + claims('<!--^', H, list.marks[i], undefined, M_DOT) + '-->';
   }
-  if (k >= 0) A.push(tok(T_LISTEND, k));
+  if (k >= 0) out += mark(M_LISTEND, k);
+  return out;
 };
 
-const emitFrame = (f, A) => {
+const emitFrame = (f) => {
   const s = f.s;
   const prog = s.prog;
   const H = f.H;
@@ -955,7 +947,9 @@ const emitFrame = (f, A) => {
     }
     switch (op.k) {
       case OPEN: {
-        const ops = op.m >= 0 && f.ops ? f.ops[op.m] : undefined;
+        let ops = op.m >= 0 && f.ops ? f.ops[op.m] : undefined;
+        // A part that only set a component's property leaves an empty list: no attribute changes.
+        if (ops !== undefined && ops.length === 0) ops = undefined;
         let res = null;
         if (op.ci >= 0) {
           res = renderComponent(f.insts[op.ci]);
@@ -968,45 +962,26 @@ const emitFrame = (f, A) => {
         else str = `<${op.tag}${attrStr(applyOps(op.attrs, res ? (ops ? ops.concat(res.ops) : res.ops) : ops))}`;
         buf += str;
         if (H && (op.top >= 0 || op.m >= 0)) {
-          buf += ' r:n="';
-          const nums = op.top >= 0 ? (op.m >= 0 ? [f.base + op.top, f.base + s.T + op.m] : [f.base + op.top]) : [f.base + s.T + op.m];
-          buf = pushNums(A, buf, H, nums, T_DOT) + '"';
+          buf = (op.top >= 0 ? claims(buf + ' r:n="', H, f.base + op.top, op.m >= 0 ? f.base + s.T + op.m : undefined, M_DOT) : claims(buf + ' r:n="', H, f.base + s.T + op.m, undefined, M_DOT)) + '"';
         }
-        if (res) {
-          A.push(buf);
-          A.push(tok(T_HOST, res.idx));
-          buf = '';
-        }
-        if (op.m >= 0 && f.rse && f.rse[op.m]) {
-          buf += ' r:e="';
-          buf = pushNums(A, buf, H, [f.rse[op.m].join(',')], T_COLON) + '"';
-        }
+        if (res) buf += mark(M_HOST, res.idx);
+        if (op.m >= 0 && f.rse && f.rse[op.m]) buf = claims(buf + ' r:e="', H, f.rse[op.m].join(','), undefined, M_COLON) + '"';
         buf += '>';
-        if (res) {
-          A.push(buf);
-          A.push(res.inner);
-          buf = '';
-        }
+        if (res) buf += res.inner;
         break;
       }
       case PART:
-        A.push(buf);
-        buf = '';
-        emitValue(f.ph[op.i], A);
+        buf += emitValue(f.ph[op.i]);
         break;
       case MARK:
         if (!H) {
           if (op.m < 0 && op.data !== '' && op.data !== 'rs') buf += `<!--${op.data}-->`;
         } else {
-          buf += '<!--^';
-          buf = pushNums(A, buf, H, op.top >= 0 ? (op.m >= 0 ? [f.base + op.top, f.base + s.T + op.m] : [f.base + op.top]) : [f.base + s.T + op.m], T_DOT) + '-->';
+          buf = (op.top >= 0 ? claims(buf + '<!--^', H, f.base + op.top, op.m >= 0 ? f.base + s.T + op.m : undefined, M_DOT) : claims(buf + '<!--^', H, f.base + s.T + op.m, undefined, M_DOT)) + '-->';
         }
         break;
       case TEXT:
-        if (H) {
-          buf += '<!--^t';
-          buf = pushNums(A, buf, H, [f.base + op.top], T_DOT) + '-->';
-        }
+        if (H) buf = claims(buf + '<!--^t', H, f.base + op.top, undefined, M_DOT) + '-->';
         buf += escText(op.data);
         break;
       case CTXIN: {
@@ -1020,7 +995,7 @@ const emitFrame = (f, A) => {
         break;
     }
   }
-  A.push(buf);
+  return buf;
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -1076,7 +1051,7 @@ const renderComponent = (host) => {
   host.__f &= ~DIRTY;
   // render
   host.__rc++;
-  const content = [];
+  let content = '';
   const ctx = CTX;
   RC.root = rc;
   CTX = host;
@@ -1106,12 +1081,12 @@ const renderComponent = (host) => {
             if (v != null && v !== '') styleOp(host.__ops, v);
           } else fallback(`<Host> part type ${type}`);
         }
-        emitFrame(build(out.$t, out.v, host, hostParts.length), content);
+        content = emitFrame(build(out.$t, out.v, host, hostParts.length));
       } else {
         // A list written straight into the (connected) host: its entries connect last to first.
-        emitValue(buildValue(out, host, true), content);
+        content = emitValue(buildValue(out, host, true));
       }
-      content.push('<!--^0-->');
+      content += '<!--^0-->';
       hook(host, 'componentDidRender', 'componentDidRender');
     }
   } finally {
@@ -1124,7 +1099,7 @@ const renderComponent = (host) => {
   hook(host, 'componentDidLoad', 'componentDidLoad');
   host.__f |= HAS_LOADED;
   let inner = content;
-  if (shadow) inner = [`<template shadowrootmode="open"${meta.delegatesFocus ? ' shadowrootdelegatesfocus' : ''}>${styles.join('')}`, content, '</template>'];
+  if (shadow) inner = `<template shadowrootmode="open"${meta.delegatesFocus ? ' shadowrootdelegatesfocus' : ''}>${styles.join('')}${content}</template>`;
   // Usual case (a scoped component): the host's only attribute is its class list.
   let classOnly = null;
   for (const op of host.__ops) {
@@ -1157,7 +1132,7 @@ const stateEntry = (host) => {
   }
   const s = {};
   let any = false;
-  for (const name of Object.keys(C.__meta.members)) {
+  for (const name of C.__meta.names) {
     const v = host.__v.get(name);
     const d = def.__v.get(name);
     if (v === d || (v === undefined && d === undefined)) continue;
@@ -1190,7 +1165,6 @@ const trapDescriptors = DOM_GLOBALS.map((name) => ({
     return fallback(`${name} (a DOM global)`);
   },
 }));
-const trapProps = Object.fromEntries(DOM_GLOBALS.map((name, i) => [name, trapDescriptors[i]]));
 const TIMERS = ['setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask'];
 
 /**
@@ -1199,22 +1173,29 @@ const TIMERS = ['setTimeout', 'setInterval', 'setImmediate', 'queueMicrotask'];
  */
 let ORIG = null;
 const arm = () => {
-  const saved = [];
+  const n = DOM_GLOBALS.length;
   // When another DOM renderer has installed its globals, they are shadowed for the render and put back.
   const foreign = 'document' in globalThis;
-  if (foreign) for (const name of DOM_GLOBALS) saved.push(Object.getOwnPropertyDescriptor(globalThis, name));
-  else ORIG ||= DOM_GLOBALS.map((name) => Object.getOwnPropertyDescriptor(globalThis, name));
-  Object.defineProperties(globalThis, trapProps);
+  let saved = null;
+  if (foreign) {
+    saved = new Array(n);
+    for (let i = 0; i < n; i++) saved[i] = Object.getOwnPropertyDescriptor(globalThis, DOM_GLOBALS[i]);
+  } else if (ORIG === null) {
+    ORIG = new Array(n);
+    for (let i = 0; i < n; i++) ORIG[i] = Object.getOwnPropertyDescriptor(globalThis, DOM_GLOBALS[i]);
+  }
+  for (let i = 0; i < n; i++) Reflect.defineProperty(globalThis, DOM_GLOBALS[i], trapDescriptors[i]);
   const timers = TIMERS.map((name) => globalThis[name]);
   for (const name of TIMERS) globalThis[name] = () => fallback(`${name} in a render`);
-  return { saved: foreign ? saved : null, timers };
+  return { saved, timers };
 };
 const disarm = (st) => {
-  for (let i = 0; i < DOM_GLOBALS.length; i++) {
-    const name = DOM_GLOBALS[i];
-    const d = st.saved ? st.saved[i] : ORIG[i];
-    if (d) Object.defineProperty(globalThis, name, d);
-    else delete globalThis[name];
+  const n = DOM_GLOBALS.length;
+  const was = st.saved || ORIG;
+  for (let i = 0; i < n; i++) {
+    const d = was[i];
+    if (d) Reflect.defineProperty(globalThis, DOM_GLOBALS[i], d);
+    else Reflect.deleteProperty(globalThis, DOM_GLOBALS[i]);
   }
   for (let i = 0; i < TIMERS.length; i++) globalThis[TIMERS[i]] = st.timers[i];
 };
@@ -1233,6 +1214,7 @@ export async function createStringRenderer(load, { resumable = true, url = 'http
 
   const run = (html, resume, ld) => {
     FELL = null;
+    MARKS = 0;
     let tmpl = pageCache.get(html);
     if (!tmpl) {
       if (pageCache.size >= PAGES) pageCache.delete(pageCache.keys().next().value);
@@ -1244,9 +1226,7 @@ export async function createStringRenderer(load, { resumable = true, url = 'http
     try {
       compiled(tmpl, true);
       const f = build(tmpl, [], null, 0);
-      const A = [];
-      emitFrame(f, A);
-      const out = number(A, page, resume, ld);
+      const out = number(emitFrame(f), page, resume, ld);
       if (FELL !== null) throw new Fallback(FELL);
       // What a component's `disconnectedCallback` does when the page is thrown away.
       for (const host of page.hosts) hook(host, '__disconnected', 'disconnectedCallback');
@@ -1275,65 +1255,62 @@ export async function createStringRenderer(load, { resumable = true, url = 'http
   return render;
 }
 
-/** The numbering pass: the tokens of the output become ids, `s-rs`, list skips and the state script. */
-const number = (A, page, resume, ld) => {
+/** The numbering pass: the markers of the markup become ids, `s-rs`, list skips and the state script. */
+const MARKER = /([\u0001-\u0005])(\d+)\u0006/;
+const number = (html, page, resume, ld) => {
   const state = resume ? {} : null;
   const types = new Set();
   const seen = new Set(), eager = new Set();
   const ids = new Array(page.hosts.length);
-  const OUT = [];
   const startAt = [];
   const startCount = [];
   let next = 0;
   let stateless = 0;
-  const walk = (a) => {
-    for (let i = 0; i < a.length; i++) {
-      const x = a[i];
-      if (typeof x === 'string') OUT.push(x);
-      else if (typeof x === 'number') {
-        const kind = x & 7;
-        const val = x >> 3;
-        switch (kind) {
-          case T_HOST: {
-            const host = page.hosts[val];
-            const id = ++next;
-            ids[val] = id;
-            let now = false;
-            if (state) {
-              const entry = stateEntry(host);
-              for (const type of host.__evs || []) {
-                if (DELEGATED.has(type)) types.add(type);
-                else if (ELEMENT_ON.has(`on${type}`)) now = true;
-              }
-              if (entry === null) {
-                now = true;
-                stateless++;
-              } else if (entry) state[id] = entry;
-            }
-            seen.add(host.constructor.__meta.tag);
-            if (now) eager.add(host.constructor.__meta.tag);
-            OUT.push(` s-rs="${id}"${now ? ' s-rh' : ''}`);
-            break;
+  // [text, kind, index, text, kind, index, ..., text]: each marker's kind slot becomes what it stands for.
+  const OUT = html.split(MARKER);
+  if ((OUT.length - 1) / 3 !== MARKS) fallback('a control character in the markup');
+  for (let i = 1; i < OUT.length; i += 3) {
+    const val = +OUT[i + 1];
+    OUT[i + 1] = '';
+    switch (OUT[i]) {
+      case M_HOST: {
+        const host = page.hosts[val];
+        const id = ++next;
+        ids[val] = id;
+        let now = false;
+        if (state) {
+          const entry = stateEntry(host);
+          for (const type of host.__evs || []) {
+            if (DELEGATED.has(type)) types.add(type);
+            else if (ELEMENT_ON.has(`on${type}`)) now = true;
           }
-          case T_LISTSTART:
-            startAt[val] = OUT.length;
-            startCount[val] = stateless;
-            OUT.push('');
-            break;
-          case T_LISTEND:
-            if (state && stateless === startCount[val]) OUT[startAt[val]] = `~${page.lists[val].last}:${page.lists[val].total}`;
-            break;
-          case T_DOT:
-            OUT.push(`${ids[val]}.`);
-            break;
-          case T_COLON:
-            OUT.push(`${ids[val]}:`);
-            break;
+          if (entry === null) {
+            now = true;
+            stateless++;
+          } else if (entry) state[id] = entry;
         }
-      } else walk(x);
+        const tag = host.constructor.__meta.tag;
+        seen.add(tag);
+        if (now) eager.add(tag);
+        OUT[i] = ` s-rs="${id}"${now ? ' s-rh' : ''}`;
+        break;
+      }
+      case M_LISTSTART:
+        startAt[val] = i;
+        startCount[val] = stateless;
+        OUT[i] = '';
+        break;
+      case M_LISTEND:
+        if (state && stateless === startCount[val]) OUT[startAt[val]] = `~${page.lists[val].last}:${page.lists[val].total}`;
+        OUT[i] = '';
+        break;
+      case M_DOT:
+        OUT[i] = `${ids[val]}.`;
+        break;
+      default:
+        OUT[i] = `${ids[val]}:`;
     }
-  };
-  walk(A);
+  }
   let out = page.root.styles.join('') + OUT.join('');
   if (state) {
     const e = [...types].join(',');
