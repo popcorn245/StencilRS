@@ -77,9 +77,8 @@ from Stencil's compiler.
 ### A smaller runtime (`runtime: 'stencilrs'`)
 
 `stencilrs({ runtime: 'stencilrs' })` builds for stencilrs' own runtime instead of Stencil's, and its production
-build ships only the parts your components use (`runtimeFeatures`, `'auto'` by default): a one-component shadow-DOM
-app is 4.5 KB gzip, 9.0 KB with every optional part (`runtimeFeatures: false`). A client that hydrates server
-html needs `hydrateClient: true`. Options, rules and sizes: [docs/runtime.md](docs/runtime.md#smaller-builds-runtimefeatures)
+build ships only the parts your components use (`runtimeFeatures`, `'auto'` by default, which keeps hydration): a one-component
+shadow-DOM app is 7.0 KB gzip, 4.5 KB with `runtimeFeatures: 'client'` (no server renders it), 9.0 KB with every optional part (`false`). Options, rules and sizes: [docs/runtime.md](docs/runtime.md#smaller-builds-runtimefeatures)
 and [docs/vite-plugin.md](docs/vite-plugin.md#which-parts-of-the-stencilrs-runtime-ship-runtimefeatures).
 
 ### Type declarations for a library

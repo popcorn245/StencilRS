@@ -82,10 +82,10 @@ test('FeatureScan: the modules of the bundle only, the last word on a file, and 
   assert.equal(scan.features(['/p/a.tsx', '/p/util.js']).vnode, false);
 });
 
-test('auto: a production browser build; hydration and resuming only with hydrateClient, signals with the plugin\'s option', () => {
+test('auto: hydration and resuming stay on; client turns them off; signals also with the plugin\'s option', () => {
   const none = { light: false, vnode: false, signals: false };
-  assert.deepEqual(autoRuntimeFeatures(none), { server: false, hot: false, hydrate: false, resume: false, light: false, signals: false, vnode: false });
-  assert.deepEqual(autoRuntimeFeatures({ ...none, light: true, vnode: true }, { hydrateClient: true }), { server: false, hot: false, hydrate: true, resume: true, light: true, signals: false, vnode: true });
+  assert.deepEqual(autoRuntimeFeatures(none), { server: false, hot: false, hydrate: true, resume: true, light: false, signals: false, vnode: false });
+  assert.deepEqual(autoRuntimeFeatures({ ...none, light: true, vnode: true }, { client: true }), { server: false, hot: false, hydrate: false, resume: false, light: true, signals: false, vnode: true });
   assert.equal(autoRuntimeFeatures(none, { signals: true }).signals, true);
 });
 
@@ -95,9 +95,10 @@ test('the option: the default, the whole runtime, auto, an object, and what it r
   assert.deepEqual(resolveRuntimeFeatures('all'), { mode: 'all' });
   assert.deepEqual(resolveRuntimeFeatures(false), { mode: 'all' });
   assert.deepEqual(resolveRuntimeFeatures('auto'), { mode: 'auto' });
+  assert.deepEqual(resolveRuntimeFeatures('client'), { mode: 'client' });
   assert.deepEqual(resolveRuntimeFeatures({ hydrate: false }), { mode: 'explicit', features: { hydrate: false } });
   assert.throws(() => resolveRuntimeFeatures({ slots: false }), /unknown feature "slots"/);
-  assert.throws(() => resolveRuntimeFeatures('some'), /must be 'auto', 'all', false or an object/);
+  assert.throws(() => resolveRuntimeFeatures('some'), /must be 'auto', 'client', 'all', false or an object/);
   assert.throws(() => resolveRuntimeFeatures(true), /must be 'auto'/);
   assert.deepEqual(allFeatures({ hot: false }), { server: true, hydrate: true, resume: true, light: true, signals: true, vnode: true, hot: false });
 });

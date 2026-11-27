@@ -227,7 +227,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] }, runtime?: 'stencil' | 'stencilrs', runtimeFeatures?: false | 'all' | 'auto' | { server?: boolean, hydrate?: boolean, resume?: boolean, light?: boolean, signals?: boolean, vnode?: boolean, hot?: boolean } }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] }, runtime?: 'stencil' | 'stencilrs', runtimeFeatures?: false | 'all' | 'auto' | 'client' | { server?: boolean, hydrate?: boolean, resume?: boolean, light?: boolean, signals?: boolean, vnode?: boolean, hot?: boolean } }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -254,7 +254,8 @@ const SPEC_PAGE_OPTIONS = {
  *   as a module of its own, `components/<tag>.js` (importing it defines the tag), with `components.json` mapping tag to module and to the
  *   shared chunks it imports. `{ split: false }`: the flag only; `{ manifest, dir }`: the manifest's file name (false: none), the folder.
  *   runtimeFeatures (default `'auto'`, `runtime: 'stencilrs'` production browser builds; docs/runtime.md): which optional parts of the runtime the bundle keeps. `'auto'`: the ones the
- *   build's own modules use (components' encapsulation, `h()`, spreads, functional components, signals; `hydrate` and `resume` with `hydrateClient`), never `server` or `hot`;
+ *   build's own modules use (components' encapsulation, `h()`, spreads, functional components, signals), plus `hydrate` and `resume`, never `server` or `hot`; `'client'`: `'auto'` without
+ *   `hydrate` and `resume`, for an app no server renders;
  *   a module the plugin cannot read counts as using what it might. `false` or `'all'`: the whole runtime. `{ server, hydrate, resume, light, signals, vnode, hot }`: each
  *   `false` drops that part (one left out stays on); `light: false` with a component that is not shadow DOM fails the build.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
@@ -282,7 +283,7 @@ export function stencilrs(options = {}) {
       if (mode === 'all') chosen = allFeatures();
       else if (mode === 'explicit') chosen = allFeatures(features);
       else {
-        const seen = new Set();
+        const seen = new Set(); // 'auto' and 'client'
         const queue = [...[].concat(typeof buildInput === 'string' ? [buildInput] : Object.values(buildInput ?? {})), ...splitFiles.keys()];
         while (queue.length) {
           let id = queue.shift();
@@ -293,7 +294,7 @@ export function stencilrs(options = {}) {
           const info = await ctx.load({ id, resolveDependencies: true });
           queue.push(...info.importedIds, ...info.dynamicallyImportedIds);
         }
-        chosen = autoRuntimeFeatures(featureScan.features(seen), { hydrateClient: !!hydrateClient, signals });
+        chosen = autoRuntimeFeatures(featureScan.features(seen), { client: mode === 'client', signals });
       }
       if (verbose) ctx.info?.(`[stencilrs] runtimeFeatures (${mode}): ${Object.entries(chosen).map(([k, v]) => `${k} ${v ? 'on' : 'off'}`).join(', ')}`);
       return chosen;
@@ -563,7 +564,7 @@ export function stencilrs(options = {}) {
       // Production builds of the stencilrs runtime: the optional features (runtime.js `F_*`) are written into the bundle as constants in
       // `renderChunk` (`runtimeFeatures`), so the bundler folds them. The dev server and Vitest keep the whole runtime.
       featuresOn = runtime === 'stencilrs' && env?.command === 'build' && !ssr && !specPage && !userConfig.build?.ssr && !env?.isSsrBuild;
-      if (featuresOn && hydrateClient && featureOption.features?.hydrate === false) throw new Error(`[stencilrs] runtimeFeatures.hydrate is false but hydrateClient is on`);
+      if (featuresOn && hydrateClient && (featureOption.features?.hydrate === false || featureOption.mode === 'client')) throw new Error(`[stencilrs] runtimeFeatures leaves hydration out ('client' or hydrate: false) but hydrateClient is on`);
       // The dev server's startup scan reads source files, so it misses the imports the transform
       // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
       // first request and re-runs its optimizer. Only the client runtime of the default output
@@ -1048,7 +1049,7 @@ export function stencilrs(options = {}) {
       unionHint.flush();
       // 'auto' was decided from the modules loaded from the entries; every module is known now. One that needs a feature the choice left out
       // (something loaded another way) must not be built into a page that fails at run time.
-      if (featuresOn && !error && featureOption.mode === 'auto' && featuresChosen) {
+      if (featuresOn && !error && featureOption.mode !== 'all' && featureOption.mode !== 'explicit' && featuresChosen) {
         const chosen = await featuresChosen;
         const used = featureScan.features(this.getModuleIds());
         const short = ['light', 'vnode', 'signals'].filter((k) => used[k] && !chosen[k]);

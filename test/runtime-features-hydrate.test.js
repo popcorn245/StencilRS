@@ -36,13 +36,13 @@ try {
 }
 const chromiumOnly = { skip: !chromium && 'playwright not installed', timeout: 120000 };
 
-/** The client: the fixture's components in a production browser build with hydrateClient, as `/out.js`. */
+/** The client: the fixture's components in a production browser build (default runtimeFeatures), as `/out.js`. */
 const client = async (entry, options = {}, { minify = true } = {}) => {
   const result = await build({
     root: fixture,
     configFile: false,
     logLevel: 'silent',
-    plugins: [stencilrs({ runtime: 'stencilrs', hydrateClient: { split: false }, ...options })],
+    plugins: [stencilrs({ runtime: 'stencilrs', ...options })],
     build: { write: false, minify, lib: { entry: join(fixture, entry), formats: ['es'], fileName: 'out' } },
   });
   return [result].flat().flatMap((r) => r.output).filter((o) => o.type === 'chunk').map((o) => o.code).join('\n');
@@ -106,7 +106,7 @@ const solo = (page) => page.evaluate(() => {
   return { text: c.shadowRoot.querySelector('button').textContent.trim(), on: [...c.shadowRoot.querySelectorAll('li')].map((li) => li.className) };
 });
 
-test('gated build (auto), resumable html: waits, then wakes on a click, keeping the server\'s nodes', chromiumOnly, async () => {
+test('default build (auto), resumable html: waits, then wakes on a click, keeping the server\'s nodes', chromiumOnly, async () => {
   const js = await client('shadow.ts');
   const readable = await client('shadow.ts', {}, { minify: false });
   assert.ok(readable.includes('function hydrateEl') && readable.includes('function resumeEl') && !readable.includes('SlotPart ='), 'sanity: hydration and resuming are in this build, the light-DOM half is not');
@@ -130,7 +130,7 @@ test('gated build (auto), resumable html: waits, then wakes on a click, keeping 
   });
 });
 
-test('gated build (auto), non-resumable html: every component hydrates on load, in place', chromiumOnly, async () => {
+test('default build (auto), non-resumable html: every component hydrates on load, in place', chromiumOnly, async () => {
   const js = await client('shadow.ts');
   const html = await render(SHADOW_PAGE, { resumable: false });
   assert.doesNotMatch(html, /rs\/state/);
@@ -147,7 +147,7 @@ test('gated build (auto), non-resumable html: every component hydrates on load, 
   });
 });
 
-test('gated build with resume: false, non-resumable html', chromiumOnly, async () => {
+test('build with resume: false, non-resumable html', chromiumOnly, async () => {
   const features = { server: false, hot: false, light: false, signals: false, vnode: false, resume: false };
   const js = await client('shadow.ts', { runtimeFeatures: features });
   const readable = await client('shadow.ts', { runtimeFeatures: features }, { minify: false });
@@ -194,8 +194,8 @@ test('gated and whole-runtime builds hydrate the same page to the same result', 
 });
 
 test('a build without hydration on a server-rendered page says so (never a silent second render)', chromiumOnly, async () => {
-  const js = await client('shadow.ts', { hydrateClient: false });
-  assert.ok(!(await client('shadow.ts', { hydrateClient: false }, { minify: false })).includes('function hydrateEl'));
+  const js = await client('shadow.ts', { runtimeFeatures: 'client' });
+  assert.ok(!(await client('shadow.ts', { runtimeFeatures: 'client' }, { minify: false })).includes('function hydrateEl'));
   await withPage(await render(SHADOW_PAGE, { resumable: false }), js, async ({ errors }) => {
     assert.equal(errors.filter((e) => /server-rendered page, build without hydration/.test(e)).length, 1, 'once for the page, not once per component');
   });

@@ -24,6 +24,7 @@ const MARKERS = {
 };
 const features = (code) => Object.fromEntries(Object.entries(MARKERS).map(([k, m]) => [k, code.includes(m)]));
 const OFF = { server: false, hydrate: false, resume: false, light: false, signals: false, vnode: false, hot: false };
+const HYD = { ...OFF, hydrate: true, resume: true }; // what 'auto' keeps when nothing else is used
 const ALL = Object.fromEntries(Object.keys(OFF).map((k) => [k, true]));
 
 const bundle = async (entry, options = {}, { root = fixture, plugins = [] } = {}) => {
@@ -44,38 +45,40 @@ test('the markers: the whole runtime has every one, so an absent marker means th
   assert.deepEqual(await used('shadow.ts', { runtimeFeatures: { hot: true } }), ALL);
 });
 
-test('default (auto): shadow components, nothing else, is the runtime without any optional part', async () => {
+test('default (auto): shadow components keep hydration and resuming only; client (no server renders the app) keeps nothing optional', async () => {
   const code = await bundle('shadow.ts');
-  assert.deepEqual(features(code), OFF);
+  assert.deepEqual(features(code), HYD);
+  const client = await bundle('shadow.ts', { runtimeFeatures: 'client' });
+  assert.deepEqual(features(client), OFF);
+  assert.equal(client, await bundle('shadow.ts', { runtimeFeatures: OFF }), 'the same as turning every part off by hand');
+  assert.deepEqual(features(await bundle('shadow.ts', { hydrateClient: { split: false } })), HYD, 'hydrateClient changes nothing under auto');
   assert.match(code, /customElements\.define/, 'the runtime itself is there');
   assert.equal(code, await bundle('shadow.ts', { runtimeFeatures: 'auto' }), 'the default is auto');
-  assert.deepEqual(features(await bundle('shadow.ts', { runtimeFeatures: OFF })), OFF, 'the same as turning every part off by hand');
-  assert.equal(code, await bundle('shadow.ts', { runtimeFeatures: OFF }));
 });
 
 test('light: a component that is not shadow DOM brings the light-DOM half', async () => {
-  assert.deepEqual(await used('only-light.ts'), { ...OFF, light: true });
-  assert.deepEqual(await used('only-none.ts'), { ...OFF, light: true }, 'the default encapsulation is none');
-  assert.equal((await used('only-counter.ts')).light, false);
+  assert.deepEqual(await used('only-light.ts', { runtimeFeatures: 'client' }), { ...OFF, light: true });
+  assert.deepEqual(await used('only-none.ts', { runtimeFeatures: 'client' }), { ...OFF, light: true }, 'the default encapsulation is none');
+  assert.equal((await used('only-counter.ts', { runtimeFeatures: 'client' })).light, false);
 });
 
 test('vnode: h(), a spread and a functional component bring vnode support; JSX alone does not', async () => {
-  assert.deepEqual(await used('only-vnode.ts'), { ...OFF, vnode: true });
-  assert.deepEqual(await used('only-spread.ts'), { ...OFF, vnode: true });
-  assert.deepEqual(await used('only-fn.ts'), { ...OFF, vnode: true });
-  assert.equal((await used('only-counter.ts')).vnode, false);
+  assert.deepEqual(await used('only-vnode.ts', { runtimeFeatures: 'client' }), { ...OFF, vnode: true });
+  assert.deepEqual(await used('only-spread.ts', { runtimeFeatures: 'client' }), { ...OFF, vnode: true });
+  assert.deepEqual(await used('only-fn.ts', { runtimeFeatures: 'client' }), { ...OFF, vnode: true });
+  assert.equal((await used('only-counter.ts', { runtimeFeatures: 'client' })).vnode, false);
 });
 
 test('signals: an import of the signals module (the plugin\'s signals option makes it importable)', async () => {
-  assert.deepEqual(await used('only-signal.ts', { signals: true }), { ...OFF, signals: true });
-  assert.equal((await used('only-counter.ts', { signals: true })).signals, true, 'the option alone keeps the binder: the page may load a signal from anywhere');
-  assert.equal((await used('only-counter.ts')).signals, false);
+  assert.deepEqual(await used('only-signal.ts', { signals: true, runtimeFeatures: 'client' }), { ...OFF, signals: true });
+  assert.equal((await used('only-counter.ts', { signals: true, runtimeFeatures: 'client' })).signals, true, 'the option alone keeps the binder: the page may load a signal from anywhere');
+  assert.equal((await used('only-counter.ts', { runtimeFeatures: 'client' })).signals, false);
 });
 
-test('hydrate and resume: with hydrateClient only; server and hot never', async () => {
-  assert.deepEqual(await used('shadow.ts', { hydrateClient: { split: false } }), { ...OFF, hydrate: true, resume: true });
-  assert.deepEqual(await used('shadow.ts', { hydrateClient: true }), { ...OFF, hydrate: true, resume: true });
-  assert.deepEqual(await used('only-light.ts', { hydrateClient: { split: false }, signals: true }), { ...OFF, hydrate: true, resume: true, light: true, signals: true });
+test('hydrate and resume: on under auto, off under client; server and hot never', async () => {
+  assert.deepEqual(await used('shadow.ts', { hydrateClient: true }), HYD);
+  assert.deepEqual(await used('only-light.ts', { signals: true }), { ...HYD, light: true, signals: true });
+  assert.deepEqual(await used('only-light.ts', { runtimeFeatures: 'client', signals: true }), { ...OFF, light: true, signals: true });
 });
 
 test('an object turns off what it names, and leaves out what it does not mention (on)', async () => {
@@ -86,9 +89,10 @@ test('an object turns off what it names, and leaves out what it does not mention
 });
 
 test('the option refuses what it does not know, and hydrateClient without hydration', async () => {
-  assert.throws(() => stencilrs({ runtime: 'stencilrs', runtimeFeatures: 'small' }), /must be 'auto', 'all', false or an object/);
+  assert.throws(() => stencilrs({ runtime: 'stencilrs', runtimeFeatures: 'small' }), /must be 'auto', 'client', 'all', false or an object/);
   assert.throws(() => stencilrs({ runtime: 'stencilrs', runtimeFeatures: { slots: false } }), /unknown feature "slots"/);
-  await assert.rejects(bundle('shadow.ts', { hydrateClient: true, runtimeFeatures: { hydrate: false } }), /hydrate is false but hydrateClient is on/);
+  await assert.rejects(bundle('shadow.ts', { hydrateClient: true, runtimeFeatures: { hydrate: false } }), /leaves hydration out .* but hydrateClient is on/);
+  await assert.rejects(bundle('shadow.ts', { hydrateClient: true, runtimeFeatures: 'client' }), /leaves hydration out/);
 });
 
 test('an explicit light: false with a component that is not shadow DOM fails the build, naming it', async () => {
@@ -97,6 +101,7 @@ test('an explicit light: false with a component that is not shadow DOM fails the
   // a shadow-only app is fine, and so is light: false with `auto` in front of a light app (auto turns it on)
   assert.equal((await used('shadow.ts', { runtimeFeatures: { light: false } })).light, false);
   assert.equal((await used('only-light.ts', { runtimeFeatures: 'auto' })).light, true);
+  await assert.rejects(bundle('only-light.ts', { runtimeFeatures: { light: false } }), /light is false/);
 });
 
 // Projects of their own, inside the package so that the compiled components' import of `@popcorn245/stencilrs/runtime` resolves (removed at the end).
@@ -123,9 +128,9 @@ test('modules the plugin does not compile: a hand-written component and h() in a
     'main-helper.ts': `import './shadow.tsx';\nimport './helper.ts';\n`,
     'main-plain.ts': `import './shadow.tsx';\nimport './plain.ts';\n`,
   });
-  assert.deepEqual(await used('main-hand.ts', {}, { root }), { ...OFF, light: true, vnode: true });
-  assert.deepEqual(await used('main-helper.ts', {}, { root }), { ...OFF, vnode: true });
-  assert.deepEqual(await used('main-plain.ts', {}, { root }), OFF, 'a module that only reads Build or getAssetPath asks for nothing');
+  assert.deepEqual(await used('main-hand.ts', { runtimeFeatures: 'client' }, { root }), { ...OFF, light: true, vnode: true });
+  assert.deepEqual(await used('main-helper.ts', { runtimeFeatures: 'client' }, { root }), { ...OFF, vnode: true });
+  assert.deepEqual(await used('main-plain.ts', { runtimeFeatures: 'client' }, { root }), OFF, 'a module that only reads Build or getAssetPath asks for nothing');
 });
 
 test('collections: a component from a package the build compiles (hydrateClient.collections) counts', async () => {

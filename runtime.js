@@ -1239,7 +1239,7 @@ export class Base extends (F_LIGHT ? Light : HTMLElement) {
       // it does whether or not it waits (a parent that waits won't pass it its props).
       const id = F_HYDRATE && !SERVER ? this.getAttribute('s-rs') : null;
       // A build without hydration (`runtimeFeatures`) on a page the server rendered would render everything again beside the server's nodes: say so, once.
-      if (!F_HYDRATE && !SERVER && !noHydrate && this.hasAttribute('s-rs')) console.error('stencilrs: server-rendered page, build without hydration (set hydrateClient: true)'), (noHydrate = 1);
+      if (!F_HYDRATE && !SERVER && !noHydrate && this.hasAttribute('s-rs')) console.error('stencilrs: server-rendered page, build without hydration (runtimeFeatures)'), (noHydrate = 1);
       const resumed = F_RESUME && id !== null && hasState();
       const wait = resumed && !this.hasAttribute('s-rh') && classCanWait(this.constructor);
       if (resumed) {

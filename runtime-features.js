@@ -15,18 +15,20 @@ export const RUNTIME_FEATURES = ['server', 'hydrate', 'resume', 'light', 'signal
 export const DEFAULT_RUNTIME_FEATURES = 'auto';
 
 /**
- * The option as a mode: `{ mode: 'all' }` (`false`, `'all'`), `{ mode: 'auto' }`, or `{ mode: 'explicit', features }` (an object:
+ * The option as a mode: `{ mode: 'all' }` (`false`, `'all'`), `{ mode: 'auto' }`, `{ mode: 'client' }` (auto for a client-only app: no
+ * hydration, no resuming), or `{ mode: 'explicit', features }` (an object:
  * `{ hydrate: false }`; a feature left out is on). Unset is `DEFAULT_RUNTIME_FEATURES`.
  */
 export function resolveRuntimeFeatures(option = DEFAULT_RUNTIME_FEATURES) {
   if (option === false || option === 'all') return { mode: 'all' };
   if (option === 'auto') return { mode: 'auto' };
+  if (option === 'client') return { mode: 'client' };
   if (option && typeof option === 'object' && !Array.isArray(option)) {
     const unknown = Object.keys(option).filter((k) => !RUNTIME_FEATURES.includes(k));
     if (unknown.length) throw new Error(`[stencilrs] runtimeFeatures: unknown feature ${unknown.map((k) => JSON.stringify(k)).join(', ')} (${RUNTIME_FEATURES.join(', ')})`);
     return { mode: 'explicit', features: option };
   }
-  throw new Error(`[stencilrs] runtimeFeatures must be 'auto', 'all', false or an object, got ${JSON.stringify(option)}`);
+  throw new Error(`[stencilrs] runtimeFeatures must be 'auto', 'client', 'all', false or an object, got ${JSON.stringify(option)}`);
 }
 
 /** Every feature, on unless `features` turns it off: `{ server: true, ..., hot: true }`. */
@@ -177,11 +179,12 @@ export class FeatureScan {
 
 /**
  * `runtimeFeatures: 'auto'`: server and hot reload off (a production browser build), `light`, `vnode` and `signals` as the build uses
- * them, `hydrate` and `resume` on only with `hydrateClient` (they are for pages the server rendered), and `signals` on with the plugin's
- * `signals` option.
+ * them, `hydrate` and `resume` on (a page the server rendered cannot be told from the client build, and dropping them would render it
+ * again without a word), `signals` also on with the plugin's `signals` option. `client` (`'client'`): the same with `hydrate` and
+ * `resume` off, for an app no server renders.
  */
-export function autoRuntimeFeatures(used, { hydrateClient = false, signals = false } = {}) {
-  return { server: false, hot: false, hydrate: !!hydrateClient, resume: !!hydrateClient, light: !!used.light, signals: !!used.signals || !!signals, vnode: !!used.vnode };
+export function autoRuntimeFeatures(used, { client = false, signals = false } = {}) {
+  return { server: false, hot: false, hydrate: !client, resume: !client, light: !!used.light, signals: !!used.signals || !!signals, vnode: !!used.vnode };
 }
 
 /**
