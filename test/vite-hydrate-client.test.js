@@ -29,8 +29,8 @@ test('runtimeFlags: hydrateClient turns the runtime\'s client hydration on, over
 test('hydrateClientOptions: defaults, the object form, and what it refuses', () => {
   assert.equal(hydrateClientOptions(undefined), false);
   assert.equal(hydrateClientOptions(false), false);
-  assert.deepEqual(hydrateClientOptions(true), { split: true, manifest: 'components.json', dir: 'components', tags: {}, collections: [] });
-  assert.deepEqual(hydrateClientOptions({ split: false, manifest: false, dir: '/c/' }), { split: false, manifest: false, dir: 'c', tags: {}, collections: [] });
+  assert.deepEqual(hydrateClientOptions(true), { split: true, manifest: 'components.json', dir: 'components', tags: {}, collections: [], islands: false });
+  assert.deepEqual(hydrateClientOptions({ split: false, manifest: false, dir: '/c/' }), { split: false, manifest: false, dir: 'c', tags: {}, collections: [], islands: false });
   assert.throws(() => hydrateClientOptions({ splt: true }), /unknown option "splt"/);
   assert.throws(() => hydrateClientOptions('yes'), /boolean or an object/);
   assert.throws(() => stencilrs({ hydrateClient: true, componentExport: 'ssr' }), /cannot be combined with componentExport: 'ssr'/);

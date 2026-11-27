@@ -17,11 +17,13 @@
 // `hydrate` is anything with `renderToString(html, options)`: a hydrate app built by stencilrs
 // (`componentExport: 'ssr'`) or by Stencil's own `ssr` output target.
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
 import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands } from './express-islands.js';
+import { bootConfig, bootTag, insertBeforeBodyEnd, normalizeClient } from './islands-manifest.js';
 import { createRenderCache } from './render-cache.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
@@ -37,16 +39,16 @@ const loadHydrate = async (hydrate) => {
 const SCOPED_ISLANDS = "stencilEngine: `islands` need serializeShadowRoot 'declarative-shadow-dom' (the default): islands are not supported with scoped rendering (`serializeShadowRoot: 'scoped'` or `false`), see docs/islands.md";
 const isScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false;
 
-/** `islands: false | true | { idStride, earlyHead }` as `{ idStride, earlyHead }`, or null. */
+/** `islands: false | true | { idStride, earlyHead, client }` as `{ idStride, earlyHead, client }`, or null. */
 const normalizeIslands = (islands) => {
   if (islands === false || islands == null) return null;
   const o = islands === true ? {} : islands;
   if (typeof o !== 'object') throw new TypeError('stencilEngine: `islands` must be true, false or { idStride, earlyHead }');
-  for (const key of Object.keys(o)) if (key !== 'idStride' && key !== 'earlyHead') throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected idStride, earlyHead)`);
-  const { idStride = 1000, earlyHead = false } = o;
+  for (const key of Object.keys(o)) if (key !== 'idStride' && key !== 'earlyHead' && key !== 'client') throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected idStride, earlyHead, client)`);
+  const { idStride = 1000, earlyHead = false, client = false } = o;
   if (!(Number.isSafeInteger(idStride) && idStride >= 1)) throw new TypeError('stencilEngine: `islands.idStride` must be a positive integer');
   if (typeof earlyHead !== 'boolean') throw new TypeError('stencilEngine: `islands.earlyHead` must be a boolean');
-  return { idStride, earlyHead };
+  return { idStride, earlyHead, client: client ? normalizeClient(client, (file) => JSON.parse(readFileSync(file, 'utf8'))) : null };
 };
 
 const workerFile = new URL('./express-worker.js', import.meta.url);
@@ -338,6 +340,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       parts: split.islands.map((isl, i) => (isl.html.trim() ? fragmentRender(isl.html, { ...base, fullDocument: false, idBase: (i + 1) * stride }) : null)),
       earlyHead: early && probe(early.htmlTag, base).then((tag) => tag + early.rest),
       inspect: (label, result) => inspect(path, result.diagnostics, label),
+      client: islandsConfig.client && document ? (manifest) => bootTag(bootConfig(manifest, islandsConfig.client), islandsConfig.client) : null,
     });
   };
 
@@ -371,7 +374,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     const { html, options } = await prepare(path, locals);
     if (islandsConfig) {
       const page = islandsOf(path, html, options);
-      if (page) return page.html();
+      if (page) return islandsConfig.client ? insertBeforeBodyEnd(await page.html(), await page.bootTag()) : page.html();
     }
     const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
     inspect(path, result.diagnostics);

@@ -60,8 +60,68 @@ Through `res.render` an early head changes nothing for the browser (the page is 
 - **`maxHydrateCount`** (Stencil's 300 components per render) applies per island.
 - Errors after bytes are sent, aborting pending renders when the socket closes and compression flush policy belong to the streaming responder (#192).
 
+## Client directives (`islands.client`)
+
+`client="load | idle | visible | static | none"` on `<stencil-island>` says when, and whether, the island's components run in the browser. The server html of every island is
+complete either way; the directive only decides when the client takes it over.
+
+| `client` | The client |
+|---|---|
+| `load` (default) | defines the island's components at boot and hydrates them, together with the shell's, in one pass |
+| `idle` | the same from `requestIdleCallback` |
+| `visible` | the same when an element of the island intersects the viewport (`IntersectionObserver`; `margin` sets its `rootMargin`) |
+| `static` | never: the html stays what the server wrote. The island is rendered without hydration annotations (`s-id`, `c-id`, `s-sn`, `s-mode`, the `<!--r. o. s. t. c.-->` comments: -8..-21% gzip in the spike), and a component only static islands use is never loaded |
+| `none` | as `static`, and not listed in `window.stencilIslands.state` |
+
+```js
+const engine = stencilEngine({
+  hydrate: './dist/hydrate/index.js',
+  islands: { client: { base: '/assets/', manifest: './dist/client/components.json', init: ['init.js'] } },
+});
+```
+
+`client` takes `base` (URL prefix of the build, default `/`), `manifest` (the `components.json` of the `hydrateClient` build below, a path or the parsed object), `init` (modules that run before any
+component is defined: Ionic's global script), `script` (URL of the boot, default `<base>islands.js`, `false` for none), `preload` (default true) and `margin` (default `0px`). With it,
+`res.render` writes before `</body>`, for a document view:
+
+```html
+<link rel="modulepreload" href="/assets/init.js"> ... <!-- init, the shell's and the load islands' modules, and the chunks they import -->
+<script type="application/json" id="stencil-islands">{"base":"/assets/","init":["init.js"],"shell":["components/ion-app.js"],"islands":[{"name":"feed","client":"visible","files":["components/ion-item.js"]},{"name":"promo","client":"static","files":[]}]}</script>
+<script type="module" src="/assets/islands.js"></script>
+```
+
+The files are, for each island, the modules of the tags its render used (`result.components`, so what the page really rendered, not a build-time guess), looked up in `components.json`; a tag the
+build has no module for is listed in `missing`. `engine.renderIslands(path)` gives the same to a streaming responder: `page.clientManifest()` is `{ shell: [tag], islands: [{ name, client, tags }] }`
+and `page.bootTag()` the markup above, to write with the last chunk. A fragment view (no `<html>`) gets neither the boot nor the annotation stripping.
+
+The client is built by `stencilrs({ hydrateClient: { islands: true } })` (docs/vite-plugin.md), which also writes the boot as `islands.js`; or import `boot` from `@popcorn245/stencilrs/islands`.
+
+**One component, many instances.** A custom element is global: once `ion-item` is defined, every `ion-item` in the page upgrades and connects, in any island. So the gate is per instance: the client wraps each class's
+`connectedCallback` as `customElements.define` is called (a guarded patch: a class without one is left alone and warned about). A host whose closest `[data-island]`, looking through the shadow roots it
+sits in, is not active yet is parked and connected by hand, in document order, when its island activates; a host of a `static` or `none` island is never connected (it is upgraded, so its
+properties work, and nothing renders or hydrates). A tag used by both a static and a hydrated island therefore behaves per instance. A host in no island, or in one the manifest does not list, connects as usual.
+
+**One synchronous pass.** The modules of one activation (the shell and every `load` island together at boot, later one island at a time, queued) are imported with `customElements.define` held back and then all defined in
+one synchronous pass; Stencil's lazy loader registers its tags the same way. A parent that sets props on its children in `componentWillLoad` (`ion-tabs` on `ion-tab`) otherwise loses them on a child that is
+not defined yet. The rule has a consequence for islands: keep a parent and the children it configures in the same island, or in the shell and `load` islands; a child in a later `idle` or `visible`
+island is defined after its parent has run.
+
+**Events and state.** `stencil-island-ready` (`{ name, client, ms }`, bubbles from the island's first element) when an island's hosts are ready, `stencil-islands-ready` on `document` when the shell and every `load` island are,
+`stencil-island-error` (`{ name, error }`) when its modules do not load: the island stays the server's html and the rest of the page goes on. `window.stencilIslands` is `{ ready, state, activate(name), ms() }`; `state[name]` is
+`pending`, `loading`, `ready`, `static` or `error`.
+
+**Per-island chunks.** There is no bundle per island to build or keep in step: the unit is the per-tag module of the `hydrateClient` build and the grouping is the page's, resolved per request from what
+each island rendered. A visible island's modules are requested when it scrolls in, a static island's are not requested at all unless another island uses the tag, the modules a `load` island needs are
+preloaded together with the chunks they import (`components.json`'s `imports`), and the lazy loader is not used: its bundle groups are coarser than islands. Merging an island's modules into one file would
+need the island to tag manifest at build time and a second bundling pass over the build output (two copies of the runtime if done wrongly); it is not done.
+
+Limits: the directives are per page load (nothing re-hydrates after a client-side navigation); `visible` needs `IntersectionObserver` (without it the island activates at once).
+
 ## Checks and numbers
 
 From `examples/ionic` (after `npm run build:hydrate` and the client build described in spike-islands.md): `node check/islands.mjs` renders list-50 and kitchen-sink split into islands
 and hydrates them in Chromium against the whole-page render (same DOM, same `style[sty-id]` count after hydration, no duplicate host ids); `node bench-islands.mjs [workers] [rounds]`
 runs whole-page, islands (`res.render`), in-order chunks and early-head chunks interleaved over HTTP.
+
+For the client (#195): `node check/islands-client.mjs` (one directive of each kind on kitchen-sink, in Chromium, on the production hydrating client build) and `node bench-islands-client.mjs [rounds] [cpu]` (this client
+against the spike's boot, interleaved; the numbers are in the pull request and in docs/spike-islands.md's follow-up 8). `test/islands-client.test.js` checks every directive in Chromium on a small fixture.

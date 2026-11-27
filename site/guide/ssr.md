@@ -129,7 +129,9 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
   The engine renders the shell and each island separately, in parallel on the pool and with their own `idBase` ranges (`idStride`, default 1000, ids per island), tags each island's
   top-level elements `data-island` / `data-client`, writes each component style once per page, and answers `res.render` with one assembled page. A view without islands is
   rendered exactly as before. An island directly inside a non-shadow component with slots, a nested island, or scoped rendering is an error. `earlyHead: true` and
-  `engine.renderIslands(path)` are the seams for a streaming responder. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
+  `engine.renderIslands(path)` are the seams for a streaming responder. `islands: { client: { base, manifest, init } }` also writes the page's client boot (a ~1.5 KB module,
+  `@popcorn245/stencilrs/islands`) that honors `client="load | idle | visible | static | none"` per island and loads only the components an active island uses; a `static` island is
+  rendered without hydration annotations. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the
   render: Express's callback receives an `Error` with the diagnostics on `err.diagnostics`.
 

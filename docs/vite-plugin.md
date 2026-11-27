@@ -46,7 +46,7 @@ project has a hydrate (`ssr`) output target, and a Vite build leaves the runtime
 
 ```ts
 stencilrs({ hydrateClient: true });
-stencilrs({ hydrateClient: { split: true, manifest: 'components.json', dir: 'components', tags: {}, collections: ['ionicons'] } });
+stencilrs({ hydrateClient: { split: true, manifest: 'components.json', dir: 'components', tags: {}, collections: ['ionicons'], islands: true } });
 ```
 
 | Option | Default | Meaning |
@@ -56,6 +56,7 @@ stencilrs({ hydrateClient: { split: true, manifest: 'components.json', dir: 'com
 | `manifest` | `'components.json'` | the asset that lists the modules: `{ version: 1, tags: { "ion-button": "components/ion-button.js" }, imports: { "components/ion-button.js": ["runtime-AbC123.js", ...] } }`. `imports` is the static closure of chunks of this build (for `modulepreload`), paths relative to the output directory. `false`: none |
 | `dir` | `'components'` | the folder of the modules, under the output directory |
 | `tags` | `{}` | `{ tag: file }`: a custom element the project does not compile, whose module (a file that defines it) is emitted and listed like a component |
+| `islands` | `false` | also emits the islands client (`islands-client.js`, `@popcorn245/stencilrs/islands`, about 1.5 KB gzipped) as `islands.js`: it reads the page's `<script type="application/json" id="stencil-islands">` (`stencilEngine`'s `islands.client`) and loads and hydrates the islands by their `client` directive, from this build's modules and manifest ([islands.md](islands.md#client-directives-islandsclient)) |
 | `collections` | `[]` | packages built by `stencil build` whose components are compiled by stencilrs as the project's own (the same `readCollections` as `buildHydrate`'s `collections`), emitted and listed like the others. Needed for `ionicons`: its `ion-icon` ships compiled with a runtime of its own (`ionicons/components/index.js`, hydration compiled out), so server-rendered icons would be rendered again |
 
 `split` and the manifest apply to `vite build` only, not to the dev server or `mode: 'spec-page'`, and only to a component stencilrs compiled
@@ -71,6 +72,9 @@ an own property of the element that the child's constructor (`this.active = fals
 go. So a loader should import the modules first, with `customElements.define` held back, and define every tag in one synchronous pass
 (`examples/ionic/spike/islands/hydrating-client.mjs` has the 10 lines; `test/vite-hydrate-client.test.js` has them too). With Ionic's page of kitchen-sink,
 loading the same modules in parallel without this left the first `ion-tab` hidden and its button unselected, the only difference to Stencil's own client.
+
+The islands client does exactly this per activation (the shell and the `load` islands in one pass at boot, later one island at a time), and gates `connectedCallback` per instance so a tag used by a
+static and a hydrated island behaves per host. `components.json`'s `imports` is what the engine turns into `modulepreload` links for the modules loaded at boot.
 
 ### What was checked
 

@@ -82,16 +82,16 @@ const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate', '.
  * entry of its own, `<dir>/<tag>.js`; `manifest` (default `components.json`): the asset that maps each tag to its module (false: none); `tags`: `{ tag: file }` for a custom element the
  * project does not compile (a library's `ion-icon`), whose module (a file that defines it) is emitted and listed like a component; `collections`:
  * packages built by `stencil build` (`['ionicons']`) whose components are compiled by stencilrs as the project's own (`buildHydrate`'s `collections`), so that they
- * share the runtime, and its hydration, with the rest.
+ * share the runtime, and its hydration, with the rest; `islands` (default false): also emit the islands client (`islands-client.js`, docs/islands.md) as `islands.js`.
  */
 export function hydrateClientOptions(option) {
   if (!option) return false;
   const o = option === true ? {} : option;
   if (typeof o !== 'object') throw new Error(`[stencilrs] hydrateClient must be a boolean or an object, got ${JSON.stringify(option)}`);
-  const { split = true, manifest = 'components.json', dir = 'components', tags = {}, collections = [], ...rest } = o;
+  const { split = true, manifest = 'components.json', dir = 'components', tags = {}, collections = [], islands = false, ...rest } = o;
   const unknown = Object.keys(rest);
-  if (unknown.length) throw new Error(`[stencilrs] hydrateClient: unknown option ${unknown.map((k) => JSON.stringify(k)).join(', ')} (split, manifest, dir, tags, collections)`);
-  return { split: !!split, manifest: manifest === false ? false : String(manifest), dir: String(dir).replace(/^\/+|\/+$/g, ''), tags: { ...tags }, collections: [...collections] };
+  if (unknown.length) throw new Error(`[stencilrs] hydrateClient: unknown option ${unknown.map((k) => JSON.stringify(k)).join(', ')} (split, manifest, dir, tags, collections, islands)`);
+  return { split: !!split, manifest: manifest === false ? false : String(manifest), dir: String(dir).replace(/^\/+|\/+$/g, ''), tags: { ...tags }, collections: [...collections], islands: !!islands };
 }
 
 /**
@@ -221,7 +221,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string } }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean } }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -279,6 +279,7 @@ export function stencilrs(options = {}) {
     return found;
   };
   const emitExtraTags = async (ctx) => {
+    if (hydrateClient?.islands) ctx.emitFile({ type: 'chunk', id: fileURLToPath(new URL('./islands-client.js', import.meta.url)), fileName: 'islands.js', preserveSignature: 'strict' });
     for (const c of loadCollections()) emitSplit(ctx, c.file, c.tagName);
     for (const [tag, file] of Object.entries(hydrateClient?.tags ?? {})) {
       const resolved = await ctx.resolve(file, undefined, { skipSelf: true });
