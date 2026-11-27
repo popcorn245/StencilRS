@@ -1,6 +1,6 @@
 # Islands in the Express engine
 
-`stencilEngine({ islands: {} })` (issue #191; background and measurements in [spike-islands.md](spike-islands.md)). A view marks parts of itself, the
+`stencilEngine({ islands: {} })` (issue #191, scoped mode #206; background and measurements in [spike-islands.md](spike-islands.md)). A view marks parts of itself, the
 engine renders the parts separately and in parallel, and puts the page back together. A view without markers is rendered exactly as it is
 without the option (a test compares the bytes).
 
@@ -35,7 +35,7 @@ const page = await engine.renderIslands(viewPath, locals);            // the pie
    A render that used more ids than the stride (or whose `hydratedCount` did) fails the page, naming the island: raise `idStride`.
 3. **Placement check.** An island must not be a *direct* child of a component that is not a shadow host and has slots (Stencil annotates such a child for relocation, and an
    island's html carries no such mark; after hydration the content is lost). The engine sees the annotation on the rendered marker and fails with the island's name. Put the
-   island inside a plain element or a shadow host, or make the whole component the island.
+   island inside a plain element or a shadow host, or make the whole component the island. (In scoped mode every shadow component is such a parent, and the engine carries the annotation over instead of refusing: see [Scoped mode](#scoped-mode).)
 4. **Assembly.** Each island's top-level elements get `data-island="name" data-client="..."` (no wrapper element: it would break slots and `::slotted`). Component styles
    (`result.styles`) are written once per page: the shell's stay where Stencil put them, and the islands' new ones go into `<head>` after those. Shadow-DOM components
    carry their own `<style>` in their shadow roots, as in any DSD render. In a view that is not a document there is no head: no styles are written, as for any fragment render.
@@ -123,8 +123,7 @@ The helper resolves `view` like `res.render` (the `views` directory and `view en
 
 ## Limits
 
-- **DSD only.** `serializeShadowRoot: 'scoped'` (or `false`) is refused at construction and per view. Scoped pages hydrate to a different DOM than the full render even without islands
-  (spike follow-up 11).
+- **Scoped mode** (`serializeShadowRoot: 'scoped'`, `false`, or a per-tag choice) is supported, with the rules of [Scoped mode](#scoped-mode) below: hydrate it with a production client, and an island that is a direct child of a component with slots has only elements at its top level.
 - **Ancestor context.** An island does not see its ancestors at render time: `ion-item` in an `ion-list` island-less is rendered without `in-list`/`role`; the client adds them.
   Put the `ion-list` inside the island if the server html matters before hydration.
 - **No page cache for island views**: `renderCache` (whole pages) is bypassed for a view with islands; cache its islands instead (below). **`maxQueue`** counts every render: a page with `n` islands queues `n + 1`.
@@ -187,13 +186,77 @@ need the island to tag manifest at build time and a second bundling pass over th
 
 Limits: the directives are per page load (nothing re-hydrates after a client-side navigation); `visible` needs `IntersectionObserver` (without it the island activates at once).
 
+## Scoped mode
+
+`serializeShadowRoot: 'scoped'` (issue #206) renders a shadow component as light DOM with slots and scoped CSS: its styles are not in the html but in `result.styles`, and its children are *relocated* (Stencil moves each
+child to the slot it belongs to and annotates it with `c-id` / `s-sn` and an `<!--o.-->` comment in the host, so the client can find it again). Islands work in it as in DSD: parallel renders from their own `idBase` ranges
+(the root-level ids of the relocation marks, `docData.rootLevelIds`, are offset with the host ids), the page's styles written once (the shell's where Stencil put them, the islands' new ones in `<head>`, or in the body before the island
+when streaming: in scoped mode they are all of a component's css, so the per-page dedupe and the hoist matter more than in DSD), the early head, both streaming modes, the island cache (the annotation is added after the lookup, so a hit
+is the same for any placement) and the client directives.
+
+**Which DOM is right.** The spike found that a whole scoped page hydrates to a different DOM than the same page split into islands, and did not say which was right. On the engine as shipped, the two come to the same DOM on either client (the strict signature of the spike's
+check is equal, list-50 and kitchen-sink, and every streaming mode); the difference the spike measured between them is not reproduced. What does differ is the client: with Stencil's *dev* client (`stencil build --dev`, the spike's) both hydrate to a page whose `ion-content` has its children
+outside the shadow root and nothing laid out, and with a *production* client both hydrate to what the components build when they render from scratch (the ground truth, a client-only render of the same markup;
+`examples/ionic/spike/islands/scoped-visual.mjs`, Chromium 520x900, pixels differing by more than 8 summed channel steps, list-50, Ionic):
+
+| hydrated with | whole page, DSD | whole page, scoped | islands, DSD | islands, scoped |
+|---|---|---|---|---|
+| production client (`hydrateClient`) | 0 px from client-only | 0 px | 0 px | 0 px |
+| Stencil dev client | 0 px | **30,254 px** (the page is blank) | 0 px | 30,254 px (the same as the whole page) |
+
+The cause is upstream, in Stencil 5.0.0-beta.25's client: `connectedCallback` adds the component's styles to its shadow root before `initializeClientHydrate`, and a dev build adds them as a `<style>` element (a production build adopts a
+constructable stylesheet, which is not a child node). Hydrating a *scoped* page into a shadow component only moves the server's nodes into the shadow root `if (!shadowRoot.childNodes.length)`, so with the `<style>` there nothing moves.
+The server html is the same either way. Nothing is patched: this is the client build, not the SSR bundle `ssr-patches.js` patches, and the production client is right. **Hydrate scoped pages with a production client.**
+
+**An island in a component with slots.** In scoped mode every shadow component is such a parent, so an island directly inside `ion-content` is the normal case, not an error as in DSD. The shell cannot hold one marker: Stencil annotates each child
+of a slot host and puts it in the slot it names, so an island of three elements has three destinations. `splitIslands` writes one marker per top-level element of the island's *source* (carrying that element's `slot`), Stencil places and numbers each
+marker as it would the element, and the assembly puts each rendered element where its marker ended up, with the marker's `c-id` and `s-sn` (a static island's own annotations are stripped first: these are the shell's, and the client reads them when it hydrates the
+parent). Markers that nothing annotated and that stayed together are one place, with the whole island's html (one anchor out of order). It is an error, naming the island, when the island's top level has text (nothing to number it with: wrap it in an element) or renders to a different
+number of elements than its view has (a component at its top level added or removed siblings). Whitespace between the elements of such an island is not kept. In DSD the old rule stands.
+
+**Numbers** (`BENCH_MODES=dsd,scoped node bench-islands.mjs 2 40 3 0` from `examples/ionic`; one shared 4-vCPU container, other jobs running, two workers per server, gzip; every route of both modes in the same interleaved rounds; first byte / last byte n = 40, requests per second n = 3 rounds of 5 s at concurrency 4; medians, min-max in the log):
+
+| | | full | islands | in-order | early head | out-of-order | cached |
+|---|---|---|---|---|---|---|---|
+| list-50 scoped | first byte ms | 42.1 | 32.8 | **6.4** | **3.3** | **8.4** | 22.6 |
+| | last byte ms | 42.2 | 32.9 | 30.2 | 34.4 | 31.3 | 22.8 |
+| | gzip bytes | 14,138 | 14,098 | 13,825 | 13,920 | 14,132 | 14,098 |
+| | requests/s | 50.2 | 47.8 | 53.0 | 48.6 | 56.2 | **96.8** |
+| list-50 DSD | first byte ms | 45.6 | 34.7 | 5.2 | 3.2 | 7.2 | 27.0 |
+| | last byte ms | 45.7 | 35.7 | 32.7 | 33.8 | 34.4 | 27.4 |
+| | gzip bytes | 20,522 | 20,582 | 20,274 | 20,191 | 20,485 | 20,582 |
+| | requests/s | 48.6 | 43.8 | 50.8 | 45.4 | 50.6 | 72.8 |
+| kitchen-sink scoped | first byte ms | 34.0 | 28.5 | **9.6** | **1.9** | **10.4** | 21.8 |
+| | last byte ms | 34.4 | 29.7 | 25.9 | 29.6 | 27.5 | 22.0 |
+| | gzip bytes | 30,508 | 31,186 | 31,664 | 31,612 | 32,338 | 31,186 |
+| | requests/s | 73.8 | 57.8 | 63.4 | 58.8 | 62.6 | **96.6** |
+| kitchen-sink DSD | first byte ms | 32.7 | 28.1 | 8.1 | 3.5 | 9.9 | 21.0 |
+| | last byte ms | 33.5 | 28.8 | 25.7 | 28.8 | 26.4 | 21.6 |
+| | gzip bytes | 31,423 | 31,708 | 32,007 | 31,988 | 31,255 | 31,708 |
+| | requests/s | 77.2 | 57.6 | 62.8 | 55.6 | 60.8 | 87.8 |
+
+Scoped islands against the whole scoped page: the first byte is 77-85% lower in order and 92-94% with the early head on list-50, 72% / 94% on kitchen-sink, and the ranges are clear of `full`'s. The last byte is 15-27% lower for every variant, but the ranges overlap `full`'s: the direction, not the size.
+Requests per second of `islands`, in-order, early head and out-of-order are within noise of `full` on list-50; on kitchen-sink the scoped `islands` page is 22% below `full` (57.8 against 73.8, ranges 56.0-60.8 and 68.2-77.8: clear), the same as DSD (57.6 against 77.2), and the cached variant is clear above `full` in both. Against DSD
+islands the scoped ones are within noise on first and last byte; the scoped pages are 31% (list-50) and 3% (kitchen-sink) smaller gzipped, since the shadow roots carry no styles, and the scoped list-50 serves more pages per second whole and cached (50.2 and 96.8 against 48.6 and 72.8) because its html is an eighth of the size. Scoped out-of-order costs +2% gzip over in-order on list-50 and +2% on kitchen-sink (an anchor and a container per annotated element).
+
+What differs from a whole scoped page, and is not a bug:
+
+- **Pre-hydration html.** An island's html has no `hidden`, `in-list` or `role` from an ancestor it did not see (as in DSD). The whole scoped page has `hidden=""` on the hosts of a slot host's children until the client shows them (a measured 50 `ion-item`
+  with `display: none` against `inline` in the spike); the islands page shows them.
+- **`visible` and layout.** The server html of a component that is not hydrated yet is not laid out like the hydrated one (its shadow styles are not in a shadow root), so an island below an idle or deferred one can be in view, and activate, earlier than in DSD.
+  `check/islands-client.mjs` with `ISLANDS_MODE=scoped` allows for it.
+- **ion-tabs race.** About 1 in 10 hydrations of a scoped kitchen-sink page, whole or islands, orders `ion-tab` and `ion-tab-bar` the other way round in the light DOM (a race in the client; the whole page does it as often). `check/islands.mjs` takes the DOM
+  most of three hydrations of the whole page come to and re-hydrates a variant that is not it, twice at most (`attempts`).
+- **`serializeShadowRoot: false`** annotates nothing for relocation (it is not meant to hydrate): the islands are in place, markers are merged, nothing else changes.
+
 ## Checks and numbers
 
 From `examples/ionic` (`npm run build:hydrate`, and the client build: `IONIC_HYDRATE_CLIENT=1 IONIC_OUT_DIR=$PWD/dist-hydrate-client node node_modules/vite/bin/vite.js build --config vite.config.ts`):
 
-- `node check/islands-client.mjs`: one directive of each kind on kitchen-sink, in Chromium, on the production hydrating client build. `test/islands-client.test.js` checks every directive on a small fixture.
-- `node check/islands.mjs`: list-50 and kitchen-sink split into islands, through `res.render` and each `streamView` mode, hydrated in Chromium against the whole-page render (same DOM,
-  no duplicate host ids). It hydrates with Stencil's own lazy-loader client (the spike's `stencil build --dev` with an `ssr` target, see spike-islands.md), not the `hydrateClient` build.
+- `node check/islands-client.mjs` (`ISLANDS_MODE=scoped` for scoped mode): one directive of each kind on kitchen-sink, in Chromium, on the production hydrating client build. `test/islands-client.test.js` checks every directive on a small fixture.
+- `node check/islands.mjs [pages] [dsd,scoped]`: list-50 and kitchen-sink split into islands, through `res.render` and each `streamView` mode, in DSD and in scoped mode, hydrated in Chromium against the whole-page render (same DOM,
+  no duplicate host ids or element ids, every host ready, the toggles, the checkbox and a button respond to clicks) and against a client-only render of the same markup. It hydrates with the production `hydrateClient` build (`ISLANDS_CLIENT=hydrate`, the default;
+  `stencil` is Stencil's own lazy-loader dev client, spike-islands.md, which is right for DSD only: see [Scoped mode](#scoped-mode)). `spike/islands/scoped-visual.mjs` compares screenshots (pixels) of each variant against the client-only render.
 - **`npm run bench:islands`** (`bench-islands-all.mjs`) runs both benchmarks below, building what is missing. `--server-only`, `--client-only`, `--workers`, `--rounds`, `--throughput-rounds`, `--paint-rounds`,
   `--client-rounds` and `--cpu` pick what runs.
   - `bench-islands.mjs` (with `bench/islands-server.mjs`): `full`, `islands`, `cached`, `in-order`, `perchunk` (one flush per island), `early head` and `out-of-order`, interleaved over HTTP: first byte, last byte, gzip size, requests per second

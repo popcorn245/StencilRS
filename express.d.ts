@@ -75,8 +75,8 @@ export interface StencilEngineOptions {
    * Islands: a view may mark parts of itself `<stencil-island name="feed" client="visible" cache="60">...</stencil-island>`. The islands and
    * the rest of the page (the shell) render as separate fragments, in parallel on the pool, each with its own `idBase` range, and are
    * assembled into one page (what `res.render` sends, or `engine.renderIslands(path).chunks()` for a streaming responder). A view without
-   * islands renders exactly as without this option. Declarative shadow DOM only: scoped rendering is refused. `true` is the defaults.
-   * `engine.stream(path, locals)` and `streamView(engine, view, locals)` send it as it renders. See docs/islands.md. Experimental (#191, #192).
+   * islands renders exactly as without this option. Works with `serializeShadowRoot: 'declarative-shadow-dom'` and `'scoped'` (an island directly inside a shadow component, which scoped rendering makes a slot host, may only have elements at its top level; hydrate a scoped page with a production client). `true` is the defaults.
+   * `engine.stream(path, locals)` and `streamView(engine, view, locals)` send it as it renders. See docs/islands.md. Experimental (#191, #192, #206).
    */
   islands?: boolean | StencilIslandsOptions;
 }

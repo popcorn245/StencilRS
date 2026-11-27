@@ -307,7 +307,7 @@ engine renders the shell and each island separately, in parallel on the worker p
 sends them as they finish, so a slow island no longer delays the page. An island can be cached (`cache="60"`), and `islands.client` writes a small boot
 (`@popcorn245/stencilrs/islands`) that hydrates each island when its `client` directive says (`load`, `idle`, `visible`) or never (`static`, `none`),
 from a `stencilrs({ hydrateClient: { islands: true } })` build. On Ionic's pages the first byte comes 73-94% sooner when streamed, and a page with two of four islands left `static`
-runs about 38% less script. Declarative shadow DOM only. Guide: [Islands and directives](https://popcorn245.github.io/StencilRS/guide/islands.html),
+runs about 38% less script. Declarative shadow DOM and scoped mode. Guide: [Islands and directives](https://popcorn245.github.io/StencilRS/guide/islands.html),
 reference: [docs/islands.md](docs/islands.md), example: [`examples/islands`](examples/islands).
 
 ## JavaScript API

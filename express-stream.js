@@ -14,7 +14,7 @@
 import { isAbsolute } from 'node:path';
 import { constants, createGzip } from 'node:zlib';
 
-import { createDeduper } from './express-islands.js';
+import { createDeduper, pieceHtml } from './express-islands.js';
 import { insertBeforeBodyEnd } from './islands-manifest.js';
 
 export const STREAM_MODES = ['in-order', 'out-of-order'];
@@ -105,7 +105,7 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
     }
     const cut = await wait(pieces.cut());
     if (cut === aborted) return;
-    const { result, order, segments } = cut;
+    const { result, order, nth, segments } = cut;
     const early = Boolean(pieces.head);
     const fresh = createDeduper(early ? [] : result.styles);
     const styled = (isl) => (pieces.document ? fresh(isl.styles) : '');
@@ -133,6 +133,8 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
       if (r.err) return replace(started.page.islands[slot].name, r.err);
       return r.isl;
     };
+    // what the k-th marker is replaced with: the island's html (a failed island's fallback goes at its first marker and nothing at the others)
+    const html = (k, got) => (typeof got === 'string' ? (nth[k] ? '' : got) : styled(got) + pieceHtml(got, nth[k]));
 
     if (mode === 'in-order') {
       let first = (early && pieces.document ? fresh(result.styles) : '') + segments[0];
@@ -148,7 +150,7 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
         if (r === aborted) return;
         for (;;) {
           const got = island(order[k], r);
-          chunk += (typeof got === 'string' ? got : styled(got) + got.html) + segments[k + 1];
+          chunk += html(k, got) + segments[k + 1];
           if (!coalesce || k + 1 >= order.length || !done.has(order[k + 1])) break;
           k++;
           r = done.get(order[k]);
@@ -177,7 +179,7 @@ async function* run({ view, start, mode, nonceText, outer, fallback, onError, co
       if (r === aborted) return;
       pending.delete(k);
       const got = island(order[k], r);
-      yield `<div hidden id="s-isl-c-${k}">${typeof got === 'string' ? got : styled(got) + got.html}</div><script${nonceText}>$ISL(${k})</script>`;
+      yield `<div hidden id="s-isl-c-${k}">${html(k, got)}</div><script${nonceText}>$ISL(${k})</script>`;
     }
     const tag = await wait(boot(started.page));
     if (tag === aborted) return;

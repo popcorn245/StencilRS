@@ -37,8 +37,9 @@ const loadHydrate = async (hydrate) => {
   return pickRenderToString(mod);
 };
 
-const SCOPED_ISLANDS = "stencilEngine: `islands` need serializeShadowRoot 'declarative-shadow-dom' (the default): islands are not supported with scoped rendering (`serializeShadowRoot: 'scoped'` or `false`), see docs/islands.md";
-const isScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false;
+// Whether shadow components may be serialized as light DOM with slots (scoped rendering, `false`, or a per-tag choice): their children are then
+// annotated for relocation, which an island that is a direct child of such a component has to carry (express-islands.js, `splitIslands`).
+const mayBeScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false || (options.serializeShadowRoot !== null && typeof options.serializeShadowRoot === 'object');
 
 /** `islands: false | true | { idStride, earlyHead, cache, stream, fallback, onError, client }` with the defaults filled in, or null. `cache`: `false` or the island render cache's config (`true` = its defaults). */
 const normalizeIslands = (islands) => {
@@ -220,7 +221,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
  * @param [config.compileCache] Node's compile cache (`module.enableCompileCache`) for the hydrate app, here and in each worker: `true` (default; a no-op on a Node without it), `false` to opt out, or a directory for the cache
  * @param [config.warmup] render at startup so the first request is not JIT-cold: a list of views (paths, run through the inner engine with no locals) and HTML strings (starting with `<`), or `{ views, times }` to run the list `times` times (default 1; the JIT needs repeats). Shape them like real traffic. In-process and on every worker; `ready` resolves after it
  * @param [config.renderCache] opt-in cache of rendered pages, in the main thread before a worker is asked: `true` (defaults) or `{ max, maxBytes, ttl }`. Only for pages that are a pure function of the HTML and options; a view opts out with the `stencilCache: false` local
- * @param [config.islands] `true` or `{ idStride, earlyHead, cache }`: views may mark parts of themselves `<stencil-island name>`; each is rendered on its own (in parallel on the pool) and the page is assembled. A view with none renders as without this option. DSD only. `idStride` (default 1000) is how many hydration ids an island may use; `earlyHead` (default false) writes the view's head before the shell has rendered (a streaming responder's start, see `engine.renderIslands`); `cache` (default true) is the config of the per-island render cache, `{ max, maxBytes, ttl }` like `renderCache`, used by islands marked `cache` (`false` ignores the marks)
+ * @param [config.islands] `true` or `{ idStride, earlyHead, cache }`: views may mark parts of themselves `<stencil-island name>`; each is rendered on its own (in parallel on the pool) and the page is assembled. A view with none renders as without this option. Declarative shadow DOM or scoped rendering (docs/islands.md). `idStride` (default 1000) is how many hydration ids an island may use; `earlyHead` (default false) writes the view's head before the shell has rendered (a streaming responder's start, see `engine.renderIslands`); `cache` (default true) is the config of the per-island render cache, `{ max, maxBytes, ttl }` like `renderCache`, used by islands marked `cache` (`false` ignores the marks)
  * @param [config.renderTimeout] ms a pooled render may take (default 30000, 0 = no limit); past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`
  * @returns an Express engine: `app.engine('ext', stencilEngine({ ... }))`, with `ready` (a promise: the app is loaded and warmed up; resolves at once without `warmup` or a pool; rejects when the app cannot load or a warm-up render fails, the engine stays usable after a failed warm-up) and `close()` (stops the workers)
  */
@@ -235,7 +236,6 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   if (!(typeof compileCache === 'boolean' || typeof compileCache === 'string')) throw new TypeError('stencilEngine: `compileCache` must be a boolean or a directory');
   if (!(renderCache === false || renderCache === true || (renderCache && typeof renderCache === 'object'))) throw new TypeError('stencilEngine: `renderCache` must be true, false or { max, maxBytes, ttl }');
   const islandsConfig = normalizeIslands(islands);
-  if (islandsConfig && isScoped(renderOptions)) throw new TypeError(SCOPED_ISLANDS);
   // Before the hydrate app is imported (here or by a worker): the cache serves modules loaded after the call.
   enableCompileCache(compileCache);
   let pool = null;
@@ -356,7 +356,6 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
 
   // A view with islands, split and with every render started: the shell and the islands at once (on the pool they spread over the threads).
   const islandPage = (path, html, split, options, signal, useCache = true) => {
-    if (isScoped(options)) throw new IslandError(`${path}: islands need serializeShadowRoot to be 'declarative-shadow-dom' (the default), not scoped mode (docs/islands.md)`);
     const { idStride: stride } = islandsConfig;
     if (!Number.isSafeInteger((split.islands.length + 1) * stride)) throw new IslandError(`${path}: ${split.islands.length} islands with an idStride of ${stride} overflow the hydration id range`);
     const document = options.fullDocument !== false && (options.fullDocument || isDocument(html));
@@ -399,7 +398,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     if (!/<stencil-island/i.test(html)) return null; // the common case: nothing to scan
     let split;
     try {
-      split = splitIslands(html);
+      split = splitIslands(html, { relocate: mayBeScoped(options) });
     } catch (e) {
       if (e instanceof IslandError) e.message = `${path}: ${e.message}`;
       throw e;

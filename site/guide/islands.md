@@ -123,8 +123,9 @@ when the island scrolls in (+11 ms script and 13 files on kitchen-sink, +9 ms on
 
 ## Limits
 
-- **Declarative shadow DOM only.** `serializeShadowRoot: 'scoped'` is refused when the engine is built and per view.
-- An island must not be a direct child of a component that is not a shadow host and has slots (Ionic's `ion-header`): put it in a plain element or a shadow
+- **Scoped mode works** (`serializeShadowRoot: 'scoped'`): parallel renders, style dedupe, the early head, both streaming modes, the island cache and the directives. Hydrate a scoped page with a *production* client build (`hydrateClient`): Stencil's `--dev` build leaves a scoped page blank,
+  whole or in islands. In scoped mode an island directly inside a shadow component (`ion-content`) may only have elements at its top level; the engine moves Stencil's relocation marks onto them. See [Scoped mode](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md#scoped-mode).
+- In declarative shadow DOM an island must not be a direct child of a component that is not a shadow host and has slots (Ionic's `ion-header`): put it in a plain element or a shadow
   host, or make the whole component the island. The engine checks and names the island.
 - An island does not see its ancestors at render time, so an `ion-item` outside its `ion-list` renders without `in-list` and `role`; the client adds them. Put the list inside the island if the server html matters.
 - Islands cannot nest, and a name is used once per view. A fragment view (no `<html>`) gets neither the boot nor the annotation stripping.
