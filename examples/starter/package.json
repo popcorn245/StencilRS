@@ -13,7 +13,8 @@
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "build:lib": "vite build --config vite.lib.config.ts",
     "new": "node scripts/new-component.mjs",
-    "smoke:gated": "node scripts/smoke-gated.mjs"
+    "smoke:gated": "node scripts/smoke-gated.mjs",
+    "check:fold": "node scripts/check-fold.mjs"
   },
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",

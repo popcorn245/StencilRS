@@ -1,5 +1,14 @@
 # Spike: fold the runtime's `BUILD` flags (`foldRuntimeFlags`)
 
+> **Shipped.** `foldRuntimeFlags` is on by default for production client builds of the default runtime (opt out with `foldRuntimeFlags: false`;
+> the default is the constant `FOLD_RUNTIME_FLAGS_DEFAULT` in `vite-fold.js`). The option, its safety rules (every flag stays on, with one warning, when the
+> component set is uncertain), the watch behaviour and the final numbers are in [docs/vite-plugin.md](vite-plugin.md#smaller-production-bundles-foldruntimeflags).
+> What changed from this prototype: the scan is parallel (`transpileMany`) and cached per file by mtime and size (136 components: 15 ms warm; cold, the scan shares its compile with `transform`, so a ui-kit build costs +5%, 645 to 679 ms median,
+> against 0.45 s extra each time), follows what the bundler resolves (aliases, workspace packages), reads files stencilrs does not port with Stencil's compiler,
+> keeps every flag on for a file nobody can read or a package of prebuilt components that shares the runtime (it used to warn after the output was made),
+> puts a `<slot>` / `<svg>` of a local module a component imports on, applies `buildFlags` before the rules that follow from a flag, and rescans in watch mode.
+> The text below is the spike as written (the "What is left" list is what the shipped version did).
+
 Question: how much client JS do default-runtime users (Stencil's `@stencil/core` runtime) ship that they do not need, because the Vite
 plugin leaves every `BUILD` feature flag on?
 
@@ -141,11 +150,11 @@ npx stencil build --config stencil.ref.config.ts && npx vite build ref-app --con
 # ui-kit
 cd ../ui-kit && npm ci && npx vite build --config vite.lib.config.ts && npx vite build --config vite.fold.config.ts
 
-# Ionic: fetch + migrate once, then IONIC_FOLD=1 (all components) and IONIC_SUBSET=tabs (the app-tabs components)
+# Ionic: fetch + migrate once, then the default build (all components, folded; IONIC_FOLD=0 is the unfolded baseline) and IONIC_SUBSET=tabs (the app-tabs components)
 cd ../ionic && npm ci && node scripts/fetch.mjs && node scripts/migrate.mjs
-node scripts/build.mjs stencilrs                                 # baseline; output in dist-stencilrs/
-IONIC_FOLD=1 node scripts/build.mjs stencilrs
-IONIC_SUBSET=tabs IONIC_FOLD=1 node scripts/build.mjs stencilrs
+IONIC_FOLD=0 node scripts/build.mjs stencilrs                  # baseline (foldRuntimeFlags is on by default now); output in dist-stencilrs/
+node scripts/build.mjs stencilrs
+IONIC_SUBSET=tabs node scripts/build.mjs stencilrs
 node scripts/build.mjs stencil && node ../../spike/build-flags/ionic-ref.mjs $PWD <workdir>
 node ../../spike/build-flags/ionic-smoke.mjs $PWD <copy-of-dist-a> <copy-of-dist-b>
 ```

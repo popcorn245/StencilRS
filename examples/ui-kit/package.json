@@ -26,6 +26,7 @@
     "build:stencilrs": "vite build --config vite.lib.config.ts",
     "check:no-typescript": "node check-no-typescript.mjs",
     "check:dev-server": "node check-dev-server.mjs",
+    "check:fold-flags": "node check-fold-flags.mjs",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "test:ssr": "node ssr/smoke.mjs"
   },

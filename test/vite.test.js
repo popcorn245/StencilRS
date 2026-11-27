@@ -307,7 +307,7 @@ test('the verbose message counts the build it ends: compiled apart from reused',
     messages.length = 0;
     await plugin.buildStart.call(ctx);
     await plugin.transform.call(ctx, component('counter-cmp', 'CounterCmp'), cmpFile, {});
-    plugin.buildEnd.call(ctx);
+    await plugin.buildEnd.call(ctx);
     return messages.join('\n');
   };
   assert.match(await rebuild(), /compiled 1 component file\(s\), reused 0;/);

@@ -51,6 +51,9 @@ pub struct TranspileResult {
     pub code: String,
     /// Source map v3 JSON from `code` to the original source, when `source_map` was asked for.
     pub map: Option<String>,
+    /// `component_metadata: Result`: each component's `static get COMPILER_META()` member text (the code has none).
+    #[serde(rename = "compilerMeta")]
+    pub compiler_meta: Vec<String>,
     pub components: Vec<ComponentMeta>,
     pub diagnostics: Vec<Diagnostic>,
     /// The other files the components' ancestor classes were read from. A bundler compiles
@@ -139,7 +142,7 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     );
     // The metadata holds a numeric `@Watch()` argument as a TypeScript node, which
     // `convertValueToLiteral` cannot copy (docs/quirks.md 11): the whole file fails.
-    if opts.component_metadata == ComponentMetadata::CompilerStatic
+    if opts.component_metadata != ComponentMetadata::None
         && !analysis.failed
         && analysis
             .components
@@ -163,12 +166,14 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
         Ok(codegen::Generated {
             code: source.to_owned(),
             map: None,
+            meta: Vec::new(),
+            meta_inputs: Vec::new(),
         })
     } else {
         codegen::generate(&parsed.program, source, &analysis.components, opts)
     };
-    let (code, map) = match generated {
-        Ok(generated) => (generated.code, generated.map),
+    let (code, map, compiler_meta) = match generated {
+        Ok(generated) => (generated.code, generated.map, generated.meta),
         Err(message) => {
             diagnostics.push(Diagnostic {
                 level: Level::Error,
@@ -176,7 +181,7 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
                 start: 0,
                 end: 0,
             });
-            (String::new(), None)
+            (String::new(), None, Vec::new())
         }
     };
     let mut base_classes: Vec<String> = Vec::new();
@@ -188,6 +193,7 @@ pub fn transpile(source: &str, opts: &TranspileOptions) -> TranspileResult {
     TranspileResult {
         code,
         map,
+        compiler_meta,
         components: analysis.components,
         diagnostics,
         base_classes,

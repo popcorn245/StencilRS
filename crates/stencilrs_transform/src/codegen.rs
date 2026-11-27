@@ -86,6 +86,10 @@ pub enum ComponentMetadata {
     None,
     /// `static get COMPILER_META()`: the metadata `newSpecPage` registers components with.
     CompilerStatic,
+    /// The same metadata, but beside the code instead of in it: the code is what `None` generates, and `Generated::meta` has each
+    /// component's `static get COMPILER_META()` member text. One analysis and one generation, for a caller (the Vite plugin's flag scan)
+    /// that needs the metadata of the very module it compiles.
+    Result,
 }
 
 #[derive(Debug, Clone)]
@@ -125,6 +129,10 @@ pub struct CodegenOptions2 {
 pub struct Generated {
     pub code: String,
     pub map: Option<String>,
+    /// `ComponentMetadata::Result`: the `COMPILER_META` getter of each component, in class order.
+    pub meta: Vec<String>,
+    /// What `meta` is built from, per component class: its name, `has_modern_property_decls`, `has_heritage`.
+    pub(crate) meta_inputs: Vec<(String, bool, bool)>,
 }
 
 const KEEP_IMPORTS: [&str; 24] = [
@@ -214,6 +222,24 @@ pub fn generate(
     if opts.component_metadata == ComponentMetadata::None {
         return generate_pass(program, source, components, opts, None);
     }
+    if opts.component_metadata == ComponentMetadata::Result {
+        // The code is the plain pass; the facts about its `h()` calls are read off it, and the getters made from them.
+        let mut generated = generate_pass(program, source, components, opts, None)?;
+        for (name, has_modern_property_decls, has_heritage) in std::mem::take(&mut generated.meta_inputs) {
+            let Some(cmp) = components.iter().find(|c| c.component_class_name == name) else {
+                continue;
+            };
+            let vdom = scan_vdom(&generated.code, &name);
+            generated.meta.push(compiler_meta::getter(&MetaInput {
+                cmp,
+                vdom: &vdom,
+                file: &opts.file,
+                has_modern_property_decls,
+                has_heritage,
+            }));
+        }
+        return Ok(generated);
+    }
     // The metadata holds facts about the vdom calls, which Stencil reads off the `h()` calls its
     // JSX transform wrote. So: generate once, read those calls from the output, then again with
     // the metadata in the class.
@@ -264,6 +290,7 @@ fn generate_pass(
         .unwrap_or_else(|| "Component".into());
     let is_custom = |d: &Decorator| is_custom_decorator(d, &remove_decorators, &component_decorator);
     let mut uses_decorate = false;
+    let mut meta_inputs: Vec<(String, bool, bool)> = Vec::new();
 
     // `updateStencilCoreImports`
     let mut last_import_end = None;
@@ -747,6 +774,9 @@ fn generate_pass(
         // `addComponentMetaStatic` appends the metadata to the static getters of
         // `convertDecoratorsToStatic`; the lazy and native transforms then remove some of those
         // and write them again (below), after it.
+        if opts.component_metadata == ComponentMetadata::Result {
+            meta_inputs.push((name.to_owned(), info.has_modern_property_decls, info.has_heritage));
+        }
         if let Some(vdom) = vdom.and_then(|v| v.get(name)) {
             let input = MetaInput {
                 cmp,
@@ -933,7 +963,12 @@ fn generate_pass(
             prefix_lines,
         )
     });
-    Ok(Generated { code, map })
+    Ok(Generated {
+        code,
+        map,
+        meta: Vec::new(),
+        meta_inputs,
+    })
 }
 
 pub(crate) fn has_decorator(decorators: &[Decorator], name: &str) -> bool {

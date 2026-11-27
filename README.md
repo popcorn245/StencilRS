@@ -145,6 +145,22 @@ stencilrs({ typecheck: { tsconfig: 'tsconfig.app.json', bin: 'tsc' } });
   up the overlap with the write step; type errors then leave the output on disk). Without `dts`, keep a
   checked-in `src/components.d.ts` as Stencil projects do.
 
+### Smaller production bundles
+
+`stencil build` bundles Stencil's runtime with the feature flags (`BUILD.slotRelocation`, `BUILD.hostListener`, ...) computed from your components,
+so a feature none of them uses is not shipped. The Vite plugin does the same by default for production builds of the default runtime
+(`foldRuntimeFlags`): it reads the project's components at `buildStart` (in parallel, cached per file, rescanned in `--watch`) and the runtime
+loses the features no component needs, 13 to 18 KB gzip on any app (the starter 29.9 to 16.4 KB, Ionic's tab pages 123.7 to 108.6 KB).
+
+```ts
+stencilrs({ foldRuntimeFlags: false });                  // off: the same output as before
+stencilrs({ foldRuntimeFlags: { dirs: ['src', 'ui/src'] } }); // folders to scan (default 'src'); what the bundle imports is followed too
+stencilrs({ buildFlags: { hydrateClientSide: false } });  // a client that does not hydrate server html: another 2.5 KB
+```
+
+When it cannot be sure which components a bundle has (a file nothing can read, a package of prebuilt components that shares the runtime) every flag
+stays on and one warning names the files. [Details, numbers and the checks](docs/vite-plugin.md#smaller-production-bundles-foldruntimeflags).
+
 For a ready project (dev server, component generator, tests in happy-dom and headless Chrome, app
 and library builds) copy [`examples/starter`](examples/starter/README.md).
 

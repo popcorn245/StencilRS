@@ -37,6 +37,8 @@ test('hydrateClientOptions: defaults, the object form, and what it refuses', () 
   assert.throws(() => stencilrs({ hydrateClient: true, componentExport: 'ssr' }), /cannot be combined with componentExport: 'ssr'/);
 });
 
+// The tests that read the `BUILD.x = ...` lines the components write run with `foldRuntimeFlags: false`; the Chromium tests that adopt server nodes
+// run with the default (folded flags).
 const bundle = async (options, { entry = 'all.ts' } = {}) => {
   const result = await build({
     root: fixture,
@@ -57,12 +59,12 @@ test('default build: one bundle, byte for byte the same with and without the opt
 });
 
 test('buildFlags: { hydrateClientSide: false } (the default build\'s way off) is unchanged by this feature', async () => {
-  const code = (await bundle({ buildFlags: { hydrateClientSide: false } })).get('out.js');
+  const code = (await bundle({ buildFlags: { hydrateClientSide: false }, foldRuntimeFlags: false })).get('out.js');
   assert.match(code, /BUILD\.hydrateClientSide = false;/);
 });
 
 test('hydrateClient: the flag, a module per component, and the manifest', async () => {
-  const out = await bundle({ hydrateClient: true });
+  const out = await bundle({ hydrateClient: true, foldRuntimeFlags: false });
   assert.ok(out.has('components/x-counter.js') && out.has('components/x-note.js'));
   assert.match(out.get('components/x-counter.js'), /BUILD\.hydrateClientSide = true;/);
   assert.match(out.get('components/x-counter.js'), /defineCustomElement\(XCounter, \[/);
@@ -76,10 +78,10 @@ test('hydrateClient: the flag, a module per component, and the manifest', async 
 });
 
 test('hydrateClient: { split: false } is the flag alone, { manifest: false } and { dir } name the output', async () => {
-  const flagOnly = await bundle({ hydrateClient: { split: false } });
+  const flagOnly = await bundle({ hydrateClient: { split: false }, foldRuntimeFlags: false });
   assert.equal([...flagOnly.keys()].some((f) => f.startsWith('components')), false);
   assert.match(flagOnly.get('out.js'), /BUILD\.hydrateClientSide = true;/);
-  const named = await bundle({ hydrateClient: { manifest: false, dir: 'tags' } });
+  const named = await bundle({ hydrateClient: { manifest: false, dir: 'tags' }, foldRuntimeFlags: false });
   assert.ok(named.has('tags/x-counter.js'));
   assert.equal(named.has('components.json'), false);
 });
@@ -196,7 +198,7 @@ test('Chromium: the hydrating client adopts the hydrate app\'s nodes and the com
 test('Chromium: without hydrateClient the same modules render again next to the server nodes (the flag is what adopts them)', { ...chromiumOnly, timeout: 120000 }, async () => {
   const html = await renderPage();
   // `split` still on, the flag off: what the default Ionic config does (`buildFlags: { hydrateClientSide: false }`).
-  const files = await bundle({ hydrateClient: true, buildFlags: {} });
+  const files = await bundle({ hydrateClient: true, buildFlags: {}, foldRuntimeFlags: false });
   const flagOff = new Map([...files].map(([f, c]) => [f, typeof c === 'string' ? c.replaceAll('BUILD.hydrateClientSide = true;', 'BUILD.hydrateClientSide = false;') : c]));
   const r = await hydrateIn(html, flagOff);
   assert.equal(r.renders, 2, 'with hydration compiled out the client renders a second tree beside the server\'s declarative shadow root');
