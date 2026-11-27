@@ -42,7 +42,7 @@ const hasError = (result) => (result?.diagnostics ?? []).some((d) => d.level ===
 /**
  * @param {(html: string, options?: object) => Promise<{ html: string, diagnostics?: object[] }>} renderToString
  * @param {true | { max?: number, maxBytes?: number, ttl?: number }} [config] `true` is the defaults. `ttl` is in ms, 0 for none
- * @returns `render(html, options, { cache: false }?)` with the same result as `renderToString`, plus `clear()` and `stats()`
+ * @returns `render(html, options, { cache: false, ttl }?)` (`ttl` in ms replaces the configured one for this lookup: an entry older than it is a miss and is rendered again) with the same result as `renderToString`, plus `clear()` and `stats()`
  */
 export const createRenderCache = (renderToString, config = true) => {
   if (typeof renderToString !== 'function') throw new TypeError('createRenderCache: `renderToString` must be a function');
@@ -72,7 +72,7 @@ export const createRenderCache = (renderToString, config = true) => {
   // What a caller gets is a copy: mutating `diagnostics` of one response does not change the next.
   const give = (r) => ({ ...r, diagnostics: r.diagnostics?.map((d) => ({ ...d })) });
 
-  const render = (html, options, { cache = true } = {}) => {
+  const render = (html, options, { cache = true, ttl = o.ttl } = {}) => {
     if (!cache) {
       stats.bypassed++;
       return renderToString(html, options);
@@ -84,7 +84,7 @@ export const createRenderCache = (renderToString, config = true) => {
     }
     const hit = entries.get(key);
     if (hit) {
-      if (o.ttl > 0 && Date.now() - hit.at >= o.ttl) drop(key);
+      if (ttl > 0 && Date.now() - hit.at >= ttl) drop(key);
       else {
         entries.delete(key); // re-insert: most recent last
         entries.set(key, hit);

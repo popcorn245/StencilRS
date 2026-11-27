@@ -132,6 +132,7 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
   `engine.stream(path, locals)` and the Express handler `streamView(engine, 'home', locals, { mode, nonce, compress })` send the page as it renders: the shell at once, then each island in order, or
   (`mode: 'out-of-order'`) as it finishes, moved into place by one inline script (`nonce` for a CSP, a `<noscript>` reveal). An island that fails after bytes are out is replaced by a fallback and logged; a
   client that hangs up cancels the renders that have not started. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
+  An island marked `cache` (or `cache="60"` for seconds) is rendered once and served from `islands.cache` (the `renderCache` shape; default on) with the ids of its slot; the shell never is. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the
   render: Express's callback receives an `Error` with the diagnostics on `err.diagnostics`.
 

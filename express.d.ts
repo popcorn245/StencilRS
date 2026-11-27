@@ -97,6 +97,12 @@ export interface StencilIslandsOptions {
   fallback?: StencilStreamOptions['fallback'];
   /** The default `onError` of `engine.stream`: where a failure after the response started is logged (default `console.error`). */
   onError?: StencilStreamOptions['onError'];
+  /**
+   * The render cache of islands marked `cache` (`cache` alone: the `ttl` here, none by default; `cache="60"`: 60 seconds): `true` (default, the render cache's defaults),
+   * `{ max, maxBytes, ttl }` (ms) like `renderCache`, or `false` to ignore the marks. Keyed on the island's html and the render options with its `idBase`, so a hit
+   * has the ids of its slot. The shell and unmarked islands always render. A view opts out for a request with the `stencilCache: false` local.
+   */
+  cache?: boolean | RenderCacheOptions;
 }
 
 /** `'in-order'`: the shell, then each island in the order of the view as it is next in line. `'out-of-order'`: the whole shell with an anchor for each island at once, then each island as it finishes, moved into place by a one-line script. */
@@ -134,7 +140,7 @@ export interface StencilIsland {
   name: string;
   /** `load` (default), `idle`, `visible`, `static` or `none`: written on the island's roots as `data-client`; the client directives of a later release read it. */
   client: 'load' | 'idle' | 'visible' | 'static' | 'none';
-  /** The `cache` attribute: null (absent), true (bare) or seconds. Nothing reads it yet. */
+  /** The `cache` attribute: null (absent), true (bare) or seconds (0: not cached). */
   cache: boolean | number | null;
 }
 
@@ -174,6 +180,8 @@ export interface StencilExpressEngine {
   stream(path: string, locals?: object, options?: StencilStreamOptions): AsyncGenerator<string, void, void>;
   /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
   renderCache: RenderCache | null;
+  /** The per-island render cache (`islands.cache`), or null when the engine has no islands or `islands.cache` is false: `clear()` and `stats()`. */
+  islandCache: RenderCache | null;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */
   close(): Promise<void>;
 }

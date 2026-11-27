@@ -1,5 +1,6 @@
-// Issues #191 and #192: the islands engine and its streaming responder against the whole-page render, over HTTP, interleaved A/B (every
-// round visits each route once, the order rotating), medians with min-max and n. Starts bench/islands-server.mjs itself.
+// Issues #191, #192 and #193: the islands engine, its streaming responder and the per-island cache (the `cached` route: the static islands
+// served from the per-island cache) against the whole-page render, over HTTP, interleaved A/B (every round visits each route once, the order
+// rotating), medians with min-max and n. Starts bench/islands-server.mjs itself.
 //   node bench-islands.mjs [workers=2] [rounds=40] [throughputRounds=3] [paintRounds=9]
 // Time to first byte, last byte and gzip size per route, then requests/s at concurrency 4, then first contentful paint in Chromium (cold cache,
 // 414x800, the page's Ionic stylesheet render-blocking) unthrottled and on a 'Fast 3G' profile whose latency is split into 75 ms before the
@@ -12,7 +13,7 @@ import { fmt, launch, stats } from './spike/islands/lib.mjs';
 
 const [workers = '2', roundsArg = '40', tRoundsArg = '3', pRoundsArg = '9'] = process.argv.slice(2);
 const rounds = Number(roundsArg);
-const routes = ['full', 'islands', 'inorder', 'perchunk', 'early', 'ooo'];
+const routes = ['full', 'islands', 'cached', 'inorder', 'perchunk', 'early', 'ooo'];
 const pages = ['list-50', 'kitchen-sink'];
 const conc = 4;
 
@@ -54,7 +55,7 @@ const run = async (path, ms) => {
   await Promise.all(Array.from({ length: conc }, async () => { while (performance.now() < end) { await get(path, agent); n++; } }));
   return n / (ms / 1000);
 };
-const troutes = ['full', 'islands', 'inorder', 'ooo'];
+const troutes = ['full', 'islands', 'cached', 'inorder', 'ooo'];
 for (const page of Number(tRoundsArg) > 0 ? pages : []) {
   const acc = Object.fromEntries(troutes.map((r) => [r, []]));
   for (const r of troutes) await run(`/${r}/${page}`, 1000);
