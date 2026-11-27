@@ -119,6 +119,8 @@ Standalone, n=300 to 600 (`spike/bench-string-only.mjs`), median 2.4 to 2.8 ms, 
 (1 ms: nothing to create), first render 13 to 23 ms (the JIT), against 180 to 300 ms setup plus 190 to 375 ms
 first render for happy-dom.
 
+(The shipped renderer, `runtime-string.js`, took 3.3 ms alone on a later box while the prototype took 2.7; after the tuning of docs/bench-2026-11-27.md section 2 it takes 2.6 ms.)
+
 Where the ~2.7 ms go (`render.sync`, measured with `performance.now()`): about 1.75 ms building the string
 (500 component instances, template walks, claim bookkeeping) and about 1.25 ms in the last pass (flattening the
 177 KB string and numbering the 501 hosts). It is not tuned: no pooling of component instances, `Map` per

@@ -454,3 +454,39 @@ test('the scan and the build share one compile per component, the very result `t
   // another source is another compile
   assert.notEqual(scanner.compile(file, source + ' ', 'build'), asked);
 });
+
+test('a member with no default (`"defaultValue": undefined` in the compiler\'s metadata) is read without compiling the literal', async () => {
+  const root = project({ 'src/a.tsx': cmp('my-a', { extra: '  @Prop() nothing?: string;' }) });
+  const { cmps } = await scanComponents(root, { dirs: [join(root, 'src')] });
+  assert.equal(cmps.length, 1);
+  assert.equal(cmps[0].hasProp, true);
+  assert.equal(cmps[0].properties.find((p) => p.name === 'nothing').defaultValue, undefined);
+});
+
+test('a watch rescan asks the bundler once per specifier, and again when a file appears or disappears', async () => {
+  const root = project({
+    'src/a.tsx': `import { Component, h } from '@stencil/core';\nimport '@lib/wide';\n@Component({ tag: 'my-a' })\nexport class A { render() { return <div />; } }\n`,
+    'lib/wide.tsx': cmp('my-wide', { encapsulation: 'none', body: '<div><slot /></div>' }),
+  });
+  const asked = [];
+  const resolveSpec = async (spec) => {
+    asked.push(spec);
+    return { id: join(root, 'lib/wide.tsx') };
+  };
+  const scanner = createFoldScanner();
+  const options = { dirs: [join(root, 'src')], resolveSpec, aliases: ['@lib'] };
+  const first = await scanner.scan(root, options);
+  assert.deepEqual(asked, ['@lib/wide']);
+  assert.deepEqual(first.cmps.map((m) => m.tagName).sort(), ['my-a', 'my-wide']);
+  const second = await scanner.scan(root, options);
+  assert.deepEqual(asked, ['@lib/wide'], 'the answer is remembered');
+  assert.deepEqual(second.cmps.map((m) => m.tagName).sort(), ['my-a', 'my-wide']);
+  write(root, { 'src/b.ts': 'export const b = 1;\n' });
+  await scanner.scan(root, options);
+  assert.deepEqual(asked, ['@lib/wide', '@lib/wide'], 'a new file may change what a specifier resolves to');
+  // The file it resolved to is gone: the component is gone from the project, and the bundler is asked again.
+  rmSync(join(root, 'lib/wide.tsx'));
+  const gone = await scanner.scan(root, options);
+  assert.deepEqual(gone.cmps.map((m) => m.tagName), ['my-a']);
+  assert.equal(asked.length, 3);
+});

@@ -73,6 +73,7 @@ const SLOT_RE = /<slot[\s>/]/;
 const SVG_RE = /<svg[\s>/]/;
 // A diagnostic that says stencilrs cannot give this file's metadata. A member's `complexType` (docs and types) changes no flag.
 const unported = (d) => !/^stencilrs: the type of /.test(d.message) && (d.message.startsWith('stencilrs:') || d.level === 'error');
+const UNDEFINED_MEMBER_RE = /,\s*"\w+":\s*undefined(?=\s*[,}\]])/g;
 const unique = (re, source) => [...new Set([...source.matchAll(re)].map((m) => m[1]))];
 
 /**
@@ -85,20 +86,32 @@ const metaFromGetter = (text) => {
   if (start < 7 || end < start) return null;
   const literal = text.slice(start, end + 1);
   try {
-    return JSON.parse(literal); // what the compiler writes is JSON, nearly always: much cheaper than compiling it
+    return JSON.parse(literal); // what the compiler writes is JSON, but for the `undefined` of a member with no default: much cheaper than compiling it
   } catch {
-    return new Function(`return ${literal}`)(); // `undefined`, a bare key
+    try {
+      // `"key": undefined` (a member with no default) is not JSON. Such a member is dropped: it reads `undefined` all the same. The pattern starts at the
+      // comma before the key, so it matches a member only where one can begin (inside a string every quote is escaped).
+      return JSON.parse(literal.replace(UNDEFINED_MEMBER_RE, ''));
+    } catch {
+      return new Function(`return ${literal}`)(); // a bare key
+    }
   }
 };
 
-/** A relative import specifier as the source file it names, or null. */
-function resolveLocal(spec, from) {
+/** A relative import specifier as the source file it names, or null. `memo` (one scan's) remembers the answers: most files import the same helpers. */
+function resolveLocal(spec, from, memo = null) {
   const base = resolve(dirname(from), spec);
+  if (memo?.has(base)) return memo.get(base);
   const stem = base.replace(/\.(m?js|jsx)$/, '');
+  let found = null;
   for (const c of [base, ...['.tsx', '.ts', '.jsx'].map((e) => base + e), ...['.tsx', '.ts'].map((e) => stem + e), ...['.tsx', '.ts'].map((e) => join(base, 'index' + e))]) {
-    if (isSource(c) && statSync(c, { throwIfNoEntry: false })?.isFile()) return posix(c);
+    if (isSource(c) && statSync(c, { throwIfNoEntry: false })?.isFile()) {
+      found = posix(c);
+      break;
+    }
   }
-  return null;
+  memo?.set(base, found);
+  return found;
 }
 
 /** Whether a module, or a module it imports from its own package, imports `@stencil/core` (the runtime this build bundles). */
@@ -160,6 +173,9 @@ function packageInfo(name, fromDir) {
 export function createFoldScanner({ resolveImports = true, compileOptions = null } = {}) {
   const cache = new Map(); // file -> entry
   const packages = new Map(); // `${dir}|${name}` -> real folder | null
+  const resolvedCache = new Map(); // `${dir}|${specifier}` -> the source file the bundler resolved it to (see `scan`)
+  let lastWalk = null;
+  let localMemo = new Map(); // relative import -> source file, this scan (the files do not change while one runs)
 
   // With `compileOptions(source, file)` (the Vite plugin's own options for a component), the scan compiles each component exactly as the build's
   // `transform` will, and the metadata comes beside the code (`componentMetadata: 'result'`): the result is shared with `transform` (`compile`), so the
@@ -208,7 +224,7 @@ export function createFoldScanner({ resolveImports = true, compileOptions = null
     const visited = new Set();
     const visit = (from, imports, depth) => {
       for (const spec of imports) {
-        const target = resolveLocal(spec, from);
+        const target = resolveLocal(spec, from, localMemo);
         if (!target || target.includes('/node_modules/')) continue;
         let m = local.get(target);
         if (!m) {
@@ -248,55 +264,84 @@ export function createFoldScanner({ resolveImports = true, compileOptions = null
     const home = (file) => (file.startsWith(posix(root) + '/') ? posix(root) : dirname(file));
     const aliased = (spec) => aliases.some((a) => (typeof a === 'string' ? spec === a || spec.startsWith(a + '/') : a.test(spec)));
     const started = performance.now();
+    localMemo = new Map();
     const resolved = new Map(); // `${dir}|${specifier}` -> the file the bundler resolves it to, this scan
     const stamps = new Map();
     const seen = new Set();
     const entriesOf = new Map();
-    const queue = [...(dirs?.length ? dirs : [root]).flatMap((d) => collect(d, [])), ...entries.filter((f) => isSource(f) && existsSync(f))].map(posix);
+    const walked = (dirs?.length ? dirs : [root]).flatMap((d) => collect(d, [])).map(posix);
+    // What the bundler resolved is remembered across scans (a watch rebuild asks again for nothing it has answered), until a file appears in or
+    // disappears from the scanned folders: a new file may be what a specifier now resolves to.
+    const walkKey = walked.join('\0');
+    if (walkKey !== lastWalk) {
+      resolvedCache.clear();
+      lastWalk = walkKey;
+    }
+    let wave = [...walked, ...entries.filter((f) => isSource(f) && existsSync(f)).map(posix)];
     const pending = []; // entries to transpile
     const local = new Map(); // local modules read for `addLocalFeatures`, this scan
-    while (queue.length) {
-      const file = queue.pop();
-      if (seen.has(file)) continue;
-      seen.add(file);
-      let entry = cache.get(file);
-      const stamp = stampOf(file);
-      if (!entry || entry.stamp !== stamp || !entry.done || !depsFresh(entry.deps, stamps)) {
-        let source;
-        try {
-          source = readFileSync(file, 'utf-8');
-        } catch {
-          continue;
+    // Breadth first, a wave at a time: the bundler is asked for all the specifiers of a wave at once (it answers them beside each other).
+    while (wave.length) {
+      const next = [];
+      const asks = new Map(); // `${dir}|${specifier}` -> [specifier, importer]
+      const bareOf = []; // [key, ...] of this wave, in order
+      for (const file of wave) {
+        if (seen.has(file)) continue;
+        seen.add(file);
+        let entry = cache.get(file);
+        const stamp = stampOf(file);
+        if (!entry || entry.stamp !== stamp || !entry.done || !depsFresh(entry.deps, stamps)) {
+          let source;
+          try {
+            source = readFileSync(file, 'utf-8');
+          } catch {
+            continue;
+          }
+          entry = { stamp, deps: [], imports: unique(RELATIVE_IMPORT_RE, source), bare: unique(BARE_IMPORT_RE, source), signals: SIGNALS_RE.test(source), decorated: hasComponentDecorator(source), source, metas: [], done: false };
+          cache.set(file, entry);
+          if (entry.decorated) pending.push([file, entry]);
+          else entry.done = true;
         }
-        entry = { stamp, deps: [], imports: unique(RELATIVE_IMPORT_RE, source), bare: unique(BARE_IMPORT_RE, source), signals: SIGNALS_RE.test(source), decorated: hasComponentDecorator(source), source, metas: [], done: false };
-        cache.set(file, entry);
-        if (entry.decorated) pending.push([file, entry]);
-        else entry.done = true;
+        entriesOf.set(file, entry);
+        for (const spec of entry.imports) {
+          const target = resolveLocal(spec, file, localMemo);
+          if (target && !target.includes('/node_modules/')) next.push(target);
+        }
+        // A bare import is a package, or an alias (`@utils/x`, a workspace package) for a source file of the project: the bundler says which.
+        for (const spec of resolveSpec ? entry.bare : []) {
+          const name = packageOf(spec);
+          if (!name || name.startsWith('@stencil/') || skipPackages.includes(name)) continue;
+          const key = `${dirname(file)}|${spec}`;
+          // Asking the bundler costs; it is asked for what can matter: an alias, a package of Stencil components, a package linked from the workspace.
+          if (!aliased(spec)) {
+            const pk = `${home(file)}|${name}`;
+            if (!packages.has(pk)) packages.set(pk, packageInfo(name, home(file)));
+            const info = packages.get(pk);
+            if (!info?.uses && !info?.linked) continue;
+          }
+          if (!resolved.has(key)) {
+            const known = resolvedCache.get(key);
+            if (known && stampOf(known) !== null) resolved.set(key, known);
+            else asks.set(key, [spec, file]);
+          }
+          bareOf.push(key);
+        }
       }
-      entriesOf.set(file, entry);
-      for (const spec of entry.imports) {
-        const target = resolveLocal(spec, file);
-        if (target && !target.includes('/node_modules/')) queue.push(target);
+      if (asks.size) {
+        await Promise.all(
+          [...asks].map(async ([key, [spec, importer]]) => {
+            const r = await resolveSpec(spec, importer).catch(() => null);
+            const id = r && !r.external ? posix(r.id.split('?')[0]) : null;
+            resolved.set(key, id);
+            if (id) resolvedCache.set(key, id); // an answer of null (a package, an external) is asked again: only what exists is remembered
+          }),
+        );
       }
-      // A bare import is a package, or an alias (`@utils/x`, a workspace package) for a source file of the project: the bundler says which.
-      for (const spec of resolveSpec ? entry.bare : []) {
-        const name = packageOf(spec);
-        if (!name || name.startsWith('@stencil/') || skipPackages.includes(name)) continue;
-        const key = `${dirname(file)}|${spec}`;
-        // Asking the bundler costs; it is asked for what can matter: an alias, a package of Stencil components, a package linked from the workspace.
-        if (!aliased(spec)) {
-          const pk = `${home(file)}|${name}`;
-          if (!packages.has(pk)) packages.set(pk, packageInfo(name, home(file)));
-          const info = packages.get(pk);
-          if (!info?.uses && !info?.linked) continue;
-        }
-        if (!resolved.has(key)) {
-          const r = await resolveSpec(spec, file).catch(() => null);
-          resolved.set(key, r && !r.external ? posix(r.id.split('?')[0]) : null);
-        }
+      for (const key of bareOf) {
         const id = resolved.get(key);
-        if (id && !id.startsWith('\0') && !id.includes('/node_modules/') && isSource(id)) queue.push(id);
+        if (id && !id.startsWith('\0') && !id.includes('/node_modules/') && isSource(id)) next.push(id);
       }
+      wave = next;
     }
     // Extra sources (collection components) have no file of their own to stat: keyed by their text.
     for (const { file, source } of extraSources) {
@@ -363,7 +408,7 @@ export function createFoldScanner({ resolveImports = true, compileOptions = null
         if (folder && !scannedFiles.some((f) => f.startsWith(folder + '/'))) prebuilt.set(spec, { spec, name, from: entry.extra ?? key, id: resolved.get(`${from}|${spec}`) });
       }
     }
-    return { cmps, signalsImport, fallback, failed, prebuilt: [...prebuilt.values()], files: seen, watch: [...entriesOf.values()].flatMap((e) => e.deps.map(([p]) => p)).concat(scannedFiles), ms: performance.now() - started };
+    return { cmps, signalsImport, fallback, failed, prebuilt: [...prebuilt.values()], files: seen, watch: [...new Set([...entriesOf.values()].flatMap((e) => e.deps.map(([p]) => p)).concat(scannedFiles))], ms: performance.now() - started };
   }
 
   return { scan, compile, newBuild };
