@@ -11,5 +11,7 @@ export declare function createRenderer(
     settleRounds?: number;
     /** Write each component's state so components resume without rendering on load (default true). */
     resumable?: boolean;
+    /** Experimental (docs/spike-lazy-define.md): hold back `customElements.define` for tags whose instances all wait. */
+    lazyDefine?: 'wake' | 'idle' | null;
   },
-): Promise<(html: string, options?: { resumable?: boolean }) => Promise<string>>;
+): Promise<(html: string, options?: { resumable?: boolean; lazyDefine?: 'wake' | 'idle' | null }) => Promise<string>>;

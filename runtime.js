@@ -53,6 +53,7 @@ export const template = (html, parts, svg = false, host = null) => ({ html, part
 export const t = (tmpl, v, k) => ({ $t: tmpl, v, k });
 
 const prepare = (tmpl) => {
+  if (pending.size) for (const tag of pending.keys()) if (tmpl.html.includes(`<${tag}`)) ensureDefined(tag);
   const te = document.createElement('template');
   te.innerHTML = tmpl.svg ? `<svg>${tmpl.html}</svg>` : tmpl.html;
   let content = te.content;
@@ -538,6 +539,7 @@ function setH(v) {
     const parent = this.m.parentNode;
     const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
     const adopt = adopting(this.host);
+    if (pending.size) ensureDefined(v.tag);
     const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
     const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
     // Its props may hold handlers and refs, which the client must run.
@@ -1049,6 +1051,7 @@ const waiting = new Map();
 const waitTypes = new Set();
 const wakeFor = (type, path) => {
   if (!waitTypes.has(type)) return;
+  if (pending.size) for (const n of path) if (n.nodeType === 1 && pending.has(n.localName)) ensureDefined(n.localName);
   let up = null;
   for (let j = 0; j < path.length; j++) {
     const n = path[j];
@@ -1074,6 +1077,47 @@ const wakeFor = (type, path) => {
   if (up) for (let i = up.length - 1; i >= 0; i--) resumeEl.call(up[i]);
 };
 const wake = (e) => wakeFor(e.type, e.composedPath());
+// Lazy define (opt-in, `ld` on the state script: "wake" or "idle"): a tag whose every instance on the
+// page waits isn't registered until something needs it: an event on one of its instances (`wakeFor`), a
+// template or element the client renders with the tag (`ensureDefined` in `prepare` and the node
+// part), or, with "idle", when the browser has nothing else to do. Until then its instances stay
+// plain HTMLElements, as the server wrote them.
+const pending = new Map();
+let lazyMode, lazyTags;
+const ensureDefined = (tag) => {
+  const Cstr = pending.get(tag);
+  if (Cstr) {
+    pending.delete(tag);
+    customElements.define(tag, Cstr);
+  }
+};
+const defineIdle = () => {
+  const run = () => {
+    for (const tag of pending.keys()) {
+      ensureDefined(tag);
+      break;
+    }
+    if (pending.size) later(run);
+  };
+  const later = (fn) => (globalThis.scheduler?.postTask ? scheduler.postTask(fn, { priority: 'background' }) : globalThis.requestIdleCallback ? requestIdleCallback(fn) : setTimeout(fn));
+  later(run);
+};
+/** True when the tag was held back: see above. */
+const deferDefine = (Cstr, tag) => {
+  if (SERVER) return false;
+  if (lazyMode === undefined) {
+    // `lt`: the tags the server found no instance of that hydrates on load.
+    const el = document.querySelector('script[type="rs/state"]');
+    lazyMode = el?.getAttribute('ld') || null;
+    lazyTags = new Set((el?.getAttribute('lt') || '').split(','));
+  }
+  if (!lazyMode || !lazyTags.has(tag) || !classCanWait(Cstr)) return false;
+  hasState(); // takes over from the inline catcher (events replay once the tag is defined)
+  delegate();
+  pending.set(tag, Cstr);
+  if (lazyMode === 'idle' && pending.size === 1) defineIdle();
+  return true;
+};
 const delegate = () => {
   if (delegating) return;
   delegating = true;
@@ -1577,7 +1621,7 @@ export const define = (Cstr, meta, register = true) => {
   }
   Object.defineProperty(Cstr, '__meta', { value: meta });
   Object.defineProperty(Cstr, 'observedAttributes', { value: Object.keys(meta.attrs) });
-  if (register && !existing) customElements.define(meta.tag, Cstr);
+  if (register && !existing && !deferDefine(Cstr, meta.tag)) customElements.define(meta.tag, Cstr);
 };
 
 // Hot reload lives in runtime-hot.js, which the Vite plugin imports in dev only.
