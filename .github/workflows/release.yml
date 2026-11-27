@@ -4,7 +4,7 @@ name: release
 # tarballs on its own OS (no Rust involved) and publishes the platform packages and the root package to npm.
 #
 # Releases are semantic-release on main: the conventional commits merged since the last tag pick
-# the version (fix: patch, feat: minor, BREAKING CHANGE: major); no release-worthy commit, no
+# the version (fix:, perf:, chore(deps): patch; feat: minor; BREAKING CHANGE: major); no release-worthy commit, no
 # release. It publishes, then tags and writes the GitHub Release. Pull requests that touch the
 # binding run the build and install checks only.
 on:

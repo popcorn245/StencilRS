@@ -139,7 +139,98 @@ ${island('y')}
 ${island('z')}
 </ion-content></ion-app>`, { x: stressBlock('X'), y: stressBlock('Y'), z: stressBlock('Z') });
 
-export const PAGES = { 'list-50': list50, 'kitchen-sink': sink, stress };
+
+// Real app layouts (Ionic's own starters, served as one page per route): what an Ionic app's view looks like, rather than a list in ion-content.
+// app-menu: the split-pane starter. The menu is off canvas on a phone, the page is header / content / footer, the content a hero and a feed.
+const menuItems = ['Inbox', 'Outbox', 'Favorites', 'Archived', 'Trash', 'Spam']
+  .map((name) => `          <ion-menu-toggle auto-hide="false"><ion-item lines="none" detail="false" href="#${name.toLowerCase()}"><ion-icon slot="start" name="mail"></ion-icon><ion-label>${name}</ion-label></ion-item></ion-menu-toggle>`)
+  .join('\n');
+const feed = Array.from({ length: 20 }, (_, i) => `        <ion-item>
+          <ion-avatar slot="start"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></ion-avatar>
+          <ion-label><h2>Message ${i + 1}</h2><p>Preview text of message ${i + 1}</p></ion-label>
+          <ion-note slot="end">${(i % 12) + 1}:00</ion-note>
+        </ion-item>`).join('\n');
+const appMenu = mk('app-menu', `<ion-app>
+  <ion-split-pane content-id="main">
+${island('menu')}
+    <div class="ion-page" id="main">
+${island('header')}
+      <ion-content>
+${island('hero')}
+${island('feed')}
+      </ion-content>
+${island('footer')}
+    </div>
+  </ion-split-pane>
+</ion-app>`, {
+  menu: `    <ion-menu content-id="main" type="overlay">
+      <ion-header><ion-toolbar><ion-title>Mail</ion-title></ion-toolbar></ion-header>
+      <ion-content>
+        <ion-list id="inbox-list">
+          <ion-list-header>Folders</ion-list-header>
+${menuItems}
+        </ion-list>
+      </ion-content>
+    </ion-menu>`,
+  header: `      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start"><ion-menu-button></ion-menu-button></ion-buttons>
+          <ion-title>Inbox</ion-title>
+        </ion-toolbar>
+      </ion-header>`,
+  hero: `        <ion-card>
+          <ion-card-header><ion-card-title>Welcome back</ion-card-title><ion-card-subtitle>3 new</ion-card-subtitle></ion-card-header>
+          <ion-card-content><ion-button expand="block">Compose</ion-button></ion-card-content>
+        </ion-card>`,
+  feed: `        <ion-list>
+${feed}
+        </ion-list>
+        <ion-infinite-scroll><ion-infinite-scroll-content></ion-infinite-scroll-content></ion-infinite-scroll>`,
+  footer: `      <ion-footer>
+        <ion-toolbar><ion-segment value="all"><ion-segment-button value="all"><ion-label>All</ion-label></ion-segment-button><ion-segment-button value="unread"><ion-label>Unread</ion-label></ion-segment-button></ion-segment></ion-toolbar>
+      </ion-footer>`,
+});
+
+// app-tabs: the tabs starter. Each tab is a page; only the selected one is on screen.
+const tabPage = (title, body) => `        <div class="ion-page">
+          <ion-header><ion-toolbar><ion-title>${title}</ion-title></ion-toolbar></ion-header>
+          <ion-content class="ion-padding">
+${body}
+          </ion-content>
+        </div>`;
+const appTabs = mk('app-tabs', `<ion-app>
+  <ion-tabs>
+    <ion-tab tab="home">
+${island('home')}
+    </ion-tab>
+    <ion-tab tab="search">
+${island('search')}
+    </ion-tab>
+    <ion-tab tab="settings">
+${island('settings')}
+    </ion-tab>
+    <ion-tab-bar slot="bottom" selected-tab="home">
+      <ion-tab-button tab="home"><ion-icon name="home"></ion-icon><ion-label>Home</ion-label></ion-tab-button>
+      <ion-tab-button tab="search"><ion-icon name="search"></ion-icon><ion-label>Search</ion-label></ion-tab-button>
+      <ion-tab-button tab="settings"><ion-icon name="settings"></ion-icon><ion-label>Settings</ion-label></ion-tab-button>
+    </ion-tab-bar>
+  </ion-tabs>
+</ion-app>`, {
+  home: tabPage('Home', `            <ion-card><ion-card-header><ion-card-title>Today</ion-card-title></ion-card-header><ion-card-content>Three things to do.</ion-card-content></ion-card>
+            <ion-list>
+${feed}
+            </ion-list>`),
+  search: tabPage('Search', `            <ion-searchbar placeholder="Search"></ion-searchbar>
+            <ion-list><ion-item><ion-label>Recent</ion-label></ion-item><ion-item><ion-label>Popular</ion-label></ion-item></ion-list>`),
+  settings: tabPage('Settings', `            <ion-list>
+              <ion-item><ion-toggle checked>Notifications</ion-toggle></ion-item>
+              <ion-item><ion-select label="Theme" value="auto"><ion-select-option value="auto">Auto</ion-select-option><ion-select-option value="dark">Dark</ion-select-option></ion-select></ion-item>
+              <ion-item><ion-input label="Name" value="Ada"></ion-input></ion-item>
+              <ion-item><ion-checkbox>Beta features</ion-checkbox></ion-item>
+            </ion-list>`),
+});
+
+export const PAGES = { 'list-50': list50, 'kitchen-sink': sink, stress, 'app-menu': appMenu, 'app-tabs': appTabs };
 
 export const renderOptions = (mode) => ({ prettyHtml: false, serializeShadowRoot: mode, buildId: 'islands-spike' });
 export const MODES = { dsd: 'declarative-shadow-dom', scoped: 'scoped' };

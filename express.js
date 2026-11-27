@@ -22,7 +22,7 @@ import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
-import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands } from './express-islands.js';
+import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands, unwrap, withContext } from './express-islands.js';
 import { bootConfig, bootTag, insertBeforeBodyEnd, normalizeClient } from './islands-manifest.js';
 import { STREAM_MODES, streamPage, streamView } from './express-stream.js';
 import { createRenderCache } from './render-cache.js';
@@ -45,16 +45,17 @@ const mayBeScoped = (options) => options.serializeShadowRoot === 'scoped' || opt
 const normalizeIslands = (islands) => {
   if (islands === false || islands == null) return null;
   const o = islands === true ? {} : islands;
-  const KEYS = ['idStride', 'earlyHead', 'cache', 'stream', 'fallback', 'onError', 'client'];
+  const KEYS = ['idStride', 'earlyHead', 'cache', 'stream', 'fallback', 'onError', 'client', 'context'];
   if (typeof o !== 'object') throw new TypeError(`stencilEngine: \`islands\` must be true, false or { ${KEYS.join(', ')} }`);
   for (const key of Object.keys(o)) if (!KEYS.includes(key)) throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected ${KEYS.join(', ')})`);
-  const { idStride = 1000, earlyHead = false, cache = true, stream = 'in-order', fallback, onError, client = false } = o;
+  const { idStride = 1000, earlyHead = false, cache = true, stream = 'in-order', fallback, onError, client = false, context = true } = o;
+  if (typeof context !== 'boolean') throw new TypeError('stencilEngine: `islands.context` must be a boolean');
   if (!(Number.isSafeInteger(idStride) && idStride >= 1)) throw new TypeError('stencilEngine: `islands.idStride` must be a positive integer');
   if (typeof earlyHead !== 'boolean') throw new TypeError('stencilEngine: `islands.earlyHead` must be a boolean');
   if (!(cache === false || cache === true || (cache && typeof cache === 'object'))) throw new TypeError('stencilEngine: `islands.cache` must be true, false or { max, maxBytes, ttl }');
   if (!STREAM_MODES.includes(stream)) throw new TypeError(`stencilEngine: \`islands.stream\` must be one of ${STREAM_MODES.join(', ')}`);
   for (const [key, fn] of [['fallback', fallback], ['onError', onError]]) if (fn !== undefined && typeof fn !== 'function') throw new TypeError(`stencilEngine: \`islands.${key}\` must be a function`);
-  return { idStride, earlyHead, cache, stream, fallback, onError, client: client ? normalizeClient(client, (file) => JSON.parse(readFileSync(file, 'utf8'))) : null };
+  return { idStride, earlyHead, cache, stream, fallback, onError, context, client: client ? normalizeClient(client, (file) => JSON.parse(readFileSync(file, 'utf8'))) : null };
 };
 
 const abortError = (signal) => Object.assign(new Error('stencilEngine: render cancelled'), { name: 'AbortError', code: 'ABORT_ERR', cause: signal.reason });
@@ -369,10 +370,13 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       shell: fragmentRender(split.shell, { ...base, idBase: 0 }, signal),
       parts: split.islands.map((isl, i) => {
         if (!isl.html.trim()) return null;
+        // The island inside its ancestors (as in the whole page), unless `islands.context` is off: the ancestors are in the html and the cache key
+        const ctx = islandsConfig.context ? withContext(isl) : { html: isl.html, ctx: [] };
         const opts = { ...base, fullDocument: false, idBase: (i + 1) * stride }; // the idBase of the slot is in the cache key: a hit keeps the ids of the slot
+        const out = (r) => unwrap(r, ctx, `${path}: island ${JSON.stringify(isl.name)}`);
         // `cache` marks an island as cacheable (`cache="0"` is not); `cache="60"` is its ttl in seconds, a bare `cache` uses the cache's own
-        if (islandCache && useCache && (isl.cache === true || isl.cache > 0)) return islandCache(isl.html, opts, isl.cache === true ? {} : { ttl: isl.cache * 1000 });
-        return fragmentRender(isl.html, opts, signal);
+        if (islandCache && useCache && (isl.cache === true || isl.cache > 0)) return islandCache(ctx.html, opts, isl.cache === true ? {} : { ttl: isl.cache * 1000 }).then(out);
+        return fragmentRender(ctx.html, opts, signal).then(out);
       }),
       earlyHead: early && probe(early.htmlTag, base).then((tag) => tag + early.rest),
       inspect: (label, result) => inspect(path, result.diagnostics, label),
