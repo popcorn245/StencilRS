@@ -56,7 +56,7 @@ const { html, diagnostics } = await renderToString('<my-card title="Hi"></my-car
 
 ## What makes it faster
 
-Two things, both on by default, both byte-identical to Stencil's output.
+Two things, both on by default, both byte-identical to Stencil's output (the `idBase` option aside, which changes nothing while unset).
 
 - **`fastSerializer`** swaps mock-doc's `serializeNodeToHtml` (a recursive generator that yields every tag, attribute and space as its
   own string; about 70% of `renderToString`'s CPU on an Ionic page) for a single-pass serializer that walks the same tree with plain
@@ -66,6 +66,8 @@ Two things, both on by default, both byte-identical to Stencil's output.
   cheaper attribute lookups on mock-doc's `Proxy`-backed maps (`attributes`), an `elementChildren` fast path, and a cache of the
   scoped-CSS rewrite, which Stencil otherwise repeats for every component in every render (`cssCache`). Each is a faster way to
   compute the same value, or a memo of a pure function.
+- **`idBase`** is the one patch that adds something: a render option (below). Without the option the output is byte-identical to
+  Stencil's, so it too is on by default.
 
 Opt out with `fastSerializer: false`, `runtimePatches: false` (none), or by name:
 
@@ -111,6 +113,18 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
   On the Ionic `list-50` page with a 100% hit rate (an upper bound), req/s went from about 20 to about 900 in our container; see the PR for the method.
 - **Full document or fragment.** A view that opens with a doctype or `<html>` is rendered as a document, anything else as a fragment.
   **A fragment has no `<head>`, so it loses the component styles Stencil puts there**. Render a full document, or add the styles yourself.
+- **`engine.renderFragment(html, options)`** (experimental) renders markup on its own, in-process or on the pool, with options of its own on top of
+  `renderOptions` (`fullDocument` is `false` unless you pass it), and resolves with `{ html, styles, components, hydratedCount, diagnostics }`:
+  the `styles` are what a fragment needs in the page's `<head>`, and `diagnostics` come back as they are (an `error` level one does not throw).
+  It skips the inner engine and the render cache. It is the building block for rendering parts of a page separately (islands).
+- **`idBase`** (a render option, a non-negative integer). Stencil numbers hydration ids (`s-id`, `c-id`, `<!--r.N-->`, `<!--o.0.N-->`) from a counter that
+  lives in the hydrate app's module and only grows, so two pieces rendered on different threads (or processes) both start at 1 and their ids collide
+  once concatenated; a page with colliding ids can fail to hydrate (scoped mode, and DSD pages with more components). With `idBase: n` a render
+  counts from `n` on counters of its own (ids `n + 1`, `n + 2`, ...), leaves the shared counter alone, and gives the same bytes whatever was
+  rendered before: pick ranges that do not overlap (`(i + 1) * 10000` for part `i`; `hydratedCount` says how many ids a render used).
+  `idBase: 0` also makes a whole page reproducible from one request to the next, provided you pass a fixed `buildId` too (otherwise
+  `data-stencil-build` is random per render); without `idBase` the ids of a page keep growing with every render in the process.
+  It needs the `idBase` runtime patch, on by default in `buildHydrate`.
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the
   render: Express's callback receives an `Error` with the diagnostics on `err.diagnostics`.
 

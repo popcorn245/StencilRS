@@ -72,6 +72,7 @@ one guard test per patch).
 | `cssCache` | memoizes `scopeCss` / `expandPartSelectors` across renders, keyed by (style text, scope id); module scope, so it survives the per-render runtime |
 | `selectorCache` | memoizes nwsapi's `parse` of a selector string (a fresh array per hit, nwsapi edits it in place), capped at 4096 entries |
 | `attributes` | element attribute methods reach the map behind the Proxy once per element (cached by identity of `attributes`, so replacing `attributes` is honoured); lookups are a plain loop |
+| `idBase` | not a speed patch: the `idBase` render option (hydration ids from a per-render counter instead of the process-wide one); byte-identical while unset (A/B: within noise of the same hydrate app without it) |
 | `elementChildren` | `children`, `childElementCount`, `firstElementChild` and the tree walks of `getElementsByTagName` / `getElementsByClassName` loop over `childNodes` instead of `filter` closures and an array per node |
 
 ### Per-change measurements

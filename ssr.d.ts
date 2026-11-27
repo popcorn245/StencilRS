@@ -37,7 +37,7 @@ export interface BuildHydrateOptions {
    * Byte-identical speed patches applied to Stencil's runtime text at bundle time (`ssr-patches.js`): `true` (default) is all of them, `false` none, `{ cssCache: false }` opts one out by name.
    * Each fails the build when the code it patches is not found.
    */
-  runtimePatches?: boolean | Partial<Record<'selectorCache' | 'attributes' | 'elementChildren' | 'cssCache', boolean>>;
+  runtimePatches?: boolean | Partial<Record<'selectorCache' | 'attributes' | 'elementChildren' | 'cssCache' | 'idBase', boolean>>;
   /**
    * Rolldown plugins of the second pass, which bundles `@stencil/core/runtime/server/runner` with the factory.
    * Replace a module of the runner bundle (mock-doc's serializer, for example) with `resolveId` / `load` / `transform`.

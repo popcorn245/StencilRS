@@ -30,3 +30,16 @@ export const enableCompileCache = (option = true) => {
     // no cache: slower start, nothing else
   }
 };
+
+/**
+ * The part of a `renderToString` result a fragment render hands back, as plain data (it crosses to a worker thread by structured clone,
+ * so in-process and pooled renders return the same shape): the html, the `<style>` blocks of the render's head (`styles`), the components
+ * it hydrated (`components`: `{ tag, mode, count, depth }`), their number (`hydratedCount`) and the diagnostics.
+ */
+export const fragmentResult = (result) => ({
+  html: result.html,
+  styles: (result.styles ?? []).map((s) => ({ ...s })),
+  components: (result.components ?? []).map((c) => ({ ...c })),
+  hydratedCount: result.hydratedCount ?? 0,
+  diagnostics: result.diagnostics ?? [],
+});
