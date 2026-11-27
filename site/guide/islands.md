@@ -60,6 +60,33 @@ A view without markers renders exactly as it does without the option.
 | `static` | never. The island is written without hydration annotations, and a component only static islands use is never requested |
 | `none` | as `static`, and not listed in `window.stencilIslands` |
 
+## In an Ionic app
+
+The shell keeps Ionic's frame (`ion-app`, `ion-split-pane`, `ion-tabs`, `.ion-page`, `ion-content`) and the islands are the parts inside it. Each island is rendered inside
+its ancestors, so a component that looks up the tree gets the answer it gets in the whole page: `ion-infinite-scroll` finds its `ion-content`, `ion-item` its `ion-list`,
+`ion-menu` its `ion-split-pane`. The island's html is the whole page's, but for the hydration ids.
+
+```html
+<ion-app>
+  <ion-tabs>
+    <ion-tab tab="home"><stencil-island name="home"><div class="ion-page">...</div></stencil-island></ion-tab>
+    <ion-tab tab="settings"><stencil-island name="settings" client="visible"><div class="ion-page">...</div></stencil-island></ion-tab>
+    <ion-tab-bar slot="bottom" selected-tab="home">...</ion-tab-bar>
+  </ion-tabs>
+</ion-app>
+```
+
+- A tab that is not selected: `visible`. It activates when the tab is shown.
+- A list further down `ion-content`: `visible`.
+- `ion-menu`: `idle`, not `visible`. An off-canvas menu never scrolls into view, and the menu button needs it hydrated.
+- A footer with nothing to tap: `static`.
+
+On the tabs starter, with the two tabs that are not selected `visible`, the browser requests 38% less JavaScript at load (447 to 276 KB) and spends 21-25% less time in script.
+On the split-pane starter (menu `idle`, feed `visible`, footer `static`) the page is ready 32-50% sooner. Measured as the tables above; details in
+[docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md#ionic-app-layouts).
+
+`islands: { context: false }` renders each island on its own instead (it saves 0-4.5 ms a page; an island that needs its `ion-content` then fails).
+
 ## The client
 
 `islands.client` makes the engine write the page's boot: a JSON manifest of what each island rendered (read from the render itself, so it is what

@@ -33,6 +33,8 @@ const page = await engine.renderIslands(viewPath, locals);            // the pie
 2. **Split.** The shell is the view with each island's markup cut out; the islands are fragments (`fullDocument: false`). Shell and islands render at once, on the
    pool when there is one: the shell with `idBase: 0`, island `i` with `idBase: (i + 1) * idStride`, so their hydration ids cannot collide.
    A render that used more ids than the stride (or whose `hydratedCount` did) fails the page, naming the island: raise `idStride`.
+   Each island is rendered **inside its ancestors** (`islands.context`, default true; [below](#islands-in-an-ionic-app)): the start tags of the elements open around
+   it in the view go around its html, and the island's own elements are cut back out of the render.
 3. **Placement check.** An island must not be a *direct* child of a component that is not a shadow host and has slots (Stencil annotates such a child for relocation, and an
    island's html carries no such mark; after hydration the content is lost). The engine sees the annotation on the rendered marker and fails with the island's name. Put the
    island inside a plain element or a shadow host, or make the whole component the island. (In scoped mode every shadow component is such a parent, and the engine carries the annotation over instead of refusing: see [Scoped mode](#scoped-mode).)
@@ -41,6 +43,63 @@ const page = await engine.renderIslands(viewPath, locals);            // the pie
    carry their own `<style>` in their shadow roots, as in any DSD render. In a view that is not a document there is no head: no styles are written, as for any fragment render.
 
 An island whose body is only whitespace renders nothing; one with no element at its top level (text only) is an error, as it cannot carry `data-island`.
+
+## Islands in an Ionic app
+
+An Ionic page is one tree: `ion-app` around everything, then `ion-split-pane` / `ion-menu`, `ion-tabs` / `ion-tab`, `.ion-page`, `ion-header`, `ion-content`, `ion-footer`.
+The shell keeps that frame and the islands are the parts inside it, so the boundaries fall where an Ionic app has them anyway:
+
+```html
+<ion-app>
+  <ion-split-pane content-id="main">
+    <stencil-island name="menu" client="idle"><ion-menu content-id="main">...</ion-menu></stencil-island>
+    <div class="ion-page" id="main">
+      <stencil-island name="header"><ion-header>...<ion-menu-button></ion-menu-button>...</ion-header></stencil-island>
+      <ion-content>
+        <stencil-island name="hero">...</stencil-island>
+        <stencil-island name="feed" client="visible"><ion-list>...</ion-list><ion-infinite-scroll>...</ion-infinite-scroll></stencil-island>
+      </ion-content>
+      <stencil-island name="footer" client="static"><ion-footer>...</ion-footer></stencil-island>
+    </div>
+  </ion-split-pane>
+</ion-app>
+```
+
+```html
+<ion-app>
+  <ion-tabs>
+    <ion-tab tab="home"><stencil-island name="home"><div class="ion-page">...</div></stencil-island></ion-tab>
+    <ion-tab tab="settings"><stencil-island name="settings" client="visible"><div class="ion-page">...</div></stencil-island></ion-tab>
+    <ion-tab-bar slot="bottom" selected-tab="home">...</ion-tab-bar>
+  </ion-tabs>
+</ion-app>
+```
+
+**Ancestors.** Ionic components look up the tree while they render: `ion-infinite-scroll` and `ion-refresher` fail the render without an `ion-content` above them, `ion-item`
+takes `in-list` and `role` from its `ion-list`, `ion-menu` asks its `ion-split-pane` whether it is visible (a method call), and `mode` is read from the closest element that sets it.
+A fragment rendered on its own sees none of that, so each island is rendered inside its ancestors: the view's start tags of the elements open around the island (the `<html>`,
+`<head>` and `<body>` aside), with their attributes, as real components, but without their other children. The island's top-level elements are tagged for the render and
+found again in its output wherever it put them (scoped rendering moves a shadow host's children into its slots), then taken out without the tag and without the relocation marks
+the wrapper gave them (the shell's marker supplies those). The ancestors' own html, ids, styles and tags are dropped: they are the shell's. The island is then the html the
+whole page has there, but for the ids: the browser checks hydrate every page ([Ionic app layouts](#ionic-app-layouts)) to the whole page's DOM with the strict signature (`sameDomAsFull`), list context included.
+(Stand-ins that are not components, `excludeComponents`, were tried first: `ion-menu`'s call on its split pane then throws, so the ancestors are real.)
+
+`islands: { context: false }` renders each island on its own, as before (an island that needs its `ion-content` then fails, naming the island). The cost of the
+context is the ancestors' render per island, 0-4.5 ms a page (0-13%), with ranges that overlap (`node bench-islands-context.mjs`, table in [Checks and numbers](#checks-and-numbers)). The island cache
+keys on the wrapped html, so a hit is per placement.
+
+**Directives that fit Ionic.**
+
+| Part | Directive | Why |
+|---|---|---|
+| `ion-header`, the first screen of `ion-content` | `load` | on screen at once |
+| a feed or long list further down `ion-content` | `visible` | `ion-content` scrolls inside itself; `IntersectionObserver` sees through it |
+| the content of a tab that is not selected | `visible` | a hidden `ion-tab` does not intersect; it activates when the tab is shown, and the tab bar works from the shell |
+| `ion-menu` | `idle` | not `visible`: off canvas on a phone it never intersects, and `ion-menu-button` finds no menu to open until it is hydrated |
+| a footer with nothing to tap | `static` | never hydrated |
+
+Keep a parent and the children it configures together (see *One synchronous pass* under [Client directives](#client-directives-islandsclient)): `ion-tabs` with its `ion-tab`s and
+`ion-tab-bar` in the shell, `ion-radio-group`, `ion-segment` and `ion-select` with their options in one island, `ion-split-pane` in the shell with the `.ion-page` its `content-id` names.
 
 ## Caching islands
 
@@ -124,8 +183,8 @@ The helper resolves `view` like `res.render` (the `views` directory and `view en
 ## Limits
 
 - **Scoped mode** (`serializeShadowRoot: 'scoped'`, `false`, or a per-tag choice) is supported, with the rules of [Scoped mode](#scoped-mode) below: hydrate it with a production client, and an island that is a direct child of a component with slots has only elements at its top level.
-- **Ancestor context.** An island does not see its ancestors at render time: `ion-item` in an `ion-list` island-less is rendered without `in-list`/`role`; the client adds them.
-  Put the `ion-list` inside the island if the server html matters before hydration.
+- **Ancestors without their other children.** An island is rendered inside its ancestors ([above](#islands-in-an-ionic-app)), but an ancestor there has only the island as its children: a
+  component that reads its *siblings* or its ancestor's other children while it renders (rare in Ionic) sees less than in the whole page. `islands.context: false` turns the wrapper off.
 - **No page cache for island views**: `renderCache` (whole pages) is bypassed for a view with islands; cache its islands instead (below). **`maxQueue`** counts every render: a page with `n` islands queues `n + 1`.
 - **`maxHydrateCount`** (Stencil's 300 components per render) applies per island.
 
@@ -254,7 +313,7 @@ What differs from a whole scoped page, and is not a bug:
 From `examples/ionic` (`npm run build:hydrate`, and the client build: `IONIC_HYDRATE_CLIENT=1 IONIC_OUT_DIR=$PWD/dist-hydrate-client node node_modules/vite/bin/vite.js build --config vite.config.ts`):
 
 - `node check/islands-client.mjs` (`ISLANDS_MODE=scoped` for scoped mode): one directive of each kind on kitchen-sink, in Chromium, on the production hydrating client build. `test/islands-client.test.js` checks every directive on a small fixture.
-- `node check/islands.mjs [pages] [dsd,scoped]`: list-50 and kitchen-sink split into islands, through `res.render` and each `streamView` mode, in DSD and in scoped mode, hydrated in Chromium against the whole-page render (same DOM,
+- `node check/islands.mjs [pages] [dsd,scoped]`: list-50, kitchen-sink, app-menu and app-tabs split into islands, through `res.render` and each `streamView` mode, in DSD and in scoped mode, hydrated in Chromium against the whole-page render (same DOM,
   no duplicate host ids or element ids, every host ready, the toggles, the checkbox and a button respond to clicks) and against a client-only render of the same markup. It hydrates with the production `hydrateClient` build (`ISLANDS_CLIENT=hydrate`, the default;
   `stencil` is Stencil's own lazy-loader dev client, spike-islands.md, which is right for DSD only: see [Scoped mode](#scoped-mode)). `spike/islands/scoped-visual.mjs` compares screenshots (pixels) of each variant against the client-only render.
 - **`npm run bench:islands`** (`bench-islands-all.mjs`) runs both benchmarks below, building what is missing. `--server-only`, `--client-only`, `--workers`, `--rounds`, `--throughput-rounds`, `--paint-rounds`,
@@ -262,6 +321,8 @@ From `examples/ionic` (`npm run build:hydrate`, and the client build: `IONIC_HYD
   - `bench-islands.mjs` (with `bench/islands-server.mjs`): `full`, `islands`, `cached`, `in-order`, `perchunk` (one flush per island), `early head` and `out-of-order`, interleaved over HTTP: first byte, last byte, gzip size, requests per second
     at concurrency 4, then first and largest contentful paint in Chromium, unthrottled and on a Fast 3G profile whose round trip is split around the server (75 ms before the request reaches it, 75 ms of CDP latency back).
   - `bench-islands-client.mjs`: the islands client against the spike's boot, directives against all-`load`, on the minified production build: script time, JS requested and ready.
+- `npm run bench:islands:apps` (`bench-islands-apps.mjs [rounds] [dsd|scoped]`): the Ionic app layouts below, directives against all-`load`, then each page used once (a deferred tab opened and a toggle in it clicked; the idle menu opened from the menu button).
+- `node bench-islands-context.mjs [rounds]`: what rendering islands inside their ancestors costs on the server, `islands.context` on against off.
 
 Measured on one shared 4-vCPU container (load average under 1 at the start; other jobs came and went), two workers, gzip, DSD, Ionic list-50 (1 MB of html) and kitchen-sink. Each cell is the median over interleaved rounds
 (every round visits each variant once, the start rotating), with min-max; n = 40 for the first and last byte, 3 rounds of 5 s for requests per second, 11 for paint, 15 for the client.
@@ -312,3 +373,36 @@ JS is the same; script (-28%) and ready (-24%) fall with overlapping ranges: the
 This client's `all` against the spike boot's `all` (script -19% / -23%) is not a measure of the directives: the two differ in their loader (one define pass, `modulepreload`) and in how ready is taken, so the contributions were not separated; the navigation-based ready that `bench-islands-client.mjs` also prints is the one to compare across clients.
 
 Known upstream noise: the Stencil 5.0.0-beta.25 client runtime logs `reading 'length'` / `reading 'nodeType'` errors to the console while hydrating or re-rendering childless elements; Stencil's own client does the same.
+
+### Ionic app layouts
+
+`app-menu` (the split-pane starter: menu, header, a hero card, a 20-message feed with `ion-infinite-scroll`, a footer) and `app-tabs` (the tabs starter: three tabs, each an `.ion-page`)
+are in `spike/islands/lib.mjs`. `check/islands.mjs` hydrates both, in both modes and every streaming variant, to the whole page's DOM with the strict signature. Without
+`islands.context`, `app-menu` does not render at all (`<ion-infinite-scroll> must be used inside ion-content`).
+
+Client (`bench-islands-apps.mjs`, minified production build, Chromium 414x800, 15 interleaved rounds, medians with min-max; the same shared container). Directives: `app-menu` menu `idle`,
+feed `visible`, footer `static`; `app-tabs` home `load`, the two tabs not selected `visible`.
+
+| | | script ms | ready ms | JS requested |
+|---|---|---|---|---|
+| app-tabs, DSD | all `load` | 75 (63-102) | 96 (80-135) | 85 files, 447 KB |
+| | directives | **59** (50-84) | 81 (65-119) | **63 files, 276 KB** |
+| app-tabs, scoped | all `load` | 119 (99-169) | 129 (110-187) | 85 files, 447 KB |
+| | directives | **89** (81-134) | 100 (85-155) | **63 files, 276 KB** |
+| app-menu, DSD | all `load` | 59 (42-93) | 86 (64-115) | 92 files, 394 KB |
+| | directives | 60 (52-79) | **43** (27-61) | 85 files, 357 KB |
+| app-menu, scoped | all `load` | 116 (90-164) | 123 (98-187) | 92 files, 394 KB |
+| | directives | 119 (96-151) | **84** (62-99) | 85 files, 357 KB |
+
+On the tabs app the JS requested falls 38% (171 KB, 22 files) and script time 21-25%; opening a deferred tab loads its 23 files then. On the menu app ready comes 32-50% sooner (DSD's ranges are apart),
+JS falls 9%, and script time does not move: the `idle` menu hydrates within the measured window, as it should (the menu button needs it).
+
+Server (`bench-islands-context.mjs 40`, two workers, sequential, a whole page per request, medians in ms with min-max):
+
+| | list-50 | kitchen-sink | app-menu | app-tabs |
+|---|---|---|---|---|
+| DSD, context on | 45.6 (30-81) | 25.7 (17-43) | 26.5 (18-34) | 23.2 (18-44) |
+| DSD, context off | 41.1 (22-89) | 25.8 (17-51) | fails | 20.6 (15-58) |
+| scoped, context on | 34.7 (21-68) | 26.0 (17-45) | 27.7 (22-353) | 24.8 (18-32) |
+| scoped, context off | 30.8 (17-70) | 23.3 (15-44) | fails | 23.0 (17-36) |
+

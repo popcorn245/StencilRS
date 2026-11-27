@@ -18,7 +18,8 @@
     "bench": "node bench.mjs",
     "bench:ssr": "node bench-ssr.mjs",
     "bench:islands": "node bench-islands-all.mjs",
-    "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke"
+    "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke",
+    "bench:islands:apps": "node bench-islands-apps.mjs"
   },
   "devDependencies": {
     "@capacitor/core": "8.6.2",

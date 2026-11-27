@@ -1,7 +1,7 @@
 // Issues #191 and #192 on Ionic: list-50 and kitchen-sink split into `<stencil-island>`s, rendered through `stencilEngine({ workers: 2, islands })`,
 // hydrate in Chromium to the same DOM as the page rendered whole (same engine without `islands`, the marker-free view).
 //
-//   node check/islands.mjs [list-50,kitchen-sink] [dsd,scoped]      (after `npm run build:hydrate` and a client build, see below)
+//   node check/islands.mjs [list-50,kitchen-sink,app-menu,app-tabs] [dsd,scoped]     (after `npm run build:hydrate` and a client build, see below)
 //
 // Both serializations, `declarative-shadow-dom` and `scoped` (#206). The client that hydrates: `ISLANDS_CLIENT=stencil` is Stencil's own lazy-loader
 // build (the spike's `stencil build --dev`, docs/spike-islands.md), `hydrate` the production `hydrateClient` build of the Vite plugin
@@ -22,7 +22,7 @@ import { hydrationReport, idsOf } from '../spike/islands/islands.mjs';
 import { HYDRATE, PAGES, launch, renderOptions, serve, MODES } from '../spike/islands/lib.mjs';
 import { writeViews } from '../spike/islands/views.mjs';
 
-const names = (process.argv[2] ?? 'list-50,kitchen-sink').split(',');
+const names = (process.argv[2] ?? 'list-50,kitchen-sink,app-menu,app-tabs').split(',');
 const modes = (process.argv[3] ?? 'dsd,scoped').split(',');
 const client = CLIENTS[process.env.ISLANDS_CLIENT ?? 'hydrate'];
 const dir = writeViews(names);
