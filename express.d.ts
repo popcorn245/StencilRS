@@ -6,6 +6,12 @@ export interface StencilRenderOptions {
   /** Inferred from the view: a doctype or `<html>` means a full document. Fragments are rendered without `<head>`, so without styles. */
   fullDocument?: boolean;
   prettyHtml?: boolean;
+  /**
+   * Hydration ids (`s-id`, `c-id`, `<!--o.0.N-->`, ...) of this render count from `idBase` (a non-negative integer) on counters
+   * of the render's own, instead of the process-wide ones that only grow. Needs the `idBase` runtime patch (on by default in `buildHydrate`).
+   * `idBase: 0` makes a render reproducible: the same input gives the same ids whatever was rendered before, in this thread or another.
+   */
+  idBase?: number;
   [option: string]: unknown;
 }
 
@@ -15,8 +21,21 @@ export interface StencilDiagnostic {
   [key: string]: unknown;
 }
 
+/** What `engine.renderFragment` resolves with. */
+export interface StencilFragmentResult {
+  html: string;
+  /** The `<style>` blocks the render put in its head: `{ href, id, content }` each (`id` is the `sty-id`). */
+  styles: Array<{ href: string | null; id: string | null; content: string }>;
+  /** The components the render hydrated, one entry per tag and mode. */
+  components: Array<{ tag: string; mode?: string; count: number; depth: number }>;
+  /** How many component hosts the render hydrated; with `idBase`, the ids it used are `idBase + 1 ... idBase + hydratedCount` at most. */
+  hydratedCount: number;
+  /** All of them, `error` level included: a fragment render does not throw on a diagnostic (a thrown render fails the promise). */
+  diagnostics: StencilDiagnostic[];
+}
+
 export interface HydrateApp {
-  renderToString(html: string, options?: StencilRenderOptions): Promise<{ html: string; diagnostics?: StencilDiagnostic[] }>;
+  renderToString(html: string, options?: StencilRenderOptions): Promise<{ html: string; diagnostics?: StencilDiagnostic[]; styles?: StencilFragmentResult["styles"]; components?: StencilFragmentResult["components"]; hydratedCount?: number }>;
 }
 
 export type InnerEngine = (path: string, locals: Record<string, any>, callback: (err: Error | null, html?: string) => void) => void;
@@ -58,6 +77,12 @@ export interface StencilExpressEngine {
   (path: string, options: object, callback: (err: Error | null, html?: string) => void): void;
   /** Resolves once the hydrate app is loaded and warmed up on the engine and every worker (at once without `warmup` or `workers`). Rejects if the app cannot load or a warm-up render fails; after a failed warm-up the engine still renders. */
   ready: Promise<void>;
+  /**
+   * Renders markup as a fragment, with options of its own on top of `renderOptions` (`fullDocument` is `false` unless given, not inferred),
+   * and resolves with the html, styles, components, hydrated count and diagnostics. In-process or on the worker pool (queue, timeout and
+   * crash handling as for views). Skips the inner engine and the render cache. Experimental: the building block of islands (#191).
+   */
+  renderFragment(html: string, options?: StencilRenderOptions): Promise<StencilFragmentResult>;
   /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
   renderCache: RenderCache | null;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */

@@ -108,11 +108,11 @@ test('the selector parse cache hands out a fresh array each time (nwsapi rewrite
 });
 
 test('every runtime patch has a name, a summary and an anchor, and selectPatches opts out by name', () => {
-  assert.deepEqual(RUNTIME_PATCHES.map((p) => p.name), ['selectorCache', 'attributes', 'elementChildren', 'cssCache']);
+  assert.deepEqual(RUNTIME_PATCHES.map((p) => p.name), ['selectorCache', 'attributes', 'elementChildren', 'cssCache', 'idBase']);
   for (const p of RUNTIME_PATCHES) assert.ok(p.summary && p.anchor && typeof p.apply === 'function', p.name);
-  assert.equal(selectPatches(true).length, 4);
+  assert.equal(selectPatches(true).length, 5);
   assert.equal(selectPatches(false).length, 0);
-  assert.deepEqual(selectPatches({ cssCache: false, attributes: false }).map((p) => p.name), ['selectorCache', 'elementChildren']);
+  assert.deepEqual(selectPatches({ cssCache: false, attributes: false }).map((p) => p.name), ['selectorCache', 'elementChildren', 'idBase']);
   assert.throws(() => selectPatches({ nope: false }), /unknown runtime patch "nope"/);
 });
 
@@ -121,7 +121,7 @@ const only = (name) => RUNTIME_PATCHES.filter((p) => p.name === name);
 const real = (await import('node:fs')).readFileSync(runner, 'utf8');
 
 test('each mock-doc patch applies to the installed runner, once', () => {
-  for (const name of ['selectorCache', 'attributes', 'elementChildren']) {
+  for (const name of ['selectorCache', 'attributes', 'elementChildren', 'idBase']) {
     const { applied, code } = patchRuntime(real, only(name));
     assert.deepEqual(applied, [name]);
     assert.notEqual(code, real);
@@ -152,8 +152,8 @@ test('elementChildren throws when a children getter changed', () => {
 test('the plugin fails the build when an enabled patch found no module', async () => {
   const plugin = runtimePatchesPlugin(true);
   assert.equal(plugin.transform('const nothing = 1;'), null);
-  assert.throws(() => plugin.buildEnd(), /runtime patch\(es\) selectorCache, attributes, elementChildren, cssCache found no module/);
-  const ok = runtimePatchesPlugin({ selectorCache: false, attributes: false, elementChildren: false, cssCache: false });
+  assert.throws(() => plugin.buildEnd(), /runtime patch\(es\) selectorCache, attributes, elementChildren, cssCache, idBase found no module/);
+  const ok = runtimePatchesPlugin({ selectorCache: false, attributes: false, elementChildren: false, cssCache: false, idBase: false });
   assert.doesNotThrow(() => ok.buildEnd());
 });
 
@@ -190,4 +190,27 @@ test('cssCache wraps both call sites and memoizes by style text and scope id', (
 test('cssCache throws when a call site is missing or duplicated', () => {
   assert.throws(() => patchRuntime(FACTORY.replace('expandPartSelectors(style)', 'expandPartSelectors(style, 1)'), only('cssCache')), /"cssCache".*expandPartSelectors.*found 0/s);
   assert.throws(() => patchRuntime(`${FACTORY}\n${FACTORY}`, only('cssCache')), /"cssCache".*expected 1.*found 2/s);
+});
+
+// ---- idBase: the runner's `initializeWindow` gives every document the module-level docData; with `idBase` it gets counters of its own ----
+test('idBase swaps the docData assignment for one that reads opts.idBase, and leaves the default path as it was', () => {
+  const { code, applied } = patchRuntime(real, only('idBase'));
+  assert.deepEqual(applied, ['idBase']);
+  assert.ok(code.includes('doc[STENCIL_DOC_DATA] = typeof opts.idBase === "number" ? { hostIds: opts.idBase, rootLevelIds: opts.idBase, staticComponents: new Set() } : docData;'));
+  assert.equal(code.split('doc[STENCIL_DOC_DATA] =').length, 2);
+});
+
+test('idBase throws when the docData assignment moved or is there twice, and the build fails when no module has it', () => {
+  const assignment = '\tdoc[STENCIL_DOC_DATA] = docData;';
+  assert.throws(() => patchRuntime(`${assignment}\n${assignment}`, only('idBase')), /"idBase".*expected 1.*found 2/s);
+  // the anchor is the snippet itself: a runner that changed it is not patched, and `buildEnd` says which patch found nothing
+  const moved = real.replace(assignment, '\tdoc[STENCIL_DOC_DATA] = sharedDocData;');
+  assert.notEqual(moved, real);
+  const plugin = runtimePatchesPlugin(only('idBase'));
+  assert.equal(plugin.transform(moved), null);
+  assert.throws(() => plugin.buildEnd(), /runtime patch\(es\) idBase found no module to patch/);
+});
+
+test('idBase can be opted out by name', () => {
+  assert.ok(!selectPatches({ idBase: false }).some((p) => p.name === 'idBase'));
 });

@@ -20,7 +20,7 @@ import { readFile } from 'node:fs/promises';
 import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
-import { enableCompileCache, hydrateHref, pickRenderToString } from './express-hydrate.js';
+import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
 import { createRenderCache } from './render-cache.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
@@ -67,7 +67,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
       const job = queue.shift();
       slot.job = job;
       try {
-        slot.worker.postMessage({ id: job.id, html: job.html, options: job.options });
+        slot.worker.postMessage({ id: job.id, html: job.html, options: job.options, fragment: job.fragment });
       } catch (e) {
         // renderOptions that cannot be structured-cloned (a function, ...): this render fails, the thread is fine.
         slot.job = null;
@@ -128,7 +128,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
         slot.job = null;
         clearTimeout(job.timer);
         if (m.error) job.reject(Object.assign(new Error(m.error.message), { stack: m.error.stack }));
-        else job.resolve({ html: m.html, diagnostics: m.diagnostics });
+        else job.resolve(job.fragment ? { html: m.html, styles: m.styles, components: m.components, hydratedCount: m.hydratedCount, diagnostics: m.diagnostics } : { html: m.html, diagnostics: m.diagnostics });
         dispatch();
       }
     });
@@ -151,12 +151,12 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
 
   return {
     ready: settledAll().then(() => {}),
-    render: (html, options) =>
+    render: (html, options, fragment = false) =>
       new Promise((resolve, reject) => {
         if (closed) return reject(closed);
         if (broken) return reject(broken);
         if (queue.length >= maxQueue) return reject(Object.assign(new Error(`stencilEngine: render queue is full (${maxQueue} waiting)`), { code: 'ESTENCIL_QUEUE_FULL' }));
-        queue.push({ id: nextId++, html, options, resolve, reject, timer: null });
+        queue.push({ id: nextId++, html, options, fragment, resolve, reject, timer: null });
         dispatch();
       }),
     close: async () => {
@@ -249,6 +249,17 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   const run = (html, options) => (pool ? pool.render(html, options) : load().then((renderToString) => renderToString(html, options)));
   const cached = renderCache ? createRenderCache(run, renderCache) : null;
 
+  // A fragment: markup rendered on its own, with options of its own (`idBase`, ...), and the whole of the result back, in-process or pooled.
+  const renderFragment = async (html, options = {}) => {
+    if (typeof html !== 'string') throw new TypeError('stencilEngine: renderFragment needs the HTML to render as a string');
+    if (options == null || typeof options !== 'object') throw new TypeError('stencilEngine: renderFragment options must be an object');
+    if (options.idBase !== undefined && !(Number.isSafeInteger(options.idBase) && options.idBase >= 0)) throw new TypeError('stencilEngine: `idBase` must be a non-negative integer');
+    const merged = { ...renderOptions, ...options };
+    merged.fullDocument ??= false; // a fragment is not a page: not inferred from the markup
+    if (pool) return pool.render(html, merged, true);
+    return fragmentResult(await (await load())(html, merged));
+  };
+
   const render = async (path, locals) => {
     const html = engine ? await fill(path, locals) : await read(path, locals.cache);
     const options = { ...renderOptions, ...locals.stencil };
@@ -276,6 +287,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   };
   express.ready = pool ? pool.ready : warming ? warmInProcess() : Promise.resolve();
   express.ready.catch(() => {}); // `ready` reports it; an unobserved rejection must not crash the server
+  express.renderFragment = renderFragment;
   express.renderCache = cached; // `.clear()` and `.stats()`, or null
   express.close = async () => void (await pool?.close());
   return express;
