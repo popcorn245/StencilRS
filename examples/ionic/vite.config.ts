@@ -28,6 +28,7 @@ const walk = (d: string): string[] =>
 // One entry: Ionic's global script first (it sets the mode before any element connects), then ion-icon,
 // then every file that declares a @Component. Written on each build, git-ignored.
 // IONIC_SUBSET=tabs: only what the islands `app-tabs` page renders (docs/spike-build-flags.md), for the bundle-size measurements.
+// IONIC_FOLD=0: `foldRuntimeFlags: false` (the plugin's default is on), for the unfolded baseline.
 const TABS_SUBSET = ['app', 'tabs', 'tab', 'tab-bar', 'tab-button', 'label', 'header', 'toolbar', 'title', 'content', 'card', 'card-header', 'card-title', 'card-subtitle', 'card-content', 'list', 'item', 'avatar', 'note', 'searchbar', 'toggle', 'select', 'select-option', 'input', 'checkbox', 'button', 'ripple-effect', 'backdrop', 'spinner', 'popover', 'text', 'badge', 'chip', 'skeleton-text'];
 const subset = process.env.IONIC_SUBSET === 'tabs' ? new Set(TABS_SUBSET) : null;
 const components = walk(join(src, 'components'))
@@ -169,7 +170,7 @@ export default defineConfig({
   // The dev server's watcher opens an fs.watch per file under migrated/ (slow on Windows). `stencil build` (npm run
   // build:stencil, in this folder) writes dist/ (types, collection) and .stencil/ there; the plugin's default also
   // skips www/, loader/ and hydrate/. `components/` is Stencil's standalone output folder (never source: that is src/).
-  plugins: [stencilrs({ dts: process.env.IONIC_DTS === '1', watchIgnore: ['.stencil', '.stencil-standalone', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, ...(process.env.IONIC_FOLD ? { foldRuntimeFlags: subset ? { dirs: [...subset].map((c) => join(src, 'components', c)) } : { dirs: [join(src, 'components')] } } : {}), ...(hydrateClient ? { hydrateClient: { collections: ['ionicons'], islands: true, split: process.env.IONIC_HYDRATE_SPLIT !== '0' }, css: hydrateCss } : { buildFlags: { hydrateClientSide: false } }) }), globalCss()],
+  plugins: [stencilrs({ dts: process.env.IONIC_DTS === '1', watchIgnore: ['.stencil', '.stencil-standalone', 'www', 'dist', 'loader', 'hydrate', 'components'], css: { sass: { silenceDeprecations: [...silenceDeprecations] } }, verbose: true, ...(process.env.IONIC_FOLD === '0' ? { foldRuntimeFlags: false } : subset ? { foldRuntimeFlags: { dirs: [...subset].map((c) => join(src, 'components', c)) } } : {}), ...(hydrateClient ? { hydrateClient: { collections: ['ionicons'], islands: true, split: process.env.IONIC_HYDRATE_SPLIT !== '0' }, css: hydrateCss } : { buildFlags: { hydrateClientSide: false } }) }), globalCss()],
   build: {
     outDir: process.env.IONIC_OUT_DIR ?? join(here, 'dist-stencilrs'),
     emptyOutDir: true,
