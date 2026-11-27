@@ -92,6 +92,53 @@ node.
 that every server node is the same object afterwards (shadow, scoped, nested slots, keyed lists),
 that the page is interactive, and that a tampered page falls back and still works.
 
+### A faster server renderer: `renderer: 'string'`
+
+```js
+// vite.config.ts: stencilrs({ runtime: 'stencilrs', stringRenderer: true }), then `vite build --ssr`
+const render = await createRenderer('./dist-server/entry-server.js', { renderer: 'string', onFallback: (why) => console.warn(why) });
+```
+
+The happy-dom renderer is the default and stays so. With `renderer: 'string'`, a page is first rendered by
+`runtime-string.js`, which has no DOM: it reuses the compiled templates and writes the same string. On the 500-card
+page (`examples/starter/bench/load`, 177,447 characters) it takes about 3 to 5 ms against 90 to 130 ms
+(`node spike/bench-render.mjs 40`, interleaved, warm; the output is byte-identical, `node spike/compare-html.mjs`).
+
+**Output.** Whenever the string path renders a page, the string is byte-for-byte what the happy-dom renderer writes
+(`test/runtime-string.test.js` renders about 85 pages of `test/string-fixtures.mjs` both ways), and Chromium hydrates
+it like the DOM renderer's (same nodes kept, clicks work, resumable or not).
+
+**Fallback.** A page the string renderer cannot reproduce exactly is rendered by happy-dom instead, per page, and
+`onFallback(reason, html)` is called, `render.fallbacks` counts them and `render.lastFallback` says why. The page
+falls back when it uses:
+
+- slots of light-DOM (`encapsulation: 'none'`) components, scoped slots, or light children of a component in the page
+  (relocation of nodes is not modelled);
+- an async or promise-returning lifecycle hook, signals, an `h()` vnode (non-template render), a `<table>`, `<select>`
+  or `<textarea>` in a template (the HTML parser restructures them), or markup the parser would change (a `<div>` in a
+  `<p>`, an entity without a semicolon or an unknown one, a style value the DOM rewrites);
+- state changed after the first render (in `componentDidLoad`, a timer, a continuation), a timer or microtask started
+  in a render, `writeTask`/`readTask`;
+- any hook or render that touches a DOM global (`document`, `window`, `typeof window`, `HTMLElement`...), a ref
+  element's members, or an event with listeners other than the emitter's own.
+
+Refs and spreads on elements, svg templates, lists, `<Host>`, reflected props and light components without children
+are supported.
+
+**Isolation.** The string path has no DOM globals, and while it renders every DOM global throws (that is how a hook
+touching `document` is detected and the page falls back). The fallback renders in an isolated happy-dom window whose
+globals exist only while it renders and are removed after, so `typeof document` is `'undefined'` in your hooks,
+before, during a string render and after. The two renderers never run at the same time; renders are queued.
+
+**Differences to know.** A page that falls back runs its hooks twice (once on the string path, which discarded its
+result). A module-level counter used for ids sees both runs. A non-stencilrs custom element is a plain element for
+the string renderer.
+
+**Setup.** `stringRenderer: true` (needs `runtime: 'stencilrs'`, `docs/vite-plugin.md`) makes `vite build --ssr`
+also write `<outDir>/string/<entry>.js`, the same bundle importing `@popcorn245/stencilrs/runtime/string`. Pass
+`createRenderer` the entry's path or URL (the string variant is found next to it), or a `load({ renderer })`
+function that imports the one asked for. Without the option, `renderer: 'string'` throws a message naming it.
+
 ### Resuming: components that wait for an event
 
 By default (`createRenderer(load, { resumable: true })`) the page also carries each component's

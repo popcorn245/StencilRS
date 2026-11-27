@@ -74,6 +74,13 @@ done the same way: `import cem from '@stencil/unplugin/docs'` and `components.d.
 stencilrs' own metadata, and only a file with a type it hasn't ported yet takes its metadata
 from Stencil's compiler.
 
+### A faster server renderer
+
+`stencilrs({ runtime: 'stencilrs', stringRenderer: true })` makes `vite build --ssr` also write a server bundle for a
+DOM-free renderer; `createRenderer(entry, { renderer: 'string' })` (`@popcorn245/stencilrs/runtime/server`) then renders
+a 500-card page in about 3 to 5 ms instead of 90 to 130, byte-identical, and renders any page it cannot reproduce with
+happy-dom ([docs/runtime.md](docs/runtime.md)). Off by default.
+
 ### Type declarations for a library
 
 `stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
