@@ -1,0 +1,4 @@
+:host { display: block; padding: 8px; border: 1px solid #888; }
+button { font: inherit; padding: 2px 8px; }
+ul { margin: 8px 0 0; padding-left: 20px; }
+li.on { font-weight: 700; }

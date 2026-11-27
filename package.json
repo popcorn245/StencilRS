@@ -91,6 +91,7 @@
     "signals.d.ts",
     "runtime.js",
     "runtime-hot.js",
+    "runtime-features.js",
     "runtime.d.ts",
     "runtime-server.js",
     "runtime-server.d.ts"

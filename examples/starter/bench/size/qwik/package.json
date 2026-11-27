@@ -1,0 +1,10 @@
+{
+  "name": "bench-size-qwik",
+  "private": true,
+  "type": "module",
+  "description": "The size app in Qwik (client-rendered, as bench/qwik): its own folder, since Qwik 1 wants Vite 7",
+  "devDependencies": {
+    "@builder.io/qwik": "1.20.4",
+    "vite": "7.1.12"
+  }
+}
