@@ -1,0 +1,17 @@
+[package]
+name = "grass-bench"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# standalone: not a member of the repo's cargo workspace
+[workspace]
+
+[dependencies]
+grass = { version = "0.13", default-features = false }
+rayon = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
