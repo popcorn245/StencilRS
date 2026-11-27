@@ -21,6 +21,7 @@ import { availableParallelism } from 'node:os';
 import { Worker } from 'node:worker_threads';
 
 import { enableCompileCache, fragmentResult, hydrateHref, pickRenderToString } from './express-hydrate.js';
+import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIslands } from './express-islands.js';
 import { createRenderCache } from './render-cache.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
@@ -31,6 +32,21 @@ const loadHydrate = async (hydrate) => {
   const href = hydrateHref(app);
   const mod = href ? await import(href) : app;
   return pickRenderToString(mod);
+};
+
+const SCOPED_ISLANDS = "stencilEngine: `islands` need serializeShadowRoot 'declarative-shadow-dom' (the default): islands are not supported with scoped rendering (`serializeShadowRoot: 'scoped'` or `false`), see docs/islands.md";
+const isScoped = (options) => options.serializeShadowRoot === 'scoped' || options.serializeShadowRoot === false;
+
+/** `islands: false | true | { idStride, earlyHead }` as `{ idStride, earlyHead }`, or null. */
+const normalizeIslands = (islands) => {
+  if (islands === false || islands == null) return null;
+  const o = islands === true ? {} : islands;
+  if (typeof o !== 'object') throw new TypeError('stencilEngine: `islands` must be true, false or { idStride, earlyHead }');
+  for (const key of Object.keys(o)) if (key !== 'idStride' && key !== 'earlyHead') throw new TypeError(`stencilEngine: unknown \`islands\` option \`${key}\` (expected idStride, earlyHead)`);
+  const { idStride = 1000, earlyHead = false } = o;
+  if (!(Number.isSafeInteger(idStride) && idStride >= 1)) throw new TypeError('stencilEngine: `islands.idStride` must be a positive integer');
+  if (typeof earlyHead !== 'boolean') throw new TypeError('stencilEngine: `islands.earlyHead` must be a boolean');
+  return { idStride, earlyHead };
 };
 
 const workerFile = new URL('./express-worker.js', import.meta.url);
@@ -181,10 +197,11 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
  * @param [config.compileCache] Node's compile cache (`module.enableCompileCache`) for the hydrate app, here and in each worker: `true` (default; a no-op on a Node without it), `false` to opt out, or a directory for the cache
  * @param [config.warmup] render at startup so the first request is not JIT-cold: a list of views (paths, run through the inner engine with no locals) and HTML strings (starting with `<`), or `{ views, times }` to run the list `times` times (default 1; the JIT needs repeats). Shape them like real traffic. In-process and on every worker; `ready` resolves after it
  * @param [config.renderCache] opt-in cache of rendered pages, in the main thread before a worker is asked: `true` (defaults) or `{ max, maxBytes, ttl }`. Only for pages that are a pure function of the HTML and options; a view opts out with the `stencilCache: false` local
+ * @param [config.islands] `true` or `{ idStride, earlyHead }`: views may mark parts of themselves `<stencil-island name>`; each is rendered on its own (in parallel on the pool) and the page is assembled. A view with none renders as without this option. DSD only. `idStride` (default 1000) is how many hydration ids an island may use; `earlyHead` (default false) writes the view's head before the shell has rendered (a streaming responder's start, see `engine.renderIslands`)
  * @param [config.renderTimeout] ms a pooled render may take (default 30000, 0 = no limit); past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`
  * @returns an Express engine: `app.engine('ext', stencilEngine({ ... }))`, with `ready` (a promise: the app is loaded and warmed up; resolves at once without `warmup` or a pool; rejects when the app cannot load or a warm-up render fails, the engine stays usable after a failed warm-up) and `close()` (stops the workers)
  */
-export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false, renderCache = false } = {}) => {
+export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false, renderCache = false, islands = false } = {}) => {
   if (hydrate == null) throw new TypeError('stencilEngine: `hydrate` is required');
   const size = workers === 'auto' ? Math.max(1, availableParallelism() - 1) : workers;
   if (!Number.isInteger(size) || size < 0) throw new TypeError("stencilEngine: `workers` must be a non-negative integer or 'auto'");
@@ -194,6 +211,8 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   if (warmup !== false && !(Array.isArray(warmViews) && warmViews.every((w) => typeof w === 'string') && Number.isInteger(warmTimes) && warmTimes >= 1)) throw new TypeError('stencilEngine: `warmup` must be an array of view paths and HTML strings, or { views, times } with a whole `times` of at least 1');
   if (!(typeof compileCache === 'boolean' || typeof compileCache === 'string')) throw new TypeError('stencilEngine: `compileCache` must be a boolean or a directory');
   if (!(renderCache === false || renderCache === true || (renderCache && typeof renderCache === 'object'))) throw new TypeError('stencilEngine: `renderCache` must be true, false or { max, maxBytes, ttl }');
+  const islandsConfig = normalizeIslands(islands);
+  if (islandsConfig && isScoped(renderOptions)) throw new TypeError(SCOPED_ISLANDS);
   // Before the hydrate app is imported (here or by a worker): the cache serves modules loaded after the call.
   enableCompileCache(compileCache);
   let pool = null;
@@ -249,6 +268,9 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   const run = (html, options) => (pool ? pool.render(html, options) : load().then((renderToString) => renderToString(html, options)));
   const cached = renderCache ? createRenderCache(run, renderCache) : null;
 
+  // One render of markup on its own, with the options as given: in-process or pooled, the whole result back.
+  const fragmentRender = async (html, options) => (pool ? pool.render(html, options, true) : fragmentResult(await (await load())(html, options)));
+
   // A fragment: markup rendered on its own, with options of its own (`idBase`, ...), and the whole of the result back, in-process or pooled.
   const renderFragment = async (html, options = {}) => {
     if (typeof html !== 'string') throw new TypeError('stencilEngine: renderFragment needs the HTML to render as a string');
@@ -256,17 +278,13 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     if (options.idBase !== undefined && !(Number.isSafeInteger(options.idBase) && options.idBase >= 0)) throw new TypeError('stencilEngine: `idBase` must be a non-negative integer');
     const merged = { ...renderOptions, ...options };
     merged.fullDocument ??= false; // a fragment is not a page: not inferred from the markup
-    if (pool) return pool.render(html, merged, true);
-    return fragmentResult(await (await load())(html, merged));
+    return fragmentRender(html, merged);
   };
 
-  const render = async (path, locals) => {
-    const html = engine ? await fill(path, locals) : await read(path, locals.cache);
-    const options = { ...renderOptions, ...locals.stencil };
-    options.fullDocument ??= isDocument(html);
-    const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
+  // The diagnostics of one render: warnings once each, errors fail it. `what` names the part of an island page that failed.
+  const inspect = (path, diagnostics, what) => {
     const errors = [];
-    for (const d of result.diagnostics ?? []) {
+    for (const d of diagnostics ?? []) {
       if (d.level === 'error') errors.push(d);
       else if (!warned.has(`${d.level}:${d.messageText}`)) {
         warned.add(`${d.level}:${d.messageText}`);
@@ -274,10 +292,89 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
       }
     }
     if (errors.length) {
-      const err = new Error(`Stencil render of ${path} failed: ${errors.map((d) => d.messageText).join('; ')}`);
+      const err = new Error(`Stencil render of ${path}${what ? ` (${what})` : ''} failed: ${errors.map((d) => d.messageText).join('; ')}`);
       err.diagnostics = errors;
       throw err;
     }
+  };
+
+  // The `<html>` tag Stencil writes for a document opening with `tag` and these options, from a render of an empty page: it does not depend on
+  // the page, so a response can start with it before anything has rendered. One probe per tag and options (the build id, the mode, the
+  // language are in them), kept; a probe that failed is not.
+  const probes = new Map();
+  const probe = (tag, options) => {
+    let key;
+    try {
+      key = JSON.stringify([tag, { ...options, fullDocument: undefined, idBase: undefined }]);
+    } catch {
+      key = null; // options that are not plain data: no memo, a render each time
+    }
+    let tagged = key === null ? undefined : probes.get(key);
+    if (!tagged) {
+      tagged = fragmentRender(`${tag}<head></head><body></body></html>`, { ...options, fullDocument: true, idBase: 0 }).then((r) => probedHtmlTag(r.html));
+      if (key !== null) {
+        if (probes.size >= 32) probes.delete(probes.keys().next().value);
+        probes.set(key, tagged);
+        tagged.catch(() => probes.delete(key));
+      }
+    }
+    return tagged;
+  };
+
+  // A view with islands, split and with every render started: the shell and the islands at once (on the pool they spread over the threads).
+  const islandPage = (path, html, split, options) => {
+    if (isScoped(options)) throw new IslandError(`${path}: islands need serializeShadowRoot to be 'declarative-shadow-dom' (the default), not scoped mode (docs/islands.md)`);
+    const { idStride: stride } = islandsConfig;
+    if (!Number.isSafeInteger((split.islands.length + 1) * stride)) throw new IslandError(`${path}: ${split.islands.length} islands with an idStride of ${stride} overflow the hydration id range`);
+    const document = options.fullDocument !== false && (options.fullDocument || isDocument(html));
+    const base = { ...options, fullDocument: document };
+    const early = islandsConfig.earlyHead && document ? earlyHeadParts(split.shell) : null;
+    return createIslandPage({
+      split,
+      view: path,
+      document,
+      stride,
+      shell: fragmentRender(split.shell, { ...base, idBase: 0 }),
+      parts: split.islands.map((isl, i) => (isl.html.trim() ? fragmentRender(isl.html, { ...base, fullDocument: false, idBase: (i + 1) * stride }) : null)),
+      earlyHead: early && probe(early.htmlTag, base).then((tag) => tag + early.rest),
+      inspect: (label, result) => inspect(path, result.diagnostics, label),
+    });
+  };
+
+  // The view as markup and the options of its render.
+  const prepare = async (path, locals) => {
+    const html = engine ? await fill(path, locals) : await read(path, locals.cache);
+    const options = { ...renderOptions, ...locals.stencil };
+    options.fullDocument ??= isDocument(html);
+    return { html, options };
+  };
+
+  // The island page of a view, or null if the view has no islands (or the engine no `islands` option).
+  const renderIslands = async (path, locals = {}) => {
+    if (!islandsConfig) return null;
+    const { html, options } = await prepare(path, locals);
+    return islandsOf(path, html, options);
+  };
+  const islandsOf = (path, html, options) => {
+    if (!/<stencil-island/i.test(html)) return null; // the common case: nothing to scan
+    let split;
+    try {
+      split = splitIslands(html);
+    } catch (e) {
+      if (e instanceof IslandError) e.message = `${path}: ${e.message}`;
+      throw e;
+    }
+    return split ? islandPage(path, html, split, options) : null;
+  };
+
+  const render = async (path, locals) => {
+    const { html, options } = await prepare(path, locals);
+    if (islandsConfig) {
+      const page = islandsOf(path, html, options);
+      if (page) return page.html();
+    }
+    const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
+    inspect(path, result.diagnostics);
     return result.html;
   };
 
@@ -285,9 +382,24 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     // A promise chain, not an async function: Express's callback must be called once, and a throw inside it must not re-enter the catch.
     render(path, options ?? {}).then((html) => callback(null, html), (err) => callback(err));
   };
-  express.ready = pool ? pool.ready : warming ? warmInProcess() : Promise.resolve();
+  // Early head: probe the `<html>` tag of the warm-up documents (or `<html lang="en">`) now, so the first request already has it. A failed probe is not
+  // the engine's failure: the request that needs it probes again.
+  const probeAtStartup = async () => {
+    if (!islandsConfig?.earlyHead) return;
+    const tags = new Set();
+    for (const w of warmItems ? await warmItems.catch(() => []) : []) {
+      const split = w.options.fullDocument ? splitIslands(w.html) : null;
+      const parts = split && earlyHeadParts(split.shell);
+      if (parts) tags.add(parts.htmlTag);
+    }
+    if (!tags.size) tags.add('<html lang="en">');
+    await Promise.all([...tags].map((t) => probe(t, { ...renderOptions, fullDocument: true }).catch(() => {})));
+  };
+  const started = pool ? pool.ready : warming ? warmInProcess() : Promise.resolve();
+  express.ready = islandsConfig?.earlyHead ? started.then(probeAtStartup) : started;
   express.ready.catch(() => {}); // `ready` reports it; an unobserved rejection must not crash the server
   express.renderFragment = renderFragment;
+  express.renderIslands = renderIslands;
   express.renderCache = cached; // `.clear()` and `.stats()`, or null
   express.close = async () => void (await pool?.close());
   return express;

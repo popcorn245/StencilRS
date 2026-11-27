@@ -125,6 +125,11 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
   `idBase: 0` also makes a whole page reproducible from one request to the next, provided you pass a fixed `buildId` too (otherwise
   `data-stencil-build` is random per render); without `idBase` the ids of a page keep growing with every render in the process.
   It needs the `idBase` runtime patch, on by default in `buildHydrate`.
+- **`islands`** (experimental, declarative shadow DOM only): `stencilEngine({ islands: {} })` lets a view mark parts of itself `<stencil-island name="feed" client="visible">...</stencil-island>`.
+  The engine renders the shell and each island separately, in parallel on the pool and with their own `idBase` ranges (`idStride`, default 1000, ids per island), tags each island's
+  top-level elements `data-island` / `data-client`, writes each component style once per page, and answers `res.render` with one assembled page. A view without islands is
+  rendered exactly as before. An island directly inside a non-shadow component with slots, a nested island, or scoped rendering is an error. `earlyHead: true` and
+  `engine.renderIslands(path)` are the seams for a streaming responder. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the
   render: Express's callback receives an `Error` with the diagnostics on `err.diagnostics`.
 
