@@ -137,6 +137,19 @@ test('page.clientManifest() and bootTag() on renderIslands', async () => {
   assert.match(await page.bootTag(), /^<link rel="modulepreload"/);
 });
 
+test('engine.stream writes the same boot before </body> in the closing chunk, in order and out of order, and strips static islands too', async () => {
+  const bootOf = (page) => /<link rel="modulepreload"[\s\S]*<\/script>(?=<\/body>)/.exec(page)?.[0];
+  for (const mode of ['in-order', 'out-of-order']) {
+    const chunks = [];
+    for await (const c of engine.stream(view, {}, { mode })) chunks.push(c);
+    const page = chunks.join('');
+    assert.equal((page.match(/id="stencil-islands"/g) ?? []).length, 1, mode);
+    assert.equal(bootOf(page), bootOf(html), `${mode}: the boot equals the one res.render writes`);
+    assert.match(chunks.at(-1), /<script type="module" src="\/islands\.js"><\/script><\/body>/, `${mode}: in the chunk that closes the page`);
+    assert.match(page, /<div data-island="s" data-client="static" id="s"><isl-counter(?![^>]* s-id=)/, `${mode}: the static island has no annotations`);
+  }
+});
+
 test('the boot script is about 1.5 KB gzipped', () => {
   const boot = files.get('islands.js');
   assert.ok(boot, 'hydrateClient.islands emits islands.js');

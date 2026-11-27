@@ -228,7 +228,7 @@ export const stripAnnotations = (html) => html.replace(/ (?:s-id|c-id|s-sn|s-mod
 const styleTag = (s) => `<style${s.id ? ` sty-id="${String(s.id).replace(/"/g, '&quot;')}"` : ''}>${s.content}</style>`;
 
 /** Writes each style once per page: `fresh(styles)` is the tags of the ones not seen yet. */
-const createDeduper = (seed = []) => {
+export const createDeduper = (seed = []) => {
   const seen = new Set(seed.map((s) => s.id ?? s.content));
   return (styles) => {
     let out = '';
@@ -392,7 +392,13 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
     async clientManifest() {
       const { result } = await cutShell();
       const tagsOf = (components) => [...new Set(components.map((c) => c.tag))].sort();
-      const list = await Promise.all(split.islands.map(async (isl, slot) => ({ name: isl.name, client: isl.client, tags: tagsOf((await part(slot)).components) })));
+      // An island that failed to render (a streamed page replaced it with a fallback) is listed as `none`: nothing to load for it.
+      const list = await Promise.all(
+        split.islands.map(async (isl, slot) => {
+          const got = await part(slot).then((r) => r, () => null);
+          return got ? { name: isl.name, client: isl.client, tags: tagsOf(got.components ?? []) } : { name: isl.name, client: 'none', tags: [] };
+        })
+      );
       return { shell: tagsOf(result.components ?? []), islands: list };
     },
 
@@ -400,6 +406,8 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
     async bootTag() {
       return client ? client(await page.clientManifest()) : '';
     },
+    /** What a streaming responder (express-stream.js) assembles its own chunks from: the early head, the cut shell, an island's render. */
+    pieces: { head: earlyHead, cut: cutShell, part, document },
 
     /** Per island, once rendered: what the client side will want (`components` for a per-island manifest). Settles when every island has. */
     async manifest() {

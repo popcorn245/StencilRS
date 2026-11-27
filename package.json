@@ -68,6 +68,7 @@
     "express-islands.js",
     "islands-client.js",
     "islands-manifest.js",
+    "express-stream.js",
     "express-worker.js",
     "vite.js",
     "vite-css.js",
