@@ -152,6 +152,7 @@ export default defineConfig({
             { text: 'API', link: '/guide/api' },
             { text: 'Testing', link: '/guide/testing' },
             { text: 'Server-side rendering', link: '/guide/ssr' },
+            { text: 'Islands and directives', link: '/guide/islands' },
             { text: 'Migrating to Stencil v5', link: '/guide/migrating' },
           ],
         },

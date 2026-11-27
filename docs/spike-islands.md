@@ -1,5 +1,7 @@
 # Spike: islands and HTML streaming for the SSR / Express engine (issue #183)
 
+> **Status: built.** Everything proposed here shipped as `stencilEngine({ islands })` (#190-#196) except scoped mode and context-carrying islands; [What shipped](#what-shipped-against-what-was-proposed) compares the two, with the final numbers. The reference is [islands.md](islands.md); the text below is the spike as it was written.
+
 A one-day prototype with measurements. Nothing here is library code: the prototype lives in `examples/ionic/spike/islands/`, the only
 patch to Stencil's runner is a text edit of the built hydrate app done by `make-idbase-hydrate.mjs`, and no file under the package root
 changed. Everything is Ionic 9.0.12 (migrated to Stencil 5.0.0-beta.25), the pages `list-50` and `kitchen-sink` of `ssr-pages.mjs`
@@ -23,6 +25,63 @@ finish. The client can then hydrate islands individually (`load`, `idle`, `visib
 
 Reproduce (from `examples/ionic`): `npm run build:hydrate`, copy `spike/islands/stencil.client.config.ts` to `migrated/` and build the
 client (command in its header), `node spike/islands/make-idbase-hydrate.mjs`, then the scripts named in each section.
+
+## What shipped against what was proposed
+
+| proposed | shipped |
+|---|---|
+| `idBase` as a guarded runner patch | #190, as proposed (`idBase` render option, differential test, guard). Stride 1000 and the overflow check, which names the island |
+| `renderFragment` returning `{ html, styles, components, hydratedCount }` | #190, in-process and on the pool |
+| `<stencil-island>` scan, split, placement check, root tagging | #191, as proposed. Added: errors carry `ESTENCIL_ISLAND`, the view and the line; a text-only island is an error |
+| `islands: { stream: 'in-order' \| 'out-of-order' \| false, earlyHead, idStride }` | the engine takes `earlyHead`, `idStride`, `cache` and `client`; the stream mode is an option of `streamView` / `engine.stream` (`mode`), not of the engine |
+| streaming responder, flush policy, failures, abort | #192: `engine.stream` and `streamView`; gzip with a sync flush per chunk (`compress`), adjacent ready islands share a chunk (`coalesce`); an island that fails after bytes are out becomes a fallback and goes to `onError`; a closed socket cancels the renders that have not started |
+| out-of-order with a `<noscript>` reveal and a nonce | #192, as proposed; the swap is a `<div hidden>` container, never a `<template>` (DSD does not parse inside one), and fires `stencil-islands` |
+| early head with a probed `<html>` tag | #192, as proposed; the shell's styles go at the top of `<body>` |
+| island cache (a beyond-the-plan gain) | #193 `islands.cache`: key on the island's html, options and `idBase`, per-marker `cache="N"`, shares concurrent misses; the shell is never cached and `renderCache` is bypassed for a view with islands |
+| per-island client chunks | #194 `hydrateClient`: one module per tag and `components.json`, with the chunks each imports. Not an island bundle: the grouping is per page and per request, from `result.components` (merging would need the island-to-tags manifest at build time and a second bundling pass) |
+| `@popcorn245/stencilrs/islands`, the five directives, `connectedCallback` gate, manifest, ready events | #195, 1.5 KB; the engine writes the manifest and `modulepreload` links (`islands.client`), `engine.stream` writes the boot. Added: the one-synchronous-define-pass rule, which the spike's loader lacked and which `ion-tabs` needs |
+| example app, docs | #196: `examples/islands`, `npm run bench:islands`, the guide page and the README section |
+
+Not as proposed: scoped mode is refused (not made to work), and an island does not carry its ancestors' context.
+
+### The numbers, spike against shipped
+
+The same pages, the same method (interleaved, medians, min-max), a different day on the same kind of shared container, so the ranges are what to read. Spike's first, shipped second; the full tables and `n` are in [islands.md](islands.md#checks-and-numbers).
+
+| | spike | shipped (`npm run bench:islands`) |
+|---|---|---|
+| first byte, in order, list-50 / kitchen-sink | 39.6 -> 5.4 / 31.6 -> 7.0 ms | 48.4 -> 5.9 / 32.3 -> 8.7 ms (-88% / -73%) |
+| first byte, early head | 2.5 / 3.5 ms | 2.9 / 2.7 ms (-94% / -92%) |
+| last byte, in order | -28% / -30% | -23% / -16%, ranges overlap `full`'s: the direction, not the size |
+| parallel renders alone (`noisl`, now `islands`) | -21% / -15% | -10% / -9%, within noise |
+| gzip size of streamed pages | +12..22% | -1% .. +2% (a flush per island, not per write; 1 MB html pages) |
+| requests/s at concurrency 4 | -5..-9% / -20..-26% | within noise of `full` (-5% / -8%, ranges overlap), early head kitchen-sink -19% |
+| requests/s, static islands cached | not measured | **+55% / +38%**, ranges clear of `full`'s |
+| FCP unthrottled, in order / out of order | -35% / -24% list-50, -37% / -33% kitchen-sink | -38% / -44% list-50, -29% / -25% kitchen-sink (ranges overlap on list-50) |
+| FCP on the RTT-split Fast 3G, best case | -5..-8% | -4..-6%, kitchen-sink out of order -10%; the rest inside the spread |
+| client script, kitchen-sink, deferred static, vs all | -52% (dev build) | **-38%** (production build; the spike's boot on it: -43%) |
+| client JS requested | -57% | **-47%** (the spike's boot: -47%) |
+| ready | about -40% | -33% |
+| list-50 (no code saved) | script -41..-51%, ready -11..-23% | script -28%, ready -24%, ranges overlap |
+
+Read: the latency results reproduce, and the first byte is the robust one. The last byte and throughput results did not: the shipped renders cost what the spike's did (the fixed cost per render is the same), but the parallel win is smaller on this run and the throughput loss is
+inside the noise, so the spike's "wins latency, loses capacity" is now "wins latency, capacity unchanged within what could be measured, and recovered (and more) when the static islands are cached". The bytes cost vanished with a flush per island. The client gains are the same
+kind of gain on a production build (smaller in percent, since minified code has less to skip).
+
+### Follow-ups, status
+
+Done: 1 (#190), 2 (#190), 3 (#191), 4 (#192), 5 (#192), 6 (#192), 8 (#195), 9 (#195, as per-tag modules, see above), 10 (#193), 13 (#196). 7 is half done: the styles are written once per page, and the client still adds its own
+copy of each `style[sty-id]` that an island wrote in the body to `<head>`. Open:
+
+- **11. Scoped mode** (M, investigation): why a full scoped page hydrates to a different DOM than the islands page, and which is right. The engine refuses `serializeShadowRoot: 'scoped'` until then.
+- **12. Context-carrying islands** (M): render an island inside its ancestors and cut the wrapper out, so `in-list` / `role` are in the server html (the client adds them on hydration).
+- **7b. The duplicate `style[sty-id]` in the body** (S-M): a Stencil client lookup change (upstream), or hoisting the islands' styles into `<head>` when the head is not yet sent.
+- **14. Per-render fixed cost** (tracked in #182 / #189): an island is a render, and a page with `n` islands pays it `n + 1` times; any cut there pays out first on islands.
+- **Re-hydration after client-side navigation**: the directives are per page load.
+- **Real network and CDN, a cluster**: not measured; a page cache that is another process's gets islands from a cache with the same slot ids, which the key allows but nothing tests.
+- **The hydrating `ssr` build of Stencil against ionicons** (spike risk): still absent in this harness, so `check/islands.mjs` compares with Stencil's lazy-loader dev client, which needs the spike's `stencil build --dev` and was not rebuilt for this run (`check/islands-client.mjs` and the tests were).
+- **Upstream**: Stencil 5.0.0-beta.25's client logs `reading 'length'` / `reading 'nodeType'` on hydrate and re-render, as its own client does.
+- **Merged per-island bundles** (decided against, see islands.md): a build-time island-to-tags manifest and a second bundling pass.
 
 ## 1. Hydration ids
 

@@ -218,6 +218,8 @@ test('Chromium: every directive, per instance', { ...chromiumOnly, timeout: 120_
     const cell = (sel) => page.evaluate((s) => document.querySelector(s).shadowRoot.querySelector('button').textContent.trim(), sel);
     assert.equal(await cell('[data-island="a"] isl-counter'), 'A: 1');
     await page.locator('[data-island="a"] isl-counter button').click();
+    // the click re-renders on the next frame: wait for it rather than read at once (a fast machine reads before the render)
+    await page.waitForFunction(() => document.querySelector('[data-island="a"] isl-counter').shadowRoot.querySelector('button').textContent.trim() !== 'A: 1', null, { timeout: 5_000 }).catch(() => {});
     assert.equal(await cell('[data-island="a"] isl-counter'), 'A: 2');
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('isl-tab')].map((t) => t.active)), [true, false], 'isl-tabs reached its isl-tab children');
     assert.equal(await page.evaluate(() => window.__server.every((n) => n.isConnected)), true, 'every island root is the server\'s');
@@ -231,6 +233,7 @@ test('Chromium: every directive, per instance', { ...chromiumOnly, timeout: 120_
     const inert = await page.evaluate(() => Promise.all([...document.querySelectorAll('[data-island="s"] *, [data-island="n"] *')].filter((e) => e.localName.startsWith('isl-')).map(async (e) => [e.localName, typeof e.componentOnReady === 'function' && (await Promise.race([e.componentOnReady().then(() => 'ready'), new Promise((r) => setTimeout(() => r('never'), 300))]))])));
     assert.deepEqual(inert, [['isl-counter', 'never'], ['isl-tag', 'never'], ['isl-stamp', false], ['isl-counter', 'never']], 'upgraded where the tag is defined, never connected; the tag only they use is not even defined');
     await page.locator('#s isl-counter').evaluate((c) => c.shadowRoot.querySelector('button').click());
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))); // a re-render, if any, has happened
     await page.waitForTimeout(100);
     assert.equal(await cell('#s isl-counter'), 'S: 7', 'the static instance is the server\'s html: a click does nothing');
     assert.equal(await cell('#n isl-counter'), 'N: 9');

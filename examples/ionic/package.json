@@ -17,6 +17,7 @@
     "check": "node check/run.mjs",
     "bench": "node bench.mjs",
     "bench:ssr": "node bench-ssr.mjs",
+    "bench:islands": "node bench-islands-all.mjs",
     "all": "npm run fetch && npm run migrate && npm run build:stencil && npm run smoke"
   },
   "devDependencies": {

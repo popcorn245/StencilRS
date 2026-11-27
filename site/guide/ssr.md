@@ -125,17 +125,14 @@ app.get('/', (req, res) => res.render('home', { user: req.user }));
   `idBase: 0` also makes a whole page reproducible from one request to the next, provided you pass a fixed `buildId` too (otherwise
   `data-stencil-build` is random per render); without `idBase` the ids of a page keep growing with every render in the process.
   It needs the `idBase` runtime patch, on by default in `buildHydrate`.
-- **`islands`** (experimental, declarative shadow DOM only): `stencilEngine({ islands: {} })` lets a view mark parts of itself `<stencil-island name="feed" client="visible">...</stencil-island>`.
-  The engine renders the shell and each island separately, in parallel on the pool and with their own `idBase` ranges (`idStride`, default 1000, ids per island), tags each island's
-  top-level elements `data-island` / `data-client`, writes each component style once per page, and answers `res.render` with one assembled page. A view without islands is
-  rendered exactly as before. An island directly inside a non-shadow component with slots, a nested island, or scoped rendering is an error. `earlyHead: true` and
-  `engine.stream(path, locals)` and the Express handler `streamView(engine, 'home', locals, { mode, nonce, compress })` send the page as it renders: the shell at once, then each island in order, or
-  (`mode: 'out-of-order'`) as it finishes, moved into place by one inline script (`nonce` for a CSP, a `<noscript>` reveal). An island that fails after bytes are out is replaced by a fallback and logged; a
-  client that hangs up cancels the renders that have not started.
-  An island marked `cache` (or `cache="60"` for seconds) is rendered once and served from `islands.cache` (the `renderCache` shape; default on) with the ids of its slot; the shell never is.
-  `islands: { client: { base, manifest, init } }` also writes the page's client boot (a ~1.5 KB module,
-  `@popcorn245/stencilrs/islands`) that honors `client="load | idle | visible | static | none"` per island and loads only the components an active island uses; a `static` island is
-  rendered without hydration annotations. See [docs/islands.md](https://github.com/popcorn245/StencilRS/blob/next/docs/islands.md).
+- **`islands`** (experimental, declarative shadow DOM only): a view marks parts of itself `<stencil-island name="feed" client="visible" cache>...</stencil-island>`,
+  and `stencilEngine({ islands: {} })` renders the shell and each island separately and in parallel (each with its own `idBase` range), then puts the page back
+  together. A view without markers renders exactly as before. On top of that:
+  - `engine.stream(path, locals)` and `streamView(engine, 'home', locals, { mode })` send the page as it renders, in order or out of order (`earlyHead: true` also sends the head first);
+  - `cache` on an island keeps its render in `islands.cache`; the shell never is;
+  - `islands: { client: { base, manifest } }` writes the page's boot, which hydrates each island by its `client` directive (`load | idle | visible | static | none`) and loads only the components an active island uses.
+
+  Scoped rendering, nested islands and an island directly inside a non-shadow component with slots are errors. See [Islands and directives](/guide/islands).
 - **Diagnostics.** Warnings go to `onDiagnostic` (default `console.warn`), once per unique message. An `error` diagnostic fails the
   render: Express's callback receives an `Error` with the diagnostics on `err.diagnostics`.
 

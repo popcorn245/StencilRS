@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Islands</title>
+  <style>body{font:16px/1.5 system-ui,sans-serif;max-width:40em;margin:2em auto;padding:0 1em} section{border-top:1px solid #ddd;padding:1em 0}</style>
+</head>
+<body>
+  <h1>Islands</h1>
+  <p>The shell is rendered on every request. Each island is rendered on its own and sent as it finishes.</p>
+
+  <stencil-island name="counter" client="load">
+    <section><ex-counter></ex-counter></section>
+  </stencil-island>
+
+  <!-- 1.5 s of "data": the page and the counter are on screen long before this arrives -->
+  <stencil-island name="feed" client="visible">
+    <section><h2>Slow feed</h2><ex-feed delay="1500" items="alpha,beta,gamma"></ex-feed></section>
+  </stencil-island>
+
+  <!-- rendered once, then served from the island cache; never hydrated -->
+  <stencil-island name="footer" client="static" cache>
+    <section><ex-note>Served from the island cache, no JavaScript.</ex-note></section>
+  </stencil-island>
+</body>
+</html>
