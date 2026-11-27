@@ -26,6 +26,7 @@ import { createIslandPage, earlyHeadParts, IslandError, probedHtmlTag, splitIsla
 import { bootConfig, bootTag, insertBeforeBodyEnd, normalizeClient } from './islands-manifest.js';
 import { STREAM_MODES, streamPage, streamView } from './express-stream.js';
 import { createRenderCache } from './render-cache.js';
+import { createShadowStyleStore, externalizeShadowStyles } from './ssr-shadow-styles.js';
 
 /** A view that opens with a doctype or `<html>` is a document; anything else is rendered as a fragment. */
 const isDocument = (html) => /^\s*(?:<!--[\s\S]*?-->\s*)*<(?:!doctype\b|html[\s>])/i.test(html);
@@ -226,7 +227,7 @@ const createPool = ({ href, size, maxQueue, timeout, compileCache, warm, times }
  * @param [config.renderTimeout] ms a pooled render may take (default 30000, 0 = no limit); past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`
  * @returns an Express engine: `app.engine('ext', stencilEngine({ ... }))`, with `ready` (a promise: the app is loaded and warmed up; resolves at once without `warmup` or a pool; rejects when the app cannot load or a warm-up render fails, the engine stays usable after a failed warm-up) and `close()` (stops the workers)
  */
-export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false, renderCache = false, islands = false } = {}) => {
+export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnostic, workers = 0, maxQueue = 100, renderTimeout = 30_000, compileCache = true, warmup = false, renderCache = false, islands = false, shadowStyleLinks = false } = {}) => {
   if (hydrate == null) throw new TypeError('stencilEngine: `hydrate` is required');
   const size = workers === 'auto' ? Math.max(1, availableParallelism() - 1) : workers;
   if (!Number.isInteger(size) || size < 0) throw new TypeError("stencilEngine: `workers` must be a non-negative integer or 'auto'");
@@ -237,6 +238,9 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   if (!(typeof compileCache === 'boolean' || typeof compileCache === 'string')) throw new TypeError('stencilEngine: `compileCache` must be a boolean or a directory');
   if (!(renderCache === false || renderCache === true || (renderCache && typeof renderCache === 'object'))) throw new TypeError('stencilEngine: `renderCache` must be true, false or { max, maxBytes, ttl }');
   const islandsConfig = normalizeIslands(islands);
+  // Opt-in (docs/spike-dsd-styles.md): the per-root <style> of a declarative shadow DOM page becomes a <link> to a shared file in `engine.shadowStyles`.
+  const shadowStyles = shadowStyleLinks ? createShadowStyleStore(shadowStyleLinks === true ? {} : shadowStyleLinks) : null;
+  const shadowStyleOptions = { preload: !!(shadowStyleLinks && shadowStyleLinks.preload), minUses: (shadowStyleLinks && shadowStyleLinks.minUses) || 1 };
   // Before the hydrate app is imported (here or by a worker): the cache serves modules loaded after the call.
   enableCompileCache(compileCache);
   let pool = null;
@@ -418,7 +422,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
     }
     const result = await (cached ? cached(html, options, { cache: locals.stencilCache !== false }) : run(html, options));
     inspect(path, result.diagnostics);
-    return result.html;
+    return shadowStyles && !mayBeScoped(options) ? externalizeShadowStyles(result.html, shadowStyles, shadowStyleOptions).html : result.html;
   };
 
   // The page as chunks to write (express-stream.js): a view with islands as they come, any other view whole, as one chunk.
@@ -462,6 +466,7 @@ export const stencilEngine = ({ hydrate, engine, renderOptions = {}, onDiagnosti
   express.renderFragment = renderFragment;
   express.renderIslands = renderIslands;
   express.stream = stream;
+  express.shadowStyles = shadowStyles; // the sheets store (`app.use(store.base, store.middleware())`), or null
   express.renderCache = cached; // `.clear()` and `.stats()`, or null
   express.islandCache = islandCache; // the per-island cache: `.clear()` and `.stats()`, or null
   express.close = async () => void (await pool?.close());

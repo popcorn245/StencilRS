@@ -1,0 +1,22 @@
+--- /root/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/grass_compiler-0.13.4/src/evaluate/visitor.rs	2006-07-24 01:21:28.000000000 +0000
++++ src/evaluate/visitor.rs	2026-11-27 07:22:18.389883346 +0000
+@@ -840,12 +840,13 @@
+         macro_rules! try_path_with_extensions {
+             ($path:expr) => {
+                 let path = $path;
+-                try_path!(path.with_extension("import.sass"));
+-                try_path!(path.with_extension("import.scss"));
+-                try_path!(path.with_extension("import.css"));
+-                try_path!(path.with_extension("sass"));
+-                try_path!(path.with_extension("scss"));
+-                try_path!(path.with_extension("css"));
++                let app = |e: &str| { let mut o = path.as_os_str().to_owned(); o.push(e); PathBuf::from(o) };
++                try_path!(app(".import.sass"));
++                try_path!(app(".import.scss"));
++                try_path!(app(".import.css"));
++                try_path!(app(".sass"));
++                try_path!(app(".scss"));
++                try_path!(app(".css"));
+             };
+         }
+ 

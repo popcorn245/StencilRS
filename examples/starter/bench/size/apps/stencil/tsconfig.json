@@ -1,0 +1,1 @@
+{ "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler", "experimentalDecorators": true, "jsx": "react-jsx", "jsxImportSource": "@stencil/core", "strict": false, "skipLibCheck": true, "noEmit": true }, "include": ["src"] }

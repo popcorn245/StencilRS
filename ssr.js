@@ -365,3 +365,4 @@ export const buildHydrate = async (options = {}) => {
 
 
 export { createRenderCache } from './render-cache.js';
+export { createShadowStyleStore, externalizeShadowStyles } from './ssr-shadow-styles.js';

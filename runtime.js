@@ -17,8 +17,28 @@
 // Templates
 
 const MARK = 'rs';
+// Features. All on unless the build turns one off by defining its `__RS_FEAT_*__` constant as `false` (the Vite plugin's
+// `runtimeFeatures` option does, docs/spike-runtime-size.md): `typeof` on an undefined name is safe, so the bundler folds
+// each of these to a literal and the code behind a `false` one is dropped. A page that uses a feature the build turned off
+// is not supported (the component still renders, without that feature).
+/* eslint-disable no-undef */
+// Rendering on the server (runtime-server.js). A browser build never needs it.
+const F_SERVER = typeof __RS_FEAT_SERVER__ === 'undefined' || !!__RS_FEAT_SERVER__;
+// Hydration in place of server markup (claim scanning, deferred lists).
+const F_HYDRATE = typeof __RS_FEAT_HYDRATE__ === 'undefined' || !!__RS_FEAT_HYDRATE__;
+// Resuming: the state script, event delegation, waking components. Needs hydration.
+const F_RESUME = F_HYDRATE && (typeof __RS_FEAT_RESUME__ === 'undefined' || !!__RS_FEAT_RESUME__);
+// Components without shadow DOM: slot relocation, scoped and global style injection, `scoped` classes.
+const F_LIGHT = typeof __RS_FEAT_LIGHT__ === 'undefined' || !!__RS_FEAT_LIGHT__;
+// Signals as part values (`{count}`), Stencil's and TC39's.
+const F_SIGNALS = typeof __RS_FEAT_SIGNALS__ === 'undefined' || !!__RS_FEAT_SIGNALS__;
+// `h()` vnodes rendered by node parts, and spreads: code that calls `h` directly (functional components).
+const F_VNODE = typeof __RS_FEAT_VNODE__ === 'undefined' || !!__RS_FEAT_VNODE__;
+// The hot-reload hooks (runtime-hot.js), dev only.
+const F_HOT = typeof __RS_FEAT_HOT__ === 'undefined' || !!__RS_FEAT_HOT__;
+/* eslint-enable no-undef */
 // Set by `@popcorn245/stencilrs/runtime/server` before this module loads.
-const SERVER = !!globalThis.__RS_SERVER__;
+const SERVER = F_SERVER && !!globalThis.__RS_SERVER__;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
@@ -33,6 +53,7 @@ export const template = (html, parts, svg = false, host = null) => ({ html, part
 export const t = (tmpl, v, k) => ({ $t: tmpl, v, k });
 
 const prepare = (tmpl) => {
+  if (pending.size) for (const tag of pending.keys()) if (tmpl.html.includes(`<${tag}`)) ensureDefined(tag);
   const te = document.createElement('template');
   te.innerHTML = tmpl.svg ? `<svg>${tmpl.html}</svg>` : tmpl.html;
   let content = te.content;
@@ -57,9 +78,11 @@ const prepare = (tmpl) => {
   tmpl.order = order;
   // What hydration checks server nodes against, and which marks sit at the top level.
   const shape = (n) => (n.nodeType === 1 ? n.localName : n.nodeType);
-  tmpl.markShape = marked.map(shape);
-  tmpl.topMark = marked.map((n) => n.parentNode === content);
-  tmpl.topShape = Array.from(content.childNodes, shape);
+  if (F_HYDRATE) {
+    tmpl.markShape = marked.map(shape);
+    tmpl.topMark = marked.map((n) => n.parentNode === content);
+    tmpl.topShape = Array.from(content.childNodes, shape);
+  }
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -76,7 +99,7 @@ const prepare = (tmpl) => {
 const MISMATCH = { mismatch: true };
 const claim = (host, shape, make) => {
   if (!host) return make();
-  const map = host.__adoptMap;
+  const map = F_HYDRATE && host.__adoptMap;
   if (map) {
     const n = map.get(host.__seq++);
     if (n === undefined || (n.nodeType === 1 ? n.localName : n.nodeType) !== shape) throw MISMATCH;
@@ -89,11 +112,11 @@ const claim = (host, shape, make) => {
   }
   return n;
 };
-const adopting = (host) => !!(host && host.__adoptMap);
+const adopting = (host) => F_HYDRATE && !!(host && host.__adoptMap);
 
 const instantiate = (tmpl, host) => {
   if (!tmpl.el) prepare(tmpl);
-  if (adopting(host)) {
+  if (F_HYDRATE && adopting(host)) {
     const inst = adoptInstance(tmpl, host);
     inst.h = host;
     return inst;
@@ -122,7 +145,7 @@ const adoptInstance = (tmpl, host) => {
   let topParts = null;
   tmpl.parts.forEach(([m], i) => {
     const p = parts[i];
-    if (tmpl.topMark[m] && (p instanceof NodePart || p instanceof SlotPart)) (topParts ||= new Map()).set(p.m, p);
+    if (tmpl.topMark[m] && (p instanceof NodePart || (F_LIGHT && p instanceof SlotPart))) (topParts ||= new Map()).set(p.m, p);
   });
   return { tmpl, frag: document.createDocumentFragment(), parts, start, end: top[top.length - 1], top, topParts };
 };
@@ -149,7 +172,7 @@ const cloneInstance = (tmpl, host) => {
   // The top-level nodes and holes, for when a slotting host scatters them (see `place`).
   const top = Array.from(frag.childNodes);
   let topParts = null;
-  for (const p of parts) if ((p instanceof NodePart || p instanceof SlotPart) && p.m.parentNode === frag) (topParts ||= new Map()).set(p.m, p);
+  for (const p of parts) if ((p instanceof NodePart || (F_LIGHT && p instanceof SlotPart)) && p.m.parentNode === frag) (topParts ||= new Map()).set(p.m, p);
   return { tmpl, frag, parts, start, end: frag.lastChild, top, topParts, marked };
 };
 
@@ -157,7 +180,7 @@ const update = (inst, values, offset = 0) => {
   const parts = inst.parts;
   for (let i = 0; i < parts.length; i++) {
     const v = values[i + offset];
-    if (bound || (v !== null && typeof v === 'object' && isSignal(v))) bind(parts[i], v, inst.h);
+    if (F_SIGNALS && (bound || (v !== null && typeof v === 'object' && isSignal(v)))) bind(parts[i], v, inst.h);
     else parts[i].set(v);
   }
 };
@@ -176,8 +199,8 @@ const update = (inst, values, offset = 0) => {
 // A binding ends when its part is given another value or removed, and pauses while its component
 // is disconnected.
 
-let sig = globalThis.__RS_SIGNALS__ || null;
-globalThis.__RS_BIND__ = (s) => (sig = s);
+let sig = F_SIGNALS ? globalThis.__RS_SIGNALS__ || null : null;
+if (F_SIGNALS) globalThis.__RS_BIND__ = (s) => (sig = s);
 /** Whether any part was ever bound: until then, parts take their values without a look. */
 let bound = false;
 const subscribes = (v) => typeof v.peek === 'function' && typeof v.subscribe === 'function';
@@ -221,7 +244,7 @@ const unbindIn = (p, host) => {
 const unbindAll = (p, host) => {
   if (p.$s !== undefined) unbind(p, host);
   if (p instanceof NodePart) unbindIn(p, host);
-  else if (p instanceof SlotPart) unbindAll(p.fallback, host);
+  else if (F_LIGHT && p instanceof SlotPart) unbindAll(p.fallback, host);
 };
 
 // Native removal: a host's patched removeChild must not see the runtime's own work (and
@@ -248,13 +271,13 @@ const removeRange = (start, end) => {
 const nativeInsert = Node.prototype.insertBefore;
 const ins = (parent, node, ref) => nativeInsert.call(parent, node, ref);
 const place = (node, ref) => {
-  const lp = ref.__lp;
+  const lp = F_LIGHT ? ref.__lp : undefined;
   if (lp === undefined) ins(ref.parentNode, node, ref);
   else lp.__adopt(node, ref);
 };
 const drop = (n) => {
   detach(n);
-  const lp = n.__lp;
+  const lp = F_LIGHT ? n.__lp : undefined;
   if (lp !== undefined) {
     lp.__slotted.delete(n);
     n.__slot = null;
@@ -269,15 +292,15 @@ const instNodes = (inst, out) => {
   return out;
 };
 const partNodes = (p, out) => {
-  if (p instanceof SlotPart) {
+  if (F_LIGHT && p instanceof SlotPart) {
     for (const n of p.slotted) if (n.__slot === p) out.push(n);
     return partNodes(p.fallback, out);
   }
-  if (p.defer) p.undefer();
+  if (F_HYDRATE && p.defer) undefer.call(p);
   if (p.inst) instNodes(p.inst, out);
   else if (p.text) out.push(p.text);
   else if (p.node) out.push(p.node);
-  else if (p.hel) out.push(p.hel);
+  else if (F_VNODE && p.hel) out.push(p.hel);
   else if (p.list) for (const e of p.list) entryNodes(e, out);
   return out;
 };
@@ -288,8 +311,8 @@ const entryNodes = (e, out) => {
   return out;
 };
 const removeEntry = (e) => {
-  if (bound) unbindAll(e.part, e.part.host);
-  if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) drop(n);
+  if (F_SIGNALS && bound) unbindAll(e.part, e.part.host);
+  if (F_LIGHT && e.start.__lp !== undefined) for (const n of entryNodes(e, [])) drop(n);
   else removeRange(e.start, e.part.m);
 };
 
@@ -305,6 +328,9 @@ const moveRange = (start, end, parent, before) => {
 // ---------------------------------------------------------------------------------------------
 // Parts
 
+const off = (what) => {
+  throw new Error(`stencilrs runtime: ${what} is not in this build (runtimeFeatures)`);
+};
 const makePart = (type, node, name, svg, host) => {
   switch (type) {
     case 0: return new NodePart(node, host);
@@ -328,8 +354,8 @@ const makePart = (type, node, name, svg, host) => {
     case 3: return new ClassPart(node);
     case 4: return new StylePart(node);
     case 5: return new RefPart(node);
-    case 6: return new SpreadPart(node, svg);
-    case 7: return new SlotPart(node, name, host);
+    case 6: return F_VNODE ? new SpreadPart(node, svg) : off('spread');
+    case 7: return F_LIGHT ? new SlotPart(node, name, host) : off('<slot> outside shadow DOM');
     default: throw new Error(`stencilrs runtime: unknown part type ${type}`);
   }
 };
@@ -347,33 +373,11 @@ class NodePart {
     this.list = null;
     this.defer = null;
   }
-  /** A list kept as the server rendered it, adopted only once something in it changes (see `setList`). */
-  undefer() {
-    const d = this.defer;
-    this.defer = null;
-    const host = this.host;
-    const map = host.__adoptMap, seq = host.__seq;
-    const { map: mine, logical } = scan(null, host.__rsid, d.first, this.m);
-    host.__adoptMap = mine;
-    host.__seq = d.a;
-    try {
-      this.setList(d.v);
-      unmark(mine, logical);
-    } catch (e) {
-      if (e !== MISMATCH) throw e;
-      // Not what the server rendered: its nodes go, and the list renders from scratch.
-      for (const n of mine.values()) detach(n);
-      this.list = null;
-    } finally {
-      host.__adoptMap = map;
-      host.__seq = seq;
-    }
-  }
   clear() {
-    if (this.defer) this.undefer();
-    if (bound) unbindIn(this, this.host);
+    if (F_HYDRATE && this.defer) undefer.call(this);
+    if (F_SIGNALS && bound) unbindIn(this, this.host);
     if (this.inst) {
-      if (this.inst.start.__lp !== undefined) for (const n of instNodes(this.inst, [])) drop(n);
+      if (F_LIGHT && this.inst.start.__lp !== undefined) for (const n of instNodes(this.inst, [])) drop(n);
       else removeRange(this.inst.start, this.inst.end);
       this.inst = null;
     } else if (this.text) {
@@ -385,47 +389,21 @@ class NodePart {
     } else if (this.list) {
       for (const e of this.list) removeEntry(e);
       this.list = null;
-    } else if (this.hel) {
+    } else if (F_VNODE && this.hel) {
       drop(this.hel);
       this.hel = null;
     }
   }
-  /** A vnode from `h()` called directly: one element, patched in place while the tag holds. */
-  setH(v) {
-    if (v.tag === Fragment) {
-      if (!this.list) this.clear();
-      this.setList(v.children);
-      return;
-    }
-    if (!this.hel || this.htag !== v.tag) {
-      this.clear();
-      const parent = this.m.parentNode;
-      const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
-      const adopt = adopting(this.host);
-      const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
-      const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
-      // Its props may hold handlers and refs, which the client must run.
-      if (SERVER && this.host) this.host.__live = (this.host.__live | 0) + 1;
-      this.hel = el;
-      this.htag = v.tag;
-      this.hprops = new SpreadPart(el, svg);
-      this.hkids = new NodePart(marker, this.host);
-      if (!adopt) place(el, this.m);
-    }
-    this.hprops.set(v.props);
-    if (v.sc && !this.hel.classList.contains(v.sc)) this.hel.classList.add(v.sc);
-    this.hkids.set(v.children);
-  }
   set(v) {
     if (v === this.v && (v === null || typeof v !== 'object')) return;
-    if (this.defer) {
+    if (F_HYDRATE && this.defer) {
       if (same(v, this.defer.v)) return;
-      this.undefer();
+      undefer.call(this);
     }
     if (v == null || v === false || v === true) {
       this.clear();
-    } else if (v.$h === 1) {
-      this.setH(v);
+    } else if (F_VNODE && v.$h === 1) {
+      setH.call(this, v);
     } else if (v.$t !== undefined) {
       if (this.inst && this.inst.tmpl === v.$t) {
         update(this.inst, v.v);
@@ -438,7 +416,7 @@ class NodePart {
       }
     } else if (Array.isArray(v)) {
       const d = this.m.__rsd;
-      if (d && !this.list && adopting(this.host)) {
+      if (F_HYDRATE && d && !this.list && adopting(this.host)) {
         // Server-rendered with nothing in it to run (no events, refs or slots of this host, and
         // every component in it resumes with its own state): kept as it is until it changes.
         this.defer = { v, a: d.a, b: d.b, first: d.first };
@@ -451,7 +429,7 @@ class NodePart {
       this.setList(v);
     } else if (v instanceof Node) {
       if (this.node !== v) {
-        if (adopting(this.host)) throw MISMATCH; // a node from outside: the server's is another
+        if (F_HYDRATE && adopting(this.host)) throw MISMATCH; // a node from outside: the server's is another
         this.clear();
         place(v, this.m);
         this.node = v;
@@ -509,7 +487,7 @@ class NodePart {
           place(e.part.m, ref);
         }
       } else if (!keep[i]) {
-        if (e.start.__lp !== undefined) for (const n of entryNodes(e, [])) place(n, ref);
+        if (F_LIGHT && e.start.__lp !== undefined) for (const n of entryNodes(e, [])) place(n, ref);
         else moveRange(e.start, e.part.m, parent, ref);
       }
       e.part.set(items[i]);
@@ -525,6 +503,58 @@ class NodePart {
   }
 }
 
+/* Methods of NodePart that are features of their own, outside the class so that a build without them drops them. */
+/** A list kept as the server rendered it, adopted only once something in it changes (see `setList`). */
+function undefer() {
+  const d = this.defer;
+  this.defer = null;
+  const host = this.host;
+  const map = host.__adoptMap, seq = host.__seq;
+  const { map: mine, logical } = scan(null, host.__rsid, d.first, this.m);
+  host.__adoptMap = mine;
+  host.__seq = d.a;
+  try {
+    this.setList(d.v);
+    unmark(mine, logical);
+  } catch (e) {
+    if (e !== MISMATCH) throw e;
+    // Not what the server rendered: its nodes go, and the list renders from scratch.
+    for (const n of mine.values()) detach(n);
+    this.list = null;
+  } finally {
+    host.__adoptMap = map;
+    host.__seq = seq;
+  }
+}
+
+/** A vnode from `h()` called directly: one element, patched in place while the tag holds. */
+function setH(v) {
+  if (v.tag === Fragment) {
+    if (!this.list) this.clear();
+    this.setList(v.children);
+    return;
+  }
+  if (!this.hel || this.htag !== v.tag) {
+    this.clear();
+    const parent = this.m.parentNode;
+    const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
+    const adopt = adopting(this.host);
+    if (pending.size) ensureDefined(v.tag);
+    const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
+    const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
+    // Its props may hold handlers and refs, which the client must run.
+    if (SERVER && this.host) this.host.__live = (this.host.__live | 0) + 1;
+    this.hel = el;
+    this.htag = v.tag;
+    this.hprops = new SpreadPart(el, svg);
+    this.hkids = new NodePart(marker, this.host);
+    if (!adopt) place(el, this.m);
+  }
+  this.hprops.set(v.props);
+  if (v.sc && !this.hel.classList.contains(v.sc)) this.hel.classList.add(v.sc);
+  this.hkids.set(v.children);
+}
+
 /** Whether two part values render the same: templates, vnodes, arrays and plain objects by content. */
 const same = (a, b) => {
   if (a === b) return true;
@@ -535,7 +565,7 @@ const same = (a, b) => {
     return true;
   }
   if (a.$t !== undefined) return a.$t === b.$t && a.k === b.k && same(a.v, b.v);
-  if (a.$h === 1) return b.$h === 1 && a.tag === b.tag && a.k === b.k && same(a.props, b.props) && same(a.children, b.children);
+  if (F_VNODE && a.$h === 1) return b.$h === 1 && a.tag === b.tag && a.k === b.k && same(a.props, b.props) && same(a.children, b.children);
   if (Object.getPrototypeOf(a) !== Object.prototype || Object.getPrototypeOf(b) !== Object.prototype) return false;
   const ka = Object.keys(a);
   if (ka.length !== Object.keys(b).length) return false;
@@ -1021,6 +1051,7 @@ const waiting = new Map();
 const waitTypes = new Set();
 const wakeFor = (type, path) => {
   if (!waitTypes.has(type)) return;
+  if (pending.size) for (const n of path) if (n.nodeType === 1 && pending.has(n.localName)) ensureDefined(n.localName);
   let up = null;
   for (let j = 0; j < path.length; j++) {
     const n = path[j];
@@ -1043,9 +1074,50 @@ const wakeFor = (type, path) => {
     }
     if (host) (up ||= []).push(host);
   }
-  if (up) for (let i = up.length - 1; i >= 0; i--) up[i].__resume();
+  if (up) for (let i = up.length - 1; i >= 0; i--) resumeEl.call(up[i]);
 };
 const wake = (e) => wakeFor(e.type, e.composedPath());
+// Lazy define (opt-in, `ld` on the state script: "wake" or "idle"): a tag whose every instance on the
+// page waits isn't registered until something needs it: an event on one of its instances (`wakeFor`), a
+// template or element the client renders with the tag (`ensureDefined` in `prepare` and the node
+// part), or, with "idle", when the browser has nothing else to do. Until then its instances stay
+// plain HTMLElements, as the server wrote them.
+const pending = new Map();
+let lazyMode, lazyTags;
+const ensureDefined = (tag) => {
+  const Cstr = pending.get(tag);
+  if (Cstr) {
+    pending.delete(tag);
+    customElements.define(tag, Cstr);
+  }
+};
+const defineIdle = () => {
+  const run = () => {
+    for (const tag of pending.keys()) {
+      ensureDefined(tag);
+      break;
+    }
+    if (pending.size) later(run);
+  };
+  const later = (fn) => (globalThis.scheduler?.postTask ? scheduler.postTask(fn, { priority: 'background' }) : globalThis.requestIdleCallback ? requestIdleCallback(fn) : setTimeout(fn));
+  later(run);
+};
+/** True when the tag was held back: see above. */
+const deferDefine = (Cstr, tag) => {
+  if (SERVER) return false;
+  if (lazyMode === undefined) {
+    // `lt`: the tags the server found no instance of that hydrates on load.
+    const el = document.querySelector('script[type="rs/state"]');
+    lazyMode = el?.getAttribute('ld') || null;
+    lazyTags = new Set((el?.getAttribute('lt') || '').split(','));
+  }
+  if (!lazyMode || !lazyTags.has(tag) || !classCanWait(Cstr)) return false;
+  hasState(); // takes over from the inline catcher (events replay once the tag is defined)
+  delegate();
+  pending.set(tag, Cstr);
+  if (lazyMode === 'idle' && pending.size === 1) defineIdle();
+  return true;
+};
 const delegate = () => {
   if (delegating) return;
   delegating = true;
@@ -1063,50 +1135,8 @@ const HAS_LOADED = 1, QUEUED = 2, RENDERING = 4, CONNECTED_ONCE = 8, REFLECTING 
 /** Components loading now (not lazy, not loaded): when none, a parent has none to wait for. */
 let loading = 0;
 
-/** What every compiled component extends. */
-export class Base extends HTMLElement {
-  constructor() {
-    super();
-    this.__f = 0;
-    this.__v = new Map();
-    this.__root = null;
-    this.__host = null;
-    this.__seq = 0;
-    this.__ps = undefined;
-    // Properties set on the element before it was upgraded would shadow the accessors.
-    const meta = this.constructor.__meta;
-    let early = null;
-    for (const name of meta.names) {
-      if (Object.prototype.hasOwnProperty.call(this, name)) {
-        (early ||= []).push([name, this[name]]);
-        delete this[name];
-      }
-    }
-    this.__early = early;
-    if (hot) hot.track(this);
-  }
-  componentOnReady() {
-    this.__resume();
-    return this.__onReady;
-  }
-  /** Made on first use: most components on a resumed page are never asked. */
-  get __onReady() {
-    return (this.__rp ||= this.__f & READY ? Promise.resolve(this) : new Promise((r) => (this.__rr = r)));
-  }
-  /** The server's state for this component (see Resuming), taken when first needed. */
-  __state() {
-    const id = this.__ps;
-    this.__ps = undefined;
-    const s = stateOf(id);
-    if (s) for (const k in s) this.__v.set(k, s[k]);
-  }
-  __resume() {
-    if (!this.__lazy) return;
-    this.__lazy = false;
-    if (this.__ps !== undefined) this.__state();
-    waiting.delete(this.getAttribute('s-rs'));
-    this.__load();
-  }
+/** Slot relocation outside shadow DOM: the half of Base that routes children into `<slot>` parts (F_LIGHT). */
+class Light extends HTMLElement {
   /** A logical child, from another component's render or the page: into the slot it names. */
   __adopt(node, ref) {
     if (node.nodeType === 11) {
@@ -1168,18 +1198,50 @@ export class Base extends HTMLElement {
     }
     return super.removeChild(n);
   }
+}
+
+/** What every compiled component extends. */
+export class Base extends (F_LIGHT ? Light : HTMLElement) {
+  constructor() {
+    super();
+    this.__f = 0;
+    this.__v = new Map();
+    this.__root = null;
+    this.__host = null;
+    this.__seq = 0;
+    this.__ps = undefined;
+    // Properties set on the element before it was upgraded would shadow the accessors.
+    const meta = this.constructor.__meta;
+    let early = null;
+    for (const name of meta.names) {
+      if (Object.prototype.hasOwnProperty.call(this, name)) {
+        (early ||= []).push([name, this[name]]);
+        delete this[name];
+      }
+    }
+    this.__early = early;
+    if (F_HOT && hot) hot.track(this);
+  }
+  componentOnReady() {
+    if (F_RESUME) resumeEl.call(this);
+    return this.__onReady;
+  }
+  /** Made on first use: most components on a resumed page are never asked. */
+  get __onReady() {
+    return (this.__rp ||= this.__f & READY ? Promise.resolve(this) : new Promise((r) => (this.__rr = r)));
+  }
   connectedCallback() {
     const meta = this.constructor.__meta;
     if (!(this.__f & CONNECTED_ONCE)) {
       this.__f |= CONNECTED_ONCE;
       // Server-rendered on a resumable page: the component takes its state from the page, which
       // it does whether or not it waits (a parent that waits won't pass it its props).
-      const id = SERVER ? null : this.getAttribute('s-rs');
-      const resumed = id !== null && hasState();
+      const id = F_HYDRATE && !SERVER ? this.getAttribute('s-rs') : null;
+      const resumed = F_RESUME && id !== null && hasState();
       const wait = resumed && !this.hasAttribute('s-rh') && classCanWait(this.constructor);
       if (resumed) {
         this.__ps = id;
-        if (!wait) this.__state();
+        if (!wait) loadState.call(this);
       }
       if (this.__early) {
         for (const [k, v] of this.__early) this[k] = v;
@@ -1201,13 +1263,13 @@ export class Base extends HTMLElement {
       }
     } else {
       // Bindings paused while it was away follow their signals again.
-      if (this.__sb) for (const p of this.__sb) if (!p.$u) p.$u = follow(p);
+      if (F_SIGNALS && this.__sb) for (const p of this.__sb) if (!p.$u) p.$u = follow(p);
       this.__connected?.();
     }
   }
   disconnectedCallback() {
     // Unwatched, a shared signal no longer holds this element.
-    if (this.__sb) {
+    if (F_SIGNALS && this.__sb) {
       for (const p of this.__sb) {
         if (p.$u) p.$u();
         p.$u = null;
@@ -1224,11 +1286,11 @@ export class Base extends HTMLElement {
       console.error(e);
     }
     const meta = this.constructor.__meta;
-    const ssr = SERVER ? null : this.getAttribute('s-rs');
+    const ssr = F_HYDRATE && !SERVER ? this.getAttribute('s-rs') : null;
     if (ssr !== null) {
       this.removeAttribute('s-rs');
-      if (!this.__hydrate(ssr, meta)) {
-        if (hot) console.warn(`stencilrs: <${meta.tag}> rendered differently on the client than on the server, so it rendered again from scratch.`, this);
+      if (!hydrateEl.call(this, ssr, meta)) {
+        if (F_HOT && hot) console.warn(`stencilrs: <${meta.tag}> rendered differently on the client than on the server, so it rendered again from scratch.`, this);
         rehydrate(this, !!meta.shadow, ssr);
       }
     }
@@ -1239,15 +1301,17 @@ export class Base extends HTMLElement {
       if (meta.style) shadowStyle(root, this.constructor, meta.style);
       this.__target = root;
     } else {
-      if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
-      if (meta.scoped) this.classList.add(`sc-${meta.tag}-h`);
-      // Slot relocation: the host's own children wait here until a <slot> part takes them.
-      this.__slotted = new Set();
-      this.__slotParts = new Map();
-      for (const n of Array.from(this.childNodes)) {
-        n.__lp = this;
-        this.__slotted.add(n);
-        this.__stash(n);
+      if (F_LIGHT) {
+        if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
+        if (meta.scoped) this.classList.add(`sc-${meta.tag}-h`);
+        // Slot relocation: the host's own children wait here until a <slot> part takes them.
+        this.__slotted = new Set();
+        this.__slotParts = new Map();
+        for (const n of Array.from(this.childNodes)) {
+          n.__lp = this;
+          this.__slotted.add(n);
+          this.__stash(n);
+        }
       }
       this.__target = this;
     }
@@ -1271,54 +1335,6 @@ export class Base extends HTMLElement {
     }
     this.__f |= READY;
     this.__rr?.(this);
-  }
-  /** First render over server markup, keeping its nodes. False (and nothing kept) on a mismatch. */
-  __hydrate(id, meta) {
-    const shadow = !!meta.shadow;
-    const root = shadow ? this.shadowRoot : this;
-    if (!root || typeof this.render !== 'function') return false;
-    const { map, logical } = scan(root, id);
-    if (shadow) {
-      if (meta.style && canAdopt) {
-        shadowStyle(root, this.constructor, meta.style);
-        for (const st of Array.from(root.children)) if (st.localName === 'style' && st.hasAttribute('sty-id')) detach(st);
-      }
-    } else {
-      if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
-      this.__slotted = new Set();
-      this.__slotParts = new Map();
-      for (const n of logical) {
-        n.__lp = this;
-        this.__slotted.add(n);
-      }
-    }
-    this.__target = root;
-    this.__adoptMap = map;
-    this.__seq = 0;
-    this.__rsid = id;
-    this.__f &= ~DIRTY;
-    try {
-      this.__render(true);
-    } catch (e) {
-      if (e !== MISMATCH) console.error(e);
-      if (this.__sb) for (const p of this.__sb) unbind(p, this);
-      this.__root = this.__host = this.__hostT = null;
-      if (!shadow) {
-        for (const n of logical) n.__lp = undefined;
-        this.__slotted = this.__slotParts = undefined;
-      }
-      return false;
-    } finally {
-      this.__adoptMap = null;
-    }
-    unmark(map, logical);
-    this.removeAttribute('r:e');
-    if (this.hasAttribute('r:s')) {
-      this.__rss = true;
-      this.removeAttribute('r:s');
-    }
-    this.__f |= HAS_LOADED;
-    return true;
   }
   __render(first) {
     if (typeof this.render !== 'function') return;
@@ -1347,7 +1363,7 @@ export class Base extends HTMLElement {
           this.__hostT = out.$t;
           this.__host = out.$t.host.map(([type, name]) => makePart(type, this, name, false, this));
         }
-        for (let i = 0; i < this.__host.length; i++) bind(this.__host[i], out.v[i], this);
+        for (let i = 0; i < this.__host.length; i++) F_SIGNALS ? bind(this.__host[i], out.v[i], this) : this.__host[i].set(out.v[i]);
         if (this.__root.inst && this.__root.inst.tmpl === out.$t) {
           update(this.__root.inst, out.v, this.__host.length);
         } else {
@@ -1362,7 +1378,7 @@ export class Base extends HTMLElement {
         this.__root.set(out);
       }
       // Logical children whose slot this render removed go back to the host, hidden.
-      if (this.__slotted !== undefined && this.__slotted.size) {
+      if (F_LIGHT && this.__slotted !== undefined && this.__slotted.size) {
         for (const n of this.__slotted) if (n.nodeType === 1 && !this.contains(n)) this.__stash(n);
       }
     } catch (e) {
@@ -1379,7 +1395,7 @@ export class Base extends HTMLElement {
     }
   }
   __schedule() {
-    if (this.__lazy) return this.__resume();
+    if (F_RESUME && this.__lazy) return resumeEl.call(this);
     if (!(this.__f & HAS_LOADED)) {
       this.__f |= DIRTY;
       return;
@@ -1399,6 +1415,72 @@ export class Base extends HTMLElement {
     const des = meta.deserializers[name];
     this[name] = des ? this[des[0]](value, name) : value;
   }
+}
+
+// Base's hydration and resuming, outside the class so that a build without them drops them (`.call(el)`).
+/** The server's state for this component (see Resuming), taken when first needed. */
+function loadState() {
+  const id = this.__ps;
+  this.__ps = undefined;
+  const s = stateOf(id);
+  if (s) for (const k in s) this.__v.set(k, s[k]);
+}
+
+function resumeEl() {
+  if (!this.__lazy) return;
+  this.__lazy = false;
+  if (this.__ps !== undefined) loadState.call(this);
+  waiting.delete(this.getAttribute('s-rs'));
+  this.__load();
+}
+
+/** First render over server markup, keeping its nodes. False (and nothing kept) on a mismatch. */
+function hydrateEl(id, meta) {
+  const shadow = !!meta.shadow;
+  const root = shadow ? this.shadowRoot : this;
+  if (!root || typeof this.render !== 'function') return false;
+  const { map, logical } = scan(root, id);
+  if (shadow) {
+    if (meta.style && canAdopt) {
+      shadowStyle(root, this.constructor, meta.style);
+      for (const st of Array.from(root.children)) if (st.localName === 'style' && st.hasAttribute('sty-id')) detach(st);
+    }
+  } else if (F_LIGHT) {
+    if (meta.style) injectStyle(this.getRootNode(), this.constructor, meta.style);
+    this.__slotted = new Set();
+    this.__slotParts = new Map();
+    for (const n of logical) {
+      n.__lp = this;
+      this.__slotted.add(n);
+    }
+  }
+  this.__target = root;
+  this.__adoptMap = map;
+  this.__seq = 0;
+  this.__rsid = id;
+  this.__f &= ~DIRTY;
+  try {
+    this.__render(true);
+  } catch (e) {
+    if (e !== MISMATCH) console.error(e);
+    if (F_SIGNALS && this.__sb) for (const p of this.__sb) unbind(p, this);
+    this.__root = this.__host = this.__hostT = null;
+    if (F_LIGHT && !shadow) {
+      for (const n of logical) n.__lp = undefined;
+      this.__slotted = this.__slotParts = undefined;
+    }
+    return false;
+  } finally {
+    this.__adoptMap = null;
+  }
+  unmark(map, logical);
+  this.removeAttribute('r:e');
+  if (this.hasAttribute('r:s')) {
+    this.__rss = true;
+    this.removeAttribute('r:s');
+  }
+  this.__f |= HAS_LOADED;
+  return true;
 }
 
 /** `<Host>` and `<Fragment>` for `h()` called directly; compiled JSX never reaches them. */
@@ -1473,7 +1555,7 @@ export const forceUpdate = (el) => el.__schedule?.();
 export const define = (Cstr, meta, register = true) => {
   const existing = register ? customElements.get(meta.tag) : undefined;
   // A tag can't be defined twice: in dev the new class moves onto the registered one.
-  if (existing && existing !== Cstr && existing.__meta) return hot ? hot.swap(existing, Cstr, meta) : undefined;
+  if (existing && existing !== Cstr && existing.__meta) return F_HOT && hot ? hot.swap(existing, Cstr, meta) : undefined;
   meta.listeners ||= [];
   meta.names = Object.keys(meta.members);
   meta.watchers ||= {};
@@ -1504,7 +1586,7 @@ export const define = (Cstr, meta, register = true) => {
       configurable: true,
       enumerable: true,
       get() {
-        if (this.__ps !== undefined) this.__state();
+        if (F_RESUME && this.__ps !== undefined) loadState.call(this);
         return this.__v.get(name);
       },
       set(value) {
@@ -1514,10 +1596,10 @@ export const define = (Cstr, meta, register = true) => {
           this.__v.set(name, value);
           return;
         }
-        if (this.__ps !== undefined) this.__state();
+        if (F_RESUME && this.__ps !== undefined) loadState.call(this);
         const old = this.__v.get(name);
         if (old === value || (Number.isNaN(old) && Number.isNaN(value))) return;
-        if (this.__lazy) this.__resume(); // it renders what the server did, then this change
+        if (F_RESUME && this.__lazy) resumeEl.call(this); // it renders what the server did, then this change
         this.__v.set(name, value);
         // Attributes can't be written from a constructor: before the first connect, reflecting waits.
         if (reflects && this.__f & CONNECTED_ONCE) reflect(this, name, value);
@@ -1539,7 +1621,7 @@ export const define = (Cstr, meta, register = true) => {
   }
   Object.defineProperty(Cstr, '__meta', { value: meta });
   Object.defineProperty(Cstr, 'observedAttributes', { value: Object.keys(meta.attrs) });
-  if (register && !existing) customElements.define(meta.tag, Cstr);
+  if (register && !existing && !deferDefine(Cstr, meta.tag)) customElements.define(meta.tag, Cstr);
 };
 
 // Hot reload lives in runtime-hot.js, which the Vite plugin imports in dev only.
@@ -1553,7 +1635,7 @@ export const __hot = (h) => {
 /** Stencil's `createEvent`: `this.changed.emit(detail)`. */
 export const createEvent = (el, name, flags) => ({
   emit: (detail) => {
-    if (!SERVER) wakeAncestors(el, name);
+    if (F_RESUME && !SERVER) wakeAncestors(el, name);
     const ev = new CustomEvent(name, { bubbles: !!(flags & 4), composed: !!(flags & 2), cancelable: !!(flags & 1), detail });
     el.dispatchEvent(ev);
     return ev;

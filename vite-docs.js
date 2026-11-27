@@ -114,7 +114,7 @@ const virtualProperties = (docs) =>
     .filter(Boolean);
 
 /** The object literal `static get COMPILER_META()` returns (JSON strings, `undefined`, `null`, `true`, `false`, nesting). */
-const compilerMetaOf = (code) => {
+export const compilerMetaOf = (code) => {
   const at = code.indexOf('static get COMPILER_META()');
   if (at < 0) return null;
   const start = code.indexOf('return {', at) + 7;
