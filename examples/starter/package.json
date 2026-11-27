@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "build:lib": "vite build --config vite.lib.config.ts",
-    "new": "node scripts/new-component.mjs"
+    "new": "node scripts/new-component.mjs",
+    "smoke:gated": "node scripts/smoke-gated.mjs"
   },
   "devDependencies": {
     "@popcorn245/stencilrs": "file:../..",

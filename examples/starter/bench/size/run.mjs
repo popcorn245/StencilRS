@@ -1,7 +1,7 @@
 // Bundle size of the same tiny app (a counter: one prop, one state, a click handler, shadow DOM with a small
 // style, plus a keyed list of 10 items) built for production with Vite, in several frameworks.
 //
-//   npm install && node run.mjs [name ...]      (names: stencil stencilrs stencilrs-gated stencilrs-auto lit solid svelte preact qwik)
+//   npm install && node run.mjs [name ...]      (names: stencil stencilrs stencilrs-default stencilrs-gated stencilrs-auto lit solid svelte preact qwik)
 //
 // Prints raw / gzip / brotli of all JavaScript the page loads (the app has no CSS file: styles are in the JS).
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -17,8 +17,11 @@ const stencilrsPlugin = async (options) => (await need('@popcorn245/stencilrs/vi
 
 const variants = {
   stencil: { dir: 'stencil', plugins: async () => [await stencilrsPlugin({ runtime: 'stencil' })] },
-  stencilrs: { dir: 'stencil', plugins: async () => [await stencilrsPlugin({ runtime: 'stencilrs' })] },
-  // The same runtime with the features this app does not use compiled out (see docs/spike-runtime-size.md).
+  // The whole runtime (`runtimeFeatures: false`).
+  stencilrs: { dir: 'stencil', plugins: async () => [await stencilrsPlugin({ runtime: 'stencilrs', runtimeFeatures: false })] },
+  // The plugin's default (`runtimeFeatures` not set: 'auto' while DEFAULT_RUNTIME_FEATURES is).
+  'stencilrs-default': { dir: 'stencil', plugins: async () => [await stencilrsPlugin({ runtime: 'stencilrs' })] },
+  // The same runtime with the features this app does not use compiled out (see docs/runtime.md).
   'stencilrs-gated': {
     dir: 'stencil',
     plugins: async () => [await stencilrsPlugin({ runtime: 'stencilrs', runtimeFeatures: { server: false, hydrate: false, resume: false, light: false, signals: false, vnode: false, hot: false } })],

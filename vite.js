@@ -31,7 +31,7 @@
 // `extends Mixin(a, b)`) are read for their members, and the files they live in are served as
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
@@ -42,7 +42,7 @@ import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
 import { defaultBuildFlags, foldBuildReads, foldedAppDataModule, scanComponents, standaloneFlags } from './vite-fold.js';
 import { readCollections } from './ssr-collection.js';
-import { autoRuntimeFeatures, readSources, runtimeFeatureDefines } from './runtime-features.js';
+import { allFeatures, applyRuntimeFeatures, autoRuntimeFeatures, FeatureScan, lightOffError, resolveRuntimeFeatures } from './runtime-features.js';
 import { applyClientRuntimePatches } from './client-patches.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
@@ -73,6 +73,8 @@ const SIGNALS_OFF = 'signals are off: set `signals: true` in stencilrs() in your
 const SIGNALS_FILE = fileURLToPath(new URL('./signals.js', import.meta.url));
 const RUNTIME_FILE = fileURLToPath(new URL('./runtime.js', import.meta.url));
 const RUNTIME_HOT_FILE = fileURLToPath(new URL('./runtime-hot.js', import.meta.url));
+// The runtime's own files: what a module imports from them is not a use of the runtime (`runtimeFeatures`).
+const OWN_RUNTIME_FILES = new Set([RUNTIME_FILE, RUNTIME_HOT_FILE, SIGNALS_FILE, ...['runtime-server.js', 'islands-client.js'].map((f) => fileURLToPath(new URL(`./${f}`, import.meta.url)))]);
 const SIGNALS_PEERS = new Set(['@stencil/core', 'signal-polyfill']);
 const shippedPolyfill = () => fileURLToPath(import.meta.resolve('signal-polyfill'));
 // Folders at the project root that `stencil build` writes build output and caches into (`www`, `dist`,
@@ -225,7 +227,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] } }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] }, runtime?: 'stencil' | 'stencilrs', runtimeFeatures?: false | 'all' | 'auto' | { server?: boolean, hydrate?: boolean, resume?: boolean, light?: boolean, signals?: boolean, vnode?: boolean, hot?: boolean } }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -251,18 +253,53 @@ const SPEC_PAGE_OPTIONS = {
  *   `BUILD.hydrateClientSide` (the one `buildFlags: { hydrateClientSide: false }` turns off), and, in a production build, emits every component
  *   as a module of its own, `components/<tag>.js` (importing it defines the tag), with `components.json` mapping tag to module and to the
  *   shared chunks it imports. `{ split: false }`: the flag only; `{ manifest, dir }`: the manifest's file name (false: none), the folder.
- *   runtimeFeatures (experimental, `runtime: 'stencilrs'` production builds; docs/spike-runtime-size.md): compiles features of the runtime out of the bundle: `'auto'`
- *   (from the project's own `src`) or `{ server, hydrate, resume, light, signals, vnode, hot }`, each `false` to drop it. Unset: the whole runtime.
+ *   runtimeFeatures (default `'auto'`, `runtime: 'stencilrs'` production browser builds; docs/runtime.md): which optional parts of the runtime the bundle keeps. `'auto'`: the ones the
+ *   build's own modules use (components' encapsulation, `h()`, spreads, functional components, signals; `hydrate` and `resume` with `hydrateClient`), never `server` or `hot`;
+ *   a module the plugin cannot read counts as using what it might. `false` or `'all'`: the whole runtime. `{ server, hydrate, resume, light, signals, vnode, hot }`: each
+ *   `false` drops that part (one left out stays on); `light: false` with a component that is not shadow DOM fails the build.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, foldRuntimeFlags: foldOption = false, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', runtimeFeatures, ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, foldRuntimeFlags: foldOption = false, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', runtimeFeatures: runtimeFeaturesOption, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
   const ssr = componentExport === 'ssr';
+  // `runtimeFeatures`: `{ mode: 'all' | 'auto' | 'explicit', features? }` (runtime-features.js). Active in a production browser build of the stencilrs runtime (`config`).
+  const featureOption = resolveRuntimeFeatures(runtimeFeaturesOption);
+  const featureScan = new FeatureScan();
+  let featuresOn = false;
+  let featuresChosen = null; // a promise of this build's features, made when the runtime module is first transformed (`chooseFeatures`)
+  let buildInput = null;
+  // `runtimeFeatures`: the features the build needs. 'auto' loads the build's modules (`this.load` runs each one's transform, which fills `featureScan`) from its entries,
+  // without waiting for the runtime itself, whose transform is what asks: the constants must be literals before the bundler tree-shakes the runtime.
+  const chooseFeatures = (ctx) => {
+    featuresChosen ||= (async () => {
+      const { mode, features } = featureOption;
+      let chosen;
+      if (mode === 'all') chosen = allFeatures();
+      else if (mode === 'explicit') chosen = allFeatures(features);
+      else {
+        const seen = new Set();
+        const queue = [...[].concat(typeof buildInput === 'string' ? [buildInput] : Object.values(buildInput ?? {})), ...splitFiles.keys()];
+        while (queue.length) {
+          let id = queue.shift();
+          if (typeof id !== 'string') continue;
+          if (!isAbsolute(id) && !id.startsWith('\0')) id = (await ctx.resolve(id, undefined, { isEntry: true, skipSelf: false }))?.id;
+          if (!id || seen.has(id) || OWN_RUNTIME_FILES.has(id.split('?')[0])) continue;
+          seen.add(id);
+          const info = await ctx.load({ id, resolveDependencies: true });
+          queue.push(...info.importedIds, ...info.dynamicallyImportedIds);
+        }
+        chosen = autoRuntimeFeatures(featureScan.features(seen), { hydrateClient: !!hydrateClient, signals });
+      }
+      if (verbose) ctx.info?.(`[stencilrs] runtimeFeatures (${mode}): ${Object.entries(chosen).map(([k, v]) => `${k} ${v ? 'on' : 'off'}`).join(', ')}`);
+      return chosen;
+    })();
+    return featuresChosen;
+  };
   // `foldRuntimeFlags`: `true`, or `{ dirs }`, the folders (relative to the Vite root, default `src`) whose components set the flags.
   const foldRuntimeFlags = !!foldOption;
   const foldDirs = (typeof foldOption === 'object' && foldOption.dirs) || ['src'];
@@ -523,13 +560,10 @@ export function stencilrs(options = {}) {
     config(userConfig, env) {
       fallbackPlugin.remember('config', [userConfig, env]);
       const result = { resolve: { alias: [virtualGlobalAlias(userConfig, env)] } };
-      // Production builds of the stencilrs runtime: its optional features (runtime.js `F_*`) are `define`d, all on unless
-      // `runtimeFeatures` turns some off, so the bundler folds them. The dev server and Vitest keep the whole runtime.
-      if (runtime === 'stencilrs' && env?.command === 'build' && !ssr && !specPage) {
-        const features = runtimeFeatures === 'auto' ? autoRuntimeFeatures(readSources(join(resolve(userConfig.root ?? process.cwd()), 'src')), { hydrateClient: !!hydrateClient }) : runtimeFeatures;
-        if (hydrateClient && features?.hydrate === false) throw new Error(`[stencilrs] runtimeFeatures.hydrate is false but hydrateClient is on`);
-        result.define = runtimeFeatureDefines(features);
-      }
+      // Production builds of the stencilrs runtime: the optional features (runtime.js `F_*`) are written into the bundle as constants in
+      // `renderChunk` (`runtimeFeatures`), so the bundler folds them. The dev server and Vitest keep the whole runtime.
+      featuresOn = runtime === 'stencilrs' && env?.command === 'build' && !ssr && !specPage && !userConfig.build?.ssr && !env?.isSsrBuild;
+      if (featuresOn && hydrateClient && featureOption.features?.hydrate === false) throw new Error(`[stencilrs] runtimeFeatures.hydrate is false but hydrateClient is on`);
       // The dev server's startup scan reads source files, so it misses the imports the transform
       // injects (`app-data`, the runtime): pre-bundle them up front, or Vite finds them on the
       // first request and re-runs its optimizer. Only the client runtime of the default output
@@ -628,7 +662,9 @@ export function stencilrs(options = {}) {
       if (STYLE_FILE_RE.test(id)) noteStyle(id, change?.event);
     },
 
-    async buildStart() {
+    async buildStart(options) {
+      featuresChosen = null; // `runtimeFeatures` is decided again for every build, from the modules it transforms
+      buildInput = options?.input;
       splitFiles.clear(); // `emitFile` is per build: a watch rebuild emits every component's entry again
       if (hydrateClient && !isDev && !specPage) await emitExtraTags(this);
       foldedFlags = null;
@@ -698,6 +734,12 @@ export function stencilrs(options = {}) {
         return { code: code.replace(/"stencilrs-dir:([^"]+)"/g, (_, rel) => JSON.stringify(devUrlOfDir(rel))), map: null };
       }
       const file = id.split('?')[0].replaceAll('\\', '/');
+      // `runtimeFeatures`: what each module of the build asks of the runtime (a compiled one is recorded again, from its metadata, below).
+      if (featuresOn && !transformOpts?.ssr && !id.startsWith(BASE_PREFIX) && !OWN_RUNTIME_FILES.has(file) && /\.[cm]?[jt]sx?$/.test(file)) featureScan.other(file, code);
+      // `runtimeFeatures`: the runtime's own module gets its `__RS_FEAT_*__` constants as literals, before the bundler tree-shakes it.
+      if (featuresOn && !transformOpts?.ssr && code.includes('__RS_FEAT_SERVER__') && /\.[cm]?js$/.test(file)) {
+        return { code: applyRuntimeFeatures(code, await chooseFeatures(this)), map: null };
+      }
       // `foldRuntimeFlags`: the runtime's reads of `BUILD.x` become the literals, which the bundler cannot do through the object itself.
       if (foldedFlags && !(ssr || transformOpts?.ssr) && STENCIL_DIST_RE.test(file) && code.includes(APP_DATA_ID)) {
         code = foldBuildReads(applyClientRuntimePatches(code, file), foldedFlags);
@@ -730,6 +772,7 @@ export function stencilrs(options = {}) {
         const fine = await transpileAsync(code, { file, resolveImports: false, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
         const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
         if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        if (featuresOn) featureScan.compiled(file, { components: [], code: fine.code, source: code });
         return { code: fine.code, map: null };
       }
       if (!DECORATORS_RE.test(code)) {
@@ -771,6 +814,11 @@ export function stencilrs(options = {}) {
         const fine = await transpileAsync(code, { file, resolveImports, componentExport: 'stencilrs', useDefineForClassFields, ...jsxFor(code, tsconfigJsx) });
         const errors = fine.diagnostics.filter((d) => d.level === 'error' && !d.message.startsWith('stencilrs:'));
         if (errors.length) this.error(`[stencilrs] ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+        if (featuresOn) {
+          const refused = lightOffError(file, fine.components, featureOption.features);
+          if (refused) this.error(`[stencilrs] ${refused}`);
+          featureScan.compiled(file, { components: fine.components, code: fine.code, source: original });
+        }
         if (!fine.components.length) return null;
         for (const base of fine.baseClasses) {
           baseClasses.add(base);
@@ -943,6 +991,7 @@ export function stencilrs(options = {}) {
       }
       const errors = result.diagnostics.filter((d) => d.level === 'error');
       if (errors.length) this.error(`[stencilrs] transpile error in ${file}:\n${errors.map((d) => d.message).join('\n')}`);
+      if (featuresOn && baseExport === 'stencilrs') featureScan.compiled(id, { components: result.components, code: result.code, source: code });
       return { code: result.code, map: result.map ? JSON.parse(result.map) : null };
     },
 
@@ -995,8 +1044,16 @@ export function stencilrs(options = {}) {
       await loadCss?.dispose();
     },
 
-    buildEnd() {
+    async buildEnd(error) {
       unionHint.flush();
+      // 'auto' was decided from the modules loaded from the entries; every module is known now. One that needs a feature the choice left out
+      // (something loaded another way) must not be built into a page that fails at run time.
+      if (featuresOn && !error && featureOption.mode === 'auto' && featuresChosen) {
+        const chosen = await featuresChosen;
+        const used = featureScan.features(this.getModuleIds());
+        const short = ['light', 'vnode', 'signals'].filter((k) => used[k] && !chosen[k]);
+        if (short.length) this.error(`[stencilrs] runtimeFeatures 'auto' left out ${short.join(', ')}, which modules of this build use (${short.map((k) => `${k}: ${used.files[k].slice(0, 3).join(', ')}`).join('; ')}), found after the runtime was built. Set runtimeFeatures explicitly (\`{ ${short.map((k) => `${k}: true`).join(', ')} }\`) or \`false\`.`);
+      }
       // `foldRuntimeFlags` computed the flags from the project's own components: a package that brings components already compiled
       // (built by `stencil build`) shares the runtime, but its features were not counted.
       if (foldedFlags) {

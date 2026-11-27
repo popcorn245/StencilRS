@@ -74,6 +74,14 @@ done the same way: `import cem from '@stencil/unplugin/docs'` and `components.d.
 stencilrs' own metadata, and only a file with a type it hasn't ported yet takes its metadata
 from Stencil's compiler.
 
+### A smaller runtime (`runtime: 'stencilrs'`)
+
+`stencilrs({ runtime: 'stencilrs' })` builds for stencilrs' own runtime instead of Stencil's, and its production
+build ships only the parts your components use (`runtimeFeatures`, `'auto'` by default): a one-component shadow-DOM
+app is 4.5 KB gzip, 9.0 KB with every optional part (`runtimeFeatures: false`). A client that hydrates server
+html needs `hydrateClient: true`. Options, rules and sizes: [docs/runtime.md](docs/runtime.md#smaller-builds-runtimefeatures)
+and [docs/vite-plugin.md](docs/vite-plugin.md#which-parts-of-the-stencilrs-runtime-ship-runtimefeatures).
+
 ### Type declarations for a library
 
 `stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s

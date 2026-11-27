@@ -39,6 +39,7 @@ const F_HOT = typeof __RS_FEAT_HOT__ === 'undefined' || !!__RS_FEAT_HOT__;
 /* eslint-enable no-undef */
 // Set by `@popcorn245/stencilrs/runtime/server` before this module loads.
 const SERVER = F_SERVER && !!globalThis.__RS_SERVER__;
+let noHydrate = false;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
@@ -53,7 +54,7 @@ export const template = (html, parts, svg = false, host = null) => ({ html, part
 export const t = (tmpl, v, k) => ({ $t: tmpl, v, k });
 
 const prepare = (tmpl) => {
-  if (pending.size) for (const tag of pending.keys()) if (tmpl.html.includes(`<${tag}`)) ensureDefined(tag);
+  if (F_RESUME && pending.size) for (const tag of pending.keys()) if (tmpl.html.includes(`<${tag}`)) ensureDefined(tag);
   const te = document.createElement('template');
   te.innerHTML = tmpl.svg ? `<svg>${tmpl.html}</svg>` : tmpl.html;
   let content = te.content;
@@ -539,7 +540,7 @@ function setH(v) {
     const parent = this.m.parentNode;
     const svg = v.tag === 'svg' || (!!parent && parent.namespaceURI === SVG_NS && parent.localName !== 'foreignObject');
     const adopt = adopting(this.host);
-    if (pending.size) ensureDefined(v.tag);
+    if (F_RESUME && pending.size) ensureDefined(v.tag);
     const el = claim(this.host, v.tag, () => (svg ? document.createElementNS(SVG_NS, v.tag) : document.createElement(v.tag)));
     const marker = claim(this.host, 8, () => el.appendChild(document.createComment('')));
     // Its props may hold handlers and refs, which the client must run.
@@ -1237,6 +1238,8 @@ export class Base extends (F_LIGHT ? Light : HTMLElement) {
       // Server-rendered on a resumable page: the component takes its state from the page, which
       // it does whether or not it waits (a parent that waits won't pass it its props).
       const id = F_HYDRATE && !SERVER ? this.getAttribute('s-rs') : null;
+      // A build without hydration (`runtimeFeatures`) on a page the server rendered would render everything again beside the server's nodes: say so, once.
+      if (!F_HYDRATE && !SERVER && !noHydrate && this.hasAttribute('s-rs')) console.error('stencilrs: server-rendered page, build without hydration (set hydrateClient: true)'), (noHydrate = 1);
       const resumed = F_RESUME && id !== null && hasState();
       const wait = resumed && !this.hasAttribute('s-rh') && classCanWait(this.constructor);
       if (resumed) {
@@ -1621,7 +1624,7 @@ export const define = (Cstr, meta, register = true) => {
   }
   Object.defineProperty(Cstr, '__meta', { value: meta });
   Object.defineProperty(Cstr, 'observedAttributes', { value: Object.keys(meta.attrs) });
-  if (register && !existing && !deferDefine(Cstr, meta.tag)) customElements.define(meta.tag, Cstr);
+  if (register && !existing && !(F_RESUME && deferDefine(Cstr, meta.tag))) customElements.define(meta.tag, Cstr);
 };
 
 // Hot reload lives in runtime-hot.js, which the Vite plugin imports in dev only.

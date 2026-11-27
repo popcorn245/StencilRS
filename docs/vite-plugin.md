@@ -84,6 +84,29 @@ the modules the page uses and reports adoption (every server node still connecte
 the one Stencil's own client (`stencil build --dev` with an `ssr` target, the spike's) produces. Known and not ours: @stencil/core 5.0.0-beta.25's client
 runtime throws `Cannot read properties of undefined (reading 'length')` (and once `'nodeType'`) in `patch` while hydrating childless elements, on Stencil's own client too; hydration continues.
 
+## Which parts of the stencilrs runtime ship (`runtimeFeatures`)
+
+With `runtime: 'stencilrs'`, a production browser build keeps only the optional parts of `runtime.js` the build's components use: light DOM
+(slots, scoped CSS), `h()` vnodes and spreads, signal bindings, and, with `hydrateClient`, hydration and resuming. A shadow-DOM app is 4.5 KB
+gzip instead of 8.8 KB. Details, the detection rules, sizes and the tests: [runtime.md](runtime.md#smaller-builds-runtimefeatures).
+
+```ts
+stencilrs({ runtime: 'stencilrs' });                                    // 'auto' (the default)
+stencilrs({ runtime: 'stencilrs', hydrateClient: { split: false } });   // a client that hydrates server html: keeps hydration and resuming
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: false });            // the whole runtime ('all' is the same)
+stencilrs({ runtime: 'stencilrs', runtimeFeatures: { vnode: false } }); // by hand: named parts off, the others on
+```
+
+| Value | Meaning |
+|---|---|
+| unset, `'auto'` | the parts the modules of this build use, from what the plugin compiled (component metadata, compiled code) and, for modules it does not compile, their imports of the runtime, conservatively. `server` and `hot` are always off. `hydrate` and `resume` are on only with `hydrateClient`. A feature that turns out to be needed after the runtime was built fails the build |
+| `false`, `'all'` | the whole runtime |
+| `{ server, hydrate, resume, light, signals, vnode, hot }` | each `false` drops that part; one left out stays on. `light: false` with a component that is not shadow DOM is a build error; `hydrate: false` with `hydrateClient` too |
+
+Production builds of `runtime: 'stencilrs'` only (not the dev server, Vitest, SSR builds, `mode: 'spec-page'`). Pages rendered by `runtime-server.js` need
+`hydrateClient: true` on the client build: without it the build has no hydration, and says so in the console. The default is one constant,
+`DEFAULT_RUNTIME_FEATURES` in `runtime-features.js`.
+
 ## Folders the dev server does not watch (`watchIgnore`)
 
 Vite's file watcher (chokidar) opens one `fs.watch` per file under the project root, about 0.9 ms
