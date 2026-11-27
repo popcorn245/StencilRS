@@ -1,0 +1,5 @@
+---
+import Card from './Card.astro';
+import { ITEMS } from '../../../items.mjs';
+---
+<main><header><h1>Shop</h1><button id="count">Clicked 0</button></header><section>{ITEMS.map((i) => <Card name={i.name} price={i.price} />)}</section></main>

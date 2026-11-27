@@ -1,0 +1,15 @@
+{
+  "name": "ssr-string-compare",
+  "private": true,
+  "type": "module",
+  "description": "Spike: SSR of the 500-card page in Lit, Solid and Astro (Qwik and stencilrs are built from examples/starter/bench); see ../../docs/spike-ssr-string.md",
+  "dependencies": {
+    "@babel/core": "7.29.0",
+    "@lit-labs/ssr": "4.1.0",
+    "astro": "7.4.13",
+    "babel-preset-solid": "1.9.19",
+    "lit": "3.3.3",
+    "solid-js": "1.9.20",
+    "vitest": "5.0.4"
+  }
+}
