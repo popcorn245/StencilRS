@@ -92,3 +92,16 @@ export interface RenderCache {
  * `true` is the defaults (`max` 500, `maxBytes` 64 MiB, `ttl` 0).
  */
 export function createRenderCache(renderToString: (html: string, options?: any) => Promise<{ html: string; diagnostics?: any[] }>, options?: true | RenderCacheOptions): RenderCache;
+
+export interface ShadowStyleStore {
+  base: string;
+  sheets: Map<string, string>;
+  add(id: string, css: string): string;
+  get(file: string): string | undefined;
+  /** Connect/Express middleware serving the sheets (`immutable`), mounted at `base`. */
+  middleware(): (req: { url?: string }, res: any, next?: () => void) => void;
+}
+/** Opt-in: a store of the shared sheets that `externalizeShadowStyles` links to. `base` (default `/c/`) starts and ends with `/`; `max` sheets are kept (default 5000). */
+export function createShadowStyleStore(options?: { base?: string; max?: number }): ShadowStyleStore;
+/** Replaces the `<style sty-id>` that start each declarative shadow root by `<link rel=stylesheet sty-id>` to a file of the store. `preload` adds `<link rel=preload as=style>` to the head. */
+export function externalizeShadowStyles(html: string, store: ShadowStyleStore, options?: { preload?: boolean; minUses?: number }): { html: string; files: string[] };

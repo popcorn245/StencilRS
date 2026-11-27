@@ -79,6 +79,12 @@ export interface StencilEngineOptions {
    * `engine.stream(path, locals)` and `streamView(engine, view, locals)` send it as it renders. See docs/islands.md. Experimental (#191, #192, #206).
    */
   islands?: boolean | StencilIslandsOptions;
+  /**
+   * Opt-in, experimental (docs/spike-dsd-styles.md): in declarative shadow DOM pages, replace the `<style>` that starts each shadow root by a
+   * `<link rel=stylesheet>` to a shared file named by content hash. Mount `engine.shadowStyles.middleware()` at `engine.shadowStyles.base`.
+   * `true` or `{ base, max, preload }`. Whole-page renders only (not islands); scoped pages are left as they are.
+   */
+  shadowStyleLinks?: boolean | { base?: string; max?: number; preload?: boolean; minUses?: number };
 }
 
 export interface StencilIslandsOptions {
@@ -211,6 +217,8 @@ export interface StencilExpressEngine {
   stream(path: string, locals?: object, options?: StencilStreamOptions): AsyncGenerator<string, void, void>;
   /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
   renderCache: RenderCache | null;
+  /** The sheets of the `shadowStyleLinks` option, or null. */
+  shadowStyles: import('./ssr.js').ShadowStyleStore | null;
   /** The per-island render cache (`islands.cache`), or null when the engine has no islands or `islands.cache` is false: `clear()` and `stats()`. */
   islandCache: RenderCache | null;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */

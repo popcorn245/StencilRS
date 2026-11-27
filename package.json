@@ -85,6 +85,7 @@
     "ssr-patches.js",
     "client-patches.js",
     "render-cache.js",
+    "ssr-shadow-styles.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "signals.js",
