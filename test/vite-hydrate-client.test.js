@@ -3,10 +3,11 @@
 // hydrated in place by those modules.
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
+import { mkdtemp, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { build } from 'vite';
 
@@ -102,10 +103,11 @@ const PAGE = `<x-counter id="c" data-server="1"><span id="slotted" data-server="
 /** The hydrate app of the fixture, and what it renders the page to. */
 const renderPage = async () => {
   const { code } = await buildHydrate({ root: fixture, srcDir: 'src', namespace: 'fixture', logLevel: 'silent' });
-  const dir = await import('node:fs/promises').then((fs) => fs.mkdtemp(join(process.env.TMPDIR ?? '/tmp', 'hydrate-client-')));
-  const file = join(dir, 'index.cjs');
-  await import('node:fs/promises').then((fs) => fs.writeFile(file, code));
-  const app = createRequire(import.meta.url)(file);
+  // buildHydrate's code is an ES module (docs: `<outDir>/index.js`), so it is loaded as one, not required.
+  const dir = await mkdtemp(join(process.env.TMPDIR ?? '/tmp', 'hydrate-client-'));
+  const file = join(dir, 'index.mjs');
+  await writeFile(file, code);
+  const app = await import(pathToFileURL(file).href);
   const result = await app.renderToString(`<!doctype html><html><head></head><body>${PAGE}</body></html>`, { fullDocument: true, serializeShadowRoot: 'declarative-shadow-dom', prettyHtml: false, buildId: 'fixture' });
   return result.html;
 };
@@ -156,39 +158,47 @@ const hydrateIn = async (html, files) => {
     await page.waitForFunction(() => document.querySelector('x-counter')?.classList.contains('hydrated') && document.querySelector('x-counter').shadowRoot.querySelector('x-note')?.classList.contains('hydrated'), null, { timeout: 10000 });
     await page.waitForTimeout(200);
     const adopted = await page.evaluate(() => window.__server.filter((n) => n.isConnected).length);
-    const button = page.locator('x-counter button');
-    await button.click();
-    await button.click();
-    const after = await page.evaluate(() => document.querySelector('x-counter').shadowRoot.querySelector('button').textContent.trim());
+    // Without hydration the client renders next to the server's tree, in the same declarative shadow root: the client's button is the last one.
+    const renders = await page.evaluate(() => document.querySelector('x-counter').shadowRoot.querySelectorAll('.counter').length);
+    const button = page.locator('x-counter button').last();
+    // One render per click: the runtime batches updates, and a second click inside the first one's (upstream-throwing, see below) render is lost.
+    for (const n of [1, 2]) {
+      await button.click();
+      await page.waitForFunction((n) => document.querySelector('x-counter').shadowRoot.querySelector('.counter:last-child button').textContent.trim() === `count: ${n}`, n, { timeout: 10000 });
+    }
+    const after = await page.evaluate(() => [...document.querySelector('x-counter').shadowRoot.querySelectorAll('button')].at(-1).textContent.trim());
     const slotted = await page.evaluate(() => document.querySelector('#slotted').dataset.server);
-    return { marked, adopted, before: before?.trim(), after, slotted, errors };
+    return { marked, adopted, renders, before: before?.trim(), after, slotted, errors };
   } finally {
     await browser.close();
   }
 };
 
-// @stencil/core 5.0.0-beta.25's client runtime throws "Cannot read properties of undefined (reading 'length')" in `patch` while hydrating
-// childless elements; Stencil's own lazy build does the same on its own server render (examples/ui-kit/ssr/smoke.mjs). Anything else is a failure.
-const UPSTREAM = /reading 'length'/;
+// @stencil/core 5.0.0-beta.25's client runtime throws "Cannot read properties of undefined (reading 'length')" in `patch` when a hydrated
+// component re-renders over childless elements (`oldChildren !== null` is true for the undefined `$children$` of a vnode rebuilt from server html);
+// the render that threw leaves its vnode without `$elm$`, so a later render can also fail with "reading 'nodeType'". Stencil's own lazy build does
+// the same on its own server render (examples/ui-kit/ssr/smoke.mjs). The DOM is still updated; anything else is a failure.
+const UPSTREAM = /reading '(length|nodeType)'/;
 
-test('Chromium: the hydrating client adopts the hydrate app\'s nodes and the components work', chromiumOnly, { timeout: 120000 }, async () => {
+test('Chromium: the hydrating client adopts the hydrate app\'s nodes and the components work', { ...chromiumOnly, timeout: 120000 }, async () => {
   const html = await renderPage();
   assert.match(html, /<x-counter[^>]*s-id="/, 'the server rendered with hydration ids');
   const files = await bundle({ hydrateClient: true });
   const r = await hydrateIn(html, files);
   assert.equal(r.before, 'count: 0', 'the server rendered the button');
   assert.equal(r.adopted, r.marked, `every server node survived (${r.adopted} of ${r.marked})`);
+  assert.equal(r.renders, 1, 'one tree in the shadow root: the server\'s, adopted');
   assert.equal(r.after, 'count: 2', 'two clicks, two renders');
   assert.equal(r.slotted, '1', 'the slotted light-DOM node is the server\'s');
   assert.deepEqual(r.errors.filter((e) => !UPSTREAM.test(e)), []);
 });
 
-test('Chromium: without hydrateClient the same modules throw the server nodes away (the flag is what adopts them)', chromiumOnly, { timeout: 120000 }, async () => {
+test('Chromium: without hydrateClient the same modules render again next to the server nodes (the flag is what adopts them)', { ...chromiumOnly, timeout: 120000 }, async () => {
   const html = await renderPage();
   // `split` still on, the flag off: what the default Ionic config does (`buildFlags: { hydrateClientSide: false }`).
   const files = await bundle({ hydrateClient: true, buildFlags: {} });
   const flagOff = new Map([...files].map(([f, c]) => [f, typeof c === 'string' ? c.replaceAll('BUILD.hydrateClientSide = true;', 'BUILD.hydrateClientSide = false;') : c]));
   const r = await hydrateIn(html, flagOff);
-  assert.ok(r.adopted < r.marked, `with hydration compiled out the server's nodes are replaced (${r.adopted} of ${r.marked} kept)`);
+  assert.equal(r.renders, 2, 'with hydration compiled out the client renders a second tree beside the server\'s declarative shadow root');
   assert.equal(r.after, 'count: 2', 'it still works, it just rendered again');
 });
