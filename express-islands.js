@@ -13,9 +13,11 @@ export const CLIENT_DIRECTIVES = ['load', 'idle', 'visible', 'static', 'none'];
 const ATTRIBUTES = new Set(['name', 'client', 'cache']);
 const SLOT_ATTR = 'data-island-slot';
 const ROOT_ATTR = 'data-island-root';
+const CTX_ATTR = 'data-island-ctx';
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 // Elements whose content is text, not markup: a `<stencil-island` inside them is not an island.
 const RAW = new Set(['script', 'style', 'textarea', 'title']);
+const DOCUMENT_TAGS = new Set(['html', 'head', 'body']);
 
 /** What the island layer throws for a view or a render it cannot take: `code` is `ESTENCIL_ISLAND`. */
 export class IslandError extends Error {
@@ -108,8 +110,16 @@ export const scanIslands = (html) => {
   const found = [];
   let open = null;
   const where = (at) => `line ${lineOf(html, at)}`;
+  const stack = []; // the elements open around the current position (outside islands): an island's ancestors
   for (const t of tags(html)) {
-    if (t.name !== 'stencil-island') continue;
+    if (t.name !== 'stencil-island') {
+      if (open) continue;
+      if (t.close) {
+        const k = stack.findLastIndex((e) => e.name === t.name);
+        if (k >= 0) stack.length = k; // closes it and whatever HTML closed implicitly inside it; a stray end tag closes nothing
+      } else if (!t.selfClosing && !VOID.has(t.name) && !RAW.has(t.name)) stack.push({ name: t.name, tag: html.slice(t.start, t.end) });
+      continue;
+    }
     if (t.close) {
       if (!open) throw new IslandError(`</stencil-island> at ${where(t.start)} closes nothing`);
       open.bodyEnd = t.start;
@@ -134,7 +144,7 @@ export const scanIslands = (html) => {
       else throw new IslandError(`island ${JSON.stringify(name)}: cache="${raw}" must be empty or a number of seconds`);
     }
     if (found.some((f) => f.name === name)) throw new IslandError(`island ${JSON.stringify(name)} at ${where(t.start)} is defined twice`);
-    open = { name, client, cache, start: t.start, bodyStart: t.end };
+    open = { name, client, cache, start: t.start, bodyStart: t.end, context: stack.filter((e) => !DOCUMENT_TAGS.has(e.name)) };
   }
   if (open) throw new IslandError(`island ${JSON.stringify(open.name)} at ${where(open.start)} is not closed`);
   return found;
@@ -192,7 +202,7 @@ export const splitIslands = (html, { relocate = false } = {}) => {
   const islands = found.map((f) => {
     const body = html.slice(f.bodyStart, f.bodyEnd);
     const slots = relocate ? topLevelElements(body).roots.map((r) => parseAttrs(body.slice(r.nameEnd, r.tagEnd - 1)).get('slot') ?? null) : [];
-    return { name: f.name, client: f.client, cache: f.cache, html: body, roots: Math.max(slots.length, 1), slots };
+    return { name: f.name, client: f.client, cache: f.cache, html: body, roots: Math.max(slots.length, 1), slots, context: f.context };
   });
   let shell = '';
   let at = 0;
@@ -206,6 +216,79 @@ export const splitIslands = (html, { relocate = false } = {}) => {
   });
   shell += html.slice(at);
   return { shell, islands: islands.map(({ slots, ...i }) => i), relocate };
+};
+
+/**
+ * An island rendered inside its ancestors. A fragment render sees no ancestors, so a component that looks up the tree at render time finds nothing:
+ * `ion-infinite-scroll` and `ion-refresher` fail without their `ion-content`, `ion-item` renders without `in-list` and `role` outside its `ion-list`,
+ * and a `mode` set on `ion-app` does not reach the island. `withContext(isl)` puts the island's html inside the start tags of the elements around it in
+ * the view (the html, head and body aside), as they are: the ancestors are rendered as components (Ionic calls their methods: `ion-menu` asks its
+ * `ion-split-pane` whether it is visible), only without their other children. Each top-level element of the island is tagged `data-island-ctx="k"`
+ * so that `unwrap` can find it again wherever the render put it (scoped rendering relocates a shadow host's children into its slot).
+ */
+export const withContext = (isl) => {
+  const ctx = isl.context ?? [];
+  if (!ctx.length) return { html: isl.html, ctx, roots: 0 };
+  const tagged = tagRoots(isl.html, (k) => ` ${CTX_ATTR}="${k}"`);
+  if (!tagged.roots) return { html: isl.html, ctx: [], roots: 0 }; // only text: nothing to find again, rendered on its own
+  const { roots } = topLevelElements(isl.html);
+  return {
+    html: ctx.map((e) => e.tag).join('') + tagged.html + ctx.map((e) => `</${e.name}>`).reverse().join(''),
+    ctx,
+    roots: tagged.roots,
+    before: isl.html.slice(0, roots[0].start),
+    after: isl.html.slice(roots[roots.length - 1].end),
+  };
+};
+
+/**
+ * The island's html out of a render made by `withContext`: its top-level elements, each without the tag and without the relocation annotation
+ * (`c-id`, `s-sn`) the render gave it in its ancestors (the shell's marker carries the one that counts). Elements that stayed side by side, with
+ * nothing but text between them, are taken with that text; elements the render moved apart are taken one by one. `components` is cut down to the
+ * tags the island's html uses (the ancestors' own are the shell's).
+ */
+export const unwrap = (result, wrap, name = 'an island') => {
+  if (!wrap.ctx.length) return result;
+  const html = result.html;
+  const found = [];
+  const list = [...tags(html)];
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i];
+    if (t.close) continue;
+    const m = new RegExp(`\\s${CTX_ATTR}="(\\d+)"`).exec(html.slice(t.nameEnd, t.end));
+    if (!m) continue;
+    let end = t.end;
+    if (!t.selfClosing && !VOID.has(t.name)) {
+      let depth = 0;
+      for (let j = i; j < list.length; j++) {
+        const u = list[j];
+        if (u.close) {
+          if (--depth === 0) {
+            end = u.end;
+            break;
+          }
+        } else if (!u.selfClosing && !VOID.has(u.name)) depth++;
+      }
+    }
+    found.push({ k: Number(m[1]), start: t.start, end, tagEnd: t.end, nameEnd: t.nameEnd });
+  }
+  const fail = (why) => {
+    throw new IslandError(`${name}: rendered in its ancestors (${wrap.ctx.map((e) => `<${e.name}>`).join('')}), ${why}`);
+  };
+  if (found.length !== wrap.roots || new Set(found.map((f) => f.k)).size !== wrap.roots) fail(`its ${wrap.roots} top-level elements did not come back once each`);
+  const clean = (f) => {
+    const start = html.slice(f.start, f.tagEnd).replace(new RegExp(`\\s${CTX_ATTR}="\\d+"`), '').replace(/\s(?:c-id|s-sn)="[^"]*"/g, '');
+    return start + html.slice(f.tagEnd, f.end);
+  };
+  let out = '';
+  const together = found.every((f, i) => !i || (f.k === i && f.start >= found[i - 1].end && !/<[a-zA-Z/]|<!--[rostc]\./.test(html.slice(found[i - 1].end, f.start))));
+  if (together) {
+    out = found.map((f, i) => (i ? html.slice(found[i - 1].end, f.start) : '') + clean(f)).join('');
+    out = wrap.before + out + wrap.after;
+  } else out = [...found].sort((a, b) => a.k - b.k).map(clean).join('');
+  const used = new Set();
+  for (const t of tags(out)) if (!t.close) used.add(t.name);
+  return { ...result, html: out, components: (result.components ?? []).filter((c) => used.has(typeof c === 'string' ? c : c.tag ?? c.tagName ?? c)) };
 };
 
 /**

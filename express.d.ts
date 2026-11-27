@@ -91,6 +91,12 @@ export interface StencilIslandsOptions {
    * its `<meta charset>` to it. Component styles written in the body make the Stencil client add a copy of each to `<head>` when it hydrates (harmless, a few KB).
    */
   earlyHead?: boolean;
+  /**
+   * Render each island inside its ancestors (default true): the start tags of the elements around it in the view go around its html, as real components, and the
+   * island is cut back out. A component that looks up the tree while it renders (Ionic's `ion-infinite-scroll`, `ion-item`, `ion-menu`) then sees what it sees in the
+   * whole page. False renders each island on its own.
+   */
+  context?: boolean;
   /** The default mode of `engine.stream` (default `'in-order'`). */
   stream?: StencilStreamMode;
   /** The default `fallback` of `engine.stream`: the html that replaces an island that failed after the response started. */
