@@ -31,7 +31,7 @@
 // `extends Mixin(a, b)`) are read for their members, and the files they live in are served as
 // virtual modules compiled with `transformAsBaseClass`, so a base class extends `HTMLElement`.
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildId, foldBuildFlags, transpile, transpileAsync } from './index.js';
@@ -40,6 +40,7 @@ import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
+import { readCollections } from './ssr-collection.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -54,6 +55,7 @@ const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
 const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
+const DIR_PREFIX = 'stencilrs-dir:';
 const STENCIL_DIST_RE = /\/node_modules\/@stencil\/core\/dist\/.+\.m?js$/;
 // What the compiled components import their runtime from (the `h`, `Host`, ... of every component file).
 const RUNTIME_ID = '@stencil/core/runtime/client/standalone';
@@ -76,6 +78,37 @@ const shippedPolyfill = () => fileURLToPath(import.meta.resolve('signal-polyfill
 const DEFAULT_WATCH_IGNORE = ['.stencil', 'www', 'dist', 'loader', 'hydrate', '.vitest'];
 
 /**
+ * The `hydrateClient` option, normalised: `false` (off), or `{ split, manifest }`. `split` (default true): every component is also an
+ * entry of its own, `<dir>/<tag>.js`; `manifest` (default `components.json`): the asset that maps each tag to its module (false: none); `tags`: `{ tag: file }` for a custom element the
+ * project does not compile (a library's `ion-icon`), whose module (a file that defines it) is emitted and listed like a component; `collections`:
+ * packages built by `stencil build` (`['ionicons']`) whose components are compiled by stencilrs as the project's own (`buildHydrate`'s `collections`), so that they
+ * share the runtime, and its hydration, with the rest; `islands` (default false): also emit the islands client (`islands-client.js`, docs/islands.md) as `islands.js`.
+ */
+export function hydrateClientOptions(option) {
+  if (!option) return false;
+  const o = option === true ? {} : option;
+  if (typeof o !== 'object') throw new Error(`[stencilrs] hydrateClient must be a boolean or an object, got ${JSON.stringify(option)}`);
+  const { split = true, manifest = 'components.json', dir = 'components', tags = {}, collections = [], islands = false, ...rest } = o;
+  const unknown = Object.keys(rest);
+  if (unknown.length) throw new Error(`[stencilrs] hydrateClient: unknown option ${unknown.map((k) => JSON.stringify(k)).join(', ')} (split, manifest, dir, tags, collections, islands)`);
+  return { split: !!split, manifest: manifest === false ? false : String(manifest), dir: String(dir).replace(/^\/+|\/+$/g, ''), tags: { ...tags }, collections: [...collections], islands: !!islands };
+}
+
+/**
+ * The `BUILD` flags a component module sets on the runtime's `BUILD` object (`import { BUILD } from '@stencil/core/app-data'`),
+ * as `{ flag: value }`, in the order they are written. `hydrateClient` turns on what the client runtime needs to adopt server-rendered
+ * nodes (`hydrateClientSide`: `s-id` / `c-id` markers, `<!--r.-->` comments, `s-sn` slots, `sty-id` styles); it wins over `buildFlags`.
+ */
+export function runtimeFlags({ signals = false, buildFlags = {}, hydrateClient = false, dev = false } = {}) {
+  return {
+    ...(signals ? { vdomSignals: true } : {}),
+    ...buildFlags,
+    ...(hydrateClient ? { hydrateClientSide: true } : {}),
+    ...(dev ? { hotModuleReplacement: true, isDev: true } : {}),
+  };
+}
+
+/**
  * A `server.watch.ignored` matcher for the given folders directly under `root`: true for the folder and
  * everything below it. A function, not a glob, so that characters in the root path (`(`, `[`, `\\` on
  * Windows) need no escaping. Vite adds it to the user's own `ignored` and to its defaults.
@@ -87,6 +120,29 @@ export function watchIgnoreMatcher(root, folders) {
     const p = String(path).replaceAll('\\', '/');
     return dirs.some((d) => p === d || p.startsWith(`${d}/`));
   };
+}
+
+/**
+ * The manifest of a `hydrateClient` build: `tags` maps each tag to the module that defines it, `imports` lists the chunks each of those
+ * modules needs (static imports of chunks of this build, transitively), for preloading. Paths are relative to the output directory.
+ */
+export function componentManifest(bundle, files) {
+  const tags = {};
+  const imports = {};
+  const closure = (name, seen = new Set()) => {
+    for (const i of bundle[name]?.imports ?? []) if (bundle[i] && !seen.has(i)) closure(i, seen.add(i));
+    return seen;
+  };
+  const byId = new Map([...files].map(([file, tag]) => [file, tag]));
+  for (const chunk of Object.values(bundle)) {
+    if (chunk.type !== 'chunk' || !chunk.isEntry || !chunk.facadeModuleId) continue;
+    const tag = byId.get(chunk.facadeModuleId.split('?')[0]);
+    if (!tag || chunk.fileName.split('/').pop() !== `${tag}.js`) continue;
+    tags[tag] = chunk.fileName;
+    imports[chunk.fileName] = [...closure(chunk.fileName)];
+  }
+  const sorted = (o) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : 1)));
+  return JSON.stringify({ version: 1, tags: sorted(tags), imports: sorted(imports) }, null, 2) + '\n';
 }
 
 /** @stencil/unplugin's `resolveSpecifier`, which stencilrs' ancestor walk mirrors. */
@@ -165,7 +221,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr' }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean } }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -183,16 +239,54 @@ const SPEC_PAGE_OPTIONS = {
  *   signals (default false): TC39 signals (`@popcorn245/stencilrs/signals`; docs/signals.md). `signal-polyfill` ships with stencilrs (the project's own
  *   copy is used if it has one), and `signals.js` is added to every component module, so a signal passed to a template is bound on the
  *   stencilrs runtime. Without it, importing `@popcorn245/stencilrs/signals` fails the build.
+ *   hydrateClient (default false): a browser build that hydrates the server's html (`buildHydrate`, `renderToString`): sets the runtime's
+ *   `BUILD.hydrateClientSide` (the one `buildFlags: { hydrateClientSide: false }` turns off), and, in a production build, emits every component
+ *   as a module of its own, `components/<tag>.js` (importing it defines the tag), with `components.json` mapping tag to module and to the
+ *   shared chunks it imports. `{ split: false }`: the flag only; `{ manifest, dir }`: the manifest's file name (false: none), the folder.
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
   const ssr = componentExport === 'ssr';
+  const hydrateClient = hydrateClientOptions(hydrateClientOption);
+  if (hydrateClient && ssr) throw new Error(`[stencilrs] hydrateClient is the browser build: it cannot be combined with componentExport: 'ssr'`);
+  // `hydrateClient.split`: the component files of this build (file -> tag), each emitted as an entry chunk of its own.
+  const splitFiles = new Map();
+  const emitSplit = (ctx, file, tag) => {
+    if (!hydrateClient?.split || isDev || specPage || splitFiles.get(file) === tag) return;
+    splitFiles.set(file, tag);
+    ctx.emitFile({ type: 'chunk', id: file, fileName: `${hydrateClient.dir ? hydrateClient.dir + '/' : ''}${tag}.js`, preserveSignature: 'strict' });
+  };
+  // `hydrateClient.collections`: a collection's components, as decorated source served at a virtual path (file -> code) and the file they came from.
+  const collectionSource = new Map();
+  const collectionOrigin = new Map();
+  let collectionRoots = [];
+  const loadCollections = () => {
+    collectionSource.clear();
+    collectionOrigin.clear();
+    collectionRoots = hydrateClient ? hydrateClient.collections.map((n) => `/node_modules/${n}/`) : [];
+    if (!hydrateClient?.collections.length || isDev || specPage) return [];
+    const found = readCollections(root, hydrateClient.collections);
+    for (const c of found) {
+      collectionSource.set(c.file, c.code);
+      collectionOrigin.set(c.file, c.origin);
+    }
+    return found;
+  };
+  const emitExtraTags = async (ctx) => {
+    if (hydrateClient?.islands) ctx.emitFile({ type: 'chunk', id: fileURLToPath(new URL('./islands-client.js', import.meta.url)), fileName: 'islands.js', preserveSignature: 'strict' });
+    for (const c of loadCollections()) emitSplit(ctx, c.file, c.tagName);
+    for (const [tag, file] of Object.entries(hydrateClient?.tags ?? {})) {
+      const resolved = await ctx.resolve(file, undefined, { skipSelf: true });
+      if (!resolved) ctx.error(`[stencilrs] hydrateClient.tags: cannot resolve ${JSON.stringify(file)} for <${tag}>`);
+      emitSplit(ctx, resolved.id, tag);
+    }
+  };
   const dtsFileName = dts ? (typeof dts === 'object' && dts.fileName) || 'components.d.ts' : null;
   // Component source files seen by this build, for the declaration file.
   const dtsSources = new Map();
@@ -217,6 +311,30 @@ export function stencilrs(options = {}) {
   let foldFlags = !specPage;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
+  let cacheDir = '';
+  let devBase = '';
+  // In dev the client runtime is pre-bundled, so the transform below never sees it, and Vite would run `stripLiteral` over it twice for the one
+  // `new URL(".", import.meta.url)`: in the optimizer, and again in `vite:asset-import-meta-url` over the bundle it wrote. This plugin (before
+  // Vite's own in the optimizer) writes the directory as `new URL("stencilrs-dir:<path relative to deps/>", '' + import.meta.url)`; neither
+  // Vite pattern matches that, and `transform` turns the path into the URL Vite's dev plugin would write (`devUrlOfDir`) when the file is served.
+  // Vite also adds the directory to `safeModulePaths`: that set is read for an exact file path only, and nothing fetches the directory itself.
+  const runtimeBaseUrlOptimizerPlugin = () => ({
+    name: 'stencilrs:runtime-base-url',
+    transform: {
+      filter: { id: STENCIL_DIST_RE, code: STENCIL_BASE_URL },
+      handler(code, id) {
+        const dir = relative(join(cacheDir, 'deps'), dirname(id)).replaceAll('\\', '/');
+        return { code: code.replaceAll(STENCIL_BASE_URL, `new URL(${JSON.stringify(DIR_PREFIX + dir)}, '' + import.meta.url)`), map: null };
+      },
+    },
+  });
+  // `fileToDevUrl` of Vite: `/rel` inside the root, `/@fs/<abs>` outside it, behind the base.
+  const devUrlOfDir = (rel) => {
+    const abs = resolve(cacheDir, 'deps', rel).replaceAll('\\', '/');
+    const rootSlash = root.replaceAll('\\', '/').replace(/\/?$/, '/');
+    const moduleUrl = abs === rootSlash.slice(0, -1) ? '/' : abs.startsWith(rootSlash) ? '/' + abs.slice(rootSlash.length) : '/@fs/' + abs.replace(/^\/+/, '');
+    return devBase ? devBase.replace(/\/$/, '') + moduleUrl : moduleUrl;
+  };
   let tsconfigJsx = null;
   // A tsconfig with `useDefineForClassFields: false` (Stencil projects set it, so that a @Prop default is a
   // plain assignment) is honoured as Stencil does: stencilrs emits the initializers as constructor
@@ -248,6 +366,60 @@ export function stencilrs(options = {}) {
   let checkTimer = null;
   let deferCheck = false; // `dts` + a written build: the check starts in `writeBundle`
   let checkDev = false; // dev server or `vite build --watch`: report, never block
+  // `deferWatch`: true from `config` until the page has loaded (`deferWatchFor`); while true, `deferred` hides the root's files.
+  let deferring = false;
+  let deferRoot = '';
+  let watchedFromStart = new Set(); // the config file's dependencies and `publicDir`: watched at once, as Vite asks
+  let envDir = '';
+  let stopDeferring = () => {};
+  const posix = (p) => String(p).replaceAll('\\', '/');
+  const deferred = (path) => {
+    if (!deferring) return false;
+    const p = posix(path);
+    if (!p.startsWith(`${deferRoot}/`)) return false; // the root itself, and anything outside it, is not ours to hide
+    for (const w of watchedFromStart) if (p === w || p.startsWith(`${w}/`)) return false;
+    // `.env`, `.env.local`, `.env.<mode>`: directly in `envDir`, which may be the root
+    return !(p.startsWith(`${envDir}/.env`) && !p.slice(envDir.length + 1).includes('/'));
+  };
+  /**
+   * Ends the deferral once the page has loaded: no request in flight for `idle` ms (200), or `cap` ms (5000) after the server
+   * starts when no request comes (a health check, a user who has not opened the page, middleware mode behind another server).
+   * Then the root is added to the watcher again, without the hiding. A file saved meanwhile is not reported until its next
+   * save: the crawl has not seen it (`ignoreInitial`), and no event was due.
+   */
+  const deferWatchFor = (server) => {
+    if (!deferring) return;
+    const { idle = 200, cap = 5000 } = typeof deferWatch === 'object' ? deferWatch : {};
+    let inflight = 0;
+    let idleTimer;
+    const end = () => {
+      stopDeferring();
+      deferring = false;
+      server.watcher.add(server.config.root);
+    };
+    const capTimer = setTimeout(end, cap);
+    capTimer.unref();
+    stopDeferring = () => {
+      clearTimeout(capTimer);
+      clearTimeout(idleTimer);
+      stopDeferring = () => {};
+    };
+    server.middlewares.use((req, res, next) => {
+      if (!deferring) return next();
+      inflight++;
+      clearTimeout(idleTimer);
+      res.once('close', () => {
+        if (--inflight > 0 || !deferring) return;
+        idleTimer = setTimeout(end, idle);
+        idleTimer.unref();
+      });
+      next();
+    });
+    // Middleware mode has no `httpServer` to close: the server's own `close` stops the timers.
+    const close = server.close;
+    server.close = () => (stopDeferring(), close.call(server));
+  };
+
   const reportCheck = (r) => {
     if (!r || r.killed) return;
     if (r.ok) logger?.info(`[stencilrs] typecheck passed (${r.name})`, { timestamp: true });
@@ -341,7 +513,9 @@ export function stencilrs(options = {}) {
       // it would get `@stencil/core`'s own entry, which never renders the components; left as source, its import
       // resolves to the runtime they use (`resolveId`).
       if (env?.command === 'serve' && !ssr && !specPage) {
-        if (!userConfig.optimizeDeps?.noDiscovery) result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID] };
+        if (!userConfig.optimizeDeps?.noDiscovery) {
+          result.optimizeDeps = { include: [APP_DATA_ID, RUNTIME_ID], exclude: [STORE_ID], rolldownOptions: { plugins: [runtimeBaseUrlOptimizerPlugin()] } };
+        }
         result.test = { server: { deps: { inline: [STORE_ID] } } };
       }
 
@@ -349,18 +523,31 @@ export function stencilrs(options = {}) {
       // keeps them, an array of folder names replaces the list. Vite concatenates this with the user's
       // `server.watch.ignored` (a string, a function or an array) and its own defaults. `server.watch: null`
       // (the user turned the watcher off) is left alone.
-      if (env?.command === 'serve' && watchIgnore && watchIgnore.length && userConfig.server?.watch !== null) {
-        result.server = { watch: { ignored: [watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore)] } };
+      //
+      // The root's first crawl (chokidar: one `readdir` and `stat` per entry, 811 on the Ionic example) runs on the main
+      // thread while the page's first requests wait. Until those are served, `deferWatch` hides what is under the root from
+      // that crawl; `configureServer` then adds the root again. One function, so the user's `ignored` stays one entry
+      // next to ours.
+      const ignoreFolders = watchIgnore && watchIgnore.length ? watchIgnoreMatcher(userConfig.root ?? process.cwd(), watchIgnore) : null;
+      // Vitest runs a dev server too, but never requests a page through it: its watcher would sit hidden until the cap.
+      deferring = env?.command === 'serve' && deferWatch !== false && !process.env.VITEST;
+      deferRoot = posix(resolve(userConfig.root ?? process.cwd())).replace(/\/+$/, '');
+      if (env?.command === 'serve' && (ignoreFolders || deferring) && userConfig.server?.watch !== null) {
+        result.server = { watch: { ignored: [(path) => !!ignoreFolders?.(path) || deferred(path)] } };
       }
       return result;
     },
 
     configResolved(config) {
       fallbackPlugin.remember('resolved', config);
+      cacheDir = config.cacheDir;
+      devBase = (config.server?.origin ?? '') + (config.decodedBase ?? config.base ?? '');
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
       buildStamps = config.command === 'build';
       root = config.root;
+      watchedFromStart = new Set([...(config.configFileDependencies ?? []), config.publicDir || ''].filter(Boolean).map(posix));
+      envDir = posix(config.envDir || root);
       project?.setRoot(root);
       isServe = config.command === 'serve';
       logger = config.logger;
@@ -376,8 +563,10 @@ export function stencilrs(options = {}) {
       // The Sass compiler process (sass-embedded) ends with the server.
       server.httpServer?.once('close', () => {
         stopCheck();
+        stopDeferring();
         void loadCss?.dispose();
       });
+      deferWatchFor(server);
       if (checker.enabled) {
         // After a change to a TypeScript file or a tsconfig: once edits settle, and a run still going is killed for the new one.
         const recheck = (file) => {
@@ -411,6 +600,8 @@ export function stencilrs(options = {}) {
     },
 
     async buildStart() {
+      splitFiles.clear(); // `emitFile` is per build: a watch rebuild emits every component's entry again
+      if (hydrateClient && !isDev && !specPage) await emitExtraTags(this);
       if (checker.enabled) {
         checkDev = isServe || !!this.meta?.watchMode;
         if (checkDev) checkInBackground();
@@ -455,6 +646,9 @@ export function stencilrs(options = {}) {
     },
 
     async transform(code, id, transformOpts) {
+      if (isServe && code.includes(`"${DIR_PREFIX}`)) {
+        return { code: code.replace(/"stencilrs-dir:([^"]+)"/g, (_, rel) => JSON.stringify(devUrlOfDir(rel))), map: null };
+      }
       const file = id.split('?')[0].replaceAll('\\', '/');
       // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
       // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).
@@ -510,6 +704,7 @@ export function stencilrs(options = {}) {
           this.addWatchFile(base);
         }
         fileToTag.set(file, kept.tagName);
+        emitSplit(this, file, kept.tagName);
         return kept.result;
       }
 
@@ -558,12 +753,9 @@ export function stencilrs(options = {}) {
 
       const { tagName, componentClassName } = result.components[0];
       fileToTag.set(file, tagName);
+      emitSplit(this, file, tagName);
 
-      const overrides = {
-        ...(SIGNALS_IMPORT_RE.test(code) ? { vdomSignals: true } : {}),
-        ...buildFlags,
-        ...(isDev && !ssr && !specPage ? { hotModuleReplacement: true, isDev: true } : {}),
-      };
+      const overrides = runtimeFlags({ signals: SIGNALS_IMPORT_RE.test(code), buildFlags, hydrateClient: !!hydrateClient, dev: isDev && !ssr && !specPage });
       const mutations = Object.entries(overrides)
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
         .join('');
@@ -591,7 +783,17 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
-      // `runtime: 'stencilrs'`: every `@stencil/core` import (helpers calling `h()`, `Build`...) gets the stencilrs runtime.
+      if (collectionSource.size) {
+        if (collectionSource.has(id)) return id;
+        // A collection component's own imports are its original's neighbours; the packages it and its files use (`@stencil/core`,
+        // the runtime) come from the project: a collection ships a nested `@stencil/core` of its own, with another runtime.
+        const from = importer?.split('?')[0];
+        if (from && (collectionOrigin.has(from) || collectionRoots.some((r) => from.replaceAll('\\', '/').includes(r)))) {
+          if (collectionOrigin.has(from) && /^\.{1,2}\//.test(id)) return this.resolve(id, collectionOrigin.get(from), { skipSelf: false });
+          if (id === '@stencil/core') return this.resolve(RUNTIME_ID, join(root, 'noop.js'), { skipSelf: true });
+          if (/^@stencil\/core\//.test(id)) return this.resolve(id, join(root, 'noop.js'), { skipSelf: true });
+        }
+      }
       if (runtime === 'stencilrs' && id === '@stencil/core' && !ssr && !specPage && importer) return RUNTIME_FILE;
       if (importer === SIGNALS_FILE && SIGNALS_PEERS.has(id)) {
         if (!signals) this.error(SIGNALS_OFF);
@@ -632,6 +834,7 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      if (collectionSource.size && collectionSource.has(id)) return collectionSource.get(id);
       if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_MODULE && project && !needsUnplugin) {
         await project.start();
@@ -693,7 +896,8 @@ export function stencilrs(options = {}) {
       return theirs ?? mine;
     },
 
-    async generateBundle(outputOptions) {
+    async generateBundle(outputOptions, bundle) {
+      if (hydrateClient?.split && hydrateClient.manifest && splitFiles.size) this.emitFile({ type: 'asset', fileName: hydrateClient.manifest, source: componentManifest(bundle, splitFiles) });
       // Before the bundle is written: a type error leaves no output. `dts` with a write waits for `writeBundle`.
       if (checker.enabled && !checkDev && !deferCheck) await awaitCheck(this);
       if (!dtsFileName || !dtsSources.size || specPage || ssr) return;

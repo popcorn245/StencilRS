@@ -269,6 +269,16 @@ app.get('/', (req, res) => res.render('home', { user }));
   bounds one render; a crashed or timed-out worker is replaced and fails only its own render.
   `engine.ready` resolves when the workers have loaded, `engine.close()` stops them. Without
   `workers` nothing changes: renders run in-process.
+- `renderCache` (opt-in; `true` or `{ max, maxBytes, ttl }`): keep rendered pages and answer a repeat request without rendering.
+  The key is a SHA-256 of the final HTML (after the inner engine) plus the merged render options (the engine's, the `stencil`
+  local's), so any change to the template output or an option is a different page; a hit returns identical bytes and, with
+  `workers`, costs no worker round-trip (the lookup is in the main thread). Bounded LRU: `max` entries (500) and `maxBytes` of
+  pages (64 MiB; a DSD page is about 1 MB), `ttl` ms (0: no expiry). A render that throws or carries an `error` diagnostic is
+  never stored, and concurrent identical misses share one render. **Only turn it on for pages that are a pure function of the
+  HTML and options**: anything read at render time (the clock, a random id, per-request state inside a component) would be
+  frozen into the cached page, and a per-user page inlined by the inner engine is a different key per user (it only fills the
+  cache). Opt one render out with the `stencilCache: false` local. `engine.renderCache.stats()` and `.clear()` are there to
+  watch and flush it. Outside Express: `createRenderCache(renderToString, opts)` from `@popcorn245/stencilrs/ssr`.
 - `compileCache` (default `true`): Node's on-disk compile cache (`module.enableCompileCache()`, Node 22.1+), switched on
   before the hydrate app loads, in this process and in each worker. The app is megabytes of JavaScript: on a warm cache
   its load went from about 30 ms to 13 ms in our container. `false` opts out, a string picks the cache directory, and
@@ -289,6 +299,16 @@ app.get('/', (req, res) => res.render('home', { user }));
 
 [`examples/express`](examples/express) is a working app on the ui-kit's hydrate app, with tests
 (EJS and plain HTML views, cache on and off, the override, the error path, warm-up and compile cache, hydration in Chromium).
+
+## Islands
+
+`stencilEngine({ islands: {} })` lets a view mark parts of itself `<stencil-island name="feed" client="visible" cache>...</stencil-island>`. The
+engine renders the shell and each island separately, in parallel on the worker pool, and `streamView(engine, 'home', locals, { mode: 'out-of-order' })`
+sends them as they finish, so a slow island no longer delays the page. An island can be cached (`cache="60"`), and `islands.client` writes a small boot
+(`@popcorn245/stencilrs/islands`) that hydrates each island when its `client` directive says (`load`, `idle`, `visible`) or never (`static`, `none`),
+from a `stencilrs({ hydrateClient: { islands: true } })` build. On Ionic's pages the first byte comes 73-94% sooner when streamed, and a page with two of four islands left `static`
+runs about 38% less script. Declarative shadow DOM and scoped mode. Guide: [Islands and directives](https://popcorn245.github.io/StencilRS/guide/islands.html),
+reference: [docs/islands.md](docs/islands.md), example: [`examples/islands`](examples/islands).
 
 ## JavaScript API
 

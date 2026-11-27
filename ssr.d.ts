@@ -37,7 +37,7 @@ export interface BuildHydrateOptions {
    * Byte-identical speed patches applied to Stencil's runtime text at bundle time (`ssr-patches.js`): `true` (default) is all of them, `false` none, `{ cssCache: false }` opts one out by name.
    * Each fails the build when the code it patches is not found.
    */
-  runtimePatches?: boolean | Partial<Record<'selectorCache' | 'attributes' | 'elementChildren' | 'cssCache', boolean>>;
+  runtimePatches?: boolean | Partial<Record<'selectorCache' | 'attributes' | 'elementChildren' | 'cssCache' | 'idBase', boolean>>;
   /**
    * Rolldown plugins of the second pass, which bundles `@stencil/core/runtime/server/runner` with the factory.
    * Replace a module of the runner bundle (mock-doc's serializer, for example) with `resolveId` / `load` / `transform`.
@@ -68,3 +68,27 @@ export function hasSerializer(code: string): boolean;
 export function patchSerializer(code: string): string;
 /** A Rolldown/Rollup/Vite plugin that applies `patchSerializer`; it fails the build if nothing was patched. */
 export function fastSerializerPlugin(): { name: string; transform(code: string): { code: string; map: null } | null; buildEnd(): void };
+
+export interface RenderCacheOptions {
+  /** Most pages kept (default 500). */
+  max?: number;
+  /** Most UTF-8 bytes of pages kept in total (default 64 MiB); a page larger than this is not cached. */
+  maxBytes?: number;
+  /** Milliseconds a page stays valid (default 0: no expiry). */
+  ttl?: number;
+}
+
+/** A caching `renderToString`: pass `{ cache: false }` as the third argument to skip the cache for one call, or `{ ttl }` (ms) to replace the configured ttl for that lookup. */
+export interface RenderCache {
+  (html: string, options?: any, call?: { cache?: boolean; ttl?: number }): Promise<{ html: string; diagnostics?: object[] }>;
+  clear(): void;
+  stats(): { hits: number; misses: number; evictions: number; bypassed: number; entries: number; bytes: number };
+}
+
+/**
+ * Wraps any `renderToString(html, options)` in an opt-in LRU cache, keyed by a SHA-256 of the HTML and options.
+ * Only correct when the page is a pure function of those inputs. Results with an `error` diagnostic, and thrown errors, are never cached;
+ * concurrent identical misses share one render. Options that cannot be serialized to JSON make that render uncacheable (it runs, uncached).
+ * `true` is the defaults (`max` 500, `maxBytes` 64 MiB, `ttl` 0).
+ */
+export function createRenderCache(renderToString: (html: string, options?: any) => Promise<{ html: string; diagnostics?: any[] }>, options?: true | RenderCacheOptions): RenderCache;

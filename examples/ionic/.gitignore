@@ -11,3 +11,7 @@ smoke/shots/
 .lib/
 dist-stencilrs/
 .bench/
+dist-hydrate-client/
+dist-hydrate-onebundle/
+dist-hydrate-client-dev/
+dist-client/

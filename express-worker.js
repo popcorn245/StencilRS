@@ -1,10 +1,10 @@
 // A render thread of stencilEngine's pool (`workers: n`, see express.js). It imports the hydrate app once, then
-// answers `{ id, html, options }` messages with `{ id, html, diagnostics }`, or `{ id, error }` when renderToString throws.
+// answers `{ id, html, options, fragment? }` messages with `{ id, html, diagnostics }` (and, for `fragment: true`, `styles`, `components`, `hydratedCount`), or `{ id, error }` when renderToString throws.
 // Strings travel by structured clone: ~1.2 ms for a 1 MB page, against hundreds of ms to render it, and
 // encoding to a transferred ArrayBuffer measured slower (the main thread then pays a decode on top), so there is no buffer path.
 import { parentPort, workerData } from 'node:worker_threads';
 
-import { enableCompileCache, pickRenderToString } from './express-hydrate.js';
+import { enableCompileCache, fragmentResult, pickRenderToString } from './express-hydrate.js';
 
 // Before the import: a thread has its own isolate, so the main thread's `enableCompileCache` does not reach it.
 enableCompileCache(workerData.compileCache);
@@ -19,7 +19,7 @@ try {
   parentPort.postMessage({ initError: { message: String(e?.message ?? e), stack: e?.stack } });
 }
 
-parentPort.on('message', async ({ id, html, options, warm, times }) => {
+parentPort.on('message', async ({ id, html, options, fragment, warm, times }) => {
   if (warm) {
     let error;
     for (let n = 0; n < times; n++) {
@@ -36,8 +36,9 @@ parentPort.on('message', async ({ id, html, options, warm, times }) => {
   }
   try {
     const result = await renderToString(html, options);
-    // Only what crosses: the page and the diagnostics (plain objects). The rest of the result stays here.
-    parentPort.postMessage({ id, html: result.html, diagnostics: result.diagnostics ?? [] });
+    // Only what crosses: the page and the diagnostics (plain objects), and for a fragment render (`renderFragment`) the styles,
+    // components and hydrated count too. The rest of the result stays here.
+    parentPort.postMessage(fragment ? { id, ...fragmentResult(result) } : { id, html: result.html, diagnostics: result.diagnostics ?? [] });
   } catch (e) {
     parentPort.postMessage({ id, error: { message: String(e?.message ?? e), stack: e?.stack } });
   }

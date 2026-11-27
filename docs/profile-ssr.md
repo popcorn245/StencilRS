@@ -72,6 +72,7 @@ one guard test per patch).
 | `cssCache` | memoizes `scopeCss` / `expandPartSelectors` across renders, keyed by (style text, scope id); module scope, so it survives the per-render runtime |
 | `selectorCache` | memoizes nwsapi's `parse` of a selector string (a fresh array per hit, nwsapi edits it in place), capped at 4096 entries |
 | `attributes` | element attribute methods reach the map behind the Proxy once per element (cached by identity of `attributes`, so replacing `attributes` is honoured); lookups are a plain loop |
+| `idBase` | not a speed patch: the `idBase` render option (hydration ids from a per-render counter instead of the process-wide one); byte-identical while unset (A/B: within noise of the same hydrate app without it) |
 | `elementChildren` | `children`, `childElementCount`, `firstElementChild` and the tree walks of `getElementsByTagName` / `getElementsByClassName` loop over `childNodes` instead of `filter` closures and an array per node |
 
 ### Per-change measurements
@@ -112,11 +113,49 @@ The numbers of the three rows, before and after, are in the PR description.
   they cannot be shared without reworking nwsapi's instance model.
 - **Larger young generation** for the scavenge cost: within noise (see GC above).
 
+## Allocation patches tried for #182 and dropped
+
+The "next layer" candidates below were implemented as guarded patches in the same model (one opt-out each) and measured; none
+earned its place, so none was merged. They are recorded here so they are not tried again blind.
+
+- `hostAccessors`: `proxyHostElement` shares one accessor descriptor per (component, member) and reads `Object.entries(cmpMeta.$members$)`
+  once per component, instead of two closures and an object per member per element.
+- `instanceAccessors`: `reWireGetterSetter` shares the re-wrapped accessor per (prototype, member) instead of a prototype-chain walk
+  and two closures per member per instance.
+- `annotationWalk`: `parseVNodeAnnotations` takes one snapshot of the children (plus shadow root) instead of two `Array.from` copies and
+  a spread, and `insertVNodeAnnotations` finds the parent's `s-sr` comment by looping instead of copying every sibling list once per host.
+
+All three were byte-identical to the unpatched runner on every page and both shadow modes (`variants.mjs` check).
+
+Allocation, which is deterministic (`--trace-gc`, 65 renders, pre-GC size minus the previous post-GC size, summed; two runs of the
+same build agree within about 1%). MB allocated; `old4` is the four patches above, `new3` those plus the three tried here, and
+the last three columns are `new3` with one of the new patches left out (leave-one-out, so the difference to `new3` is that patch):
+
+| combination | none | old4 | new3 | new3 - hostAccessors | new3 - instanceAccessors | new3 - annotationWalk |
+|---|---:|---:|---:|---:|---:|---:|
+| list-50 / dsd | 1409 | 1209 | 1161 (-4.0% vs old4) | 1150 | 1214 | 1180 |
+| list-50 / scoped | 1542 | 1081 | 996 (-7.9%) | 1018 | 1061 | 1012 |
+| kitchen-sink / dsd | 640 | 576 | 554 (-3.8%) | 562 | 577 | 572 |
+| kitchen-sink / scoped | 1587 | 561 | 544 (-3.1%) | 559 | 569 | 553 |
+
+Together the three take 3-8% off the allocation volume. `instanceAccessors` is the largest share (20-50 MB), `annotationWalk` next
+(9-19 MB), `hostAccessors` between -11 and +22 MB, i.e. nothing measurable (a descriptor per member is only created for the props
+of the hosts a page has, and the rest of what `proxyHostElement` allocates stays).
+
+Time did not follow. In-process interleaved A/B (every variant renders in turn in one process, order alternating, 80-120 renders
+per combination; `old4` appears twice as an identical control): the control copy differs from `old4` by up to +-8% on a single
+combination on this shared 4-vCPU container, and `new3` against `old4` ranges from -14% to +3% across runs of the same build pair
+(the first runs, at load 5, showed -8 to -14%; the quieter reruns -2 to +2% on kitchen-sink and -3 to +1% on list-50). GC time summed
+over the 65 renders did not move beyond its own noise (list-50 dsd: 307 ms `old4`, 323 ms `new3`; list-50 scoped 293 -> 272 ms;
+kitchen-sink dsd 178 -> 212 ms; kitchen-sink scoped 175 -> 178 ms), and the number of collections only fell by 1 to 5 of 50-96. The
+scavenges cost what they cost because they copy the live DOM and style text of the render in flight, not because of the garbage
+those descriptors and arrays make, so the 3-8% fewer allocated bytes did not turn into a measurable wall-clock change. Conclusion:
+within noise, not merged (more code that has to track Stencil's text for no demonstrated gain).
+
 ## What is left (next layer)
 
 After the patches, on list-50 dsd: GC ~16%, `renderVdom`/`patch` ~15% and component `render` ~9% (Stencil's and Ionic's own
 code), serializer ~8% (`walk`), selector engine ~7% (`closest` from `hostContext`: the per-render nwsapi instance and lambda
 compile, `collect`), `proxyHostElement` + `reWireGetterSetter` ~6% (`Object.defineProperty` per member per element), annotations
-~4%, parse + window ~7%. The next candidates are the per-element member wiring (one shared descriptor per component
-instead of per element) and the annotation walks (`Array.from(childNodes)` per node), both in Stencil's runtime proper rather
-than mock-doc.
+~4%, parse + window ~7%. The per-element member wiring and the annotation walks were tried and are within noise (see above); what is left is Stencil's
+own render work and the live-state scavenges, which a text patch does not remove.

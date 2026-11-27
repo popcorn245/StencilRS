@@ -237,6 +237,26 @@ test('serve pre-bundles the runtime imports the transform injects; Vite merges t
   assert.equal(run({}, 'serve', { optimizeDeps: { noDiscovery: true, include: [] } }).optimizeDeps, undefined);
 });
 
+test('serve keeps stripLiteral off the pre-bundled runtime: the optimizer writes a marker, the dev transform the URL Vite would', async () => {
+  const [plugin] = stencilrs();
+  const result = plugin.config({}, { command: 'serve', mode: 'development' });
+  const [optimizer, ...rest] = result.optimizeDeps.rolldownOptions.plugins;
+  assert.equal(rest.length, 0);
+  const root = join(tmpdir(), 'proj');
+  plugin.configResolved({ command: 'serve', root, cacheDir: join(root, 'node_modules/.vite'), base: '/', decodedBase: '/app/', server: {} });
+  const dist = join(root, 'node_modules/@stencil/core/dist/runtime/client');
+  const src = 'const base = new URL(".", import.meta.url).href; new URL("./x", import.meta.url);';
+  const { filter, handler } = optimizer.transform;
+  assert.ok(filter.id.test(join(dist, 'index.js').replaceAll('\\', '/')) && !filter.id.test('/x/node_modules/other/index.js'));
+  const out = handler(src, join(dist, 'index.js')).code;
+  assert.equal(out, 'const base = new URL("stencilrs-dir:../../@stencil/core/dist/runtime/client", \'\' + import.meta.url).href; new URL("./x", import.meta.url);');
+  // Served: the directory inside the root is `/<rel>` behind the base, as Vite's `vite:asset-import-meta-url` writes it.
+  const served = await plugin.transform(out, join(root, 'node_modules/.vite/deps/runtime.js'), {});
+  assert.equal(served.code, 'const base = new URL("/app/node_modules/@stencil/core/dist/runtime/client", \'\' + import.meta.url).href; new URL("./x", import.meta.url);');
+  // `noDiscovery`: nothing is added (Vite concatenates the plugin arrays of the user and the plugin).
+  assert.equal(plugin.config({ optimizeDeps: { noDiscovery: true } }, { command: 'serve', mode: 'development' }).optimizeDeps, undefined);
+});
+
 test('a watch rebuild does not scan the stylesheets again, but a stylesheet that starts importing a virtual global is still handled', async () => {
   const root = join(project, 'watch-scan');
   mkdirSync(join(root, 'src'), { recursive: true });
@@ -320,7 +340,7 @@ test('serve does not watch the folders `stencil build` writes into; merged with 
   const win = process.platform === 'win32';
   const root = win ? 'C:\\proj (1)' : '/proj (1)';
   const run = (options, command, userConfig = {}) => stencilrs(options)[0].config({ root, ...userConfig }, { command, mode: 'development' });
-  const [ignore] = run({}, 'serve').server.watch.ignored;
+  const [ignore] = run({ deferWatch: false }, 'serve').server.watch.ignored;
   const p = (rel) => (win ? `C:\\proj (1)\\${rel}` : `/proj (1)/${rel}`);
   for (const dir of ['www', 'dist', 'loader', 'hydrate', '.stencil']) {
     assert.equal(ignore(p(dir)), true, dir);
@@ -340,11 +360,11 @@ test('serve does not watch the folders `stencil build` writes into; merged with 
   }
 
   // Off, replaced, not for build, or a watcher the user turned off.
-  assert.equal(run({ watchIgnore: false }, 'serve').server, undefined);
-  assert.equal(run({ watchIgnore: [] }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: false, deferWatch: false }, 'serve').server, undefined);
+  assert.equal(run({ watchIgnore: [], deferWatch: false }, 'serve').server, undefined);
   assert.equal(run({}, 'build').server, undefined);
   assert.equal(run({}, 'serve', { server: { watch: null } }).server, undefined);
-  const [custom] = run({ watchIgnore: ['components', './out/'] }, 'serve').server.watch.ignored;
+  const [custom] = run({ watchIgnore: ['components', './out/'], deferWatch: false }, 'serve').server.watch.ignored;
   assert.deepEqual([custom(p('components/x.js')), custom(p('out/x.js')), custom(p('www/x.js'))], [true, true, false]);
 });
 

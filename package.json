@@ -40,6 +40,7 @@
       "types": "./express.d.ts",
       "default": "./express.js"
     },
+    "./islands": "./islands-client.js",
     "./vite": "./vite.js",
     "./ssr": {
       "types": "./ssr.d.ts",
@@ -64,6 +65,10 @@
     "express.js",
     "express.d.ts",
     "express-hydrate.js",
+    "express-islands.js",
+    "islands-client.js",
+    "islands-manifest.js",
+    "express-stream.js",
     "express-worker.js",
     "vite.js",
     "vite-css.js",
@@ -78,6 +83,7 @@
     "ssr.d.ts",
     "ssr-serializer.js",
     "ssr-patches.js",
+    "render-cache.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "signals.js",
@@ -120,7 +126,7 @@
     "happy-dom": "^21.0.1",
     "sass": "^1.99.0",
     "semantic-release": "^25.0.9",
-    "vite": "8.3.4"
+    "vite": "8.4.0"
   },
   "release": {
     "branches": [

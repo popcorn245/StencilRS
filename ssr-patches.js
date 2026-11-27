@@ -1,7 +1,8 @@
 // Bundle-time patches for Stencil's hydrate runner, in the same guarded text-patch style as the serializer swap in
 // ssr.js (`patchSerializer`): each one rewrites the text of a module Stencil ships (mock-doc inside
-// `runtime/server/runner.mjs`, or the server runtime inside the ssr factory), never node_modules, and every one is
-// byte-identical by construction (a faster way to compute the same value, or a memo of a pure function).
+// `runtime/server/runner.mjs`, or the server runtime inside the ssr factory), never node_modules. All but `idBase` are
+// byte-identical by construction (a faster way to compute the same value, or a memo of a pure function); `idBase` adds a
+// render option and changes nothing while the option is unset.
 //
 //   buildHydrate({ runtimePatches: true })                     // default: all of them
 //   buildHydrate({ runtimePatches: { cssCache: false } })      // opt one out
@@ -166,6 +167,18 @@ function $stencilrsCssMemo(kind, fn, style, scopeId) {
         )
       );
     },
+  },
+  {
+    name: 'idBase',
+    summary: "the `idBase` render option: a render with `idBase: n` numbers its hydration ids (`s-id`, `c-id`, `o.`/`t.` annotations) from n, with counters of its own, instead of the process-wide ones that only ever grow. Renders without it are untouched",
+    anchor: '\tdoc[STENCIL_DOC_DATA] = docData;',
+    apply: (code) =>
+      swap(
+        'idBase',
+        code,
+        '\tdoc[STENCIL_DOC_DATA] = docData;',
+        '\tdoc[STENCIL_DOC_DATA] = typeof opts.idBase === "number" ? { hostIds: opts.idBase, rootLevelIds: opts.idBase, staticComponents: new Set() } : docData;',
+      ),
   },
 ];
 
