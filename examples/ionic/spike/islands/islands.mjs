@@ -62,7 +62,7 @@ function snapshot(doc, ctx) {
     if (node.nodeType !== 1) return '';
     if (node.localName === 'style' || node.localName === 'script') return '';
     const attrs = [...node.attributes]
-      .filter((a) => !['s-id', 'c-id', 's-sn', 's-mode', 'sty-id'].includes(a.name) && !(ctx && ['hidden', 'role'].includes(a.name)))
+      .filter((a) => !['s-id', 'c-id', 's-sn', 's-mode', 'sty-id', 'data-island', 'data-client'].includes(a.name) && !(ctx && ['hidden', 'role'].includes(a.name)))
       .map((a) => `${a.name}=${a.name === 'class' ? norm(a.value).split(/\s+/).filter((c) => !(ctx && c === 'in-list')).sort().join('.') : norm(a.value)}`)
       .sort()
       .join(' ');

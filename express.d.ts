@@ -71,6 +71,48 @@ export interface StencilEngineOptions {
   renderCache?: boolean | RenderCacheOptions;
   /** Milliseconds a pooled render may take (default 30000, 0 for no limit). Past it the worker is replaced and the render fails with `ESTENCIL_TIMEOUT`. */
   renderTimeout?: number;
+  /**
+   * Islands: a view may mark parts of itself `<stencil-island name="feed" client="visible" cache="60">...</stencil-island>`. The islands and
+   * the rest of the page (the shell) render as separate fragments, in parallel on the pool, each with its own `idBase` range, and are
+   * assembled into one page (what `res.render` sends, or `engine.renderIslands(path).chunks()` for a streaming responder). A view without
+   * islands renders exactly as without this option. Declarative shadow DOM only: scoped rendering is refused. `true` is the defaults.
+   * See docs/islands.md. Experimental (#191).
+   */
+  islands?: boolean | StencilIslandsOptions;
+}
+
+export interface StencilIslandsOptions {
+  /** Hydration ids each island may use (default 1000): the shell counts from 0, island `i` from `(i + 1) * idStride`. An island that needs more fails the page, naming it. */
+  idStride?: number;
+  /**
+   * Start a response with the view's own `<html>` (its attributes plus those Stencil adds, from a probe render made once per tag and options, at startup for the warm-up documents),
+   * `<head>` and `<body>` before the shell has rendered, and write the shell's component styles at the top of the body. Only `engine.renderIslands(path).chunks()` writes before
+   * the render is done; through `res.render` the page is the same bytes but is sent at the end. Default false. The head is the view's as written: Stencil does not add
+   * its `<meta charset>` to it. Component styles written in the body make the Stencil client add a copy of each to `<head>` when it hydrates (harmless, a few KB).
+   */
+  earlyHead?: boolean;
+}
+
+/** An island of a view, as `engine.renderIslands` reports it. */
+export interface StencilIsland {
+  name: string;
+  /** `load` (default), `idle`, `visible`, `static` or `none`: written on the island's roots as `data-client`; the client directives of a later release read it. */
+  client: 'load' | 'idle' | 'visible' | 'static' | 'none';
+  /** The `cache` attribute: null (absent), true (bare) or seconds. Nothing reads it yet. */
+  cache: boolean | number | null;
+}
+
+/** A view with islands, split and rendering. */
+export interface StencilIslandPage {
+  islands: StencilIsland[];
+  /** Whether `chunks()` starts with the head, before the shell has rendered (`islands.earlyHead`, and the view is a document with its own `<html>` and `<body>`). */
+  early: boolean;
+  /** The page in the order it can be written: each piece the moment it is next in line. A render that fails throws out of the iteration, after the earlier chunks. Component styles are in the body here. */
+  chunks(): AsyncGenerator<string, void, void>;
+  /** The whole page. Without an early head the islands' new component styles are in `<head>` (after the shell's), as in a whole-page render. */
+  html(): Promise<string>;
+  /** Per island, after it has rendered: its `StencilIsland` fields and the components it hydrated (`{ tag, mode, count, depth }`), for a per-island client manifest. */
+  manifest(): Promise<Array<StencilIsland & { components: StencilFragmentResult['components'] }>>;
 }
 
 export interface StencilExpressEngine {
@@ -83,6 +125,11 @@ export interface StencilExpressEngine {
    * crash handling as for views). Skips the inner engine and the render cache. Experimental: the building block of islands (#191).
    */
   renderFragment(html: string, options?: StencilRenderOptions): Promise<StencilFragmentResult>;
+  /**
+   * The view as an island page with every render already started, or null when the engine has no `islands` option or the view no islands.
+   * Runs the inner engine with `locals` like `res.render`. The seam a streaming responder uses: write `page.chunks()` as they arrive. Experimental.
+   */
+  renderIslands(path: string, locals?: object): Promise<StencilIslandPage | null>;
   /** The render cache of `renderCache`, or null: `clear()` and `stats()`. */
   renderCache: RenderCache | null;
   /** Stops the workers; renders in flight or queued fail with `ESTENCIL_CLOSED`. */

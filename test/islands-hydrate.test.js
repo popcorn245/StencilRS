@@ -2,7 +2,9 @@
 // as the page rendered in one go, and the components work (a click). Without `idBase` the same page has colliding host ids (control; on this small DSD page the client survives them, on the Ionic kitchen-sink page
 // it does not: see examples/ionic/spike/islands/idbase-engine.mjs).
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { after, test } from 'node:test';
 import { pathToFileURL } from 'node:url';
@@ -59,7 +61,7 @@ function report(doc) {
   const sig = (node) => {
     if (node.nodeType === 3) return node.nodeValue.trim() ? JSON.stringify(node.nodeValue.trim()) : '';
     if (node.nodeType !== 1 || node.localName === 'style' || node.localName === 'script') return '';
-    const attrs = [...node.attributes].filter((a) => !['s-id', 'c-id'].includes(a.name)).map((a) => `${a.name}=${a.value.split(/\s+/).sort().join('.')}`).sort().join(' ');
+    const attrs = [...node.attributes].filter((a) => !['s-id', 'c-id', 'data-island', 'data-client'].includes(a.name)).map((a) => `${a.name}=${a.value.split(/\s+/).sort().join('.')}`).sort().join(' ');
     return `<${node.localName} ${attrs}${node.shadowRoot ? ' #shadow' : ''}>${[...(node.shadowRoot?.childNodes ?? []), ...node.childNodes].map(sig).join('')}</>`;
   };
   const server = doc.defaultView.__server;
@@ -69,6 +71,7 @@ function report(doc) {
     lost: server.filter((n) => !n.isConnected).length,
     notHydrated: hosts.filter((h) => !h.classList.contains('hydrated')).length,
     leftover: doc.querySelectorAll('[s-id],[c-id]').length,
+    styles: [...doc.querySelectorAll('style[sty-id]')].map((st) => `${st.getAttribute('sty-id')}@${st.closest('body') ? 'body' : 'head'}`).sort(),
     buttons: [...doc.querySelectorAll('isl-counter')].map((c) => c.shadowRoot.querySelector('button').textContent.trim()),
   };
 }
@@ -130,4 +133,32 @@ test('control: the same islands without idBase collide on host ids', { skip }, a
   const { html } = await assemble([{}, {}]);
   const all = hostIds(html);
   assert.ok(new Set(all).size < all.length, `expected duplicate s-id, got ${all}`);
+});
+
+test('a view with islands through the engine hydrates in Chromium to the full render\'s DOM, with no style duplicated in the body', { skip }, async () => {
+  const islandsEngine = stencilEngine({ hydrate: built.hydrate, workers: 2, islands: {}, renderOptions: { buildId: 'b' } });
+  const dir = mkdtempSync(join(tmpdir(), 'stencilrs-islands-view-'));
+  const body = (a, b) => SHELL(a, b);
+  const file = join(dir, 'page.html');
+  writeFileSync(file, page('<meta charset="utf-8"><title>islands</title>', body(`<stencil-island name="a" client="visible">${ISLAND_A}</stencil-island>`, `<stencil-island name="b">${ISLAND_B}</stencil-island>`)));
+  const rendered = await new Promise((ok, no) => islandsEngine(file, {}, (e, h) => (e ? no(e) : ok(h))));
+  await islandsEngine.close();
+  assert.deepEqual(hostIds(rendered), ['1001', '1002', '1003', '2001', '2002']);
+
+  const browser = await chromium.launch();
+  try {
+    const [full, islands] = [await hydrate(browser, await fullRender()), await hydrate(browser, rendered)];
+    for (const r of [full, islands]) {
+      assert.deepEqual(r.errors, []);
+      assert.equal(r.state.lost, 0, 'every server node was adopted');
+      assert.equal(r.state.notHydrated, 0);
+      assert.equal(r.state.leftover, 0);
+      assert.deepEqual(r.clicked, ['A: 2', 'B: 6']);
+    }
+    assert.equal(islands.state.sig, full.state.sig, 'hydrated DOM equals the full render\'s');
+    assert.deepEqual(islands.state.styles, full.state.styles, 'the same styles, in the same places: the client added none in the body');
+    assert.ok(islands.state.styles.every((s) => s.endsWith('@head')), islands.state.styles.join());
+  } finally {
+    await browser.close();
+  }
 });
