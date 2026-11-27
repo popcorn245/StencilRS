@@ -300,6 +300,16 @@ app.get('/', (req, res) => res.render('home', { user }));
 [`examples/express`](examples/express) is a working app on the ui-kit's hydrate app, with tests
 (EJS and plain HTML views, cache on and off, the override, the error path, warm-up and compile cache, hydration in Chromium).
 
+## Islands
+
+`stencilEngine({ islands: {} })` lets a view mark parts of itself `<stencil-island name="feed" client="visible" cache>...</stencil-island>`. The
+engine renders the shell and each island separately, in parallel on the worker pool, and `streamView(engine, 'home', locals, { mode: 'out-of-order' })`
+sends them as they finish, so a slow island no longer delays the page. An island can be cached (`cache="60"`), and `islands.client` writes a small boot
+(`@popcorn245/stencilrs/islands`) that hydrates each island when its `client` directive says (`load`, `idle`, `visible`) or never (`static`, `none`),
+from a `stencilrs({ hydrateClient: { islands: true } })` build. On Ionic's pages the first byte comes 73-94% sooner when streamed, and a page with two of four islands left `static`
+runs about 38% less script. Declarative shadow DOM only. Guide: [Islands and directives](https://popcorn245.github.io/StencilRS/guide/islands.html),
+reference: [docs/islands.md](docs/islands.md), example: [`examples/islands`](examples/islands).
+
 ## JavaScript API
 
 ```js

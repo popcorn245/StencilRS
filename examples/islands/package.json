@@ -1,0 +1,20 @@
+{
+  "name": "stencilrs-islands-example",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "An Express page with a slow island: streamView, islands and the islands client on a hydrateClient build",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs",
+    "test": "node --test \"test/**/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@popcorn245/stencilrs": "file:../..",
+    "@stencil/core": "5.0.0-beta.25",
+    "express": "^5.1.0",
+    "playwright": "1.64.1",
+    "typescript": "6.0.3",
+    "vite": "8.4.0"
+  }
+}
