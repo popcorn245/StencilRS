@@ -40,6 +40,7 @@ import { createTypecheck, formatFailure } from './vite-typecheck.js';
 import { STENCIL_CSS_PREFIX, createCssPipeline, parseStencilCssId, resolveStencilCss } from './vite-css.js';
 import { createUnionOrderHint } from './vite-hint.js';
 import { createFileFilter, createProject } from './vite-project.js';
+import { defaultBuildFlags, foldBuildReads, foldedAppDataModule, scanComponents, standaloneFlags } from './vite-fold.js';
 import { readCollections } from './ssr-collection.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
@@ -53,6 +54,7 @@ const REAL_DECORATOR_RE = /(?:^|[;{}])[ \t]*@(?:Component|Prop|State|Event|Metho
 const IMPORTS_H_RE = /import\s+\{[^}]*\bh\b[^}]*\}\s+from\s+['"]@stencil\/core['"]/;
 const SIGNALS_IMPORT_RE = /from\s+['"]@stencil\/core\/signals['"]/;
 const APP_DATA_ID = '@stencil/core/app-data';
+const FOLDED_APP_DATA_ID = '\0stencilrs-app-data';
 const BASE_PREFIX = '\0stencilrs-base:';
 const STENCIL_BASE_URL = 'new URL(".", import.meta.url)';
 const DIR_PREFIX = 'stencilrs-dir:';
@@ -221,7 +223,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean } }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] } }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -229,6 +231,10 @@ const SPEC_PAGE_OPTIONS = {
  *   buildFlags: overrides for the runtime's `BUILD` flags, which `stencil build` computes from the project and a
  *   Vite build leaves at their defaults (all features on, `hydrateClientSide` too). A client-only library
  *   sets `{ hydrateClientSide: false }`, as `stencil build` does without a hydrate output target.
+ *   foldRuntimeFlags (default false, production client builds, the default runtime): compute the `BUILD` flags from the project's components, as
+ *   `stencil build` does, and serve them as constants, so the bundle drops the runtime features no component uses (vite-fold.js,
+ *   docs/spike-build-flags.md). `{ dirs }`: the folders (relative to the Vite root, default `src`) whose components are scanned: every component
+ *   the page defines must be in them. `buildFlags` and `hydrateClient` still apply on top.
  *   css: the component stylesheet pipeline (vite-css.js). `targets`: the browsers lightningcss lowers for and
  *   prefixes: a browserslist query (string or array), lightningcss' targets object, or false for none; the default
  *   is what `stencil build`'s `autoprefixCss` targets. `minify`: true (lightningcss' own: shortens values), 'whitespace' (default in a build: what
@@ -248,11 +254,14 @@ const SPEC_PAGE_OPTIONS = {
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, foldRuntimeFlags: foldOption = false, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
   const ssr = componentExport === 'ssr';
+  // `foldRuntimeFlags`: `true`, or `{ dirs }`, the folders (relative to the Vite root, default `src`) whose components set the flags.
+  const foldRuntimeFlags = !!foldOption;
+  const foldDirs = (typeof foldOption === 'object' && foldOption.dirs) || ['src'];
   const hydrateClient = hydrateClientOptions(hydrateClientOption);
   if (hydrateClient && ssr) throw new Error(`[stencilrs] hydrateClient is the browser build: it cannot be combined with componentExport: 'ssr'`);
   // `hydrateClient.split`: the component files of this build (file -> tag), each emitted as an entry chunk of its own.
@@ -309,6 +318,9 @@ export function stencilrs(options = {}) {
     server.ws.send({ type: 'custom', event: 'stencil:docs-update' });
   };
   let foldFlags = !specPage;
+  // `foldRuntimeFlags`: the whole project's `BUILD` flags as constants (vite-fold.js), set in `buildStart` of a production client build.
+  let foldedFlags = null;
+  let isBuild = false;
   let isDev = stencilOptions.dev ?? false;
   let root = process.cwd();
   let cacheDir = '';
@@ -544,6 +556,7 @@ export function stencilrs(options = {}) {
       devBase = (config.server?.origin ?? '') + (config.decodedBase ?? config.base ?? '');
       isDev = stencilOptions.dev ?? config.command === 'serve';
       foldFlags = config.command === 'build' && !specPage;
+      isBuild = config.command === 'build';
       buildStamps = config.command === 'build';
       root = config.root;
       watchedFromStart = new Set([...(config.configFileDependencies ?? []), config.publicDir || ''].filter(Boolean).map(posix));
@@ -602,6 +615,25 @@ export function stencilrs(options = {}) {
     async buildStart() {
       splitFiles.clear(); // `emitFile` is per build: a watch rebuild emits every component's entry again
       if (hydrateClient && !isDev && !specPage) await emitExtraTags(this);
+      foldedFlags = null;
+      if (foldRuntimeFlags && isBuild && !isDev && !ssr && !specPage && runtime === 'stencil') {
+        // Every component of the project must be known before the runtime chunk is made: scan the sources once, as `stencil build` reads them all.
+        const scan = scanComponents(root, { resolveImports, dirs: foldDirs.map((d) => resolve(root, d)).filter((d) => existsSync(d)) });
+        const appData = await this.resolve(APP_DATA_ID, join(root, 'noop.js'), { skipSelf: true });
+        if (!scan.complete || !scan.cmps.length || !appData) {
+          logger?.warn(`[stencilrs] foldRuntimeFlags: ${!appData ? 'no @stencil/core/app-data' : scan.cmps.length ? `${scan.problems.length} file(s) stencilrs does not port yet (${scan.problems[0]})` : 'no component found'}: every runtime feature stays on`);
+        } else {
+          const base = defaultBuildFlags(appData.id.split('?')[0]);
+          // `hydrateClientSide` stays as it is without folding (on, unless `buildFlags` or `hydrateClient` say otherwise): Stencil turns it off
+          // without an SSR output target, which this cannot know. `buildFlags: { hydrateClientSide: false }` is the one that matters most.
+          foldedFlags = {
+            ...base,
+            ...standaloneFlags(scan.cmps, { hydrateClientSide: !!hydrateClient || (buildFlags.hydrateClientSide ?? base.hydrateClientSide), signals: signals || scan.signalsImport }),
+            ...runtimeFlags({ signals: signals || scan.signalsImport, buildFlags, hydrateClient: !!hydrateClient }),
+          };
+          if (verbose) logger?.info(`[stencilrs] foldRuntimeFlags: ${scan.cmps.length} component(s), ${Object.values(foldedFlags).filter(Boolean).length}/${Object.keys(foldedFlags).length} flags on`);
+        }
+      }
       if (checker.enabled) {
         checkDev = isServe || !!this.meta?.watchMode;
         if (checkDev) checkInBackground();
@@ -650,6 +682,12 @@ export function stencilrs(options = {}) {
         return { code: code.replace(/"stencilrs-dir:([^"]+)"/g, (_, rel) => JSON.stringify(devUrlOfDir(rel))), map: null };
       }
       const file = id.split('?')[0].replaceAll('\\', '/');
+      // `foldRuntimeFlags`: the runtime's reads of `BUILD.x` become the literals, which the bundler cannot do through the object itself.
+      if (foldedFlags && !(ssr || transformOpts?.ssr) && STENCIL_DIST_RE.test(file) && code.includes(APP_DATA_ID)) {
+        code = foldBuildReads(code, foldedFlags);
+        if (code.includes(STENCIL_BASE_URL)) code = code.replaceAll(STENCIL_BASE_URL, `new URL(".", '' + import.meta.url)`);
+        return { code, map: null };
+      }
       // Vite's `vite:asset-import-meta-url` would run `stripLiteral` over the whole 230 kB client runtime (about 250 ms of a cold
       // build) for its one `new URL(".", import.meta.url)`, to emit exactly this (the directory is no file, so the URL is kept).
       if (code.includes(STENCIL_BASE_URL) && !ssr && !transformOpts?.ssr && STENCIL_DIST_RE.test(file)) {
@@ -756,7 +794,7 @@ export function stencilrs(options = {}) {
       emitSplit(this, file, tagName);
 
       const overrides = runtimeFlags({ signals: SIGNALS_IMPORT_RE.test(code), buildFlags, hydrateClient: !!hydrateClient, dev: isDev && !ssr && !specPage });
-      const mutations = Object.entries(overrides)
+      const mutations = foldedFlags ? '' : Object.entries(overrides)
         .map(([k, v]) => `__stencilBUILD.${k}=${v};`)
         .join('');
       let out = mutations ? `import{BUILD as __stencilBUILD}from"${APP_DATA_ID}";\n${mutations}\n${result.code}` : result.code;
@@ -783,6 +821,7 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      if (foldedFlags && id === APP_DATA_ID) return FOLDED_APP_DATA_ID;
       if (collectionSource.size) {
         if (collectionSource.has(id)) return id;
         // A collection component's own imports are its original's neighbours; the packages it and its files use (`@stencil/core`,
@@ -834,6 +873,7 @@ export function stencilrs(options = {}) {
     },
 
     async load(id) {
+      if (id === FOLDED_APP_DATA_ID && foldedFlags) return foldedAppDataModule(foldedFlags);
       if (collectionSource.size && collectionSource.has(id)) return collectionSource.get(id);
       if (id === SIGNALS_FILE && !signals) this.error(SIGNALS_OFF);
       if (id === DOCS_MODULE && project && !needsUnplugin) {
@@ -938,6 +978,12 @@ export function stencilrs(options = {}) {
 
     buildEnd() {
       unionHint.flush();
+      // `foldRuntimeFlags` computed the flags from the project's own components: a package that brings components already compiled
+      // (built by `stencil build`) shares the runtime, but its features were not counted.
+      if (foldedFlags) {
+        const prebuilt = [...this.getModuleIds()].filter((id) => id.includes('/node_modules/') && !id.includes('/node_modules/@stencil/') && !STENCIL_DIST_RE.test(id) && this.getModuleInfo(id)?.importedIds.some((i) => /\/@stencil\/core\/dist\/runtime\/client\//.test(i)));
+        if (prebuilt.length) this.warn(`[stencilrs] foldRuntimeFlags: ${prebuilt.length} module(s) from node_modules use the Stencil runtime (${prebuilt[0].split('/node_modules/').pop()}); the runtime features only they need are not in the bundle. Add their folders to foldRuntimeFlags.dirs, or leave the option off.`);
+      }
       if (verbose && counts.stencilrs + counts.reused + counts.stencil > 0) {
         this.info?.(`[stencilrs] compiled ${counts.stencilrs} component file(s), reused ${counts.reused}; ${counts.stencil} left to Stencil's compiler`);
       }

@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": false, "strictPropertyInitialization": false },
+  "include": [
+    "src/components/pop-counter",
+    "src/components/pop-greeting",
+    "src/components/pop-toggle",
+    "src/components/pop-press-button",
+    "src/components/pop-tone-chip",
+    "src/components/pop-date-field",
+    "src/shared"
+  ],
+  "exclude": ["node_modules", "src/**/*.stories.ts", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

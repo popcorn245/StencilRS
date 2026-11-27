@@ -75,6 +75,7 @@
     "vite-types.js",
     "vite-docs.js",
     "vite-project.js",
+    "vite-fold.js",
     "vite-fallback.js",
     "vite-hint.js",
     "vite-typecheck.js",
