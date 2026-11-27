@@ -9,6 +9,14 @@ renderer that reuses the compiled templates produces **byte-identical HTML** in 
 (custom element per card), 3 to 4 times faster than Qwik, and about 6 times slower than Solid's `renderToString`.
 Verdict: build it, as an opt-in renderer with an automatic fallback to happy-dom (see the end).
 
+**Shipped** (branch `feat/ssr-string`): `runtime-string.js` at the root, `createRenderer(load, { renderer: 'string' })` with
+fallback to an isolated happy-dom renderer, and the Vite option `stringRenderer`. See `docs/runtime.md` ("A faster
+server renderer") for what it renders, what falls back, and the numbers; `test/runtime-string.test.js` is the
+differential test. The text below is the original spike; paths under `spike/` moved (`spike/runtime-string.js` is now
+`runtime-string.js`, `spike/vite.string.config.ts` became the `stringRenderer` option, `spike/compare-fixtures.mjs`
+became `test/string-fixtures.mjs`, `spike/fallback-demo.mjs` was replaced by the hybrid renderer). Not done in the
+release: light-DOM slot relocation, async hooks, signals, `h()` renders, tables, the Ionic and ui-kit components.
+
 Branch `spike/ssr-string`. Everything is under `spike/`; no existing file changed, default output is unchanged.
 
 ## 1. Baseline: the happy-dom renderer

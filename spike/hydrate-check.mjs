@@ -8,10 +8,10 @@ import { createServer } from 'node:http';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { createStringRenderer } from './runtime-string.js';
+import { createStringRenderer } from '../runtime-string.js';
 
 const bench = new URL('../examples/starter/bench/', import.meta.url);
-const render = await createStringRenderer(() => import(new URL('dist-load-string-server/entry-server.js', bench)));
+const render = await createStringRenderer(() => import(new URL('dist-load-stencilrs-server/string/entry-server.js', bench)));
 const body = render.sync('<load-app></load-app>');
 const clientDir = new URL('dist-load-stencilrs/', bench).pathname;
 const shell = readFileSync(join(clientDir, 'index.html'), 'utf8');

@@ -1,11 +1,11 @@
 // Byte-compares the string renderer's HTML with the happy-dom renderer's on the 500-card page.
 //   node spike/compare-html.mjs [out-dir]   (writes string.html and dom.html to out-dir when given)
-import { createStringRenderer } from './runtime-string.js';
+import { createStringRenderer } from '../runtime-string.js';
 import { createRenderer } from '../runtime-server.js';
 import { writeFileSync } from 'node:fs';
 
 const bench = new URL('../examples/starter/bench/', import.meta.url);
-const strRender = await createStringRenderer(() => import(new URL('dist-load-string-server/entry-server.js', bench)));
+const strRender = await createStringRenderer(() => import(new URL('dist-load-stencilrs-server/string/entry-server.js', bench)));
 const s = await strRender('<load-app></load-app>');
 const domRender = await createRenderer(() => import(new URL('dist-load-stencilrs-server/entry-server.js', bench)));
 const d = await domRender('<load-app></load-app>');

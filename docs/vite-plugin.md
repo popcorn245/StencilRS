@@ -36,6 +36,14 @@ When unplugin loads late (the first fallback in the middle of a build), the hook
 (`config`, `configResolved`, `configureServer`, `buildStart`) are replayed on it first, and its
 `transform` skips every file stencilrs compiled.
 
+## A DOM-free server renderer (`stringRenderer`)
+
+`stencilrs({ runtime: 'stencilrs', stringRenderer: true })` (default `false`; it throws without `runtime: 'stencilrs'`):
+a `vite build --ssr` also writes the variant of the server bundle for the string renderer to `<outDir>/string/` (a
+nested build of the same entries, importing `@popcorn245/stencilrs/runtime/string`). Use it with
+`createRenderer(entry, { renderer: 'string' })` from `@popcorn245/stencilrs/runtime/server`, which falls back to happy-dom
+page by page (`docs/runtime.md`). The default output is unchanged.
+
 ## A client that hydrates server-rendered html (`hydrateClient`)
 
 `renderToString` / `hydrateDocument` of the hydrate app (`buildHydrate`, `@popcorn245/stencilrs/ssr`) write html the browser can show before any

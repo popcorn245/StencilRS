@@ -44,6 +44,7 @@ import { defaultBuildFlags, foldBuildReads, foldedAppDataModule, scanComponents,
 import { readCollections } from './ssr-collection.js';
 import { allFeatures, applyRuntimeFeatures, autoRuntimeFeatures, FeatureScan, lightOffError, resolveRuntimeFeatures } from './runtime-features.js';
 import { applyClientRuntimePatches } from './client-patches.js';
+import { buildStringVariant, isStringVariant, resolveStringRuntime } from './vite-string.js';
 import { STYLE_FILE_RE, createFallback, mentionsVirtualGlobalImport, scanStyleFiles, scanStyleFilesAsync, virtualGlobalAlias } from './vite-fallback.js';
 
 // The Rust `foldBuildFlags` returns at once unless the file has a `Build` import from `@stencil/core` (its `BUILD_IMPORT`):
@@ -227,7 +228,7 @@ const SPEC_PAGE_OPTIONS = {
 };
 
 /**
- * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] }, runtime?: 'stencil' | 'stencilrs', runtimeFeatures?: false | 'all' | 'auto' | 'client' | { server?: boolean, hydrate?: boolean, resume?: boolean, light?: boolean, signals?: boolean, vnode?: boolean, hot?: boolean } }} [options]
+ * @param {import('@stencil/unplugin').StencilPluginOptions & { signals?: boolean, buildFlags?: Record<string, boolean>, fallback?: boolean, watchIgnore?: false | string[], deferWatch?: boolean | { idle?: number, cap?: number }, verbose?: boolean, css?: { targets?: string | string[] | Record<string, number> | false, minify?: boolean | 'whitespace' | 'stencil', transform?: (css: string, file: string) => string | undefined | Promise<string | undefined>, sass?: Record<string, unknown>, cache?: boolean | 'memory' }, dts?: boolean | { fileName?: string }, typecheck?: boolean | { tsconfig?: string, bin?: 'tsgo' | 'tsc' | 'tsrs' | 'tsc-rs' }, resolveImports?: boolean, componentExport?: 'customelement' | 'ssr', hydrateClient?: boolean | { split?: boolean, manifest?: string | false, dir?: string, islands?: boolean }, foldRuntimeFlags?: boolean | { dirs?: string[] }, runtime?: 'stencil' | 'stencilrs', runtimeFeatures?: false | 'all' | 'auto' | 'client' | { server?: boolean, hydrate?: boolean, resume?: boolean, light?: boolean, signals?: boolean, vnode?: boolean, hot?: boolean }, stringRenderer?: boolean }} [options]
  *   dts (default false): emit `components.d.ts` with the build output. `true`, or `{ fileName }`,
  *   a path inside the output directory (default `components.d.ts`).
  *   typecheck (default false): run `tsgo` (else `tsc`) `--noEmit` against the project's tsconfig in a child process, beside the
@@ -258,12 +259,14 @@ const SPEC_PAGE_OPTIONS = {
  *   `hydrate` and `resume`, for an app no server renders;
  *   a module the plugin cannot read counts as using what it might. `false` or `'all'`: the whole runtime. `{ server, hydrate, resume, light, signals, vnode, hot }`: each
  *   `false` drops that part (one left out stays on); `light: false` with a component that is not shadow DOM fails the build.
+ *   stringRenderer (default false, `runtime: 'stencilrs'`): an SSR build (`vite build --ssr`) also writes the variant of the server bundle for the DOM-free
+ *   string renderer (runtime-string.js) to `<outDir>/string/`, for `createRenderer(load, { renderer: 'string' })` (docs/runtime.md, Server rendering).
  *   resolveImports (default true): component metadata as a full `stencil build` computes it,
  *   following relative imports for prop types and defaults. false: exactly what Stencil's
  *   single-file transpileSync (and so @stencil/unplugin) produces.
  */
 export function stencilrs(options = {}) {
-  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, foldRuntimeFlags: foldOption = false, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', runtimeFeatures: runtimeFeaturesOption, ...stencilOptions } = options;
+  const { signals = false, fallback = true, watchIgnore = DEFAULT_WATCH_IGNORE, deferWatch = true, verbose = false, dts = false, resolveImports = true, componentExport = 'customelement', buildFlags = {}, foldRuntimeFlags: foldOption = false, hydrateClient: hydrateClientOption = false, css: cssOptions = {}, typecheck = false, runtime = 'stencil', runtimeFeatures: runtimeFeaturesOption, stringRenderer = false, ...stencilOptions } = options;
   if (componentExport !== 'customelement' && componentExport !== 'ssr') {
     throw new Error(`[stencilrs] componentExport must be 'customelement' or 'ssr', got ${JSON.stringify(componentExport)}`);
   }
@@ -301,6 +304,10 @@ export function stencilrs(options = {}) {
     })();
     return featuresChosen;
   };
+  if (stringRenderer && runtime !== 'stencilrs') throw new Error(`[stencilrs] stringRenderer needs runtime: 'stencilrs'`);
+  // `stringRenderer`: this plugin is the one of the second build, which writes the string variant (vite-string.js).
+  let stringVariant = false;
+  let stringBuild = null;
   // `foldRuntimeFlags`: `true`, or `{ dirs }`, the folders (relative to the Vite root, default `src`) whose components set the flags.
   const foldRuntimeFlags = !!foldOption;
   const foldDirs = (typeof foldOption === 'object' && foldOption.dirs) || ['src'];
@@ -603,6 +610,8 @@ export function stencilrs(options = {}) {
 
     configResolved(config) {
       fallbackPlugin.remember('resolved', config);
+      stringVariant = stringRenderer && isStringVariant(config);
+      stringBuild = stringRenderer && !stringVariant && config.command === 'build' && !!config.build.ssr ? config : null;
       cacheDir = config.cacheDir;
       devBase = (config.server?.origin ?? '') + (config.decodedBase ?? config.base ?? '');
       isDev = stencilOptions.dev ?? config.command === 'serve';
@@ -889,6 +898,10 @@ export function stencilrs(options = {}) {
     // (@stencil/unplugin's `\0stencil-base:` modules). Components are compiled before their
     // imports resolve, so the set is filled in time.
     async resolveId(id, importer) {
+      if (stringVariant) {
+        const res = resolveStringRuntime(id, importer);
+        if (res) return res;
+      }
       if (foldedFlags && id === APP_DATA_ID) return FOLDED_APP_DATA_ID;
       if (collectionSource.size) {
         if (collectionSource.has(id)) return id;
@@ -1021,6 +1034,7 @@ export function stencilrs(options = {}) {
 
     // `components.d.ts` is on disk now: check against it.
     async writeBundle() {
+      if (stringBuild) await buildStringVariant(stringBuild);
       if (!checker.enabled || checkDev || !deferCheck) return;
       try {
         await checker.prepare();

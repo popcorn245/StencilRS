@@ -57,6 +57,10 @@
     "./runtime/server": {
       "types": "./runtime-server.d.ts",
       "default": "./runtime-server.js"
+    },
+    "./runtime/string": {
+      "types": "./runtime-string.d.ts",
+      "default": "./runtime-string.js"
     }
   },
   "files": [
@@ -96,7 +100,11 @@
     "runtime-features.js",
     "runtime.d.ts",
     "runtime-server.js",
-    "runtime-server.d.ts"
+    "runtime-server.d.ts",
+    "runtime-string.js",
+    "runtime-string-dom.js",
+    "runtime-string.d.ts",
+    "vite-string.js"
   ],
   "publishConfig": {
     "access": "public"

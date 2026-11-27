@@ -81,6 +81,13 @@ build ships only the parts your components use (`runtimeFeatures`, `'auto'` by d
 shadow-DOM app is 7.0 KB gzip, 4.5 KB with `runtimeFeatures: 'client'` (no server renders it), 9.0 KB with every optional part (`false`). Options, rules and sizes: [docs/runtime.md](docs/runtime.md#smaller-builds-runtimefeatures)
 and [docs/vite-plugin.md](docs/vite-plugin.md#which-parts-of-the-stencilrs-runtime-ship-runtimefeatures).
 
+### A faster server renderer
+
+`stencilrs({ runtime: 'stencilrs', stringRenderer: true })` makes `vite build --ssr` also write a server bundle for a
+DOM-free renderer; `createRenderer(entry, { renderer: 'string' })` (`@popcorn245/stencilrs/runtime/server`) then renders
+a 500-card page in about 3 to 5 ms instead of 90 to 130, byte-identical, and renders any page it cannot reproduce with
+happy-dom ([docs/runtime.md](docs/runtime.md)). Off by default.
+
 ### Type declarations for a library
 
 `stencilrs({ dts: true })` writes `components.d.ts` beside the build output, as `stencil build`'s
