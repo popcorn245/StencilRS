@@ -960,6 +960,8 @@ const emitFrame = (f, A) => {
         if (op.ci >= 0) {
           res = renderComponent(f.insts[op.ci]);
         }
+        // Two writers of `style` (the parent's part or attribute, and <Host>) merge their declarations in the DOM.
+        if (res && (ops || op.attrs.length) && res.ops.some((o) => o[0] === 'a' && o[1] === 'style') && ((ops && ops.some((o) => o[0] === 'a' && o[1] === 'style')) || op.attrs.some((a) => a[0] === 'style'))) fallback('style set by a parent and by <Host>');
         let str;
         if (!ops && !(res && res.ops.length)) str = op.str;
         else if (res && !ops && !op.attrs.length && res.classOnly) str = `<${op.tag} class="${res.classOnly}"`;

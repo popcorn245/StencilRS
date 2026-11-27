@@ -16,6 +16,9 @@
 //
 // One window per renderer, renders one at a time: the runtime keeps per-document state.
 
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+
 // The DOM events a resumable page delegates: a component listening to any other hydrates on load.
 const DELEGATED = new Set(['click', 'dblclick', 'auxclick', 'contextmenu', 'input', 'change', 'beforeinput', 'submit', 'reset', 'keydown', 'keyup', 'keypress', 'pointerdown', 'pointerup', 'pointerover', 'pointerenter', 'pointerleave', 'pointerout', 'mousedown', 'mouseup', 'mouseover', 'mouseenter', 'mouseleave', 'mouseout', 'touchstart', 'touchend', 'focus', 'blur', 'focusin', 'focusout', 'paste', 'copy', 'cut', 'dragstart', 'drop']);
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
@@ -35,9 +38,17 @@ const isHost = (el) => !!el.constructor?.__meta;
  */
 export async function createRenderer(load, options = {}) {
   const { renderer = 'dom' } = options;
+  if (typeof load !== 'function') load = entryLoader(load);
   if (renderer === 'string') return createHybrid(load, options);
   if (renderer !== 'dom') throw new Error(`[stencilrs] createRenderer: renderer must be 'dom' or 'string', got ${JSON.stringify(renderer)}`);
   return createDomRenderer(load, options, false);
+}
+
+/** `load` as the URL (or path) of the SSR build's entry: the string variant is `string/<name>` next to it (`stringRenderer`, vite-string.js). */
+function entryLoader(entry) {
+  const url = entry instanceof URL ? entry : /^[a-z][a-z0-9+.-]+:/i.test(String(entry)) ? new URL(entry) : pathToFileURL(resolve(String(entry)));
+  const string = new URL(`string/${url.pathname.slice(url.pathname.lastIndexOf('/') + 1)}`, url);
+  return ({ renderer }) => import(renderer === 'string' ? string.href : url.href);
 }
 
 /**
@@ -167,7 +178,13 @@ async function createDomRenderer(load, { url = 'http://localhost/', settleRounds
 async function createHybrid(load, options) {
   const { url, resumable = true, lazyDefine = null, onFallback = null } = options;
   const { createStringRenderer } = await import('./runtime-string.js');
-  const strRender = await createStringRenderer(() => load({ renderer: 'string' }), { resumable, lazyDefine, url });
+  let strRender;
+  try {
+    strRender = await createStringRenderer(() => load({ renderer: 'string' }), { resumable, lazyDefine, url });
+  } catch (e) {
+    if (e?.code === 'ERR_MODULE_NOT_FOUND' || e?.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') e.message += `\n[stencilrs] renderer: 'string' needs the server bundle built for it: set stringRenderer: true in stencilrs() and run the SSR build again (docs/runtime.md).`;
+    throw e;
+  }
   let dom = null;
   let tail = Promise.resolve();
   let busy = 0;

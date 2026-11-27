@@ -289,6 +289,133 @@ export class XListSkip {
     </div>;
   }
 }`,
+  'x-matrix': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-matrix', encapsulation: { type: 'scoped' } })
+export class XMatrix {
+  @Prop() v: any = 'a "q" & <b>';
+  render() {
+    const v = this.v;
+    return <div>
+      <a href={v} title={v} id={v} lang={v} role={v} slot={v} target={v} rel={v}>1</a>
+      <a href={null} title={null} id={undefined} target={false} rel={true}>2</a>
+      <a title={0} id={5} lang={''}>3</a>
+      <img src={v} alt={v} width={5} height="7" />
+      <img src={null} alt={null} width={0} />
+      <input placeholder={v} name={v} disabled={true} />
+      <input placeholder={null} name={0} disabled={false} />
+      <button name={v} disabled={0} hidden={1}>b</button>
+      <button disabled={'yes'} hidden={''}>b</button>
+      <p hidden={true}>h</p><p hidden={false}>h</p><p hidden={null}>h</p><p hidden={'x'}>h</p>
+      <div data-a={v} aria-label={v} data-n={0} data-f={false} data-t={true} data-u={undefined} data-null={null} data-s="">x</div>
+      <span class={null}></span><span class={undefined}></span><span class={''}></span><span class={{}}></span>
+      <span class="  a   b " ></span>
+      <span class={v}></span>
+    </div>;
+  }
+}`,
+  'x-classes': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-classes', encapsulation: { type: 'scoped' } })
+export class XClasses {
+  @Prop() on = true;
+  render() {
+    return <div class="base  extra">
+      <p class="a b" id="x"></p>
+      <p class={{ a: true, b: false, 'c d': true }}></p>
+      <p class={'a  b c'}></p>
+      <p class="s" ></p>
+      <i class={'x'} title="t"></i>
+      <b class={this.on ? 'on' : ''} style={{ color: 'red' }}></b>
+    </div>;
+  }
+}`,
+  'x-frag': `import { Component, Fragment, h } from '@stencil/core';
+@Component({ tag: 'x-frag', encapsulation: { type: 'scoped' } })
+export class XFrag { render() { return <><p>a</p><p>b</p>text<x-uid name="f"></x-uid></>; } }`,
+  'x-nullroot': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-nullroot', encapsulation: { type: 'scoped' } })
+export class XNullRoot { @Prop() show = false; render() { return this.show ? <p>shown</p> : null; } }`,
+  'x-textroot': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-textroot', encapsulation: { type: 'scoped' } })
+export class XTextRoot { @Prop() t = 'plain & text'; render() { return this.t as any; } }`,
+  'x-norender': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-norender', encapsulation: { type: 'scoped' } })
+export class XNoRender { @Prop() t = 'x'; }`,
+  'x-reflect': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-reflect', encapsulation: { type: 'shadow' } })
+export class XReflect {
+  @Prop({ reflect: true }) a = 'str';
+  @Prop({ reflect: true }) b = true;
+  @Prop({ reflect: true }) c = 0;
+  @Prop({ reflect: true }) d: any = { k: 1 };
+  @Prop({ reflect: true }) e?: string;
+  @Prop({ reflect: true, mutable: true }) f = false;
+  @Prop() g = 5;
+  componentWillLoad() { this.f = true; this.a = 'changed'; }
+  render() { return <slot />; }
+}`,
+  'x-reflecthost': `import { Component, h } from '@stencil/core';
+@Component({ tag: 'x-reflecthost', encapsulation: { type: 'scoped' } })
+export class XReflectHost { render() { return <div><x-reflect a="in" c={3} e="set"></x-reflect><x-reflect b={false} d={{ z: [1] }}></x-reflect></div>; } }`,
+  'x-parse': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-parse', encapsulation: { type: 'scoped' } })
+export class XParse {
+  @Prop() n = 1;
+  @Prop() b = false;
+  @Prop() s = 'x';
+  @Prop() o: any = null;
+  @Prop({ attribute: 'my-attr' }) myAttr = '';
+  render() { return <p>{typeof this.n}:{this.n}|{typeof this.b}:{String(this.b)}|{this.s}|{this.myAttr}</p>; }
+}`,
+  'x-mixed': `import { Component, h } from '@stencil/core';
+const f = (n: number) => (n % 2 ? <b key={n}>{n}</b> : n % 3 ? 'text' + n : null);
+@Component({ tag: 'x-mixed', encapsulation: { type: 'scoped' } })
+export class XMixed {
+  render() {
+    return <div>
+      {[0, 1, 2, 3, 4, 5, 6].map(f)}
+      {['a', 'b']}
+      {[[1, 2], [], [3]]}
+      {[<i key="dup">x</i>, <i key="dup">y</i>]}
+      {[undefined, null, false, true, 0, '']}
+      <ul>{[]}</ul>
+      <ul>{[null]}</ul>
+      {[0].map(() => [1, 2].map((n) => <u key={n}>{n}</u>))}
+    </div>;
+  }
+}`,
+  'x-hostmix': `import { Component, Prop, Host, h } from '@stencil/core';
+@Component({ tag: 'x-hostmix', encapsulation: { type: 'scoped' } })
+export class XHostMix {
+  @Prop() on = true;
+  @Prop() mode = 'a';
+  render() { return <Host class={{ on: this.on }} aria-label={this.mode} data-m={this.mode} hidden={!this.on} style={{ color: 'red' }}><p>{this.mode}</p></Host>; }
+}`,
+  'x-hostuse': `import { Component, h } from '@stencil/core';
+@Component({ tag: 'x-hostuse', encapsulation: { type: 'scoped' } })
+export class XHostUse {
+  render() { return <div><x-hostmix class="outer" mode="z" data-p={1}></x-hostmix><x-hostmix on={false} id="i" class={{ k: true }}></x-hostmix><x-hostmix title="t" aria-hidden="true"></x-hostmix></div>; }
+}`,
+  'x-hostusestyle': `import { Component, h } from '@stencil/core';
+@Component({ tag: 'x-hostusestyle', encapsulation: { type: 'scoped' } })
+export class XHostUseStyle { render() { return <x-hostmix style={{ display: 'block' }}></x-hostmix>; } }`,
+  'x-lightnested': `import { Component, h } from '@stencil/core';
+@Component({ tag: 'x-lightnested', encapsulation: { type: 'none' } })
+export class XLightNested { render() { return <section><x-lightplain n={2}></x-lightplain><x-attrs></x-attrs><x-shell><span>k</span></x-shell></section>; } }`,
+  'x-twostyles': `import { Component, h } from '@stencil/core';
+@Component({ tag: 'x-twostyles', encapsulation: { type: 'shadow' }, styles: 'a{color:red} b{color:blue}' })
+export class XTwoStyles { render() { return <div><x-attrs></x-attrs><x-lightplain></x-lightplain><x-attrs></x-attrs></div>; } }`,
+  'x-strkey': `import { Component, Prop, h } from '@stencil/core';
+@Component({ tag: 'x-strkey', encapsulation: { type: 'scoped' } })
+export class XStrKey {
+  @Prop() items = ['a', 'b', 'c'];
+  render() { return <ol>{this.items.map((i, n) => <li key={i} class={{ first: n === 0 }}><x-parse n={n}></x-parse>{i}</li>)}</ol>; }
+}`,
+  'x-click': `import { Component, State, h } from '@stencil/core';
+@Component({ tag: 'x-click', encapsulation: { type: 'scoped' } })
+export class XClick {
+  @State() n = 0;
+  render() { return <div class="c"><button onClick={() => (this.n = this.n + 1)}>+</button><span class="n">{this.n}</span></div>; }
+}`,
   // Everything below falls back.
   'x-dom': `import { Component, h } from '@stencil/core';
 @Component({ tag: 'x-dom', encapsulation: { type: 'scoped' } })
@@ -454,7 +581,25 @@ export const PAGES = [
   ['lazyDefine', '<ssr-badge count="1"></ssr-badge><x-fnprop></x-fnprop><x-listenhost></x-listenhost>', { lazyDefine: 'wake' }],
   ['lazyDefine idle', '<ssr-badge count="1"></ssr-badge><x-fnprop></x-fnprop>', { lazyDefine: 'idle' }],
   ['event types that wait, and ones that hydrate on load', '<x-listenhost></x-listenhost>'],
+  ['property matrix on native elements', '<x-matrix></x-matrix>'],
+  ['property matrix, plain values', '<x-matrix v="ok"></x-matrix>'],
+  ['class forms', '<x-classes></x-classes>'],
+  ['fragment root', '<x-frag></x-frag>'],
+  ['null root', '<x-nullroot></x-nullroot><x-nullroot show></x-nullroot>'],
+  ['text root', '<x-textroot></x-textroot><x-textroot t=""></x-textroot>'],
+  ['no render method', '<x-norender></x-norender>'],
+  ['reflected props, set in componentWillLoad', '<x-reflect a="attr" b="false" c="2" g="7"></x-reflect>'],
+  ['reflected props set by a parent', '<x-reflecthost></x-reflecthost>'],
+  ['attribute parsing of props', '<x-parse n="42" b="" s="y" my-attr="ma"></x-parse><x-parse n="abc" b="false"></x-parse>'],
+  ['mixed lists: elements, text, null, nested, duplicate keys', '<x-mixed></x-mixed>'],
+  ['<Host> with class, aria, hidden, style', '<x-hostmix></x-hostmix><x-hostmix on="false" mode="q"></x-hostmix>'],
+  ['a component with attributes set by its parent', '<x-hostuse></x-hostuse>'],
+  ['light components in light components', '<x-lightnested></x-lightnested>'],
+  ['styles of several components in a shadow root', '<x-twostyles></x-twostyles>'],
+  ['string keys, a component per entry', '<x-strkey></x-strkey>'],
+  ['a component with state and a click handler', '<x-click></x-click>'],
   // Fallbacks
+  ['FALLBACK style set by a parent and by <Host>', '<x-hostusestyle></x-hostusestyle>', undefined, 'style set by'],
   ['FALLBACK scoped <slot>', '<ssr-card heading="Hi"><b slot="title">T</b>body</ssr-card>', undefined, 'slot'],
   ['FALLBACK light children of a light component in the page', '<x-lightplain n="3"><b>kid</b></x-lightplain>', undefined, 'light'],
   ['FALLBACK light slots in a template', '<x-lightuse></x-lightuse>', undefined, 'slot'],
