@@ -7,11 +7,12 @@
 // cannot collide), and the pieces are put back together here: the island's roots tagged `data-island` / `data-client`, the
 // component styles each island needs written once per page. Nothing in this file renders or touches Express: the engine hands in the
 // render promises, and gets back an object that yields the page in chunks (`chunks()`, what a streaming responder writes as they
-// arrive) or as one string (`html()`, what `res.render` sends). DSD only: see docs/islands.md.
+// arrive) or as one string (`html()`, what `res.render` sends). Declarative shadow DOM and scoped rendering: see docs/islands.md.
 
 export const CLIENT_DIRECTIVES = ['load', 'idle', 'visible', 'static', 'none'];
 const ATTRIBUTES = new Set(['name', 'client', 'cache']);
 const SLOT_ATTR = 'data-island-slot';
+const ROOT_ATTR = 'data-island-root';
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 // Elements whose content is text, not markup: a `<stencil-island` inside them is not an island.
 const RAW = new Set(['script', 'style', 'textarea', 'title']);
@@ -140,28 +141,80 @@ export const scanIslands = (html) => {
 };
 
 /**
- * Cuts a view into a shell and its islands: `{ shell, islands: [{ name, client, cache, html }] }`, or `null` when the view has none.
- * The shell is the view with each island replaced by an empty marker element that survives a render and says which island it holds.
+ * The top-level elements of a piece of markup, in order: `{ roots: [{ start, end, nameEnd, tagEnd }], stray }`. `end` is past the element's
+ * end tag (an unclosed element runs to the end), `stray` is whether there is text between or around them (comments and whitespace do not count).
  */
-export const splitIslands = (html) => {
+export const topLevelElements = (html) => {
+  const roots = [];
+  let depth = 0;
+  let cur = null;
+  for (const t of tags(html)) {
+    if (t.close) {
+      if (depth > 0 && --depth === 0 && cur) {
+        cur.end = t.end;
+        roots.push(cur);
+        cur = null;
+      }
+      continue;
+    }
+    if (depth === 0) cur = { start: t.start, end: html.length, nameEnd: t.nameEnd, tagEnd: t.end };
+    if (t.selfClosing || VOID.has(t.name)) {
+      if (depth === 0) {
+        cur.end = t.end;
+        roots.push(cur);
+        cur = null;
+      }
+    } else depth++;
+  }
+  if (cur) roots.push(cur);
+  let rest = '';
+  let at = 0;
+  for (const r of roots) {
+    rest += html.slice(at, r.start);
+    at = r.end;
+  }
+  rest += html.slice(at);
+  return { roots, stray: rest.replace(/<!--[\s\S]*?-->/g, '').trim() !== '' };
+};
+
+/**
+ * Cuts a view into a shell and its islands: `{ shell, islands: [{ name, client, cache, html, roots }], relocate }`, or `null` when the view has none.
+ * The shell is the view with each island replaced by an empty marker element that survives a render and says which island it holds.
+ *
+ * With `relocate` (scoped rendering: a shadow component is rendered as light DOM with slots, so its children are relocation candidates: Stencil moves
+ * each to the slot it belongs to, and annotates it with `c-id` / `s-sn` and an `<!--o.-->` comment in the host) the shell gets one marker per top-level
+ * element of the island, carrying that element's `slot`. Stencil then places and numbers each marker as it would the element itself, and the assembly puts
+ * each element where its marker ended up, with the marker's annotation.
+ */
+export const splitIslands = (html, { relocate = false } = {}) => {
   const found = scanIslands(html);
   if (!found.length) return null;
+  const islands = found.map((f) => {
+    const body = html.slice(f.bodyStart, f.bodyEnd);
+    const slots = relocate ? topLevelElements(body).roots.map((r) => parseAttrs(body.slice(r.nameEnd, r.tagEnd - 1)).get('slot') ?? null) : [];
+    return { name: f.name, client: f.client, cache: f.cache, html: body, roots: Math.max(slots.length, 1), slots };
+  });
   let shell = '';
   let at = 0;
   found.forEach((f, i) => {
-    shell += `${html.slice(at, f.start)}<stencil-island ${SLOT_ATTR}="${i}"></stencil-island>`;
+    shell += html.slice(at, f.start);
+    for (let k = 0; k < islands[i].roots; k++) {
+      const slot = islands[i].slots[k];
+      shell += `<stencil-island ${SLOT_ATTR}="${i}"${relocate ? ` ${ROOT_ATTR}="${k}"` : ''}${slot != null ? ` slot="${slot.replace(/"/g, '&quot;')}"` : ''}></stencil-island>`;
+    }
     at = f.end;
   });
   shell += html.slice(at);
-  return { shell, islands: found.map((f) => ({ name: f.name, client: f.client, cache: f.cache, html: html.slice(f.bodyStart, f.bodyEnd) })) };
+  return { shell, islands: islands.map(({ slots, ...i }) => i), relocate };
 };
 
 /**
  * Adds `attrs` (` data-island="a" data-client="load"`) to the start tag of every top-level element of an island's rendered html. An
- * island has no wrapper element (one would change slot assignment and `::slotted`), so its roots carry the marker. Returns the new
- * html and how many roots it tagged.
+ * island has no wrapper element (one would change slot assignment and `::slotted`), so its roots carry the marker. `attrs` is a string or a
+ * function of the root's index. Returns the new html and how many roots it tagged.
  */
 export const tagRoots = (html, attrs) => {
+  const attrsOf = typeof attrs === 'function' ? attrs : () => attrs;
   let depth = 0;
   let out = '';
   let last = 0;
@@ -172,7 +225,7 @@ export const tagRoots = (html, attrs) => {
       continue;
     }
     if (depth === 0) {
-      out += html.slice(last, t.nameEnd) + attrs;
+      out += html.slice(last, t.nameEnd) + attrsOf(count);
       last = t.nameEnd;
       count++;
     }
@@ -189,11 +242,13 @@ export const highestId = (html) => {
 };
 
 /**
- * The markers in a rendered shell, in document order: `{ slot, start, end, attrs }`. A marker that carries a hydration annotation
- * (`c-id`, `s-sn`) sits directly inside a component that is not a shadow host and has slots: Stencil tagged it as a node to relocate
- * on the client, and replacing it with the island's html would lose that, so it is an error.
+ * The markers in a rendered shell, in document order: `{ slot, root, start, end, relocation }`. An island has one marker, or with `relocate` (see
+ * `splitIslands`) one per top-level element, which scoped rendering may have put in different places (`root` says which element a marker stands for).
+ * A marker that carries a hydration annotation (`c-id`, `s-sn`) sits directly inside a component that is not a shadow host and has slots: Stencil tagged
+ * it as a node to relocate on the client. With `relocate` the annotation comes back as `relocation` `{ cid, sn }` for the assembly to put on the element
+ * that takes the marker's place (the `<!--o.-->` comment Stencil left in the host stays valid). Without it the island's html would lose it, so it is an error.
  */
-export const findMarkers = (rendered, islands) => {
+export const findMarkers = (rendered, islands, { relocate = false } = {}) => {
   const out = [];
   const list = [...tags(rendered)];
   for (let i = 0; i < list.length; i++) {
@@ -204,18 +259,28 @@ export const findMarkers = (rendered, islands) => {
     if (slot === undefined) continue;
     const next = list[i + 1];
     if (!next || !next.close || next.name !== 'stencil-island' || rendered.slice(t.end, next.start).trim()) continue;
-    out.push({ slot: Number(slot), start: t.start, end: next.end, attrs });
+    const root = Number(/data-island-root="(\d+)"/.exec(attrs)?.[1] ?? 0);
+    const annotated = /\s(?:c-id|s-sn)\b/.test(attrs);
+    out.push({ slot: Number(slot), root, start: t.start, end: next.end, annotated, relocation: annotated ? { cid: /\sc-id="([^"]*)"/.exec(attrs)?.[1], sn: /\ss-sn="([^"]*)"/.exec(attrs)?.[1] } : null });
   }
   const name = (slot) => JSON.stringify(islands[slot].name);
   for (let slot = 0; slot < islands.length; slot++) {
-    if (!out.some((m) => m.slot === slot)) throw new IslandError(`island ${name(slot)}: its marker is not in the rendered shell (the HTML parser moved or dropped it: islands cannot sit in <head>, <table>, <select> and the like)`);
+    const mine = out.filter((m) => m.slot === slot);
+    if (mine.length !== (islands[slot].roots ?? 1) || new Set(mine.map((m) => m.root)).size !== mine.length) throw new IslandError(`island ${name(slot)}: its marker is not in the rendered shell (the HTML parser moved or dropped it: islands cannot sit in <head>, <table>, <select> and the like)`);
   }
   for (const m of out) {
-    if (/\s(?:c-id|s-sn)\b/.test(m.attrs)) {
+    if (m.annotated && !relocate) {
       throw new IslandError(`island ${name(m.slot)} sits directly inside a component that is not a shadow host and has slots (Stencil marked it for relocation, and an island's html carries no such mark): wrap it in a plain element, or make the whole component the island`);
     }
   }
-  return out;
+  // Markers nothing annotated, that stayed together, are one place for the island: the whole of its html goes there, not an element at each.
+  const merged = [];
+  for (const m of out) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.slot === m.slot && !out.some((o) => o.slot === m.slot && o.annotated) && !rendered.slice(prev.end, m.start).trim()) prev.end = m.end;
+    else merged.push(m);
+  }
+  return merged;
 };
 
 /**
@@ -224,6 +289,9 @@ export const findMarkers = (rendered, islands) => {
  * `sty-id` stays: the client's style lookup and the deduplication of styles are keyed by it.
  */
 export const stripAnnotations = (html) => html.replace(/ (?:s-id|c-id|s-sn|s-mode)="[^"]*"/g, '').replace(/<!--[rostc]\.[^>]*-->/g, '');
+
+/** What an island's `nth` marker is replaced with: its whole html, or (scoped rendering, an island with a marker per element) that element. */
+export const pieceHtml = (isl, nth = 0) => (isl.pieces ? isl.pieces[nth] ?? '' : isl.html);
 
 const styleTag = (s) => `<style${s.id ? ` sty-id="${String(s.id).replace(/"/g, '&quot;')}"` : ''}>${s.content}</style>`;
 
@@ -309,7 +377,7 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
       }
       let markers;
       try {
-        markers = findMarkers(html, split.islands);
+        markers = findMarkers(html, split.islands, { relocate: split.relocate });
       } catch (e) {
         if (e instanceof IslandError) e.message = `${view}: ${e.message}`;
         throw e;
@@ -321,7 +389,8 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
         at = m.end;
       }
       segments.push(html.slice(at));
-      return { result, order: markers.map((m) => m.slot), segments };
+      // `order[k]` is the island at the k-th marker and `nth[k]` which of its elements it takes (`pieceHtml`)
+      return { result, order: markers.map((m) => m.slot), nth: markers.map((m) => m.root), segments, markers };
     }));
 
   const resolved = new Map();
@@ -334,11 +403,31 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
           const result = parts[slot] ? await parts[slot] : { html: '', styles: [], components: [], hydratedCount: 0 };
           check(`island ${JSON.stringify(isl.name)}`, result, (slot + 1) * stride);
           const never = client && (isl.client === 'static' || isl.client === 'none');
-          const tagged = tagRoots(never ? stripAnnotations(result.html) : result.html, ` data-island="${isl.name}" data-client="${isl.client}"`);
+          const body = never ? stripAnnotations(result.html) : result.html;
+          const mark = ` data-island="${isl.name}" data-client="${isl.client}"`;
+          let tagged;
+          let pieces;
+          if (split.relocate) {
+            // Scoped rendering: the island's elements go where their markers ended up in the shell, one piece each. A marker Stencil annotated (a direct child of
+            // a component with slots) hands its relocation annotation to the element, after a static island's own annotations are stripped: this one is the
+            // shell's, and the client reads it when it hydrates the parent.
+            const mine = (await cutShell()).markers.filter((m) => m.slot === slot).sort((a, b) => a.root - b.root);
+            if (mine.some((m) => m.annotated)) {
+              const top = topLevelElements(body);
+              if (top.stray) throw new IslandError(`${view}: island ${JSON.stringify(isl.name)} sits directly inside a component with slots, so its top level can only hold elements (text there cannot be relocated): wrap the text in an element`);
+              if (body.trim() && top.roots.length !== mine.length) throw new IslandError(`${view}: island ${JSON.stringify(isl.name)} rendered ${top.roots.length} top-level elements where its view has ${mine.length}: a component at its top level added or removed siblings, and its relocation marks no longer match`);
+              tagged = tagRoots(body, (k) => `${mark}${mine[k].relocation?.cid != null ? ` c-id="${mine[k].relocation.cid}"` : ''}${mine[k].relocation?.sn != null ? ` s-sn="${mine[k].relocation.sn}"` : ''}`);
+              pieces = topLevelElements(tagged.html).roots.map((r) => tagged.html.slice(r.start, r.end));
+            } else {
+              tagged = tagRoots(body, mark);
+              pieces = [tagged.html]; // nothing to relocate: the whole island at its (first) marker, nothing at any other
+            }
+            tagged = { html: pieces.join(''), roots: tagged.roots };
+          } else tagged = tagRoots(body, mark);
           if (!tagged.roots && result.html.trim()) {
             throw new IslandError(`${view}: island ${JSON.stringify(isl.name)} has no element at its top level (only text or comments): there is nothing to carry data-island, wrap it in an element`);
           }
-          return { html: tagged.html, styles: result.styles ?? [], components: result.components ?? [], hydratedCount: result.hydratedCount };
+          return { html: tagged.html, pieces, styles: result.styles ?? [], components: result.components ?? [], hydratedCount: result.hydratedCount };
         })()
       );
       resolved.get(slot).catch(() => {});
@@ -359,12 +448,12 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
      */
     async *chunks() {
       if (earlyHead) yield await earlyHead;
-      const { result, order, segments } = await cutShell();
+      const { result, order, nth, segments } = await cutShell();
       const fresh = createDeduper(earlyHead ? [] : result.styles);
       yield (earlyHead && document ? fresh(result.styles) : '') + segments[0];
       for (let k = 0; k < order.length; k++) {
         const isl = await part(order[k]);
-        yield (document ? fresh(isl.styles) : '') + isl.html + segments[k + 1];
+        yield (document ? fresh(isl.styles) : '') + pieceHtml(isl, nth[k]) + segments[k + 1];
       }
     },
 
@@ -376,13 +465,13 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
         return out;
       };
       if (earlyHead || !document) return inline();
-      const { result, order, segments } = await cutShell();
+      const { result, order, nth, segments } = await cutShell();
       const headEnd = documentLandmarks(segments[0]).headEnd;
       if (!headEnd) return inline(); // no </head> before the first island: nowhere to hoist to
       const isls = await Promise.all(order.map(part));
       const fresh = createDeduper(result.styles);
       const styles = isls.map((i) => fresh(i.styles)).join('');
-      return segments[0].slice(0, headEnd.start) + styles + segments[0].slice(headEnd.start) + isls.map((isl, k) => isl.html + segments[k + 1]).join('');
+      return segments[0].slice(0, headEnd.start) + styles + segments[0].slice(headEnd.start) + isls.map((isl, k) => pieceHtml(isl, nth[k]) + segments[k + 1]).join('');
     },
 
     /**
@@ -412,7 +501,7 @@ export const createIslandPage = ({ split, view, shell, parts, stride, document, 
     /** Per island, once rendered: what the client side will want (`components` for a per-island manifest). Settles when every island has. */
     async manifest() {
       const { order } = await cutShell();
-      return Promise.all(order.map(async (slot) => ({ ...page.islands[slot], components: (await part(slot)).components })));
+      return Promise.all([...new Set(order)].map(async (slot) => ({ ...page.islands[slot], components: (await part(slot)).components })));
     },
   };
   return page;

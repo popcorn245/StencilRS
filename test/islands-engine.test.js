@@ -195,12 +195,10 @@ test('errors of the view are IslandErrors with the view in the message; a render
   assert.deepEqual(unhandled, []);
 });
 
-test('islands need DSD: scoped rendering is refused, at construction and per view', async () => {
-  assert.throws(() => stencilEngine({ hydrate: built.hydrate, islands: {}, renderOptions: { serializeShadowRoot: 'scoped' } }), /islands are not supported with scoped rendering/);
-  assert.throws(() => stencilEngine({ hydrate: built.hydrate, islands: {}, renderOptions: { serializeShadowRoot: false } }), /scoped/);
+test('islands take scoped rendering at construction and per view (test/islands-scoped.test.js has the rest)', async () => {
+  for (const serializeShadowRoot of ['scoped', false, { default: 'scoped' }]) assert.doesNotThrow(() => make({ islands: {}, renderOptions: { serializeShadowRoot } }), JSON.stringify(serializeShadowRoot));
   const engine = make({ islands: {} });
-  await assert.rejects(renderView(engine, view(PAGE), { stencil: { serializeShadowRoot: 'scoped' } }), /not scoped mode/);
-  // without islands in the view, scoped rendering is as ever
+  assert.match(await renderView(engine, view(PAGE), { stencil: { serializeShadowRoot: 'scoped' } }), /<isl-counter data-island="a" data-client="visible"/);
   assert.match(await renderView(engine, view(DOC(ISLAND_B)), { stencil: { serializeShadowRoot: 'scoped' } }), /<isl-counter/);
   assert.equal(await engine.renderIslands(view(DOC(ISLAND_B))), null);
 });

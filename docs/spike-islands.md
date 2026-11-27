@@ -1,6 +1,6 @@
 # Spike: islands and HTML streaming for the SSR / Express engine (issue #183)
 
-> **Status: built.** Everything proposed here shipped as `stencilEngine({ islands })` (#190-#196) except scoped mode and context-carrying islands; [What shipped](#what-shipped-against-what-was-proposed) compares the two, with the final numbers. The reference is [islands.md](islands.md); the text below is the spike as it was written.
+> **Status: built.** Everything proposed here shipped as `stencilEngine({ islands })` (#190-#196, and scoped mode in #206) except context-carrying islands; [What shipped](#what-shipped-against-what-was-proposed) compares the two, with the final numbers. The reference is [islands.md](islands.md); the text below is the spike as it was written.
 
 A one-day prototype with measurements. Nothing here is library code: the prototype lives in `examples/ionic/spike/islands/`, the only
 patch to Stencil's runner is a text edit of the built hydrate app done by `make-idbase-hydrate.mjs`, and no file under the package root
@@ -42,7 +42,7 @@ client (command in its header), `node spike/islands/make-idbase-hydrate.mjs`, th
 | `@popcorn245/stencilrs/islands`, the five directives, `connectedCallback` gate, manifest, ready events | #195, 1.5 KB; the engine writes the manifest and `modulepreload` links (`islands.client`), `engine.stream` writes the boot. Added: the one-synchronous-define-pass rule, which the spike's loader lacked and which `ion-tabs` needs |
 | example app, docs | #196: `examples/islands`, `npm run bench:islands`, the guide page and the README section |
 
-Not as proposed: scoped mode is refused (not made to work), and an island does not carry its ancestors' context.
+Not as proposed: an island does not carry its ancestors' context. Scoped mode, refused when the islands shipped, works since #206 (follow-up 11 below).
 
 ### The numbers, spike against shipped
 
@@ -73,7 +73,7 @@ kind of gain on a production build (smaller in percent, since minified code has 
 Done: 1 (#190), 2 (#190), 3 (#191), 4 (#192), 5 (#192), 6 (#192), 8 (#195), 9 (#195, as per-tag modules, see above), 10 (#193), 13 (#196). 7 is half done: the styles are written once per page, and the client still adds its own
 copy of each `style[sty-id]` that an island wrote in the body to `<head>`. Open:
 
-- **11. Scoped mode** (M, investigation): why a full scoped page hydrates to a different DOM than the islands page, and which is right. The engine refuses `serializeShadowRoot: 'scoped'` until then.
+- **11. Scoped mode**, done (#206): the DOM Stencil's dev client builds from a scoped page is wrong whole or split (a `<style>` in the shadow root keeps it from moving the server's nodes into it), the production client builds the client-only DOM from both, and islands in scoped mode work (relocation marks per element, see [islands.md](islands.md#scoped-mode)).
 - **12. Context-carrying islands** (M): render an island inside its ancestors and cut the wrapper out, so `in-list` / `role` are in the server html (the client adds them on hydration).
 - **7b. The duplicate `style[sty-id]` in the body** (S-M): a Stencil client lookup change (upstream), or hoisting the islands' styles into `<head>` when the head is not yet sent.
 - **14. Per-render fixed cost** (tracked in #182 / #189): an island is a render, and a page with `n` islands pays it `n + 1` times; any cut there pays out first on islands.
@@ -148,6 +148,8 @@ shadow component such as `ion-content` end up directly in its shadow root next t
 its `div#background-content` and `div.inner-scroll` and the children go into the slot. I did not investigate which is right: scoped
 serialization of components that are `shadow: true` in the client build is a path nobody has exercised with Ionic. The recommendation
 below is DSD only for islands.
+
+> **Resolved in #206.** Which DOM is right: the one a client-only render builds. Stencil's dev client (`stencil build --dev`, used here) hydrates a *whole* scoped page to a wrong DOM (30,254 px from the client-only render on list-50: a blank page), and the production client (the `hydrateClient` build) hydrates the whole page and the islands page to the client-only DOM (0 px). On the engine as shipped the whole page and the islands page come to the same DOM on either client; the difference between them seen here was not reproduced. Islands work in scoped mode; see [islands.md](islands.md#scoped-mode).
 
 ### Smallest fix: `idBase` (prototype `make-idbase-hydrate.mjs`)
 
@@ -461,7 +463,7 @@ the two boots differ in the loader (one define pass, `modulepreload` of the modu
 8. **Client directives** (`@popcorn245/stencilrs/islands`): the five directives, the `connectedCallback` gate (needs a supported hook from Stencil, or a guarded client patch), the island -> tags manifest from `result.components`, `ready` events. M-L.
 9. **Per-island client chunking**: a manifest of tag -> module for the custom-elements build, and a decision on the lazy loader (its bundle groups are coarser than islands). L.
 10. **Island render cache**: key on (island html, options, slot index), `cache` attribute, ttl, interplay with `idBase` slots; benchmark against the throughput loss. M.
-11. **Scoped mode**: why a full scoped page hydrates to a different DOM than islands in scoped mode (and which is right); until then DSD only. M (investigation).
+11. **Scoped mode** (done, #206): why a full scoped page hydrates to a different DOM than islands in scoped mode (the dev client), and islands in scoped mode. M.
 12. **Context-carrying islands**: wrap an island in its ancestors for rendering and cut the wrapper out (restores `in-list`/`role` in the server html). M, only if the pre-hydration difference matters.
 13. **Docs + an example app** (`examples/` Express page with a slow island), reference for the directives. S.
 14. **Throughput**: islands multiply the per-render fixed cost; any work from #182/#189 (shared window, cheaper runtime setup) pays out here first. Tracked there.

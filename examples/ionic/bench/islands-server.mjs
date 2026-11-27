@@ -7,7 +7,7 @@
 //   /ooo/<page>       out of order: the shell with anchors, then each island as it finishes and a swap script
 //   /perchunk/<page>  as inorder, one flush per island even where two are ready together (`coalesce: false`)
 // The Ionic stylesheet is served at /css/ (render-blocking in the pages, as in a real app), so a browser can measure paint against these routes.
-// node bench/islands-server.mjs <port> <workers>
+// node bench/islands-server.mjs <port> <workers> [dsd|scoped]   (the serialization of shadow components, default dsd: #206)
 import express from 'express';
 import { createReadStream } from 'node:fs';
 import { join } from 'node:path';
@@ -17,12 +17,12 @@ import { stencilEngine, streamView } from '../../../express.js';
 import { CSS_DIR, HYDRATE, MODES, renderOptions } from '../spike/islands/lib.mjs';
 import { writeViews } from '../spike/islands/views.mjs';
 
-const [port = '0', workersArg = '2'] = process.argv.slice(2);
+const [port = '0', workersArg = '2', modeArg = 'dsd'] = process.argv.slice(2);
 const workers = Number(workersArg);
 const views = writeViews(['list-50', 'kitchen-sink']);
 const warmViews = (suffix) => ['list-50', 'kitchen-sink'].map((n) => join(views, `${n}${suffix}.html`));
 const NOCACHE = process.env.ISLAND_CACHE === 'off'; // ISLAND_CACHE=off: the cached routes render everything (the marks are ignored): the cost of the layer itself
-const common = { hydrate: HYDRATE, workers, renderOptions: renderOptions(MODES.dsd) };
+const common = { hydrate: HYDRATE, workers, renderOptions: renderOptions(MODES[modeArg]) };
 const full = stencilEngine({ ...common, warmup: { views: warmViews('.full'), times: 6 } });
 const isl = stencilEngine({ ...common, islands: { cache: !NOCACHE }, warmup: { views: warmViews(''), times: 6 } });
 const early = stencilEngine({ ...common, islands: { earlyHead: true }, warmup: { views: warmViews(''), times: 6 } });
